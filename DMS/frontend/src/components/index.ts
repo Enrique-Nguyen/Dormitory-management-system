@@ -1,0 +1,22 @@
+// Component dùng chung (UI 5.1, 27.3). Component chỉ nhận props; gọi API ở features/.
+export { default as ActionBar, type ActionDef } from './ui/ActionBar'
+export { default as ConfirmDialog, type ConfirmOptions } from './ui/ConfirmDialog'
+export { useConfirm } from './ui/useConfirm'
+export { default as DerivedChip } from './ui/DerivedChip'
+export { default as EmptyState } from './ui/EmptyState'
+export { default as FormField, type FieldControlProps } from './ui/FormField'
+export { default as PageSkeleton } from './ui/PageSkeleton'
+export { default as ResponsiveTable } from './ui/ResponsiveTable'
+export { default as StatusBadge } from './ui/StatusBadge'
+export { default as StatusTimeline } from './ui/StatusTimeline'
+export { stepsFromFlow, type TimelineStep } from './ui/timelineSteps'
+
+export { default as BedCard } from './business/BedCard'
+export { default as ContractStatus } from './business/ContractStatus'
+export { default as DepositLedger, type LedgerEntry } from './business/DepositLedger'
+export { default as InvoiceCard } from './business/InvoiceCard'
+export { default as InvoiceStatus } from './business/InvoiceStatus'
+export { default as NotificationItem } from './business/NotificationItem'
+export { default as RoomCard, type RoomBed } from './business/RoomCard'
+
+export { default as PageHeader } from './layout/PageHeader'

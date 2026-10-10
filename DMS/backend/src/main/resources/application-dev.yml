@@ -1,0 +1,4 @@
+# Máy cá nhân: PostgreSQL chạy bằng DMS/docker-compose.yml
+logging:
+  level:
+    vn.edu.tlu.dms: DEBUG

@@ -1,0 +1,58 @@
+import axios from 'axios'
+import type { ApiError } from '../services/api/client'
+import { formatDateTime } from './format'
+
+// errorCode → câu tiếng Việt (UI 27.2, danh mục mã ở API Spec mục 5). Không parse chuỗi message.
+// Mỗi câu nói rõ nguyên nhân → cách xử lý (Rule 06). Thêm mã vào đây cùng lúc với danh mục API Spec.
+// Không đưa enum tiếng Anh (như currentStatus) vào câu hiển thị cho người dùng.
+type Details = Record<string, unknown>
+
+const messages: Record<string, (d: Details) => string> = {
+  // 5.1 Chung
+  UNAUTHENTICATED: () => 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+  FORBIDDEN: () => 'Bạn không có quyền thực hiện thao tác này.',
+  NOT_FOUND: () => 'Không tìm thấy dữ liệu hoặc bạn không có quyền xem.',
+  INVALID_STATE_TRANSITION: () => 'Thao tác không còn hợp lệ vì trạng thái đã thay đổi. Trang đã được tải lại.',
+  CONCURRENT_UPDATE: () => 'Dữ liệu vừa được người khác thay đổi. Vui lòng thử lại.',
+  FILE_TOO_LARGE: (d) => `File vượt quá ${d.maxMb ?? ''} MB. Vui lòng chọn file nhỏ hơn.`,
+  INTERNAL_ERROR: (d) => `Hệ thống gặp lỗi. Vui lòng thử lại sau (mã yêu cầu: ${d.requestId ?? 'không có'}).`,
+
+  // 5.2 Tài khoản
+  INVALID_CREDENTIALS: (d) =>
+    d.remainingAttempts !== undefined
+      ? `Tên đăng nhập hoặc mật khẩu không đúng. Còn ${d.remainingAttempts} lần thử trước khi tài khoản bị tạm khóa.`
+      : 'Tên đăng nhập hoặc mật khẩu không đúng.',
+  ACCOUNT_TEMP_LOCKED: (d) =>
+    `Tài khoản tạm khóa${d.lockedUntil ? ` đến ${formatDateTime(String(d.lockedUntil))}` : ' 15 phút'} do nhập sai nhiều lần. Vui lòng thử lại sau.`,
+  ACCOUNT_LOCKED: () => 'Tài khoản đã bị khóa. Liên hệ quản trị viên để được mở khóa.',
+  PASSWORD_CHANGE_REQUIRED: () => 'Bạn cần đổi mật khẩu trước khi tiếp tục.',
+  WRONG_CURRENT_PASSWORD: () => 'Mật khẩu hiện tại không đúng. Vui lòng nhập lại.',
+  PASSWORD_POLICY: () => 'Mật khẩu mới phải có 8–64 ký tự, gồm cả chữ và số, và khác mật khẩu cũ.',
+  USERNAME_EXISTS: (d) => `Tên đăng nhập ${d.username ?? ''} đã tồn tại. Vui lòng chọn tên khác.`,
+
+  // 5.3 Phòng, giường
+  BED_TAKEN: (d) => `Giường ${d.bedCode ?? ''} vừa được phân cho sinh viên khác. Vui lòng chọn giường khác.`,
+  BED_NOT_AVAILABLE: (d) => `Giường ${d.bedCode ?? ''} hoặc phòng đang không hoạt động. Vui lòng chọn giường khác.`,
+}
+
+export function errorMessage(error: unknown): string {
+  if (axios.isAxiosError<ApiError>(error) && error.response?.data?.errorCode) {
+    const { errorCode, details, requestId } = error.response.data
+    const build = messages[errorCode]
+    if (build) return build({ ...details, requestId })
+    return error.response.data.message
+  }
+  if (axios.isAxiosError(error)) {
+    // Có phản hồi nhưng không theo khuôn { errorCode }: CSRF bị từ chối, proxy 502/504...
+    if (error.response) {
+      return `Máy chủ phản hồi không như mong đợi (HTTP ${error.response.status}). Hãy tải lại trang rồi thử lại; nếu vẫn lỗi, liên hệ Ban quản lý.`
+    }
+    return 'Không kết nối được tới máy chủ. Kiểm tra kết nối mạng rồi thử lại.'
+  }
+  return 'Đã xảy ra lỗi ngoài dự kiến trên trang. Hãy tải lại trang rồi thử lại.'
+}
+
+/** Mã lỗi của response (nếu có), để rẽ nhánh xử lý ngoài việc hiện câu thông báo. */
+export function errorCodeOf(error: unknown): string | undefined {
+  return axios.isAxiosError<ApiError>(error) ? error.response?.data?.errorCode : undefined
+}

@@ -1,0 +1,22 @@
+# Người phụ trách được tự động gán review khi PR chạm vào phần của họ (SAD mục 4.1, UI 27.3).
+# TODO: thay @tv1, @tv3, @tv4, @tv5 bằng tên GitHub thật của từng thành viên, rồi bỏ dấu # ở đầu dòng.
+# Dòng sau cùng khớp sẽ thắng.
+
+# *                                                   @Enrique-Nguyen
+# /DMS/backend/src/main/java/vn/edu/tlu/dms/common/       @tv1
+# /DMS/backend/src/main/java/vn/edu/tlu/dms/account/      @tv1
+# /DMS/backend/src/main/java/vn/edu/tlu/dms/room/         @Enrique-Nguyen
+# /DMS/backend/src/main/java/vn/edu/tlu/dms/registration/ @tv3
+# /DMS/backend/src/main/java/vn/edu/tlu/dms/contract/     @tv3 @Enrique-Nguyen @tv4
+# /DMS/backend/src/main/java/vn/edu/tlu/dms/maintenance/  @tv4
+# /DMS/backend/src/main/java/vn/edu/tlu/dms/billing/      @tv5
+# /DMS/backend/src/main/java/vn/edu/tlu/dms/notification/ @tv4 @tv5
+# /DMS/backend/src/main/resources/db/migration/           @tv1 @Enrique-Nguyen
+# /DMS/frontend/src/app/                                  @tv1
+# /DMS/frontend/src/features/account/                     @tv1
+# /DMS/frontend/src/features/room/                        @Enrique-Nguyen
+# /DMS/frontend/src/features/registration/                @tv3
+# /DMS/frontend/src/features/contract/                    @tv3
+# /DMS/frontend/src/features/maintenance/                 @tv4
+# /DMS/frontend/src/features/billing/                     @tv5
+# /DMS/frontend/src/features/notification/                @tv4 @tv5

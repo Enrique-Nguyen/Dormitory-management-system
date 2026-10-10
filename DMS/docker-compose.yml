@@ -1,0 +1,24 @@
+# Môi trường phát triển: chỉ PostgreSQL. Chạy: docker compose up -d (trong thư mục DMS/)
+# Bản triển khai đủ ba service nginx + backend + postgres (SAD mục 10) sẽ thêm sau.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dms-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-dms}
+      POSTGRES_USER: ${DB_USERNAME:-dms}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dms}
+      TZ: Asia/Ho_Chi_Minh
+      PGTZ: Asia/Ho_Chi_Minh
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

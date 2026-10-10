@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: dms
+  profiles:
+    default: dev
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/dms}
+    username: ${DB_USERNAME:dms}
+    password: ${DB_PASSWORD:dms}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate          # Flyway sở hữu lược đồ (SAD 8.3); Hibernate chỉ kiểm tra khớp
+  flyway:
+    locations: classpath:db/migration
+  session:
+    jdbc:
+      initialize-schema: never    # bảng spring_session tạo bằng migration V2
+    timeout: 30m                  # NFR-SEC-04
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 20MB
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+dms:
+  upload-dir: ${DMS_UPLOAD_DIR:./data/uploads}

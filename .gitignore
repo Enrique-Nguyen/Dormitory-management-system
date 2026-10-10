@@ -1,0 +1,23 @@
+# Bí mật và cấu hình máy cá nhân
+.env
+*.local
+
+# Backend (Maven)
+target/
+DMS/backend/data/
+
+# Frontend (Node)
+node_modules/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+
+# IDE và hệ điều hành
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
