@@ -9,12 +9,13 @@ import vn.edu.tlu.dms.account.repository.ManagementUnitRepository;
 import vn.edu.tlu.dms.account.service.ManagementUnitService;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
-import vn.edu.tlu.dms.common.service.AbstractCrudService;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.service.impl.AbstractCrudServiceImpl;
 
 @Service
 public class ManagementUnitServiceImpl
-        extends AbstractCrudService<ManagementUnit, ManagementUnitRequest, ManagementUnitResponse>
+        extends AbstractCrudServiceImpl<
+                ManagementUnit, ManagementUnitRequest, ManagementUnitResponse>
         implements ManagementUnitService {
 
     private final ScopeGuard guard;

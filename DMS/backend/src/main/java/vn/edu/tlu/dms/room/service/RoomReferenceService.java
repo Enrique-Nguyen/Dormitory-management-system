@@ -1,109 +1,42 @@
 package vn.edu.tlu.dms.room.service;
 
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import vn.edu.tlu.dms.common.exception.BusinessException;
-import vn.edu.tlu.dms.room.repository.BuildingRepository;
-import vn.edu.tlu.dms.room.repository.RoomRepository;
-import vn.edu.tlu.dms.room.repository.RoomTypeRepository;
-import vn.edu.tlu.dms.room.repository.SemesterRepository;
-
 import java.time.LocalDate;
 import java.util.Optional;
 
-@Service
-@Transactional(readOnly = true)
-public class RoomReferenceService {
+public interface RoomReferenceService {
 
-    private final RoomRepository rooms;
+    /**
+     * Lấy ID phòng/tòa/đơn vị cùng giới tính và trạng thái; báo NOT_FOUND nếu phòng không tồn tại.
+     */
+    Location getRoomLocation(Long id);
 
-    private final BuildingRepository buildings;
+    /** Lấy ID đơn vị sở hữu tòa để nơi gọi kiểm tra phạm vi quyền. */
+    Long getBuildingManagementUnitId(Long id);
 
-    private final RoomTypeRepository types;
+    /** Kiểm tra loại phòng tồn tại và đang ACTIVE trước khi tạo hoặc cập nhật hồ sơ liên quan. */
+    void requireActiveRoomType(Long id);
 
-    private final SemesterRepository semesters;
+    /**
+     * Đọc thông tin học kỳ gồm loại, ngày bắt đầu và kết thúc; không trả entity ra ngoài module.
+     */
+    SemesterRef getSemesterReference(Long id);
 
-    private final JdbcTemplate jdbc;
+    /**
+     * Tìm phòng sinh viên đang ở dựa trên phân phòng hiệu lực; trả Optional rỗng khi chưa có phòng.
+     */
+    Optional<Long> findCurrentStayingRoomId(Long studentId);
 
-    public RoomReferenceService(
-            RoomRepository rooms,
-            BuildingRepository buildings,
-            RoomTypeRepository types,
-            SemesterRepository semesters,
-            JdbcTemplate jdbc) {
-        this.rooms = rooms;
-        this.buildings = buildings;
-        this.types = types;
-        this.semesters = semesters;
-        this.jdbc = jdbc;
-    }
+    /** Kiểm tra sinh viên có hợp đồng PENDING hoặc ACTIVE để bảo vệ điều kiện tạo/sửa hồ sơ. */
+    boolean hasPendingOrActiveContract(Long studentId);
+
+    /**
+     * Khóa hồ sơ sinh viên đến hết transaction; nơi gọi phải tuân thủ thứ tự khóa thống nhất để
+     * tránh xung đột.
+     */
+    void lockStudentProfile(Long studentId);
 
     public record Location(
             Long roomId, Long buildingId, Long unitId, String gender, String status) {}
 
     public record SemesterRef(Long id, String type, LocalDate startDate, LocalDate endDate) {}
-
-    public Location getRoomLocation(Long id) {
-        var r = rooms.findById(id).orElseThrow(BusinessException::notFound);
-        return new Location(
-                id,
-                r.getBuildingId(),
-                getBuildingManagementUnitId(r.getBuildingId()),
-                r.getGender(),
-                r.getStatus());
-    }
-
-    public Long getBuildingManagementUnitId(Long id) {
-        return buildings
-                .findById(id)
-                .orElseThrow(BusinessException::notFound)
-                .getManagementUnitId();
-    }
-
-    public void requireActiveRoomType(Long id) {
-        if (id == null
-                || !types.exists(
-                        (r, q, b) -> b.and(b.equal(r.get("id"), id), b.isTrue(r.get("active"))))) {
-            throw BusinessException.notFound();
-        }
-    }
-
-    public SemesterRef getSemesterReference(Long id) {
-        var r = semesters.findById(id).orElseThrow(BusinessException::notFound);
-        return new SemesterRef(r.getId(), r.getType(), r.getStartDate(), r.getEndDate());
-    }
-
-    public Optional<Long> findCurrentStayingRoomId(Long studentId) {
-        return jdbc
-                .query(
-                        "SELECT room_id FROM v_current_stay WHERE student_id=? AND"
-                                + " assignment_kind='STAY'",
-                        (r, i) -> r.getLong(1),
-                        studentId)
-                .stream()
-                .findFirst();
-    }
-
-    public boolean hasPendingOrActiveContract(Long studentId) {
-        // Hợp đồng còn hiệu lực có thể tạm không có phân phòng khi sinh viên gửi đồ kỳ hè.
-        return Boolean.TRUE.equals(
-                jdbc.queryForObject(
-                        "SELECT EXISTS (SELECT 1 FROM dormitory_contract WHERE student_id=? AND"
-                                + " status IN ('PENDING','ACTIVE'))",
-                        Boolean.class,
-                        studentId));
-    }
-
-    public void lockStudentProfile(Long studentId) {
-        var rows =
-                jdbc.query(
-                        "SELECT user_id FROM student_profile WHERE user_id=? FOR UPDATE",
-                        (r, i) -> r.getLong(1),
-                        studentId);
-        if (rows.isEmpty()) {
-            throw BusinessException.notFound();
-        }
-    }
 }

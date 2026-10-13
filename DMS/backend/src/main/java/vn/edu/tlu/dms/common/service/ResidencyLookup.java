@@ -15,5 +15,9 @@ public interface ResidencyLookup {
             boolean activeContract,
             boolean roomLeader) {}
 
+    /**
+     * Tra cứu chỗ ở hiệu lực của sinh viên để các module đọc thông tin cư trú qua interface; trả
+     * Optional rỗng khi chưa có phân phòng đang ở hoặc giữ chỗ.
+     */
     Optional<Residency> current(Long studentId);
 }

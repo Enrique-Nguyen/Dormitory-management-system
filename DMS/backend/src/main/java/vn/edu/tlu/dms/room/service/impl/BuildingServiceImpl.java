@@ -6,8 +6,8 @@ import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
-import vn.edu.tlu.dms.common.service.AbstractCrudService;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.service.impl.AbstractCrudServiceImpl;
 import vn.edu.tlu.dms.room.api.BuildingRequest;
 import vn.edu.tlu.dms.room.api.BuildingResponse;
 import vn.edu.tlu.dms.room.domain.Building;
@@ -18,7 +18,7 @@ import java.util.List;
 
 @Service
 public class BuildingServiceImpl
-        extends AbstractCrudService<Building, BuildingRequest, BuildingResponse>
+        extends AbstractCrudServiceImpl<Building, BuildingRequest, BuildingResponse>
         implements BuildingService {
 
     private final ScopeGuard guard;

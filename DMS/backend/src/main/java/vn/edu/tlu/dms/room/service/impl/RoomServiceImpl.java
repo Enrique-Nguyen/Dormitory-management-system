@@ -489,4 +489,30 @@ public class RoomServiceImpl implements RoomService {
         }
         return value.trim();
     }
+
+    @Override()
+    public PageResponse<Response> searchRooms(
+            int page,
+            int size,
+            List<String> sort,
+            Long buildingId,
+            Short floor,
+            Long roomTypeId,
+            String gender,
+            String status,
+            Boolean hasFreeBed,
+            Boolean noLeader) {
+        return searchRooms(
+                page,
+                size,
+                sort,
+                buildingId,
+                floor,
+                roomTypeId,
+                gender,
+                status,
+                hasFreeBed,
+                noLeader,
+                "");
+    }
 }

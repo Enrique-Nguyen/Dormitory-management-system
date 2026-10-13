@@ -1,4 +1,4 @@
-package vn.edu.tlu.dms.room.service;
+package vn.edu.tlu.dms.room.service.impl;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

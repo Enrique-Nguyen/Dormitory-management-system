@@ -1,117 +1,50 @@
 package vn.edu.tlu.dms.contract.service;
 
-import org.springframework.data.domain.PageRequest;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import vn.edu.tlu.dms.common.dto.PageResponse;
-import vn.edu.tlu.dms.common.exception.BusinessException;
-import vn.edu.tlu.dms.common.security.CurrentUser;
-import vn.edu.tlu.dms.common.security.ScopeGuard;
-import vn.edu.tlu.dms.common.service.StatusHistoryService;
-import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.contract.api.ContractDtos;
-import vn.edu.tlu.dms.contract.domain.DormitoryContract;
-import vn.edu.tlu.dms.contract.repository.DormitoryContractRepository;
 
-import java.util.List;
-import java.util.Set;
+/** Khai báo thao tác tra cứu hợp đồng theo chủ sở hữu hoặc phạm vi đơn vị quản lý. */
+public interface ContractService {
 
-/**
- * Khung truy vấn hợp đồng. Hợp đồng được sinh bởi nghiệp vụ phân giường, không được tạo, sửa trạng
- * thái hoặc xóa bằng CRUD tổng quát vì sẽ làm lệch lịch sử phân phòng và sổ cọc.
- */
-@Service
-@Transactional(readOnly = true)
-public class ContractService {
+    /**
+     * Tìm kiếm và phân trang hợp đồng theo trạng thái, mã hoặc tên sinh viên trong phạm vi được
+     * phép xem.
+     *
+     * @param page số trang, bắt đầu từ 0
+     * @param size số bản ghi mỗi trang
+     * @param status trạng thái cần lọc; null để lấy mọi trạng thái
+     * @param mine true để chỉ lấy dữ liệu của sinh viên đang đăng nhập
+     * @return trang hợp đồng phù hợp với bộ lọc và quyền truy cập
+     */
+    PageResponse<ContractDtos.Response> searchContracts(
+            int page, int size, String status, boolean mine);
 
-    private final DormitoryContractRepository repository;
+    /**
+     * Tìm kiếm và phân trang hợp đồng theo trạng thái, mã hoặc tên sinh viên trong phạm vi được
+     * phép xem.
+     *
+     * @param page số trang, bắt đầu từ 0
+     * @param size số bản ghi mỗi trang
+     * @param status trạng thái cần lọc; null để lấy mọi trạng thái
+     * @param mine true để chỉ lấy dữ liệu của sinh viên đang đăng nhập
+     * @param q từ khóa theo mã hồ sơ hoặc tên sinh viên; chuỗi rỗng để không lọc theo từ khóa
+     * @return trang hợp đồng phù hợp với bộ lọc và quyền truy cập
+     */
+    PageResponse<ContractDtos.Response> searchContracts(
+            int page, int size, String status, boolean mine, String q);
 
-    private final CurrentUser currentUser;
+    /**
+     * Lấy chi tiết hợp đồng và lịch sử trạng thái sau khi kiểm tra quyền truy cập.
+     *
+     * @param id mã định danh hợp đồng
+     * @return thông tin chi tiết hợp đồng được phép xem
+     */
+    ContractDtos.Response getContractById(Long id);
 
-    private final ScopeGuard scopeGuard;
-
-    private final StatusHistoryService historyService;
-
-    public ContractService(
-            DormitoryContractRepository repository,
-            CurrentUser currentUser,
-            ScopeGuard scopeGuard,
-            StatusHistoryService historyService) {
-        this.repository = repository;
-        this.currentUser = currentUser;
-        this.scopeGuard = scopeGuard;
-        this.historyService = historyService;
-    }
-
-    public PageResponse<ContractDtos.Response> searchContracts(
-            int page, int size, String status, boolean mine) {
-        return searchContracts(page, size, status, mine, "");
-    }
-
-    public PageResponse<ContractDtos.Response> searchContracts(
-            int page, int size, String status, boolean mine, String q) {
-        scopeGuard.requireRole(mine ? new String[] {"STUDENT"} : new String[] {"STAFF"});
-        var actor = currentUser.get();
-        PageQuery.of(page, size, null, Set.of("id"), "id,desc");
-        return PageResponse.from(
-                repository
-                        .searchAccessibleContracts(
-                                actor.role(),
-                                actor.id(),
-                                actor.unitId(),
-                                actor.crossUnitAccess(),
-                                status,
-                                "%" + q.trim() + "%",
-                                PageRequest.of(page, size))
-                        .map(contract -> toContractResponse(contract, false)));
-    }
-
-    public ContractDtos.Response getContractById(Long id) {
-        scopeGuard.requireRole("STUDENT", "STAFF");
-        var actor = currentUser.get();
-        DormitoryContract contract =
-                repository
-                        .findAccessibleContract(
-                                id,
-                                actor.role(),
-                                actor.id(),
-                                actor.unitId(),
-                                actor.crossUnitAccess())
-                        .orElseThrow(BusinessException::notFound);
-        return toContractResponse(contract, true);
-    }
-
-    public ContractDtos.Response getMyCurrentContract() {
-        scopeGuard.requireRole("STUDENT");
-        return repository
-                .findAll(
-                        (root, query, builder) ->
-                                builder.and(
-                                        builder.equal(
-                                                root.get("studentId"), currentUser.get().id()),
-                                        root.get("status").in("PENDING", "ACTIVE")))
-                .stream()
-                .findFirst()
-                .map(contract -> toContractResponse(contract, true))
-                .orElse(null);
-    }
-
-    private ContractDtos.Response toContractResponse(DormitoryContract contract, boolean detail) {
-        // Chỉ quảng bá hành động đã triển khai. Kích hoạt/trả phòng cần transaction liên module.
-        return new ContractDtos.Response(
-                contract.getId(),
-                contract.getCode(),
-                contract.getStudentId(),
-                contract.getApplicationId(),
-                contract.getStartDate(),
-                contract.getEndDate(),
-                contract.getStatus(),
-                contract.getActivationDeadline(),
-                contract.getDepositRequired(),
-                contract.getActivatedAt(),
-                contract.getStatusReason(),
-                detail ? List.of() : null,
-                detail ? historyService.list("CONTRACT", contract.getId()) : null);
-    }
+    /**
+     * Lấy hợp đồng PENDING hoặc ACTIVE của sinh viên đang đăng nhập.
+     *
+     * @return chi tiết hợp đồng hiện tại; null nếu chưa có hợp đồng phù hợp
+     */
+    ContractDtos.Response getMyCurrentContract();
 }

@@ -4,8 +4,8 @@ import org.springframework.stereotype.Service;
 
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
-import vn.edu.tlu.dms.common.service.AbstractCrudService;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.service.impl.AbstractCrudServiceImpl;
 import vn.edu.tlu.dms.room.api.RoomTypeRequest;
 import vn.edu.tlu.dms.room.api.RoomTypeResponse;
 import vn.edu.tlu.dms.room.domain.RoomType;
@@ -14,7 +14,7 @@ import vn.edu.tlu.dms.room.service.RoomTypeService;
 
 @Service
 public class RoomTypeServiceImpl
-        extends AbstractCrudService<RoomType, RoomTypeRequest, RoomTypeResponse>
+        extends AbstractCrudServiceImpl<RoomType, RoomTypeRequest, RoomTypeResponse>
         implements RoomTypeService {
 
     private final ScopeGuard guard;

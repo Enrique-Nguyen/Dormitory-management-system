@@ -48,6 +48,7 @@ Fixed constraints: React SPA + Spring Boot 3 (Java 17+) + PostgreSQL 15+; modula
 ### Backend
 
 - Root package `vn.edu.tlu.dms` (name is an assumption in the SAD). Modules: `common`, `account`, `room`, `billing`, `contract`, `registration`, `maintenance`, `notification`. Each has `api/` (controller + DTO records), `service/`, `domain/` (JPA entities, enums, events), `repository/`, `job/`.
+- **Service interfaces and implementations:** `service/*Service.java` declares methods only, with Vietnamese JavaDoc on every method. All logic and `@Service`/`@Transactional` annotations belong in `service/impl/*ServiceImpl.java`, implementing the corresponding interface. Inject interfaces, not implementation classes. Keep shared abstract implementation bases in `common/service/impl`. Service interfaces must not have default/static method bodies. ArchUnit checks this structure.
 - **Dependency order**, calls go downward only: `common → account → room → billing → contract → registration / maintenance → notification`. Call another module's public Service, never its Repository or tables. Entities do not leave their module (pass IDs or DTOs). Cross-module references are stored as plain ID columns, not `@ManyToOne`. Upward notification uses Spring events:
   - *State events* change business state and are handled synchronously in the same transaction (a listener failure rolls back the business operation).
   - *Notification events* use `@TransactionalEventListener(AFTER_COMMIT)` with `@Transactional(REQUIRES_NEW)`, and failures are only logged.
