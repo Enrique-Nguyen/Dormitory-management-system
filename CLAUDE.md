@@ -81,6 +81,13 @@ The UI template (shell) is in place; module work only fills in pages:
 
 Docker Compose with three services: `nginx` (TLS, serves the built React app, proxies `/api` to the backend, so same origin and no CORS in production), `backend` (one instance), `postgres` 16. Volumes `pgdata` and `uploads` need backing up. JVM and containers use `Asia/Ho_Chi_Minh`; DB columns are `TIMESTAMPTZ`. Secrets come from environment variables; `.env` is never committed.
 
+## Git workflow (README "Quy ước làm việc")
+
+- `main` = stable (submission/demo), `develop` = integration. Both protected: PR only, 1 approval, green CI.
+- Work branches come from the latest `develop`: `<type>/<module>-<task>`, lowercase, no diacritics, kebab-case. Types: `feature`, `fix`, `refactor`, `test`, `docs`, `chore`, `hotfix` (from `main`). Module: a backend module name, `frontend-core`, or `shared`. Never name branches after people.
+- Commits and PR titles: `<type>(<module>): <description>` with `feat` for `feature`, e.g. `feat(room): thêm API chiếm giường`.
+- PRs into `develop` are squash-merged; `develop` → `main` uses a merge commit; a hotfix merged into `main` is merged back into `develop`.
+
 ## Rules that span the whole design
 
 These are easy to violate if you only read one file:
