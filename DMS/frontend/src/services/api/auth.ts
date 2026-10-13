@@ -9,7 +9,11 @@ export async function getMe(): Promise<Me> {
 }
 
 export async function login(username: string, password: string): Promise<Me> {
-  return (await api.post<Me>('/auth/login', { username, password })).data
+  // Lấy token trước đăng nhập; Spring xoay token sau khi tạo phiên.
+  await api.get('/auth/csrf')
+  const me = (await api.post<Me>('/auth/login', { username, password })).data
+  await api.get('/auth/csrf')
+  return me
 }
 
 export async function logout(): Promise<void> {
@@ -19,5 +23,6 @@ export async function logout(): Promise<void> {
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   if (mockRole) return markMockPasswordChanged()
+  await api.get('/auth/csrf')
   await api.post('/auth/change-password', { currentPassword, newPassword })
 }

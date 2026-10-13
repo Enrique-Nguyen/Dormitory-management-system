@@ -1,0 +1,126 @@
+package vn.edu.tlu.dms.room.service.impl;
+
+import org.springframework.stereotype.Service;
+
+import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.security.Actor;
+import vn.edu.tlu.dms.common.security.CurrentUser;
+import vn.edu.tlu.dms.common.security.ScopeGuard;
+import vn.edu.tlu.dms.common.service.AbstractCrudService;
+import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.room.api.BuildingRequest;
+import vn.edu.tlu.dms.room.api.BuildingResponse;
+import vn.edu.tlu.dms.room.domain.Building;
+import vn.edu.tlu.dms.room.repository.BuildingRepository;
+import vn.edu.tlu.dms.room.service.BuildingService;
+
+import java.util.List;
+
+@Service
+public class BuildingServiceImpl
+        extends AbstractCrudService<Building, BuildingRequest, BuildingResponse>
+        implements BuildingService {
+
+    private final ScopeGuard guard;
+
+    private final CurrentUser currentUser;
+
+    private final AccountReferenceService references;
+
+    public BuildingServiceImpl(
+            BuildingRepository repository,
+            ScopeGuard guard,
+            CurrentUser currentUser,
+            AuditService auditService,
+            AccountReferenceService references) {
+        super(repository, auditService, currentUser);
+        this.guard = guard;
+        this.currentUser = currentUser;
+        this.references = references;
+    }
+
+    @Override
+    protected void checkRead() {
+        guard.requireRole("STUDENT", "STAFF", "TECHNICIAN", "ADMIN");
+    }
+
+    @Override
+    protected void checkWrite() {
+        guard.requireRole("ADMIN");
+    }
+
+    @Override
+    protected Building newEntity() {
+        return new Building();
+    }
+
+    @Override
+    protected void apply(Building entity, BuildingRequest input, boolean creating) {
+        if (creating) {
+            requireValue(input.managementUnitId(), "managementUnitId");
+        }
+        if (input.managementUnitId() != null) {
+            entity.setManagementUnitId(input.managementUnitId());
+        }
+        if (creating) {
+            requireValue(input.code(), "code");
+        }
+        if (input.code() != null) {
+            entity.setCode(trimRequiredText(input.code(), "code"));
+        }
+        if (creating) {
+            requireValue(input.name(), "name");
+        }
+        if (input.name() != null) {
+            entity.setName(trimRequiredText(input.name(), "name"));
+        }
+        if (creating) {
+            requireValue(input.depositAmount(), "depositAmount");
+        }
+        if (input.depositAmount() != null) {
+            entity.setDepositAmount(input.depositAmount());
+        }
+        references.requireUnit(entity.getManagementUnitId());
+    }
+
+    @Override
+    public List<BuildingResponse> getAll() {
+        checkRead();
+        Actor actor = currentUser.get();
+        if (actor.is("STAFF") && !actor.crossUnitAccess() || actor.is("TECHNICIAN")) {
+            return ((BuildingRepository) repository)
+                            .findAll(
+                                    (r, q, b) -> b.equal(r.get("managementUnitId"), actor.unitId()))
+                            .stream()
+                            .map(this::toResponse)
+                            .toList();
+        }
+        return super.getAll();
+    }
+
+    @Override
+    public BuildingResponse getById(Long id) {
+        checkRead();
+        var entity = findEntityById(id);
+        Actor actor = currentUser.get();
+        if (actor.is("STAFF") || actor.is("TECHNICIAN")) {
+            guard.requireReadableUnit(entity.getManagementUnitId());
+        }
+        return toResponse(entity);
+    }
+
+    @Override
+    protected BuildingResponse toResponse(Building entity) {
+        return new BuildingResponse(
+                entity.getId(),
+                entity.getManagementUnitId(),
+                entity.getCode(),
+                entity.getName(),
+                entity.getDepositAmount());
+    }
+
+    @Override
+    protected Long getEntityId(Building entity) {
+        return entity.getId();
+    }
+}

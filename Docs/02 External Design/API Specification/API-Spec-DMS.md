@@ -1,6 +1,6 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.2**, 10/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.4**, 13/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.6 (mục 3, 6.2, 10), `SAD-DMS.md` v1.0, `DB-Design-DMS.md` v0.3, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
@@ -10,10 +10,18 @@
 |---|---|---|
 | 0.1 | 10/10/2026 | Bản đầu tiên: quy ước chung, danh mục endpoint theo 7 module, schema cho các nghiệp vụ chính, danh mục `errorCode`, `allowedActions`, định dạng file import |
 | 0.2 | 10/10/2026 | Theo thẩm định: Staff tạo ticket của phòng (`roomId`); xem trước trả phòng cảnh báo ticket chưa kết luận chi phí; xem trước điện nước trả phòng thiếu trưởng phòng và thiếu chỉ số; một thông báo `ROOM` cho mỗi hóa đơn điện nước; tổng hóa đơn không âm sau điều chỉnh; quy ước tên hành động không đổi trạng thái; `link` của thông báo do backend suy ra; chốt Q-API-01..07; trừ cọc chia cho người Staff chọn (`chargedStudentIds`, endpoint `chargeable-students`) |
+| 0.3 | 13/10/2026 | Bổ sung GET chi tiết/DELETE danh mục và DELETE phòng/giường chưa có lịch sử cho khung CRUD; ghi rõ giới hạn triển khai và dẫn README backend |
+| 0.4 | 13/10/2026 | Chốt phạm vi khung CRUD BE + React; bổ sung hồ sơ sinh viên, hợp đồng/hóa đơn chờ, yêu cầu/lựa chọn chờ, chỉ số, sửa/xóa thông báo và các ngoại lệ chỉ đọc |
 
 ---
 
 ## 1. Phạm vi và cách đọc
+
+Bổ sung triển khai 13/10/2026: khung backend trên nhánh `develop-quyennnv` có thêm GET chi tiết và DELETE cho danh mục `management-units`, `buildings`, `room-types`, `semesters`, `priority-categories`; đọc dùng `/api/<resource>/{id}`, xóa dùng cùng đường dẫn ghi của POST/PATCH. DELETE chỉ áp dụng dữ liệu chưa bị tham chiếu; FK từ chối thì trả 409 `CONCURRENT_UPDATE`.
+
+Có thêm DELETE `/api/rooms/{id}` và `/api/beds/{id}` cho dữ liệu chưa từng có phân phòng. Phòng/giường đã có lịch sử không được xóa, trả 409 `ROOM_OCCUPIED` hoặc `BED_OCCUPIED`. Thay đổi này phục vụ khung CRUD. Hợp đồng/hóa đơn chỉ ghi/xóa hồ sơ chờ chưa phát sinh theo mục 1.1; sổ cọc luôn chỉ đọc.
+
+Danh sách endpoint và mức hoàn thiện thực tế của khung: [README backend](../../../DMS/backend/README.md). Các mục còn lại trong tài liệu này là hợp đồng API đích của toàn bộ MVP, không đồng nghĩa mọi endpoint đã được triển khai.
 
 Tài liệu đặc tả giao diện REST giữa frontend React và backend Spring Boot. Nó là hợp đồng giữa hai phía: frontend chỉ dựa vào những gì ghi ở đây, backend không đổi tên trường, mã lỗi hay hành vi mà không cập nhật tài liệu.
 
@@ -26,6 +34,29 @@ Tài liệu đặc tả giao diện REST giữa frontend React và backend Sprin
 Ký hiệu vai trò: **S** Student, **St** Staff, **T** Technician, **A** Admin, **\*** mọi người đã đăng nhập.
 
 Sau khi bản này được duyệt, backend sinh tài liệu OpenAPI tự động bằng springdoc (`/v3/api-docs`, chỉ bật ở profile `dev`). Khi hai nguồn lệch nhau, **tài liệu này là chuẩn** và phải sửa code hoặc sửa tài liệu cho khớp.
+
+---
+
+
+### 1.1. Bổ sung cho khung CRUD (13/10/2026)
+
+Theo phạm vi người dùng chốt, bước này chỉ dựng CRUD và giao diện React đơn giản. Các endpoint dưới đây bổ sung cho khung, không tự thực hiện những luồng nghiệp vụ của MVP mô tả ở các mục sau. Quyền từ phiên, phạm vi đơn vị và FK vẫn được kiểm tra phía backend.
+
+- Sinh viên: GET danh sách/chi tiết `/api/students` hoặc `/api/admin/students`; PATCH `/{id}` theo quyền. Admin POST `/api/admin/students` để thêm từng hồ sơ, DELETE `/{id}` khi chưa có dữ liệu liên quan. Tạo trả mật khẩu tạm một lần; chưa import Excel. Staff có POST `/api/students/{id}/reset-password` trong phạm vi.
+- Giường: PATCH `/api/beds/{id}` sửa `code`. Đợt đăng ký: DELETE `/api/registration-periods/{id}` chỉ khi chưa mở/chưa có đơn; GET `/api/me/registration-periods/open` cho form sinh viên.
+- Hợp đồng: POST `/api/contracts` nhận `applicationId`, `startDate`, `endDate`. Tạo PENDING từ đơn APPROVED, chưa phân giường hay thu cọc. PATCH `/{id}` chỉ sửa ngày; DELETE `/{id}` chỉ khi PENDING chưa có phân phòng, tiền cọc hoặc lịch sử. Không nhận trạng thái từ client.
+- Gia hạn/chuyển phòng: GET danh sách/chi tiết, POST, PATCH, DELETE `/api/extension-requests` và `/api/transfer-requests`. Gia hạn nhận `contractId`, `newEndDate`, `reason`; chuyển phòng nhận `contractId`, `reason`. Chỉ sinh viên sở hữu CRUD yêu cầu PENDING; PATCH không đổi hợp đồng nguồn. Staff chỉ đọc. Chưa xét duyệt hay chuyển giường.
+- Lựa chọn hè: GET danh sách/chi tiết, POST, PATCH, DELETE `/api/summer-choices`. Nhận `contractId`, `semesterId`, `choice` (STAY/TEMP_LEAVE/LEAVE); chỉ sinh viên sở hữu CRUD PENDING. PATCH không đổi hợp đồng/học kỳ nguồn. Chưa cập nhật chỗ ở/hợp đồng.
+- Chỉ số: GET danh sách/chi tiết, POST, PATCH, DELETE `/api/utility-readings`. Form nhận `roomId`, `meterType`, `billingMonth`, `startReading`, `endReading`. Ngày kỳ là ngày đầu tháng; tiêu thụ do CSDL sinh. Chỉ số đã dùng trong hóa đơn hoặc có kỳ sau bị khóa sửa/xóa; PATCH không đổi phòng/loại/kỳ.
+- Đơn giá: thêm PATCH và DELETE `/api/utility-rates/{id}` cho bản tương lai do chính Staff tạo. Giá đã có hiệu lực được giữ nguyên.
+- Hóa đơn: POST `/api/invoices` nhận `type`, `totalAmount`, `dueDate` và `studentId`/`semesterId` cho ROOM_FEE hoặc `roomId`/`billingMonth` cho UTILITY. Tạo hồ sơ UNPAID, chưa có dòng chi tiết/tự tính tiền. PATCH `/{id}` chỉ sửa tổng tiền/hạn đóng; DELETE `/{id}` chỉ khi chưa có dòng hoặc lịch sử và chưa thanh toán. Đây là hồ sơ khung; chưa triển khai phát hành theo mục 4 của MVP.
+- Sửa chữa: PATCH `/api/maintenance-requests/{id}` sửa `category`, `severity`, `description` khi OPEN và là người tạo. DELETE cùng đường dẫn chuyển CANCELLED, giữ ảnh/lịch sử. Các endpoint xử lý có sẵn được giữ lại, UI bước này chỉ cung cấp CRUD.
+- Thông báo: GET `/api/notifications/published` và `/{id}` để quản lý thông báo đã đăng; PATCH/DELETE `/api/notifications/{id}` cho thông báo thủ công của mình. PATCH sửa tiêu đề/nội dung, giữ phạm vi. POST giữ đường dẫn có sẵn. Hộp thư GET `/api/notifications` hỗ trợ `q`.
+- Chỉ đọc: GET `/api/admin/audit-logs`, `/api/deposits`, `/api/me/deposits`, `/api/contracts/{id}/deposit`, `/api/storage-records`, `/api/me/storage-records`, `/api/me/room`. Không thêm nút ghi/xóa sổ tài chính, audit hay lịch sử.
+
+Danh sách nghiệp vụ hỗ trợ `q`, `page`, `size`, lọc phạm vi trước khi đếm/phân trang; danh mục trả mảng được tìm kiếm/phân trang trên React. PATCH giữ nguyên trường không gửi/null; không hỗ trợ xóa giá trị bằng null. Field ngoài danh sách server cho phép trả 400 VALIDATION_ERROR. Các điều kiện đang sử dụng/hết quyền sửa trả 409 như RESOURCE_IN_USE, INVALID_STATE_TRANSITION, READING_LOCKED, READING_HAS_FOLLOWING_MONTH, RATE_ALREADY_EFFECTIVE; lịch sử không bị xóa để vượt kiểm tra.
+
+Màn hồ sơ cá nhân/cấu hình chỉ sửa; tài khoản cán bộ dùng khóa, đơn đăng ký/ticket dùng hủy. Các nút React phụ thuộc vai trò và trạng thái; backend vẫn là nơi quyết định cuối. Hướng dẫn: [README backend](../../../DMS/backend/README.md) và [README frontend](../../../DMS/frontend/README.md).
 
 ---
 

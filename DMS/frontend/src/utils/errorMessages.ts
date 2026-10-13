@@ -12,10 +12,30 @@ const messages: Record<string, (d: Details) => string> = {
   UNAUTHENTICATED: () => 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
   FORBIDDEN: () => 'Bạn không có quyền thực hiện thao tác này.',
   NOT_FOUND: () => 'Không tìm thấy dữ liệu hoặc bạn không có quyền xem.',
-  INVALID_STATE_TRANSITION: () => 'Thao tác không còn hợp lệ vì trạng thái đã thay đổi. Trang đã được tải lại.',
-  CONCURRENT_UPDATE: () => 'Dữ liệu vừa được người khác thay đổi. Vui lòng thử lại.',
-  FILE_TOO_LARGE: (d) => `File vượt quá ${d.maxMb ?? ''} MB. Vui lòng chọn file nhỏ hơn.`,
-  INTERNAL_ERROR: (d) => `Hệ thống gặp lỗi. Vui lòng thử lại sau (mã yêu cầu: ${d.requestId ?? 'không có'}).`,
+  VALIDATION_FAILED: () =>
+    'Dữ liệu chưa hợp lệ. Kiểm tra các trường trong biểu mẫu.',
+  RESOURCE_IN_USE: () =>
+    'Dữ liệu đã có lịch sử hoặc đang được sử dụng, không thể sửa/xóa trực tiếp.',
+  ROOM_OCCUPIED: () =>
+    'Phòng đang có người ở hoặc giữ chỗ, không thể thực hiện thao tác này.',
+  BED_OCCUPIED: () => 'Giường đang được sử dụng hoặc giữ chỗ.',
+  ROOM_CODE_EXISTS: () => 'Mã phòng đã tồn tại trong tòa nhà.',
+  SEMESTER_OVERLAP: () => 'Thời gian học kỳ trùng với học kỳ đã có.',
+  RATE_ALREADY_EFFECTIVE: () => 'Đơn giá đã có hiệu lực. Hãy thêm bản giá mới.',
+  READING_LOCKED: () => 'Chỉ số đã được đưa vào hóa đơn, không thể sửa/xóa.',
+  READING_HAS_FOLLOWING_MONTH: () =>
+    'Tháng sau đã có chỉ số, không thể thay đổi tháng trước.',
+  READING_INVALID: () => 'Chỉ số cuối phải lớn hơn hoặc bằng chỉ số đầu.',
+  DUPLICATE_INVOICE: () => 'Sinh viên/phòng đã có hóa đơn của kỳ này.',
+  CONTRACT_EXISTS: () => 'Sinh viên đã có hợp đồng đang chờ hoặc đang ở.',
+  INVALID_STATE_TRANSITION: () =>
+    'Thao tác không còn hợp lệ vì trạng thái đã thay đổi. Trang đã được tải lại.',
+  CONCURRENT_UPDATE: () =>
+    'Dữ liệu vừa được người khác thay đổi. Vui lòng thử lại.',
+  FILE_TOO_LARGE: (d) =>
+    `File vượt quá ${d.maxMb ?? ''} MB. Vui lòng chọn file nhỏ hơn.`,
+  INTERNAL_ERROR: (d) =>
+    `Hệ thống gặp lỗi. Vui lòng thử lại sau (mã yêu cầu: ${d.requestId ?? 'không có'}).`,
 
   // 5.2 Tài khoản
   INVALID_CREDENTIALS: (d) =>
@@ -24,15 +44,21 @@ const messages: Record<string, (d: Details) => string> = {
       : 'Tên đăng nhập hoặc mật khẩu không đúng.',
   ACCOUNT_TEMP_LOCKED: (d) =>
     `Tài khoản tạm khóa${d.lockedUntil ? ` đến ${formatDateTime(String(d.lockedUntil))}` : ' 15 phút'} do nhập sai nhiều lần. Vui lòng thử lại sau.`,
-  ACCOUNT_LOCKED: () => 'Tài khoản đã bị khóa. Liên hệ quản trị viên để được mở khóa.',
+  ACCOUNT_LOCKED: () =>
+    'Tài khoản đã bị khóa. Liên hệ quản trị viên để được mở khóa.',
   PASSWORD_CHANGE_REQUIRED: () => 'Bạn cần đổi mật khẩu trước khi tiếp tục.',
-  WRONG_CURRENT_PASSWORD: () => 'Mật khẩu hiện tại không đúng. Vui lòng nhập lại.',
-  PASSWORD_POLICY: () => 'Mật khẩu mới phải có 8–64 ký tự, gồm cả chữ và số, và khác mật khẩu cũ.',
-  USERNAME_EXISTS: (d) => `Tên đăng nhập ${d.username ?? ''} đã tồn tại. Vui lòng chọn tên khác.`,
+  WRONG_CURRENT_PASSWORD: () =>
+    'Mật khẩu hiện tại không đúng. Vui lòng nhập lại.',
+  PASSWORD_POLICY: () =>
+    'Mật khẩu mới phải có 8–64 ký tự, gồm cả chữ và số, và khác mật khẩu cũ.',
+  USERNAME_EXISTS: (d) =>
+    `Tên đăng nhập ${d.username ?? ''} đã tồn tại. Vui lòng chọn tên khác.`,
 
   // 5.3 Phòng, giường
-  BED_TAKEN: (d) => `Giường ${d.bedCode ?? ''} vừa được phân cho sinh viên khác. Vui lòng chọn giường khác.`,
-  BED_NOT_AVAILABLE: (d) => `Giường ${d.bedCode ?? ''} hoặc phòng đang không hoạt động. Vui lòng chọn giường khác.`,
+  BED_TAKEN: (d) =>
+    `Giường ${d.bedCode ?? ''} vừa được phân cho sinh viên khác. Vui lòng chọn giường khác.`,
+  BED_NOT_AVAILABLE: (d) =>
+    `Giường ${d.bedCode ?? ''} hoặc phòng đang không hoạt động. Vui lòng chọn giường khác.`,
 }
 
 export function errorMessage(error: unknown): string {
@@ -54,5 +80,7 @@ export function errorMessage(error: unknown): string {
 
 /** Mã lỗi của response (nếu có), để rẽ nhánh xử lý ngoài việc hiện câu thông báo. */
 export function errorCodeOf(error: unknown): string | undefined {
-  return axios.isAxiosError<ApiError>(error) ? error.response?.data?.errorCode : undefined
+  return axios.isAxiosError<ApiError>(error)
+    ? error.response?.data?.errorCode
+    : undefined
 }

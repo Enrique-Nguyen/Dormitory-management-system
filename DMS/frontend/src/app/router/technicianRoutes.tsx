@@ -1,7 +1,6 @@
 import type { RouteObject } from 'react-router'
 import { Navigate } from 'react-router'
-import PlaceholderPage from '../../pages/PlaceholderPage'
-import TechnicianHomePage from '../../pages/technician/TechnicianHomePage'
+import CrudPage from '../../pages/CrudPage'
 import RequireRole from '../guards/RequireRole'
 import TechnicianLayout from '../layouts/TechnicianLayout'
 
@@ -14,9 +13,9 @@ export const technicianRoutes: RouteObject = {
       element: <TechnicianLayout />,
       children: [
         { index: true, element: <Navigate to="tasks" replace /> },
-        { path: 'tasks', element: <TechnicianHomePage /> },
-        { path: 'tasks/:id', element: <PlaceholderPage title="Chi tiết công việc" owner="TV4" spec="UI mục 22" /> },
-        { path: 'notifications', element: <PlaceholderPage title="Thông báo" owner="TV4" spec="UI mục 4.3, 24" /> },
+        { path: 'tasks', element: <CrudPage resource="maintenance" /> },
+        { path: 'tasks/:id', element: <CrudPage resource="maintenance" /> },
+        { path: 'notifications', element: <CrudPage resource="inbox" /> },
       ],
     },
   ],

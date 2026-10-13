@@ -1,6 +1,3 @@
-import PlaceholderPage from '../PlaceholderPage'
+import CrudHomePage from '../CrudHomePage'
 
-// TODO(TV5): thay bằng màn thật
-export default function StaffHomePage() {
-  return <PlaceholderPage title="Dashboard" owner="TV5" spec="UI mục 12; FR-NOT-06" />
-}
+export default CrudHomePage

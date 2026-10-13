@@ -36,7 +36,12 @@ export interface NavGroup {
   items: NavItem[]
 }
 
-const item = (label: string, path: string, icon?: ComponentType): NavItem => ({ key: path, label, path, icon })
+const item = (label: string, path: string, icon?: ComponentType): NavItem => ({
+  key: path,
+  label,
+  path,
+  icon,
+})
 
 /** Trang chủ của từng vai trò; route ngoài quyền chuyển về đây. */
 export const roleHome: Record<Role, string> = {
@@ -58,7 +63,10 @@ export const STAFF_REQUESTS_PATH = '/staff/requests'
 
 export const staffNav: NavGroup[] = [
   {
-    items: [item('Dashboard', '/staff/dashboard', DashboardOutlined), item('Yêu cầu chờ xử lý', STAFF_REQUESTS_PATH, ClockCircleOutlined)],
+    items: [
+      item('Dashboard', '/staff/dashboard', DashboardOutlined),
+      item('Yêu cầu chờ xử lý', STAFF_REQUESTS_PATH, ClockCircleOutlined),
+    ],
   },
   {
     title: 'Quản lý',
@@ -67,20 +75,25 @@ export const staffNav: NavGroup[] = [
       item('Phòng & Giường', '/staff/rooms', HomeOutlined),
       item('Sinh viên', '/staff/students', TeamOutlined),
       item('Hợp đồng', '/staff/contracts', SolutionOutlined),
-      item('Kỳ hè & Kho gửi đồ', '/staff/summer', InboxOutlined),
+      item('Kỳ hè', '/staff/summer', InboxOutlined),
+      item('Kho gửi đồ', '/staff/storage', InboxOutlined),
     ],
   },
   {
     title: 'Tài chính',
     items: [
       item('Điện nước', '/staff/utilities', ThunderboltOutlined),
+      item('Đơn giá điện nước', '/staff/utilities/prices', ThunderboltOutlined),
       item('Hóa đơn', '/staff/invoices', ReconciliationOutlined),
       item('Tiền cọc', '/staff/deposits', WalletOutlined),
     ],
   },
   {
     title: 'Vận hành',
-    items: [item('Sửa chữa', '/staff/maintenance', ToolOutlined), item('Thông báo', '/staff/notifications', BellOutlined)],
+    items: [
+      item('Sửa chữa', '/staff/maintenance', ToolOutlined),
+      item('Thông báo', '/staff/notifications', BellOutlined),
+    ],
   },
   {
     title: 'Hệ thống',
@@ -96,10 +109,12 @@ export const adminNav: NavGroup[] = [
   {
     items: [
       item('Tài khoản', '/admin/users', UserOutlined),
-      item('Import sinh viên', '/admin/import', UploadOutlined),
+      item('Sinh viên', '/admin/import', UploadOutlined),
       item('Đơn vị', '/admin/units', BankOutlined),
       item('Tòa nhà & mức cọc', '/admin/buildings', HomeOutlined),
       item('Quyền tổng hợp', '/admin/aggregate-permissions', SafetyOutlined),
+      item('Diện ưu tiên', '/admin/priority-categories', DatabaseOutlined),
+      item('Cấu hình', '/admin/configs', DatabaseOutlined),
       item('Nhật ký hệ thống', '/admin/audit-logs', AuditOutlined),
     ],
   },
@@ -119,19 +134,28 @@ export const studentBottomNav: NavItem[] = [
 export const studentMoreNav: NavItem[] = [
   item('Đơn đăng ký', '/student/applications', FileTextOutlined),
   item('Hợp đồng', '/student/contracts', SolutionOutlined),
-  item('Yêu cầu gia hạn / chuyển phòng', '/student/requests', ClockCircleOutlined),
+  item(
+    'Yêu cầu gia hạn / chuyển phòng',
+    '/student/requests',
+    ClockCircleOutlined,
+  ),
   item('Tiền cọc', '/student/deposit', WalletOutlined),
   item('Kỳ hè', '/student/summer', CalendarOutlined),
   item('Thông báo', '/student/notifications', BellOutlined),
   item('Hồ sơ', '/student/profile', UserOutlined),
 ]
 
-export const technicianNav: NavItem[] = [item('Việc của tôi', '/technician/tasks', ToolOutlined)]
+export const technicianNav: NavItem[] = [
+  item('Việc của tôi', '/technician/tasks', ToolOutlined),
+]
 
 export const CHANGE_PASSWORD_PATH = '/change-password'
 
 /** Chọn mục menu có path dài nhất khớp với đường dẫn hiện tại. */
-export function findActivePath(items: NavItem[], pathname: string): string | undefined {
+export function findActivePath(
+  items: NavItem[],
+  pathname: string,
+): string | undefined {
   return items
     .filter(({ path }) => pathname === path || pathname.startsWith(`${path}/`))
     .sort((a, b) => b.path.length - a.path.length)[0]?.path

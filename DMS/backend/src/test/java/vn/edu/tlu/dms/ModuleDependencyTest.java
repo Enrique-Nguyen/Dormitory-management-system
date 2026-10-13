@@ -7,6 +7,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,15 +18,19 @@ import java.util.List;
 @AnalyzeClasses(packages = "vn.edu.tlu.dms", importOptions = ImportOption.DoNotIncludeTests.class)
 class ModuleDependencyTest {
 
-    /** Thứ tự tầng từ thấp lên. Module chỉ được gọi module ở tầng thấp hơn; cùng tầng không gọi nhau. */
-    private static final List<List<String>> TIERS = List.of(
-        List.of("common"),
-        List.of("account"),
-        List.of("room"),
-        List.of("billing"),
-        List.of("contract"),
-        List.of("registration", "maintenance"),
-        List.of("notification"));
+    /**
+     * Thứ tự tầng từ thấp lên. Module chỉ được gọi module ở tầng thấp hơn; cùng tầng không gọi
+     * nhau.
+     */
+    private static final List<List<String>> TIERS =
+            List.of(
+                    List.of("common"),
+                    List.of("account"),
+                    List.of("room"),
+                    List.of("billing"),
+                    List.of("contract"),
+                    List.of("registration", "maintenance"),
+                    List.of("notification"));
 
     private static final List<String> MODULES = TIERS.stream().flatMap(List::stream).toList();
 
@@ -60,10 +65,18 @@ class ModuleDependencyTest {
                 if (forbidden.isEmpty()) {
                     continue;
                 }
-                rules.add(noClasses().that().resideInAPackage(pkg(module))
-                    .should().dependOnClassesThat().resideInAnyPackage(forbidden.toArray(String[]::new))
-                    .allowEmptyShould(true)
-                    .because("SAD 4.2: " + module + " chỉ được gọi module ở tầng thấp hơn"));
+                rules.add(
+                        noClasses()
+                                .that()
+                                .resideInAPackage(pkg(module))
+                                .should()
+                                .dependOnClassesThat()
+                                .resideInAnyPackage(forbidden.toArray(String[]::new))
+                                .allowEmptyShould(true)
+                                .because(
+                                        "SAD 4.2: "
+                                                + module
+                                                + " chỉ được gọi module ở tầng thấp hơn"));
             }
         }
         return rules;
@@ -72,10 +85,20 @@ class ModuleDependencyTest {
     private static List<ArchRule> foreignLayer(String layer) {
         List<ArchRule> rules = new ArrayList<>();
         for (String module : MODULES) {
-            rules.add(noClasses().that().resideOutsideOfPackage(pkg(module))
-                .should().dependOnClassesThat().resideInAPackage("vn.edu.tlu.dms." + module + "." + layer + "..")
-                .allowEmptyShould(true)
-                .because("SAD 4.2: không dùng " + layer + " của module " + module + " từ module khác"));
+            rules.add(
+                    noClasses()
+                            .that()
+                            .resideOutsideOfPackage(pkg(module))
+                            .should()
+                            .dependOnClassesThat()
+                            .resideInAPackage("vn.edu.tlu.dms." + module + "." + layer + "..")
+                            .allowEmptyShould(true)
+                            .because(
+                                    "SAD 4.2: không dùng "
+                                            + layer
+                                            + " của module "
+                                            + module
+                                            + " từ module khác"));
         }
         return rules;
     }
