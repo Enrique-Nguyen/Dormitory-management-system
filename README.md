@@ -79,8 +79,32 @@ Trong mỗi module: `api/` (controller + DTO), `service/`, `domain/`, `repositor
 
 ## Quy ước làm việc
 
-- Nhánh `main` được bảo vệ: chỉ nhận thay đổi qua Pull Request, cần 1 người duyệt và CI xanh.
-- Tên nhánh: `feature/<module>-<viec>`, `fix/<module>-<loi>`, `docs/<tai-lieu>`. Ví dụ `feature/room-bed-occupancy`.
-- Commit ngắn, tiếng Việt hoặc tiếng Anh đều được, bắt đầu bằng phạm vi: `room: thêm BedOccupancyService.occupy`.
+### Nhánh
+
+| Nhánh | Vai trò | Nhận thay đổi từ |
+|---|---|---|
+| `main` | Bản ổn định, dùng để nộp và demo | PR từ `develop` khi xong một mốc, hoặc PR từ `hotfix/...` |
+| `develop` | Nhánh tích hợp hằng ngày, mọi nhánh việc tách từ đây | PR từ nhánh việc |
+| `<loai>/<module>-<viec>` | Một việc của một người | Tách từ `develop` mới nhất |
+
+- `main` và `develop` đều được bảo vệ: không push thẳng, chỉ nhận qua Pull Request, cần 1 người duyệt và CI xanh.
+- Tên nhánh việc: `<loai>/<module>-<viec>`, chữ thường, không dấu, các từ nối bằng `-`, tối đa khoảng 40 ký tự.
+  - `<loai>`: `feature` (chức năng mới), `fix` (sửa lỗi), `refactor` (sửa cấu trúc, không đổi hành vi), `test` (chỉ thêm hoặc sửa test), `docs` (tài liệu trong `Docs/`, README), `chore` (cấu hình, CI, thư viện), `hotfix` (sửa gấp trên `main`).
+  - `<module>`: `common`, `account`, `room`, `registration`, `contract`, `maintenance`, `billing`, `notification`; `frontend-core` cho layout, router, theme dùng chung của frontend; `shared` cho việc chạm nhiều module.
+  - Ví dụ: `feature/room-bed-occupancy` (TV2), `feature/contract-transfer-room` (TV2), `feature/contract-checkout` (TV4), `fix/billing-electric-rounding` (TV5), `docs/shared-git-conventions`.
+  - Không đặt nhánh theo tên người (`develop-ten`): nhiều người cùng module thì phân biệt bằng phần `<viec>`.
+- Mỗi nhánh một việc, sống ngắn (vài ngày). Trước khi mở PR, cập nhật từ `develop`: `git pull --rebase origin develop` nếu nhánh chỉ mình làm, `git merge origin/develop` nếu nhiều người cùng làm.
+- PR vào `develop` dùng **Squash and merge**, xóa nhánh sau khi merge. PR `develop` vào `main` dùng **Create a merge commit** (không squash, để hai nhánh không lệch lịch sử).
+- `hotfix/...` tách từ `main`, PR vào `main`, sau đó mở thêm PR `main` vào `develop` để `develop` có bản sửa.
+
+### Commit
+
+- Dạng `<loai>(<module>): <mô tả>`, mô tả ngắn, tiếng Việt hoặc tiếng Anh đều được, không chấm cuối câu.
+- `<loai>`: `feat`, `fix`, `refactor`, `test`, `docs`, `chore` (giống loại nhánh, `feature` viết là `feat`).
+- Ví dụ: `feat(room): thêm API chiếm giường`, `fix(billing): sửa làm tròn tiền điện`, `docs(shared): cập nhật quy ước nhánh`.
+- Tiêu đề PR theo cùng dạng, vì khi squash nó thành commit trên `develop`.
+
+### Khác
+
 - Đổi API, CSDL hoặc quy tắc nghiệp vụ thì sửa tài liệu trong `Docs/` cùng PR. Thứ tự ưu tiên khi mâu thuẫn: SRS, rồi SAD / CSDL / API, rồi giao diện.
 - Không commit `.env`, mật khẩu, file trong `node_modules/`, `target/`, `dist/`.
