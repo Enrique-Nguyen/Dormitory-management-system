@@ -1,4 +1,4 @@
-package vn.edu.tlu.dms.common.service;
+package vn.edu.tlu.dms.common.service.impl;
 
 import jakarta.persistence.Table;
 
@@ -8,6 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
+import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.service.CrudService;
 
 import java.util.List;
 import java.util.Locale;
@@ -18,7 +20,7 @@ import java.util.Locale;
  * transaction; saveAndFlush làm lộ lỗi ràng buộc trước khi trả response.
  */
 @Transactional(readOnly = true)
-public abstract class AbstractCrudService<E, I, R> implements CrudService<I, R> {
+public abstract class AbstractCrudServiceImpl<E, I, R> implements CrudService<I, R> {
 
     protected final JpaRepository<E, Long> repository;
 
@@ -26,7 +28,7 @@ public abstract class AbstractCrudService<E, I, R> implements CrudService<I, R> 
 
     private final CurrentUser currentUser;
 
-    protected AbstractCrudService(
+    protected AbstractCrudServiceImpl(
             JpaRepository<E, Long> repository, AuditService auditService, CurrentUser currentUser) {
         this.repository = repository;
         this.auditService = auditService;

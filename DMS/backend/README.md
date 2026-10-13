@@ -4,7 +4,9 @@ Nhánh triển khai: `develop-quyennnv`. Backend giữ Spring Boot 3.5, Java 17+
 
 ## Cấu trúc và cách đọc mã
 
-Mỗi module có `domain` (entity), `repository`, `service` và `api` (Controller, request/response DTO). Danh mục dùng Service interface và implementation trong `service/impl`, tham khảo cách tách tầng của HR-V5. Service nghiệp vụ có transaction và Policy riêng; Controller chỉ nhận request, gọi Service và trả response.
+Mỗi module có `domain` (entity), `repository`, `service` và `api` (Controller, request/response DTO). Toàn bộ `service/<Tên>Service.java` là interface, chỉ khai báo chữ ký hàm và JavaDoc tiếng Việt. Logic nằm trong `service/impl/<Tên>ServiceImpl.java`, dùng `implements <Tên>Service`, constructor injection và `@Service`. Transaction đặt trên Impl; Controller và các module khác gọi qua interface. Các hàm overload cũng được triển khai trong Impl, không dùng `default` chứa thân hàm ở interface.
+
+Các lớp nền dùng chung nằm trong `common/service/impl`: `AbstractCrudServiceImpl` triển khai `CrudService`, `AbstractSqlCrudServiceImpl` chứa helper SQL cho các Impl của hồ sơ khung. Các kiểu record dữ liệu tham chiếu có thể khai báo trong interface, nhưng không chứa logic xử lý. Kiểm tra ArchUnit bảo vệ quy tắc interface/Impl cùng quy tắc phụ thuộc module.
 
 `common/dto` chứa kiểu trao đổi dùng chung. Không đặt DTO dùng chung trong `common/api`: kiểm tra ArchUnit không cho module khác sử dụng Controller/DTO của một module khác. `common/support/PageQuery` kiểm tra page, size và danh sách trường sắp xếp.
 

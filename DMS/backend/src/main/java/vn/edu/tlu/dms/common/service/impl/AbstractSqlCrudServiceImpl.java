@@ -1,9 +1,10 @@
-package vn.edu.tlu.dms.common.service;
+package vn.edu.tlu.dms.common.service.impl;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
+import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.support.SqlPage;
 
 import java.time.LocalDate;
@@ -21,7 +22,7 @@ import java.util.Set;
  * tên trường, ORDER BY hoặc SQL do client cung cấp vào truy vấn. Service module phải kiểm tra quyền
  * và trạng thái trước khi gọi thao tác ghi.
  */
-public abstract class SqlCrudService {
+public abstract class AbstractSqlCrudServiceImpl {
 
     protected final JdbcTemplate jdbc;
 
@@ -31,7 +32,7 @@ public abstract class SqlCrudService {
 
     protected final AuditService audit;
 
-    protected SqlCrudService(
+    protected AbstractSqlCrudServiceImpl(
             JdbcTemplate jdbc, SqlPage queries, CurrentUser current, AuditService audit) {
         this.jdbc = jdbc;
         this.queries = queries;

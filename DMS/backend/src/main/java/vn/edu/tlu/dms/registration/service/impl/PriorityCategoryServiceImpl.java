@@ -5,8 +5,8 @@ import org.springframework.stereotype.Service;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
-import vn.edu.tlu.dms.common.service.AbstractCrudService;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.service.impl.AbstractCrudServiceImpl;
 import vn.edu.tlu.dms.registration.api.PriorityCategoryRequest;
 import vn.edu.tlu.dms.registration.api.PriorityCategoryResponse;
 import vn.edu.tlu.dms.registration.domain.PriorityCategory;
@@ -17,7 +17,7 @@ import java.util.List;
 
 @Service
 public class PriorityCategoryServiceImpl
-        extends AbstractCrudService<
+        extends AbstractCrudServiceImpl<
                 PriorityCategory, PriorityCategoryRequest, PriorityCategoryResponse>
         implements PriorityCategoryService {
 

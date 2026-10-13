@@ -5,8 +5,8 @@ import org.springframework.stereotype.Service;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
-import vn.edu.tlu.dms.common.service.AbstractCrudService;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.service.impl.AbstractCrudServiceImpl;
 import vn.edu.tlu.dms.room.api.SemesterRequest;
 import vn.edu.tlu.dms.room.api.SemesterResponse;
 import vn.edu.tlu.dms.room.domain.Semester;
@@ -15,7 +15,7 @@ import vn.edu.tlu.dms.room.service.SemesterService;
 
 @Service
 public class SemesterServiceImpl
-        extends AbstractCrudService<Semester, SemesterRequest, SemesterResponse>
+        extends AbstractCrudServiceImpl<Semester, SemesterRequest, SemesterResponse>
         implements SemesterService {
 
     private final ScopeGuard guard;

@@ -19,15 +19,17 @@ Tài liệu triển khai, danh sách API thực tế, hướng dẫn chạy và 
 
 DTO dùng chung đặt trong `common/dto`, không đặt trong `common/api`; các module khác không sử dụng Controller/DTO của nhau. Entity không được trả trực tiếp ra API. Interface `ResidencyLookup` ở common do room triển khai, để account lấy cờ cư trú mà không tạo phụ thuộc ngược.
 
+Các file `service/*Service.java` chỉ là interface: mỗi hàm có chú thích tiếng Việt nêu mục đích, quyền và điều kiện quan trọng. Mọi thân hàm nằm trong `service/impl/*ServiceImpl.java` và triển khai interface tương ứng bằng `implements`. `@Service` và `@Transactional` đặt ở Impl, giữ nguyên transaction khi tách lớp. Controller/các Service khác được inject bằng interface; không inject trực tiếp Impl. Interface không có hàm `default` hoặc hàm static chứa logic.
+
 ## Cơ chế cần giữ khi mở rộng
 
-CRUD danh mục gồm `getAll`, `getById`, `create`, `update`, `deleteById`. `AbstractCrudService` thực hiện transaction, kiểm tra quyền qua hook bắt buộc, ghi audit và flush lỗi ràng buộc. Service cụ thể ánh xạ DTO và bổ sung kiểm tra nghiệp vụ; không dùng base này cho dữ liệu trạng thái hoặc giao dịch tài chính.
+CRUD danh mục gồm `getAll`, `getById`, `create`, `update`, `deleteById`. `common/service/impl/AbstractCrudServiceImpl` thực hiện transaction, kiểm tra quyền qua hook bắt buộc, ghi audit và flush lỗi ràng buộc. Service cụ thể ánh xạ DTO và bổ sung kiểm tra nghiệp vụ; không dùng base này cho dữ liệu trạng thái hoặc giao dịch tài chính.
 
 Các endpoint thao tác trạng thái gọi Policy sau khi khóa bản ghi. Trả 409 nếu hành động không còn hợp lệ; ghi lịch sử cùng transaction. Quyền tổng hợp không cho phép Staff ghi ngoài đơn vị mình, ngoại trừ phạm vi đợt đăng ký được API đặc tả.
 
 Khóa phòng/giường không thay thế khóa của nghiệp vụ phân giường tương lai. Khi thêm phân giường, kích hoạt, chuyển/trả phòng phải dùng cùng thứ tự khóa đã có trong SAD: giường → hồ sơ sinh viên → hợp đồng → hóa đơn. Các thao tác mở rộng phải recheck sau khi lấy khóa và ghi giá chụp trên lịch sử phân phòng.
 
-`SqlCrudService` là phần dùng chung cho một số hồ sơ khung: danh sách cột do server định nghĩa, giá trị dùng tham số SQL, không nhận tên bảng/cột tùy ý từ client. Mỗi Service vẫn kiểm tra quyền và điều kiện riêng trước khi ghi. `SqlPage` đếm tổng và phân trang sau khi áp dụng phạm vi. Hợp đồng/hóa đơn chỉ CRUD hồ sơ chờ chưa có dữ liệu phát sinh; sổ cọc, audit và lịch sử chỉ đọc. Các luồng chưa triển khai không được xuất hiện trong `allowedActions`.
+`common/service/impl/AbstractSqlCrudServiceImpl` là phần dùng chung cho một số hồ sơ khung: danh sách cột do server định nghĩa, giá trị dùng tham số SQL, không nhận tên bảng/cột tùy ý từ client. Mỗi Service vẫn kiểm tra quyền và điều kiện riêng trước khi ghi. `SqlPage` đếm tổng và phân trang sau khi áp dụng phạm vi. Hợp đồng/hóa đơn chỉ CRUD hồ sơ chờ chưa có dữ liệu phát sinh; sổ cọc, audit và lịch sử chỉ đọc. Các luồng chưa triển khai không được xuất hiện trong `allowedActions`.
 
 ## Khung React
 
