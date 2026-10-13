@@ -12,14 +12,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Import(TestcontainersConfiguration.class)
 class DmsApplicationTests {
 
-    @Autowired
-    JdbcTemplate jdbc;
+    @Autowired JdbcTemplate jdbc;
 
     @Test
     void contextLoadsAndFlywayCreatesSchema() {
-        Integer tables = jdbc.queryForObject(
-            "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'",
-            Integer.class);
+        Integer tables =
+                jdbc.queryForObject(
+                        "SELECT count(*) FROM information_schema.tables WHERE table_schema ="
+                                + " 'public' AND table_type = 'BASE TABLE'",
+                        Integer.class);
         // 33 bảng nghiệp vụ (CSDL v0.3) + 2 bảng Spring Session + flyway_schema_history
         assertThat(tables).isEqualTo(36);
     }

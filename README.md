@@ -1,5 +1,7 @@
 # DMS - Hệ thống quản lý ký túc xá mini
 
+Khung CRUD backend: xem [hướng dẫn chạy, API đã có và phần cần làm tiếp](DMS/backend/README.md).
+
 Đồ án môn Chuyên đề CNTT, lớp 65CNTT, nhóm 3. Tài liệu thiết kế ở `Docs/`, mã nguồn ở `DMS/`.
 
 | Thư mục | Nội dung |

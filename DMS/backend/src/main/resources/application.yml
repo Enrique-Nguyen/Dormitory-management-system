@@ -10,7 +10,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: validate          # Flyway sở hữu lược đồ (SAD 8.3); Hibernate chỉ kiểm tra khớp
+      ddl-auto: validate          # Flyway quản lý schema; Hibernate kiểm tra entity khớp migration
   flyway:
     locations: classpath:db/migration
   session:
@@ -23,6 +23,8 @@ spring:
       max-request-size: 20MB
   jackson:
     time-zone: Asia/Ho_Chi_Minh
+    deserialization:
+      fail-on-unknown-properties: true
 
 server:
   port: ${SERVER_PORT:8080}
@@ -40,3 +42,7 @@ management:
 
 dms:
   upload-dir: ${DMS_UPLOAD_DIR:./data/uploads}
+  bootstrap-admin:
+    enabled: ${DMS_BOOTSTRAP_ADMIN_ENABLED:false}
+    username: ${DMS_BOOTSTRAP_ADMIN_USERNAME:admin}
+    password: ${DMS_BOOTSTRAP_ADMIN_PASSWORD:}
