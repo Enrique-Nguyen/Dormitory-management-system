@@ -1,4 +1,4 @@
-import { WarningOutlined } from '@ant-design/icons'
+import { ArrowRightOutlined, CrownOutlined, WarningOutlined } from '@ant-design/icons'
 import { Card, Flex, Tag } from 'antd'
 import { Link } from 'react-router'
 import { bedOccupancy, bedOperation, roomOperation, type BedOccupancy } from '../../constants/statusConfig'
@@ -20,7 +20,7 @@ interface Props {
   to?: string
 }
 
-const dot: Record<BedOccupancy, string> = { OCCUPIED: '●', HELD: '◐', FREE: '○' }
+const dotSymbol: Record<BedOccupancy, string> = { OCCUPIED: '●', HELD: '◐', FREE: '○' }
 
 /** Thẻ phòng cho Card View của Staff (UI mục 15). Số liệu chiếm dụng tính từ `beds`, không nhận số đã tính sẵn. */
 export default function RoomCard({ code, typeLabel, operation = 'ACTIVE', beds, leaderName, to }: Props) {
@@ -38,27 +38,56 @@ export default function RoomCard({ code, typeLabel, operation = 'ACTIVE', beds, 
   const op = roomOperation[operation]
 
   return (
-    <Card size="small" title={code} extra={operation !== 'ACTIVE' && <Tag>{op.label}</Tag>}>
-      <div>{typeLabel}</div>
-      <div aria-label={summary} style={{ letterSpacing: 4, margin: '8px 0' }}>
+    <Card
+      size="small"
+      className="dms-room-card"
+      title={
+        <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-heading)' }}>
+          {code}
+        </span>
+      }
+      extra={operation !== 'ACTIVE' && <Tag color="warning">{op.label}</Tag>}
+    >
+      <div style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>{typeLabel}</div>
+      <div className="dms-bed-dots" aria-label={summary}>
         {beds.map((bed, i) => (
-          <span key={i} aria-hidden="true">
-            {bed.broken ? '✕' : dot[bed.occupancy]}
+          <span
+            key={i}
+            aria-hidden="true"
+            className={`dms-bed-dot ${
+              bed.broken
+                ? 'dms-bed-dot--broken'
+                : bed.occupancy === 'OCCUPIED'
+                  ? 'dms-bed-dot--occupied'
+                  : bed.occupancy === 'HELD'
+                    ? 'dms-bed-dot--held'
+                    : 'dms-bed-dot--free'
+            }`}
+          >
+            {bed.broken ? '✕' : dotSymbol[bed.occupancy]}
           </span>
         ))}
       </div>
-      <div style={{ fontSize: 12 }}>{summary}</div>
-      <Flex vertical gap={4} style={{ marginTop: 8 }}>
+      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{summary}</div>
+      <Flex vertical gap={6} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border-light)' }}>
         {leaderName ? (
-          <span>Trưởng phòng: {leaderName}</span>
+          <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <CrownOutlined style={{ color: '#D97706' }} />
+            <span>Trưởng phòng: <strong>{leaderName}</strong></span>
+          </div>
         ) : (
           occupied > 0 && (
-            <Tag icon={<WarningOutlined aria-hidden="true" />} variant="outlined" color="#B45309" style={{ background: '#fff' }}>
+            <Tag icon={<WarningOutlined aria-hidden="true" />} variant="outlined" color="#B45309" style={{ background: '#FFFBEB' }}>
               Chưa có trưởng phòng
             </Tag>
           )
         )}
-        {to && <Link to={to}>Chi tiết</Link>}
+        {to && (
+          <Link to={to} style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 500, color: 'var(--color-primary)' }}>
+            <span>Xem chi tiết</span>
+            <ArrowRightOutlined style={{ fontSize: 11 }} />
+          </Link>
+        )}
       </Flex>
     </Card>
   )

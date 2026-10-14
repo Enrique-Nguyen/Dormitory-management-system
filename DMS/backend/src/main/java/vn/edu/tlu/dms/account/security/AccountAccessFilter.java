@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import vn.edu.tlu.dms.common.dto.ApiError;
@@ -15,17 +16,9 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 
 import java.io.IOException;
-import java.util.Set;
 
-/** Đọc lại cờ tài khoản mỗi request để việc khóa/reset mật khẩu có hiệu lực với phiên đang mở. */
+/** Kiểm tra liên kết, khóa, vai trò và version DMS ngay cả khi JWT vẫn còn hạn. */
 public class AccountAccessFilter extends OncePerRequestFilter {
-
-    private static final Set<String> ALLOWED =
-            Set.of(
-                    "/api/auth/me",
-                    "/api/auth/change-password",
-                    "/api/auth/logout",
-                    "/api/auth/csrf");
 
     private final CurrentUser currentUser;
 
@@ -40,26 +33,23 @@ public class AccountAccessFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        String apiPath = request.getRequestURI().substring(request.getContextPath().length());
-        if (apiPath.startsWith("/api/")
-                && auth != null
-                && auth.getPrincipal() instanceof DmsPrincipal) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (request.getRequestURI().startsWith(request.getContextPath() + "/api/")
+                && authentication != null
+                && authentication.getPrincipal() instanceof Jwt) {
             try {
-                var actor = currentUser.get();
-                if (actor.mustChangePassword() && !ALLOWED.contains(apiPath)) {
-                    throw new BusinessException("PASSWORD_CHANGE_REQUIRED", 403);
-                }
-            } catch (BusinessException e) {
-                response.setStatus(e.getStatus());
+                currentUser.get();
+            } catch (BusinessException error) {
+                SecurityContextHolder.clearContext();
+                response.setStatus(error.getStatus());
                 response.setContentType("application/json");
                 response.setCharacterEncoding("UTF-8");
                 mapper.writeValue(
                         response.getWriter(),
                         new ApiError(
-                                e.getErrorCode(),
-                                e.getErrorCode(),
-                                e.getDetails(),
+                                error.getErrorCode(),
+                                error.getErrorCode(),
+                                error.getDetails(),
                                 (String) request.getAttribute("requestId")));
                 return;
             }

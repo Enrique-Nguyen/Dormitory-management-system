@@ -1,4 +1,4 @@
-# Khung CRUD backend DMS
+# Khung CRUD và đăng nhập backend DMS
 
 Nhánh triển khai: `develop-quyennnv`. Backend giữ Spring Boot 3.5, Java 17+, PostgreSQL 16, Flyway và `ddl-auto: validate`.
 
@@ -16,7 +16,7 @@ Tên hàm dùng tiếng Anh rõ nghĩa; JavaDoc và ghi chú quan trọng dùng 
 
 ## API đã có
 
-- Xác thực: CSRF, đăng nhập JSON, đăng xuất, người dùng hiện tại, đổi mật khẩu. Phiên lưu trong Spring Session JDBC; mật khẩu BCrypt, khóa tạm sau 5 lần sai, bắt đổi mật khẩu và khóa tài khoản có hiệu lực với phiên đang mở.
+- Xác thực mặc định: Keycloak OIDC/PKCE, Spring Security JWT Resource Server; /me trả hồ sơ DMS, logout thu hồi version. Mật khẩu/khóa tạm/đổi mật khẩu thuộc Keycloak. Subject, role, version và scope vẫn kiểm tra tại DMS.
 - Tài khoản: Admin quản lý tài khoản và sinh viên; sinh viên được thêm từng hồ sơ bằng form CRUD, trả mật khẩu tạm một lần. Staff tìm kiếm/đọc/sửa và reset mật khẩu sinh viên trong phạm vi mình. Import Excel chưa triển khai. Tài khoản cán bộ dùng khóa thay cho xóa; sinh viên chỉ xóa khi chưa có dữ liệu liên quan.
 - Hồ sơ: đọc và sửa các trường được phép của chính mình. Cấu hình hệ thống: Admin đọc và cập nhật các khóa hiện có.
 - Danh mục: đơn vị quản lý, tòa nhà, loại phòng, học kỳ, diện ưu tiên có tạo/đọc/PATCH/xóa. Request PATCH giữ nguyên trường không gửi hoặc gửi null; khung chưa hỗ trợ dùng null để xóa giá trị tùy chọn.
@@ -32,7 +32,7 @@ Tên hàm dùng tiếng Anh rõ nghĩa; JavaDoc và ghi chú quan trọng dùng 
 - Thông báo: CRUD thông báo thủ công của người tạo; sửa tiêu đề/nội dung giữ nguyên phạm vi. Hộp thư có tìm kiếm. Những endpoint đọc/đánh dấu đã đọc và listener có sẵn được giữ lại.
 - Tổng quan: tra cứu sổ cọc, giao dịch cọc, phiếu gửi đồ, phòng của sinh viên và audit log. Các trang này chỉ đọc.
 
-Các danh sách nghiệp vụ nhận `q`, `page`, `size` và lọc phạm vi trước khi phân trang. Danh mục nhỏ trả mảng; React tìm kiếm và phân trang trên mảng này. Giường có PATCH mã giường. Màn React dùng API thật, hướng dẫn ở [README frontend](../frontend/README.md).
+Các danh sách nghiệp vụ nhận `q`, `page`, `size` và lọc phạm vi trước khi phân trang. Danh mục nhỏ trả mảng; React tìm kiếm và phân trang trên mảng này. Giường có PATCH mã giường. Màn React dùng API thật, hướng dẫn chạy được gom vào [README chung](../../README.md).
 
 API giữ tiền tố `/api` và đường dẫn của API Spec; không sao chép `/save`, `/page`, UUID hoặc Keycloak của HR-V5.
 
@@ -58,18 +58,14 @@ Response nghiệp vụ hiện là DTO phục vụ khung: một số tham chiếu
 
 ## Chạy thử
 
-Khởi động PostgreSQL bằng `docker compose up -d` trong `DMS`. Trong terminal PowerShell chạy backend, có thể tạo Admin đầu tiên bằng biến môi trường:
+Xem [README chung](../../README.md). Windows local dùng start-local.ps1; máy khác dùng Compose và đặt secret backend từ môi trường. Không có tài khoản/mật khẩu mặc định trong Git.
 
-```powershell
-$env:DMS_BOOTSTRAP_ADMIN_ENABLED = 'true'
-$env:DMS_BOOTSTRAP_ADMIN_USERNAME = 'admin'
-$env:DMS_BOOTSTRAP_ADMIN_PASSWORD = '<mat-khau-co-chu-va-so-tu-8-64-ky-tu>'
-.\mvnw.cmd spring-boot:run
-```
+## Luồng đăng nhập Keycloak
 
-Mật khẩu bootstrap không có giá trị mặc định và không ghi log. Admin đầu tiên phải đổi mật khẩu. Sau lần tạo đầu, bỏ các biến bootstrap khỏi môi trường.
+SecurityConfig xác thực JWT (issuer/audience/chữ ký/expiry), CurrentUserImpl ghép subject bất biến vào app_user.keycloak_user_id và kiểm tra role/version/locked. V4 cho phép bỏ password_hash local khi chuyển tài khoản; giữ V1–V3. IdentityAccountService/Impl gọi Admin REST, có thao tác bù khi rollback và xóa sau commit; chưa có transaction phân tán/outbox retry bền vững. Quyền Staff reset và scope nghiệp vụ giữ nguyên.
 
-Đăng nhập từ SPA: GET `/api/auth/csrf`, gửi cookie `XSRF-TOKEN` trong header `X-XSRF-TOKEN` khi POST login, giữ cookie `SESSION`, rồi GET CSRF một lần nữa vì Spring xoay token sau đăng nhập. Frontend auth client đã được nối quy trình này.
+Luồng session/BCrypt cũ đã được bỏ; ứng dụng chỉ xác thực qua Keycloak. Keycloak đã cấp JWT có thể còn sống tối đa 5 phút sau thay đổi ngoài DMS; thao tác từ DMS thu hồi ngay bằng version.
+
 
 ## Kiểm tra
 
@@ -84,3 +80,10 @@ Test tích hợp mặc định dùng PostgreSQL Testcontainers và cần Docker.
 ```
 
 Không trỏ test vào CSDL đang sử dụng: test khởi động chạy migration và tạo dữ liệu mẫu. Các case CRUD thông thường có transaction rollback. Kiểm tra xóa/khóa, constraint, quyền, trạng thái và session nằm trong `CrudApiIntegrationTest`; mapping/schema trong `DmsApplicationTests`; phụ thuộc module trong `ModuleDependencyTest`.
+
+Kiểm chứng đăng nhập ngày 13/10/2026: `clean verify` đạt 38/38 test trên PostgreSQL kiểm thử riêng, gồm 14 case `AuthenticationSecurityIntegrationTest` cho CSRF/session thật, khóa đồng thời, đổi/reset mật khẩu, thu hồi phiên sau commit và phạm vi Staff. Frontend lint/build đạt. Chưa xác nhận thao tác UI trực tiếp vì công cụ trình duyệt báo `Unable to load browser request-header policy`.
+
+Kiểm chứng Keycloak ngày 14/10/2026: token thật đã gọi CRUD sinh viên và quản lý khóa/reset; UI đăng nhập được vào portal Admin. Kết quả test cuối được ghi trong README.md.
+
+
+Dọn cấu trúc: dùng lại AuthController, SecurityConfig và BootstrapAdmin; khóa/version/reset nằm trong AuthService/Impl, chuyển tài khoản nằm trong IdentityAccountService/Impl. Không tạo Controller/Config/Service song song cho cùng chức năng.

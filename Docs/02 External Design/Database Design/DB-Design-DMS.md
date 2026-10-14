@@ -1,18 +1,27 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.3**, 10/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.5 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
-> DDL đầy đủ: [`DB-DMS-schema.sql`](DB-DMS-schema.sql) (đã chạy thử trên PostgreSQL 16.15, xem mục 9)
+> **Phiên bản 0.5**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.7 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
+> DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm bổ sung `security_version`; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
 
 ---
+
+
+### Bổ sung Keycloak v0.5 — 14/10/2026
+
+Flyway V4 thêm `app_user.keycloak_user_id VARCHAR(255)` với unique index từng subject không null và cho phép `password_hash` null. Subject bất biến liên kết danh tính; username không làm khóa ghép tự động. Tài khoản Keycloak không lưu hash local; mật khẩu và SSO nằm trong database Keycloak riêng. ID hồ sơ DMS và khóa ngoại nghiệp vụ giữ nguyên.
+
+Version DMS tiếp tục tăng khi khóa/reset/thay đổi quyền/logout tại DMS và được đưa vào JWT qua mapper từ thuộc tính chỉ Admin được sửa. Principal JWT không ghi Spring Session. Các mô tả BCrypt/session v0.4 bên dưới thuộc chế độ legacy-session; không áp dụng đăng nhập mặc định. V1–V3 giữ nguyên.
+
+DB và Keycloak không có transaction phân tán; rollback dùng thao tác bù, xóa danh tính sau commit. Mất kết nối lúc bù cần đối soát. Không thay thế migration bằng chạy lại snapshot SQL.
 
 ## 1. Phạm vi và quy ước
 
 | Hạng mục | Lựa chọn | Ghi chú |
 |---|---|---|
 | DBMS | **PostgreSQL 16** | Theo SRS mục 2.5. Cần partial unique index, `EXCLUDE`, `JSONB`, generated column |
-| Migration | Flyway, `V1__init.sql` = file DDL này | Spring Boot chạy migration khi khởi động |
+| Migration | Flyway: V1 tạo nghiệp vụ, V2 tạo Spring Session, V3 thêm `security_version` | V1/V2 giữ nguyên; file DDL này là snapshot bảng nghiệp vụ hiện tại, Hibernate dùng `ddl-auto: validate` |
 | Đặt tên | `snake_case`, số ít (`room`, `bed`) | `app_user` thay cho `user` vì `user` là từ khóa |
 | Khóa chính | `BIGINT GENERATED ALWAYS AS IDENTITY` | Mã hiển thị (HD-2026-0012, TK-1024) là cột `code` riêng, `UNIQUE` |
 | Mã hiển thị | Sequence riêng mỗi loại + hàm `fn_next_code` | Xem Q-DB-10 |
@@ -21,7 +30,7 @@
 | Giá trị liệt kê | `VARCHAR` + `CHECK` | Map thẳng với `@Enumerated(EnumType.STRING)` của JPA (xem Q-DB-02) |
 | Dữ liệu suy ra | Không lưu, chỉ tính trong view | BR-08: số chỗ trống, số dư cọc, nhãn quá hạn… |
 | Xóa dữ liệu | Không xóa cứng dữ liệu đã phát sinh nghiệp vụ | Dùng trạng thái: `CLOSED`, `RETIRED`, `locked` |
-| Phiên đăng nhập | Spring Session JDBC (bảng `spring_session` do thư viện tạo) | Không vẽ trong ERD |
+| Phiên đăng nhập | Spring Session JDBC, bảng `spring_session` và `spring_session_attributes` tạo qua Flyway V2 | Không vẽ trong ERD; Spring không tự tạo lại schema phiên khi khởi động |
 
 **Quy mô ước tính** (~1.500 sinh viên, 1 năm): `room_assignment_history` vài nghìn dòng, `invoice` ~5.000 (3 học kỳ phí phòng + 12 tháng điện nước × ~300 phòng), `notification` vài chục nghìn. Index ở mục 6 là đủ, không cần partition.
 
@@ -138,9 +147,15 @@ erDiagram
 | Bảng | Mục đích | Ràng buộc chính | Truy vết |
 |---|---|---|---|
 | `management_unit` | Đơn vị quản lý: K1; N2 + N3 | `code` duy nhất | BR-07 |
-| `app_user` | Tài khoản mọi vai trò | Staff, KTV bắt buộc có đơn vị; Student, Admin không có. `cross_unit_access` chỉ cho Staff | FR-ACC-01..08 |
+| `app_user` | Tài khoản mọi vai trò | Staff, KTV bắt buộc có đơn vị; Student, Admin không có. `cross_unit_access` chỉ cho Staff; `security_version >= 0` | FR-ACC-01..08 |
 | `student_profile` | Hồ sơ sinh viên, 1-1 với `app_user` | Mọi bảng nghiệp vụ tham chiếu sinh viên qua đây (Q-DB-03) | FR-ACC-04, 05 |
 | `system_config` | Tham số cấu hình: 7 ngày kích hoạt, 15 ngày sắp hết hạn, 3 ngày tự đóng… | Khóa dạng `contract.activation_days` | SRS 2.6 |
+
+**Phiên bản bảo mật tài khoản (bản 0.4):** `app_user.security_version` có kiểu `BIGINT NOT NULL DEFAULT 0`, ràng buộc `ck_user_security_version CHECK (security_version >= 0)`. Flyway V3 bổ sung cột vào CSDL hiện có; snapshot SQL đưa cột trực tiếp vào `CREATE TABLE app_user`. Đây là số tăng khi thu hồi phiên, không phải cột khóa lạc quan `@Version`.
+
+Principal của phiên lưu ID tài khoản, vai trò và version lúc đăng nhập; `getName()` trả ID dạng chuỗi để lập `spring_session.principal_name`. Đổi/reset mật khẩu, khóa tài khoản hoặc đổi username/đơn vị/quyền liên đơn vị khóa hàng tài khoản, tăng version và lưu cùng transaction. Sau commit, dịch vụ dọn các session cũ theo ID, giữ các phiên đăng nhập mới có version hợp lệ. Request cũ lưu lại session hoặc việc dọn vật lý bị lỗi vẫn không qua được kiểm tra version trên request tiếp theo. Mở khóa không giảm version.
+
+Mật khẩu chỉ lưu hash BCrypt; mật khẩu tạm trả một lần, không ghi audit dạng rõ. Đổi mật khẩu yêu cầu đăng nhập lại; reset đặt `must_change_password = TRUE`, xóa `failed_login_count`/`locked_until` nhưng không tự mở khóa do Admin. Tài khoản bootstrap phải được bật cấu hình và cung cấp mật khẩu riêng; không có dữ liệu demo được tự nạp trong profile dev.
 
 ### 3.2. Phòng, giường, học kỳ
 
@@ -304,9 +319,12 @@ WHERE s.contract_status = 'ACTIVE' AND s.assignment_kind = 'STAY'
 
 Các thay đổi này đã được đưa vào SRS mục 5.1 (SRS v0.5).
 
+Bản 0.4 đồng bộ thêm `security_version` vào SRS v0.7 và migration V3; cấu trúc nghiệp vụ trước đó không đổi.
+
 | Thay đổi | Lý do |
 |---|---|
 | Tách `User` thành `app_user` + `student_profile` | Khóa ngoại tới `student_profile` đảm bảo `student_id` luôn là sinh viên; bảng tài khoản gọn hơn |
+| Thêm `app_user.security_version` | Thu hồi phiên khi mật khẩu/quyền thay đổi, kể cả session cũ được request đang chạy lưu lại |
 | Thêm `priority_category`, `application_priority` | SRS nói "trọng số cấu hình được" và "Staff xác nhận từng diện" nhưng chưa có bảng |
 | Thêm `registration_period_unit`, `registration_period.kind` | Đợt áp dụng cho một hoặc hai đơn vị; đợt hè khác đợt thường |
 | `MaintenanceStatusHistory` → `status_history` dùng chung | Đơn, hợp đồng, yêu cầu cũng cần timeline (UI mục 8, 11, 21) |
@@ -375,6 +393,8 @@ Kiểm thử thêm ở bản 0.2:
 
 Bản 0.3 (theo thẩm định Đặc tả API): thêm `CHECK (total_amount >= 0)` cho `invoice`; nạp lại DDL vào PostgreSQL 16 sạch: 33 bảng, 6 view, không lỗi, ràng buộc có trong `pg_constraint`.
 
+Bản 0.4 ngày 13/10/2026: bổ sung `security_version` và ràng buộc không âm trong migration V3 và snapshot. Kiểm chứng cần bao gồm migration từ V1/V2, đăng nhập nhiều phiên, đổi/reset/khóa tài khoản và request cũ lưu lại session; số lượng bảng/view nghiệp vụ giữ nguyên. Kết quả test ứng dụng được ghi riêng trong README backend sau khi chạy bộ kiểm thử.
+
 Kịch bản kiểm thử chưa đưa vào thư mục Database Design; có thể chuyển thành test tích hợp (Testcontainers) khi bắt đầu code.
 
 ---
@@ -392,3 +412,8 @@ Kịch bản kiểm thử chưa đưa vào thư mục Database Design; có thể
 | `Invoice` | Aggregate root: tạo hóa đơn cùng các `InvoiceItem` (`cascade = ALL`), tính `totalAmount` = tổng dòng rồi lưu trong **một** `@Transactional`. Sau khi đã thanh toán thì không sửa hóa đơn; điều chỉnh bằng dòng `ADJUSTMENT` ở hóa đơn kỳ sau (`adjusts_invoice_id`, FR-BIL-12) |
 | View (`v_current_stay`, `v_user_notification`…) | Entity chỉ đọc `@Immutable` + `@Subselect` / `@Table(name = "v_…")`, hoặc projection qua native query |
 | Ràng buộc → `errorCode` | Bắt `DataIntegrityViolationException`, đọc tên ràng buộc (mục 4) để trả mã lỗi tiếng Việt |
+
+Lịch sử v0.5: 14/10/2026 — thêm liên kết Keycloak, mật khẩu local nullable và database danh tính độc lập.
+
+
+Ghi chú dọn cấu trúc 14/10/2026: chỉ giữ Keycloak; dùng lại AuthController, SecurityConfig, BootstrapAdmin và AuthService/Impl. Không tạo lớp legacy hay Service chuyển đổi riêng. Migration đã áp dụng và các kiểm thử JWT/CRUD cần thiết được giữ. Hướng dẫn chạy gom vào README gốc.

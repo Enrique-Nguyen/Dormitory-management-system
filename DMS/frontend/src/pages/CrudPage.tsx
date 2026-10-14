@@ -244,6 +244,68 @@ export default function CrudPage({ resource }: { resource: string }) {
     await queryClient.invalidateQueries({ queryKey: ['crud-lookup'] })
     await queryClient.invalidateQueries({ queryKey: ['notifications'] })
   }
+  function canResetPassword(row: CrudRecord) {
+    return (
+      ['users', 'students', 'adminStudents'].includes(resource) &&
+      (role === 'ADMIN' || (role === 'STAFF' && resource === 'students')) &&
+      row.id !== me?.id
+    )
+  }
+  function showTemporaryPassword(result: unknown, username?: unknown) {
+    if (
+      !result ||
+      typeof result !== 'object' ||
+      !('temporaryPassword' in result)
+    )
+      return false
+    const password = (result as CrudRecord).temporaryPassword
+    if (typeof password !== 'string' || !password) return false
+    // Chỉ hiện trong hộp thoại này; không đưa mật khẩu tạm vào cache danh sách hoặc storage.
+    modal.info({
+      title: 'Mật khẩu tạm (hiển thị một lần)',
+      content: (
+        <>
+          {!!username && (
+            <Typography.Paragraph>
+              Tài khoản: {String(username)}
+            </Typography.Paragraph>
+          )}
+          <Typography.Paragraph copyable>{password}</Typography.Paragraph>
+          <Typography.Paragraph>
+            Cung cấp mật khẩu này cho đúng chủ tài khoản. Người dùng phải đổi
+            mật khẩu ở lần đăng nhập tiếp theo.
+          </Typography.Paragraph>
+        </>
+      ),
+      okText: 'Đã lưu mật khẩu tạm',
+    })
+    return true
+  }
+  function resetPassword(row: CrudRecord) {
+    modal.confirm({
+      title: `Đặt lại mật khẩu ${String(row.username ?? row.studentCode ?? row.fullName)}?`,
+      content:
+        'Các phiên đăng nhập cũ sẽ mất hiệu lực. Mật khẩu tạm chỉ hiển thị một lần và người dùng phải đổi mật khẩu khi đăng nhập lại.',
+      okText: 'Đặt lại mật khẩu',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          // Admin dùng API quản trị chung; Staff dùng API sinh viên kiểm tra đúng đơn vị tại BE.
+          const endpoint = role === 'ADMIN' ? '/admin/users' : '/students'
+          const result = await writeCrudRecord(
+            `${endpoint}/${row.id}/reset-password`,
+            'post',
+          )
+          if (!showTemporaryPassword(result, row.username ?? row.studentCode))
+            throw new Error('Thiếu mật khẩu tạm')
+          await refresh()
+        } catch (e) {
+          void message.error(errorMessage(e))
+          throw e
+        }
+      },
+    })
+  }
   async function openEditor(row?: CrudRecord) {
     form.resetFields()
     if (!row) {
@@ -324,16 +386,10 @@ export default function CrudPage({ resource }: { resource: string }) {
         resource === 'configs' ? 'put' : editing ? 'patch' : 'post',
         body,
       )
-      if (result && typeof result === 'object' && 'temporaryPassword' in result)
-        modal.info({
-          title: 'Mật khẩu tạm (hiển thị một lần)',
-          content: (
-            <Typography.Text copyable>
-              {String((result as CrudRecord).temporaryPassword)}
-            </Typography.Text>
-          ),
-        })
-      else void message.success('Đã lưu')
+      if (
+        !showTemporaryPassword(result, payload.username ?? payload.studentCode)
+      )
+        void message.success('Đã lưu')
       setEditing(undefined)
       await refresh()
     } catch (e) {
@@ -514,7 +570,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                 title: 'Thao tác',
                 key: 'actions',
                 fixed: 'right',
-                width: canWrite ? 210 : 95,
+                width: canWrite ? 310 : 95,
                 render: (_: unknown, row: CrudRecord) => (
                   <Space wrap>
                     <Button
@@ -538,6 +594,10 @@ export default function CrudPage({ resource }: { resource: string }) {
                     {canEditRow(row) &&
                       !config.singleton &&
                       resource !== 'configs' &&
+                      !(
+                        resource === 'users' &&
+                        (row.locked === true || row.id === me?.id)
+                      ) &&
                       !(resource === 'students' && role !== 'ADMIN') && (
                         <Button
                           size="small"
@@ -547,21 +607,28 @@ export default function CrudPage({ resource }: { resource: string }) {
                           {config.deleteLabel ?? 'Xóa'}
                         </Button>
                       )}
-                    {resource === 'users' && row.locked === true && (
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          void writeCrudRecord(
-                            `/admin/users/${row.id}/unlock`,
-                            'post',
-                          )
-                            .then(refresh)
-                            .catch((e) => message.error(errorMessage(e)))
-                        }}
-                      >
-                        Mở khóa
+                    {canResetPassword(row) && (
+                      <Button size="small" onClick={() => resetPassword(row)}>
+                        Reset mật khẩu
                       </Button>
                     )}
+                    {resource === 'users' &&
+                      role === 'ADMIN' &&
+                      row.locked === true && (
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            void writeCrudRecord(
+                              `/admin/users/${row.id}/unlock`,
+                              'post',
+                            )
+                              .then(refresh)
+                              .catch((e) => message.error(errorMessage(e)))
+                          }}
+                        >
+                          Mở khóa
+                        </Button>
+                      )}
                   </Space>
                 ),
               },

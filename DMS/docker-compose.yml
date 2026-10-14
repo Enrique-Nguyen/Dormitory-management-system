@@ -1,5 +1,5 @@
-# Môi trường phát triển: chỉ PostgreSQL. Chạy: docker compose up -d (trong thư mục DMS/)
-# Bản triển khai đủ ba service nginx + backend + postgres (SAD mục 10) sẽ thêm sau.
+# Môi trường dev: PostgreSQL DMS, PostgreSQL Keycloak và máy chủ Keycloak.
+# Secret lấy từ .env; không commit mật khẩu hoặc export realm có người dùng thật.
 services:
   postgres:
     image: postgres:16-alpine
@@ -11,7 +11,7 @@ services:
       TZ: Asia/Ho_Chi_Minh
       PGTZ: Asia/Ho_Chi_Minh
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -20,5 +20,40 @@ services:
       timeout: 3s
       retries: 10
 
+  keycloak-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Set KEYCLOAK_DB_PASSWORD in .env}
+    volumes:
+      - keycloak-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Set KEYCLOAK_DB_PASSWORD in .env}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:-keycloak-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?Set KC_BOOTSTRAP_ADMIN_PASSWORD in .env}
+      KC_HOSTNAME: http://localhost:8180
+      DMS_KEYCLOAK_ADMIN_CLIENT_SECRET: ${DMS_KEYCLOAK_ADMIN_CLIENT_SECRET:?Set DMS_KEYCLOAK_ADMIN_CLIENT_SECRET in .env}
+    ports:
+      - "127.0.0.1:8180:8080"
+    volumes:
+      - ./keycloak/dms-realm.json:/opt/keycloak/data/import/dms-realm.json:ro
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+
 volumes:
   pgdata:
+  keycloak-pgdata:

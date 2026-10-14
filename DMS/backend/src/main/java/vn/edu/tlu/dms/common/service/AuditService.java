@@ -1,6 +1,5 @@
 package vn.edu.tlu.dms.common.service;
 
-
 public interface AuditService {
 
     /**

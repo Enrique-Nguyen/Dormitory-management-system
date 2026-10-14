@@ -60,8 +60,10 @@ export default function SidebarShell({ groups, portalName, homePath, badges = {}
   )
   const menu = <Menu mode="inline" items={items} selectedKeys={active ? [active] : []} style={{ borderInlineEnd: 0 }} />
   const brand = (
-    <Link to={homePath} style={{ fontWeight: 700, fontSize: 18, color: '#1D4ED8', whiteSpace: 'nowrap' }}>
-      DMS{!isMobile && <span style={{ fontWeight: 400, color: '#6B7280', fontSize: 14 }}> · {portalName}</span>}
+    <Link to={homePath} className="dms-brand-logo">
+      <span className="dms-brand-icon">TLU</span>
+      <span>DMS</span>
+      {!isMobile && <span className="dms-portal-tag">{portalName}</span>}
     </Link>
   )
 
@@ -71,16 +73,14 @@ export default function SidebarShell({ groups, portalName, homePath, badges = {}
         <Layout.Sider
           width={SIDER_WIDTH}
           theme="light"
-          style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'auto', borderInlineEnd: '1px solid var(--color-border)' }}
+          style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'auto', borderInlineEnd: '1px solid var(--color-border)', background: '#FFFFFF' }}
         >
-          <div style={{ padding: '16px 24px' }}>{brand}</div>
-          <nav aria-label="Menu chính">{menu}</nav>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-border-light)' }}>{brand}</div>
+          <nav aria-label="Menu chính" style={{ padding: '8px 0' }}>{menu}</nav>
         </Layout.Sider>
       )}
       <Layout style={{ minWidth: 0 }}>
-        <Layout.Header
-          style={{ position: 'sticky', top: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--color-border)' }}
-        >
+        <Layout.Header className="dms-topbar">
           {!isDesktop && (
             <>
               <Button type="text" icon={<MenuOutlined />} aria-label="Mở menu" onClick={() => setDrawerOpen(true)} style={{ minWidth: 44, minHeight: 44 }} />
@@ -88,7 +88,9 @@ export default function SidebarShell({ groups, portalName, homePath, badges = {}
             </>
           )}
           {/* Dưới 640 px không đủ chỗ cho ô tìm kiếm trên topbar: chuyển vào Drawer */}
-          <div style={{ flex: 1, minWidth: 0, maxWidth: 360 }}>{!isMobile && search}</div>
+          <div className="dms-topbar-search" style={{ flex: 1, minWidth: 0, maxWidth: 360 }}>
+            {!isMobile && search}
+          </div>
           <div style={{ flex: 1 }} />
           {notificationsPath && <NotificationBell to={notificationsPath} />}
           <UserMenu />

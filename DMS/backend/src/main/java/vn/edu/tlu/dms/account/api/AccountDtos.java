@@ -11,10 +11,6 @@ public final class AccountDtos {
 
     private AccountDtos() {}
 
-    public record Login(
-            @NotBlank @Size(max = 50) String username,
-            @NotBlank @Size(max = 200) String password) {}
-
     public record Password(
             @NotBlank String currentPassword,
             @NotBlank @Size(min = 8, max = 64) String newPassword) {}

@@ -9,7 +9,15 @@ type Details = Record<string, unknown>
 
 const messages: Record<string, (d: Details) => string> = {
   // 5.1 Chung
+  IDENTITY_NOT_LINKED: () => 'Tài khoản đăng nhập chưa được cấp hồ sơ DMS. Liên hệ quản trị viên.',
+  IDENTITY_NOT_CONFIGURED: () => 'Máy chủ chưa cấu hình kết nối quản lý tài khoản.',
+  IDENTITY_UNAVAILABLE: () => 'Máy chủ quản lý tài khoản chưa sẵn sàng. Vui lòng thử lại.',
+  DUPLICATE_USERNAME: () => 'Tên đăng nhập đã tồn tại.',
   UNAUTHENTICATED: () => 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+  SESSION_REVOKED: () =>
+    'Phiên đã mất hiệu lực do thông tin bảo mật thay đổi. Vui lòng đăng nhập lại.',
+  CSRF_TOKEN_INVALID: () =>
+    'Phiên xác nhận thao tác đã thay đổi. Hãy tải lại trang rồi chủ động thử lại.',
   FORBIDDEN: () => 'Bạn không có quyền thực hiện thao tác này.',
   NOT_FOUND: () => 'Không tìm thấy dữ liệu hoặc bạn không có quyền xem.',
   VALIDATION_FAILED: () =>

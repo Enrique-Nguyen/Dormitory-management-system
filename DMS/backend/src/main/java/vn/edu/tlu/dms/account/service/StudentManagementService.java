@@ -28,8 +28,8 @@ public interface StudentManagementService {
     TemporaryPassword createStudent(StudentInput in);
 
     /**
-     * Sửa các trường hồ sơ được phép, kiểm tra vai trò và phạm vi; dữ liệu bỏ trống không dùng để
-     * xóa tùy tiện lịch sử.
+     * Sửa các trường hồ sơ được phép, kiểm tra vai trò và phạm vi; thu hồi phiên khi mã sinh viên
+     * làm thay đổi tên đăng nhập. Dữ liệu bỏ trống không dùng để xóa tùy tiện lịch sử.
      */
     Map<String, Object> updateStudent(Long id, StudentInput in);
 
@@ -40,8 +40,10 @@ public interface StudentManagementService {
     void deleteUnusedStudent(Long id);
 
     /**
-     * Đặt lại mật khẩu trong phạm vi được phép, trả mật khẩu tạm một lần và bật cờ bắt đổi mật
-     * khẩu.
+     * Staff đặt lại mật khẩu cho sinh viên thuộc đơn vị mình theo BR-07: có đơn trong đợt đang mở
+     * hoặc phân phòng hiệu lực tại đơn vị. Lịch sử đã kết thúc và quyền đọc liên đơn vị không đủ
+     * quyền reset. Trả mật khẩu tạm một lần, thu hồi phiên cũ và bắt đổi mật khẩu khi đăng nhập
+     * lại.
      */
     TemporaryPassword resetStudentPassword(Long id);
 

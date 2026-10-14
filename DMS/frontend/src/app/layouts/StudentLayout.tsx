@@ -25,17 +25,19 @@ export default function StudentLayout() {
 
   return (
     <Layout className="dms-touch" style={{ minHeight: '100vh' }}>
-      <Layout.Header style={{ position: 'sticky', top: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--color-border)' }}>
-        <Link to="/student" style={{ fontWeight: 700, fontSize: 18, color: '#1D4ED8' }}>
-          DMS
+      <Layout.Header className="dms-topbar">
+        <Link to="/student" className="dms-brand-logo">
+          <span className="dms-brand-icon">TLU</span>
+          <span>DMS</span>
+          <span className="dms-portal-tag">Sinh viên</span>
         </Link>
         {!isMobile && (
-          <nav aria-label="Menu chính" style={{ flex: 1, minWidth: 0 }}>
+          <nav aria-label="Menu chính" style={{ flex: 1, minWidth: 0, margin: '0 16px' }}>
             <Menu
               mode="horizontal"
               selectedKeys={active ? [active] : []}
               items={allNav.map((item) => ({ key: item.path, label: <Link to={item.path}>{item.label}</Link> }))}
-              style={{ borderBottom: 0 }}
+              style={{ borderBottom: 0, background: 'transparent' }}
             />
           </nav>
         )}
