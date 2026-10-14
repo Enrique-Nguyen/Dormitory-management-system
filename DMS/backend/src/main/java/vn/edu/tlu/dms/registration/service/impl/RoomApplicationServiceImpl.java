@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.contract.service.ContractService;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
@@ -131,8 +132,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                                                         "SELECT id FROM app_user WHERE full_name"
                                                                 + " ILIKE ? OR username ILIKE ?",
                                                         (row, index) -> row.getLong(1),
-                                                        "%" + keyword.trim() + "%",
-                                                        "%" + keyword.trim() + "%");
+                                                        LikePattern.contains(keyword.trim()),
+                                                        LikePattern.contains(keyword.trim()));
                                         filters.add(
                                                 ids.isEmpty()
                                                         ? b.disjunction()

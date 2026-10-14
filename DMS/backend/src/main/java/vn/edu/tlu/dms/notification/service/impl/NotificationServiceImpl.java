@@ -9,6 +9,7 @@ import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.notification.api.NotificationDtos;
 import vn.edu.tlu.dms.notification.domain.Notification;
@@ -62,7 +63,7 @@ public class NotificationServiceImpl implements NotificationService {
         String portal = currentUser.get().is("STUDENT") ? "/student" : "/staff";
         String filter = unread == null ? "" : unread ? " AND NOT is_read" : " AND is_read";
         filter += " AND (title ILIKE ? OR body ILIKE ?)";
-        String pattern = "%" + keyword.trim() + "%";
+        String pattern = LikePattern.contains(keyword.trim());
         Long total =
                 jdbc.queryForObject(
                         "SELECT count(*) FROM v_user_notification WHERE user_id = ?" + filter,

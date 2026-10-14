@@ -14,6 +14,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 
 import java.util.ArrayList;
@@ -85,8 +86,8 @@ public class StudentManagementServiceImpl implements StudentManagementService {
     public PageResponse<Map<String, Object>> searchStudents(int page, int size, String q) {
         guard.requireRole("ADMIN", "STAFF");
         var args = scopeParameters();
-        args.add("%" + q.trim() + "%");
-        args.add("%" + q.trim() + "%");
+        args.add(LikePattern.contains(q.trim()));
+        args.add(LikePattern.contains(q.trim()));
         return queries.search(
                 SELECT
                         + " WHERE "

@@ -51,6 +51,12 @@ public class AccountAccessFilter extends OncePerRequestFilter {
                     throw new BusinessException("PASSWORD_CHANGE_REQUIRED", 403);
                 }
             } catch (BusinessException e) {
+                // Tài khoản bị khóa vẫn phải đăng xuất được để xóa phiên đang mở.
+                if (e.getErrorCode().equals("ACCOUNT_LOCKED")
+                        && apiPath.equals("/api/auth/logout")) {
+                    chain.doFilter(request, response);
+                    return;
+                }
                 response.setStatus(e.getStatus());
                 response.setContentType("application/json");
                 response.setCharacterEncoding("UTF-8");

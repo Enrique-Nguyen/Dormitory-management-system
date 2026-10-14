@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 
 import java.util.ArrayList;
@@ -48,7 +49,7 @@ public class OverviewController {
         guard.requireRole("STAFF", "STUDENT");
         var args = new ArrayList<Object>();
         String filter = scope(args);
-        args.add("%" + q + "%");
+        args.add(LikePattern.contains(q));
         return queries.search(
                 "SELECT"
                     + " c.id,c.code,c.student_id,c.status,c.deposit_required,u.full_name,coalesce(v.balance,0)"
@@ -95,7 +96,7 @@ public class OverviewController {
         guard.requireRole("STAFF", "STUDENT");
         var args = new ArrayList<Object>();
         String filter = scope(args);
-        args.add("%" + q + "%");
+        args.add(LikePattern.contains(q));
         return queries.search(
                 "SELECT s.*,c.code AS contract_code,u.full_name FROM storage_record s JOIN"
                         + " dormitory_contract c ON c.id=s.contract_id JOIN room_application ap ON"

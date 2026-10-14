@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 
 import java.util.ArrayList;
@@ -31,8 +32,8 @@ public class AuditController {
             @RequestParam(defaultValue = "") String q) {
         guard.requireRole("ADMIN");
         var args = new ArrayList<Object>();
-        args.add("%" + q + "%");
-        args.add("%" + q + "%");
+        args.add(LikePattern.contains(q));
+        args.add(LikePattern.contains(q));
         return queries.search(
                 "SELECT"
                     + " a.id,a.actor_id,u.full_name,a.action,a.entity_type,a.entity_id,a.reason,a.request_id,a.created_at"

@@ -10,6 +10,7 @@ import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.ConfigService;
 import vn.edu.tlu.dms.common.service.impl.AbstractSqlCrudServiceImpl;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 import vn.edu.tlu.dms.contract.service.ContractCrudService;
 
@@ -194,8 +195,8 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
             scope = "a.preferred_unit_id=?";
             args.add(current.get().unitId());
         }
-        args.add("%" + q + "%");
-        args.add("%" + q + "%");
+        args.add(LikePattern.contains(q));
+        args.add(LikePattern.contains(q));
         return queries.search(
                 "SELECT req.*,c.code AS contract_code,u.full_name FROM "
                         + table(extension)

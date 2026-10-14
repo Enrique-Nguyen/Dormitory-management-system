@@ -10,6 +10,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
@@ -57,7 +58,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
         if (!current.get().crossUnitAccess()) {
             args.add(current.get().unitId());
         }
-        args.add("%" + q + "%");
+        args.add(LikePattern.contains(q));
         if (month != null) {
             args.add(month.withDayOfMonth(1));
         }

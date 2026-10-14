@@ -35,6 +35,9 @@ public class AuthServiceImpl implements AuthService {
 
     private final ResidencyLookup residency;
 
+    /** Hash cùng độ khó với hash thật, dùng để cân bằng thời gian khi tên đăng nhập không tồn tại. */
+    private final String absentUserHash;
+
     public AuthServiceImpl(
             AppUserRepository users,
             ManagementUnitRepository units,
@@ -48,6 +51,7 @@ public class AuthServiceImpl implements AuthService {
         this.passwords = passwords;
         this.currentUser = currentUser;
         this.residency = residency;
+        this.absentUserHash = passwords.encode("absent-user-" + System.nanoTime());
     }
 
     /**
@@ -58,9 +62,13 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(noRollbackFor = BusinessException.class)
     @Override()
     public DmsPrincipal authenticate(String username, String password) {
-        var user =
-                users.lockByUsername(username)
-                        .orElseThrow(() -> new BusinessException("INVALID_CREDENTIALS", 401));
+        var found = users.lockByUsername(username);
+        if (found.isEmpty()) {
+            // Vẫn băm một lần để thời gian phản hồi không cho biết tên đăng nhập có tồn tại hay không.
+            passwords.matches(password, absentUserHash);
+            throw new BusinessException("INVALID_CREDENTIALS", 401);
+        }
+        var user = found.get();
         if (Boolean.TRUE.equals(user.getLocked())) {
             throw new BusinessException("ACCOUNT_LOCKED", 403);
         }

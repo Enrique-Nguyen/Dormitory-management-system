@@ -8,6 +8,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 import vn.edu.tlu.dms.notification.api.NotificationDtos;
 import vn.edu.tlu.dms.notification.service.NotificationCrudService;
@@ -51,7 +52,7 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
                         + " AS unit_id,n.building_id,n.floor,n.room_id FROM notification n WHERE"
                         + " n.created_by=? AND n.source_type IS NULL AND (n.title ILIKE ? OR n.body"
                         + " ILIKE ?)",
-                new ArrayList<>(List.of(current.get().id(), "%" + q + "%", "%" + q + "%")),
+                new ArrayList<>(List.of(current.get().id(), LikePattern.contains(q), LikePattern.contains(q))),
                 page,
                 size);
     }

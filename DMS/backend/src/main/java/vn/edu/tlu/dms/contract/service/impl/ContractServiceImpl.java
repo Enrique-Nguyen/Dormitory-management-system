@@ -9,6 +9,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.contract.api.ContractDtos;
 import vn.edu.tlu.dms.contract.domain.DormitoryContract;
@@ -65,7 +66,7 @@ public class ContractServiceImpl implements ContractService {
                                 actor.unitId(),
                                 actor.crossUnitAccess(),
                                 status,
-                                "%" + q.trim() + "%",
+                                LikePattern.contains(q.trim()),
                                 PageRequest.of(page, size))
                         .map(contract -> toContractResponse(contract, false)));
     }

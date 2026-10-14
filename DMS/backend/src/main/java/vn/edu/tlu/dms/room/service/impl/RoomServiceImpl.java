@@ -14,6 +14,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedInput;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedResponse;
@@ -111,7 +112,7 @@ public class RoomServiceImpl implements RoomService {
                         filters.add(
                                 b.like(
                                         b.lower(r.get("code")),
-                                        "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%"));
+                                        LikePattern.contains(keyword.trim().toLowerCase(Locale.ROOT))));
                     }
                     var building = q.subquery(Long.class);
                     var bd = building.from(Building.class);

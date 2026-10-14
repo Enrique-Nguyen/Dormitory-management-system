@@ -16,6 +16,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 
 import java.time.OffsetDateTime;
@@ -78,7 +79,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                                 actor.crossUnitAccess(),
                                 type,
                                 status,
-                                "%" + q.trim() + "%",
+                                LikePattern.contains(q.trim()),
                                 PageRequest.of(page, size))
                         .map(invoice -> toInvoiceResponse(invoice, false)));
     }
