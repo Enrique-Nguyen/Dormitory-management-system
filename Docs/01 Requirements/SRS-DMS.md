@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Phiên bản | **0.6** |
-| Ngày | 10/10/2026 |
+| Phiên bản | **0.8** |
+| Ngày | 14/10/2026 |
 | Học phần | Chuyên đề CNTT, lớp 65CNTT, Nhóm 3 |
 | Giảng viên | Hoàng Quốc Dũng |
 | Thành viên | Nguyễn Văn Séc, Nguyễn Phú Nguyên, Lê Đức Nguyên, Nguyễn Văn Quyền, Nguyễn Tiến Lộc |
@@ -21,6 +21,8 @@
 | 0.4 | 08/10/2026 | Nhóm 3 | Bù cọc chưa nộp được tất toán bằng số dư khi trả phòng, không ghi thành công nợ (tránh thu hai lần); công nợ sau trả phòng chỉ gồm phí phòng chưa đóng và số dư cọc âm. Mục 6.2 thêm quy ước `errorCode` và `allowedActions` |
 | 0.5 | 10/10/2026 | Nhóm 3 | Mục 5 đồng bộ với thiết kế CSDL v0.2 (`DB-Design-DMS.md`): tách hồ sơ sinh viên; thêm diện ưu tiên, đơn vị áp dụng của đợt, cấu hình, ảnh sự cố; lịch sử trạng thái dùng chung; mã hiển thị HD / TK / HP / DN; thông báo xem theo khoảng thời gian ở thực tế |
 | 0.6 | 10/10/2026 | Nhóm 3 | Đồng bộ với Đặc tả API v0.2: Staff tạo được ticket **của phòng** (ví dụ hư hỏng phát hiện khi trả phòng) và tự nghiệm thu ticket do mình tạo; phát hành điện nước **bỏ qua** phòng thiếu chỉ số thay vì khóa cả đợt (UC-21, 1a); trừ cọc chia đều cho **người Staff chọn** trong số người ở lúc tạo ticket (mặc định chọn cả phòng, FR-MNT-10, Q-15) |
+| 0.7 | 13/10/2026 | Nhóm 3 | Đồng bộ luồng đăng nhập Spring Security thật: xác thực JSON, CSRF, thu hồi phiên khi thay đổi bảo mật, giới hạn BCrypt và quyền reset theo đợt/phân phòng hiệu lực; bỏ cơ chế demo/mock |
+| 0.8 | 14/10/2026 | Nhóm 3 | Theo yêu cầu chuyển đăng nhập sang Keycloak: OIDC/PKCE, JWT Bearer, tài khoản tập trung, liên kết subject và giữ RBAC/phạm vi DMS; không tự tạo tài khoản demo |
 
 ---
 
@@ -173,15 +175,17 @@ Quy ước chung cho mọi yêu cầu:
 
 | Mã | Yêu cầu | Vai trò | Ưu tiên |
 |---|---|---|---|
-| FR-ACC-01 | Người dùng đăng nhập bằng tên đăng nhập (mã SV với sinh viên) và mật khẩu; đăng xuất hủy phiên phía máy chủ | Tất cả | Must |
+| FR-ACC-01 | Người dùng đăng nhập tại Keycloak bằng tên đăng nhập/mã SV và mật khẩu; React dùng OIDC Authorization Code + PKCE, backend kiểm tra JWT. Đăng xuất từ DMS thu hồi token/phiên của tài khoản rồi chuyển sang logout Keycloak | Tất cả | Must |
 | FR-ACC-02 | Sau 5 lần đăng nhập sai liên tiếp, tài khoản bị khóa tạm 15 phút [Giả định] | Tất cả | Should |
-| FR-ACC-03 | Người dùng đổi mật khẩu; tài khoản có cờ "bắt buộc đổi mật khẩu" phải đổi trước khi dùng chức năng khác | Tất cả | Must |
+| FR-ACC-03 | Đổi mật khẩu qua Keycloak, 8–64 ký tự, có chữ/số, không dùng lại mật khẩu hiện tại; mật khẩu tạm bắt hoàn tất UPDATE_PASSWORD trước khi được cấp token. JWT đã cấp trước thay đổi trực tiếp tại Keycloak có thể còn hiệu lực tối đa 5 phút | Tất cả | Must |
 | FR-ACC-04 | Người dùng xem và cập nhật hồ sơ cá nhân (số điện thoại, quê quán, liên hệ khẩn cấp); mã SV, họ tên, giới tính chỉ Admin sửa | Tất cả | Must |
-| FR-ACC-05 | Admin import danh sách sinh viên từ Excel: kiểm tra định dạng, báo lỗi theo từng dòng, bỏ qua mã SV đã tồn tại, tạo tài khoản với mật khẩu mặc định và cờ bắt buộc đổi mật khẩu | Admin | Must |
+| FR-ACC-05 | Admin import danh sách sinh viên từ Excel: kiểm tra định dạng, báo lỗi theo từng dòng, bỏ qua mã SV đã tồn tại, tạo tài khoản với mật khẩu tạm ngẫu nhiên tại Keycloak và required action đổi mật khẩu | Admin | Must |
 | FR-ACC-06 | Admin tạo, khóa, mở khóa tài khoản Staff, Technician, Admin; gán vai trò và đơn vị quản lý | Admin | Must |
-| FR-ACC-07 | Đặt lại mật khẩu: Admin cho mọi tài khoản; Staff cho sinh viên thuộc phạm vi đơn vị mình (xem BR-07) | Admin, Staff | Must |
+| FR-ACC-07 | Đặt lại mật khẩu: Admin cho mọi tài khoản; Staff chỉ cho sinh viên có đơn trong đợt đang mở hoặc phân phòng còn hiệu lực tại đơn vị mình (BR-07). Trả mật khẩu tạm một lần, bắt đổi khi đăng nhập, xóa bộ đếm sai/khóa tạm và thu hồi mọi phiên cũ | Admin, Staff | Must |
 | FR-ACC-08 | Admin cấp quyền tổng hợp liên đơn vị cho một Staff cụ thể | Admin | Must |
 | FR-ACC-09 | Admin xem `AuditLog`, lọc theo người, loại thao tác, thời gian | Admin | Must |
+
+**Quy tắc phiên tài khoản Keycloak (v0.8):** khóa tài khoản, đổi tên đăng nhập/đơn vị quản lý hoặc thay đổi quyền đọc liên đơn vị làm thu hồi các phiên cũ. Mở khóa chỉ cho phép đăng nhập mới, không phục hồi phiên đã thu hồi. Khởi tạo Admin phải bật cấu hình riêng và cung cấp mật khẩu; ứng dụng không tự tạo tài khoản demo và không dùng vai trò mock để vượt qua đăng nhập. Quên mật khẩu được xử lý bằng reset của người quản lý có quyền; chưa có đăng ký tự do hoặc gửi liên kết reset qua email.
 
 ### 3.2. Phòng, Giường & Tòa (ROOM)
 
@@ -318,7 +322,7 @@ Mục này mô tả ở mức nghiệp vụ. Tên bảng, kiểu dữ liệu và
 | Thực thể | Thuộc tính chính | Ghi chú |
 |---|---|---|
 | `ManagementUnit` | id, tên | K1; N2 + N3 |
-| `User` | id, username, password_hash, role, management_unit_id (Staff, Technician), họ tên, SĐT, cờ đổi mật khẩu, trạng thái khóa, quyền tổng hợp liên đơn vị (Staff) | Sinh viên dùng mã SV làm username |
+| `User` | id, username, password_hash, role, management_unit_id (Staff, Technician), họ tên, SĐT, cờ đổi mật khẩu, trạng thái khóa, quyền tổng hợp liên đơn vị (Staff), `security_version` | Sinh viên dùng mã SV làm username; phiên giữ phiên bản lúc đăng nhập để kiểm tra thu hồi |
 | `StudentProfile` | user_id, mã SV, giới tính, ngày sinh, khoa, khóa, quê quán, liên hệ khẩn cấp | 1–1 với `User` có role Student; mọi thực thể nghiệp vụ tham chiếu sinh viên qua đây |
 | `Building` | id, tên, management_unit_id, **mức cọc** | K1: 1.000.000 đ; N2, N3: 2.000.000 đ |
 | `RoomType` | id, tên, số giường, **giá gốc / học kỳ chính**, **giá gốc / học kỳ hè**, diện tích, tiện ích | Nơi duy nhất lưu giá gốc |
@@ -376,6 +380,7 @@ Mục này mô tả ở mức nghiệp vụ. Tên bảng, kiểu dữ liệu và
 
 - JSON qua HTTPS; tiền tố `/api`. Hành động chuyển trạng thái dùng `POST /api/<tài nguyên>/{id}/<hành động>` (ví dụ `/approve`, `/reject`, `/activate`, `/move-out`).
 - Mã lỗi: 400 dữ liệu không hợp lệ, 401 chưa đăng nhập, 403 ngoài quyền / phạm vi, 404 không tồn tại **hoặc ngoài phạm vi đọc**, 409 xung đột trạng thái / ràng buộc (giường đã bị chiếm, gửi trùng).
+- Xác thực trả `SESSION_REVOKED` (401) khi phiên không còn khớp phiên bản bảo mật; `CSRF_TOKEN_INVALID` (403) khi request ghi thiếu/sai token. Giao diện yêu cầu đăng nhập lại khi hết hạn/thu hồi và không giữ dữ liệu của tài khoản trước.
 - Lỗi 400 / 409 trả về `errorCode` ổn định (ví dụ `BED_TAKEN`, `DUPLICATE_INVOICE`, `CONTRACT_AUTO_CANCELLED`) kèm dữ liệu chi tiết; giao diện dựng thông báo tiếng Việt từ mã, không dựa vào chuỗi `message`.
 - API chi tiết của đơn, hợp đồng, ticket, hóa đơn và yêu cầu trả về `allowedActions`: các hành động người dùng hiện tại được thực hiện ở trạng thái hiện tại. Giao diện chỉ hiển thị nút theo danh sách này; API vẫn kiểm tra lại khi nhận request.
 - Danh sách endpoint chi tiết thuộc tài liệu đặc tả API (tuần 3–4); tối thiểu bao phủ mọi FR trong mục 3.
@@ -390,10 +395,10 @@ Không có tích hợp phần cứng. Không tích hợp hệ thống bên ngoà
 
 | Mã | Yêu cầu | Cách kiểm chứng |
 |---|---|---|
-| NFR-SEC-01 | Mật khẩu băm bằng BCrypt; không lưu, không ghi log mật khẩu | Review code, kiểm tra CSDL |
+| NFR-SEC-01 | Mật khẩu do Keycloak quản lý và băm; DMS không lưu bản sao mật khẩu/hash của tài khoản đã liên kết. Không đưa secret vào frontend, log hoặc Git | Review code, kiểm tra CSDL |
 | NFR-SEC-02 | Phân quyền kiểm tra ở API trên từng đối tượng theo vai trò + phạm vi + trạng thái | Integration test truy cập chéo đơn vị |
 | NFR-SEC-03 | Validate mọi input phía server; chống SQL injection (truy vấn tham số hóa) và XSS (escape đầu ra) | Test với input độc hại |
-| NFR-SEC-04 | Phiên đăng nhập hết hạn sau 30 phút không hoạt động; cookie phiên HttpOnly, Secure | Kiểm thử thủ công |
+| NFR-SEC-04 | Phiên SSO Keycloak hết hạn sau 30 phút không hoạt động; access token 5 phút, chỉ giữ trong bộ nhớ. API DMS nhận Bearer JWT, kiểm tra issuer/audience/chữ ký/thời hạn. Khóa/reset/quyền/logout từ DMS chặn token cũ qua security_version | Kiểm thử cookie và token thật, nhiều phiên và request đồng thời |
 | NFR-SEC-05 | Thông tin bí mật (mật khẩu CSDL, khóa) cấu hình qua biến môi trường, không nằm trong mã nguồn | Review repo |
 | NFR-PER-01 | 95% request phản hồi dưới 2 giây với 100 người dùng đồng thời, dữ liệu ~1.500 sinh viên | Kiểm thử tải (JMeter / k6) kịch bản nộp đơn + tra cứu |
 | NFR-PER-02 | Phát hành hóa đơn phí phòng cho toàn KTX (~1.500 sinh viên) hoàn tất dưới 30 giây | Đo thời gian chạy |
@@ -440,6 +445,11 @@ Không có tích hợp phần cứng. Không tích hợp hệ thống bên ngoà
 | AT-24 | Sinh viên chọn tạm rời hè | Có phiếu gửi đồ; giường trống trong hè; hợp đồng vẫn ACTIVE, nhãn "Tạm rời hè"; không có hóa đơn hè; cọc giữ nguyên | FR-CON-11, BR-02 |
 | AT-25 | Đầu HK1, phân lại giường cho sinh viên tạm rời hè khi giường cũ đã có người | Phân được giường khác, không cần đơn mới; phiếu gửi đồ ghi ngày nhận lại | FR-CON-12, BR-01 |
 | AT-26 | Sinh viên đăng ký ở hè được duyệt | Ngày kết thúc hợp đồng gia hạn qua hè; có hóa đơn phí phòng học kỳ hè | FR-REG-15, FR-BIL-05 |
+| AT-27 | Đăng nhập đúng bằng từng vai trò; gửi vai trò giả từ client | Quyền lấy từ CSDL, trường lạ bị từ chối; không thể nâng quyền | FR-ACC-01, NFR-SEC-02 |
+| AT-28 | Đổi/reset mật khẩu khi tài khoản có nhiều phiên; khóa rồi mở khóa tài khoản | Phiên cũ mất hiệu lực; chỉ đăng nhập mới được dùng; mật khẩu tạm bắt đổi | FR-ACC-03, 06, 07, NFR-SEC-04 |
+| AT-29 | Staff reset sinh viên chỉ có đơn hết đợt hoặc phân phòng đã kết thúc, kể cả có quyền đọc liên đơn vị | Bị từ chối; chỉ đơn trong đợt đang mở/phân phòng hiệu lực đúng đơn vị cho phép reset | FR-ACC-07, BR-07 |
+| AT-30 | Đăng nhập PKCE, token sai issuer/audience/chữ ký, logout DMS và gọi lại token cũ | Token sai bị từ chối; token cũ sau logout bị DMS chặn | FR-ACC-01, NFR-SEC-04 |
+| AT-31 | Token có username giống tài khoản DMS nhưng subject chưa liên kết | Trả IDENTITY_NOT_LINKED, không tự nhận hồ sơ/quyền bằng username | FR-ACC-03, NFR-SEC-01 |
 
 ### 8.2. Ma trận Use Case ↔ Yêu cầu
 
@@ -656,3 +666,11 @@ Nhãn suy ra trên ACTIVE: "Sắp hết hạn", "Quá hạn trả phòng", "Tạ
 | Hoàn cọc | − | Trả phòng, bằng số dư cọc | Staff |
 
 Nhãn suy ra trên UNPAID: "Quá hạn" khi qua hạn đóng.
+
+
+### Ghi chú chuyển xác thực ngày 14/10/2026
+
+Keycloak là tích hợp xác thực được người dùng yêu cầu thêm, là ngoại lệ cho ràng buộc ban đầu không tích hợp bên ngoài. Các quy định session cookie/BCrypt thuộc lịch sử v0.7; mã ứng dụng của luồng cũ đã được bỏ. Mật khẩu/tài khoản không đồng bộ qua Git; nhóm phải dùng cùng Keycloak/realm. Mật khẩu cũ không chuyển; ID hồ sơ và dữ liệu nghiệp vụ được giữ nguyên. Keycloak và PostgreSQL DMS không có transaction phân tán: thao tác bù có thể cần đối soát nếu mất kết nối, chưa có outbox bền vững.
+
+
+Ghi chú dọn cấu trúc 14/10/2026: chỉ giữ Keycloak; dùng lại AuthController, SecurityConfig, BootstrapAdmin và AuthService/Impl. Không tạo lớp legacy hay Service chuyển đổi riêng. Migration đã áp dụng và các kiểm thử JWT/CRUD cần thiết được giữ. Hướng dẫn chạy gom vào README gốc.

@@ -1,8 +1,8 @@
 # Tài liệu kiến trúc phần mềm (SAD) — DMS
 
-> **Phiên bản 1.0**, 10/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.5 (mục 2, 4, 6, 7, 10), `DB-Design-DMS.md` v0.2, `DMS-UI-UX-Design.md` (mục 27), đề xuất đề tài (mục 4, 10, 13)
-> Trạng thái: **đã duyệt** (10/10/2026). Thay đổi sau này ghi vào lịch sử và tăng phiên bản
+> **Phiên bản 1.2**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.8 (mục 2, 4, 6, 7, 10), `DB-Design-DMS.md` v0.5, `DMS-UI-UX-Design.md` (mục 27), đề xuất đề tài (mục 4, 10, 13)
+> Trạng thái: bản 1.0 được duyệt ngày 10/10/2026; bản 1.1 đồng bộ cấu trúc Service/Impl và luồng xác thực đã triển khai ngày 13/10/2026.
 
 ### Lịch sử thay đổi
 
@@ -11,6 +11,8 @@
 | 0.1 | 10/10/2026 | Bản đầu tiên: gom các quyết định kiến trúc rải rác ở SRS, đề xuất, UI và CSDL; bổ sung ranh giới module, đồng thời, bảo mật, triển khai |
 | 0.2 | 10/10/2026 | Theo thẩm định: tách sự kiện trạng thái (cùng transaction) và sự kiện thông báo (sau commit); quan hệ chéo module chỉ lưu ID; job dùng `TransactionTemplate` và khóa lại từng bản ghi; lọc phạm vi danh sách ngay trong SQL; thứ tự ghi ảnh và dọn file khi rollback; chốt Q-ARC-01..06 |
 | 1.0 | 10/10/2026 | Nhóm duyệt bản 0.2, không đổi nội dung |
+| 1.1 | 13/10/2026 | Đồng bộ Service interface/Impl; xác thực bằng AuthenticationManager/Provider/filter Spring Security, thu hồi phiên bằng security_version và dọn sau commit; CSRF/logout, reset theo BR-07 và bỏ demo/mock |
+| 1.2 | 14/10/2026 | Keycloak OIDC/PKCE và resource server JWT; subject/version/role liên kết DMS; service account quản lý tài khoản và migration V4 |
 
 ---
 
@@ -45,7 +47,7 @@ SAD không lặp lại nội dung của các tài liệu trên; khi cần chi ti
 | Modular monolith ba lớp, logic nghiệp vụ chỉ ở Service | SRS 2.5, NFR-MNT-01 |
 | 12 tuần, 5 thành viên, mỗi người phụ trách một nhóm phân hệ | SRS 2.5, đề xuất 13.1 |
 | Triển khai Docker Compose trên một máy chủ [Giả định] | SRS 2.4 |
-| Không tích hợp hệ thống ngoài; dữ liệu sinh viên vào bằng Excel | SRS 6.3 |
+| Keycloak là tích hợp xác thực được yêu cầu thêm; dữ liệu sinh viên vào bằng Excel | SRS 6.3 |
 
 ### 2.2. Thuộc tính chất lượng quyết định kiến trúc
 
@@ -143,11 +145,14 @@ Các chỗ dễ tạo vòng và cách giải:
 ```text
 vn.edu.tlu.dms.<module>/
 ├── api/          Controller + DTO request/response (record), mapper
-├── service/      Service công khai (interface) và cài đặt; policy chuyển trạng thái
+├── service/      Chỉ Service interface, JavaDoc tiếng Việt cho từng phương thức
+│   └── impl/     *ServiceImpl implements Service; logic và transaction nằm tại đây
 ├── domain/       Entity JPA, enum trạng thái, sự kiện của module
 ├── repository/   Spring Data JPA repository, native query, projection view
 └── job/          Tác vụ định kỳ của module (nếu có)
 ```
+
+Controller gọi Service interface qua constructor injection. Mỗi Service có Impl tương ứng; interface không chứa logic hoặc phương thức `default` xử lý nghiệp vụ. `AuthService` / `AuthServiceImpl` quản lý hồ sơ hiện tại và thu hồi token. `IdentityAccountService` / `KeycloakIdentityAccountServiceImpl` tích hợp danh tính và mật khẩu trên Keycloak. Các luồng quản trị dùng chung hai Service này.
 
 | Tầng | Được làm | Không được làm |
 |---|---|---|
@@ -228,11 +233,16 @@ Quy tắc chung: **khóa xong mới kiểm tra lại điều kiện**, vì đi�
 
 ### 7.1. Xác thực và phiên
 
-- Spring Security, đăng nhập bằng form JSON `POST /api/auth/login`; mật khẩu BCrypt (NFR-SEC-01).
-- Phiên lưu ở PostgreSQL bằng Spring Session JDBC (CSDL mục 1); cookie phiên `HttpOnly`, `Secure`, `SameSite=Lax`; hết hạn sau 30 phút không hoạt động (NFR-SEC-04). Đăng xuất hủy phiên phía máy chủ (FR-ACC-01).
-- **Chống CSRF:** vì xác thực bằng cookie, bật CSRF của Spring Security với `CookieCsrfTokenRepository` (cookie `XSRF-TOKEN` đọc được bằng JS). Axios tự gửi lại header `X-XSRF-TOKEN`, frontend không phải viết thêm.
-- Khóa tạm 15 phút sau 5 lần sai (FR-ACC-02): đếm trên `app_user`.
-- Tài khoản có cờ bắt buộc đổi mật khẩu (FR-ACC-03): một filter chặn mọi API trừ `/api/auth/me`, `/api/auth/change-password`, `/api/auth/logout`, trả 403 `PASSWORD_CHANGE_REQUIRED`.
+- Keycloak quản lý đăng nhập, mật khẩu, required action và SSO; React dùng public client `dms-web`, Authorization Code + PKCE S256. Token chỉ giữ trong bộ nhớ của keycloak-js.
+- Spring Security Resource Server kiểm tra chữ ký, issuer `/realms/dms`, audience `dms-api`, hạn token. Bearer gửi trong Authorization header; API không xác thực bằng cookie và không dùng CSRF của session. Bảo vệ state/nonce/PKCE của OIDC do adapter thực hiện.
+- `CurrentUserImpl` ánh xạ `sub` duy nhất vào `app_user.keycloak_user_id`; không tự ghép theo username. Role token phải khớp role DMS; đơn vị/quyền liên đơn vị đọc từ CSDL. Khóa, subject không liên kết hoặc version cũ bị chặn.
+- V4 thêm keycloak_user_id và unique index; password_hash nullable, bỏ hash local khi chuyển. V1–V3 không sửa. Bảng session cũ chỉ giữ do migration đã áp dụng; ứng dụng không dùng Spring Session.
+- IdentityAccountService/Impl gọi Admin REST bằng client credentials của `dms-admin`; secret chỉ thuộc backend. Thuộc tính version chỉ Admin được sửa, mapper đưa dms_security_version vào JWT.
+- Khóa/reset/đổi thông tin phạm vi/logout từ DMS tăng version và logout Keycloak. Logout DMS thu hồi mọi phiên của tài khoản. Mở khóa/reset xóa trạng thái brute-force tại Keycloak. Required action UPDATE_PASSWORD hoàn tất trước khi cấp token.
+- Access token sống 5 phút; SSO idle 30 phút. Thay đổi mật khẩu hoặc logout trực tiếp ngoài DMS có thể để token JWT còn hiệu lực đến hết TTL; chưa có introspection/listener. Không đánh đồng logout refresh session với thu hồi tức thời mọi JWT.
+- Khi create/sync rollback thì có thao tác bù; xóa danh tính sau commit, khóa trước khi xóa. HTTP và DB không có atomic transaction chung; lỗi bù/xóa ghi log để đối soát, chưa có outbox retry bền vững. Reset không thể phục hồi mật khẩu cũ nếu commit DMS thất bại sau khi Keycloak đã đổi mật khẩu.
+- Chỉ có một luồng Keycloak; các Config/Controller/bootstrap song song, session cũ và BCrypt đã được loại khỏi ứng dụng.
+
 
 ### 7.2. Phân quyền ba lớp
 
@@ -343,7 +353,7 @@ Dùng PostgreSQL thật (Testcontainers) thay cho H2 vì partial unique index, `
 | NFR-REL-03 Job an toàn | Lớp job cơ sở, mỗi bản ghi một transaction, điều kiện chọn theo trạng thái | 6.4 |
 | NFR-SEC-01..05 | BCrypt, phân quyền ba lớp, cookie HttpOnly + CSRF, biến môi trường | 7 |
 | NFR-PER-01, 02 | Một instance, index theo CSDL mục 6, phát hành hóa đơn bằng batch insert | 2.2, 10 |
-| NFR-MNT-01 | Module theo phân hệ, quy tắc phụ thuộc, logic chỉ ở Service | 4 |
+| NFR-MNT-01 | Module theo phân hệ, quy tắc phụ thuộc, Service chỉ interface và logic ở Impl | 4 |
 | NFR-MNT-03 | `requestId` trong MDC | 8.2 |
 | BR-08 Không lưu dữ liệu suy ra | Nhãn tính từ view, không có job cập nhật nhãn | 6.4 |
 | BR-09 Lịch sử | `StatusHistoryService` dùng chung | 8.2 |
@@ -360,7 +370,7 @@ Dùng PostgreSQL thật (Testcontainers) thay cho H2 vì partial unique index, `
 | AD-10 | Quan hệ chéo module chỉ lưu ID | `@ManyToOne` giữa entity của hai module | Giảm ràng buộc giữa module; tránh lỗi lazy loading khi map DTO |
 | AD-04 | Policy chuyển trạng thái ở backend, trả `allowedActions` | Frontend tự suy nút từ trạng thái | Một nguồn sự thật (UI 27.2) |
 | AD-05 | Khóa bi quan (`FOR UPDATE`) ở điểm tranh chấp, READ COMMITTED | Khóa lạc quan (`@Version`); SERIALIZABLE | Phân giường là tranh chấp thật; cần báo lỗi rõ ngay, không thử lại |
-| AD-06 | Phiên cookie (Spring Session JDBC) + CSRF | JWT trong localStorage | Đăng xuất hủy được phiên phía máy chủ (FR-ACC-01); tránh lộ token qua XSS |
+| AD-06 | Keycloak OIDC/PKCE + Bearer JWT trong bộ nhớ | Session cookie cũ đã bỏ khỏi code | Theo yêu cầu đồng bộ danh tính; kiểm tra scope DMS và giới hạn TTL khi thay đổi ngoài DMS |
 | AD-07 | Ngoài phạm vi đọc trả 404 | 403 | SRS 6.2: không lộ sự tồn tại đối tượng của đơn vị khác |
 | AD-08 | Ảnh lưu trên volume, đường dẫn trong CSDL | Lưu BLOB trong PostgreSQL; dịch vụ lưu trữ đám mây | Đơn giản; không tích hợp ngoài |
 | AD-09 | Testcontainers PostgreSQL cho test tích hợp | H2 | H2 không có partial index, `EXCLUDE` như PostgreSQL |
@@ -379,3 +389,9 @@ Chốt ngày 10/10/2026 theo thẩm định của nhóm.
 | Q-ARC-04 | nginx hay Spring Boot phục vụ file tĩnh? | nginx: TLS, file tĩnh React, chuyển `/api` sang backend |
 | Q-ARC-05 | Lịch job nhắc bù cọc và thông báo sắp hết hạn | 08:00 hằng ngày |
 | Q-ARC-06 | Import Excel khi có dòng lỗi | Tạo các dòng hợp lệ, báo cáo từng dòng lỗi; file kết quả tải về ở mức Could |
+
+
+Bổ sung triển khai v1.2: môi trường dev có Keycloak và database Keycloak riêng. Compose chỉ chuẩn bị hạ tầng; Windows local có script native. Dùng chung qua mạng phải có HTTPS và cấu hình issuer/redirect/web origin theo server thực tế; xem README.md.
+
+
+Ghi chú dọn cấu trúc 14/10/2026: chỉ giữ Keycloak; dùng lại AuthController, SecurityConfig, BootstrapAdmin và AuthService/Impl. Không tạo lớp legacy hay Service chuyển đổi riêng. Migration đã áp dụng và các kiểm thử JWT/CRUD cần thiết được giữ. Hướng dẫn chạy gom vào README gốc.

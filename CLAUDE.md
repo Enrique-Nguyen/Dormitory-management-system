@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **DMS** is a web-based Dormitory Management System for Thuy Loi University dormitories (course project "Chuyên đề CNTT", class 65CNTT, group 3, 12 weeks, 5 members). The git repository root is this folder.
 
 - `Docs/`: all project documents, written in Vietnamese. Numbered by project phase.
-- `DMS/`: source code. `DMS/backend` is Spring Boot 3.5 on Java 17, built with the Maven wrapper; it contains the root package `vn.edu.tlu.dms` with one package per module, Flyway migrations, and test scaffolding. `DMS/frontend` is React 19 + Vite + TypeScript (npm, oxlint) with the folder layout from the SAD. `DMS/docker-compose.yml` runs PostgreSQL 16 for development. The backend CRUD framework is implemented (see `DMS/backend/README.md` for exact scope and remaining work). Security lives in `account/config/SecurityConfig`; shared DTOs are in `common/dto`. Frontend role routes now use a reusable CRUD framework (see `DMS/frontend/README.md`). Detailed business workflows remain future work.
+- `DMS/`: source code. `DMS/backend` is Spring Boot 3.5 on Java 17, built with the Maven wrapper; it contains the root package `vn.edu.tlu.dms` with one package per module, Flyway migrations, and test scaffolding. `DMS/frontend` is React 19 + Vite + TypeScript (npm, oxlint) with the folder layout from the SAD. `DMS/docker-compose.yml` runs PostgreSQL and Keycloak for development. The backend CRUD framework is implemented (see `DMS/backend/README.md` for exact scope and remaining work). Security lives in `account/config/SecurityConfig`; shared DTOs are in `common/dto`. Frontend role routes use a reusable CRUD framework; shared run instructions are in the root `README.md`. Detailed business workflows remain future work.
 
 ### Commands
 
@@ -22,7 +22,7 @@ Run from `DMS/frontend`: `npm run dev` (port 5173, proxies `/api` to 8080), `npm
 
 `ModuleDependencyTest` (ArchUnit) enforces the SAD 4.2 dependency order and forbids using another module's `repository` or `api` package. `DmsApplicationTests` boots the app against Testcontainers PostgreSQL and checks the table count after migration.
 
-Migrations: `V1__init.sql` is a copy of `Docs/.../DB-DMS-schema.sql` as of the scaffold; `V2__spring_session.sql` creates the Spring Session tables. From now on the migration files are the real schema. Add a new `V<n>__*.sql` and update `DB-Design-DMS.md` in the same change; never edit an applied migration.
+Migrations: `V3__account_security_version.sql` adds account session revocation; `V1__init.sql` is a copy of `Docs/.../DB-DMS-schema.sql` as of the scaffold; `V2__spring_session.sql` creates the Spring Session tables. From now on the migration files are the real schema. Add a new `V<n>__*.sql` and update `DB-Design-DMS.md` in the same change; never edit an applied migration.
 
 ### Documents
 
@@ -43,7 +43,7 @@ Precedence on conflict: SRS, then SAD / DB / API, then UI, then the proposal. To
 
 ## Architecture (from the SAD)
 
-Fixed constraints: React SPA + Spring Boot 3 (Java 17+) + PostgreSQL 15+; modular monolith, three layers, business logic only in Service; Docker Compose on one server; no external integrations (student data arrives as Excel). Four roles (Student, Staff, Technician, Admin), each with its own portal.
+Fixed constraints: React SPA + Spring Boot 3 (Java 17+) + PostgreSQL 15+; modular monolith, three layers, business logic only in Service; Docker Compose on one server; Keycloak is the requested authentication integration; student data still arrives as Excel. Four roles (Student, Staff, Technician, Admin), each with its own portal.
 
 ### Backend
 
@@ -55,12 +55,7 @@ Fixed constraints: React SPA + Spring Boot 3 (Java 17+) + PostgreSQL 15+; modula
 - `room_assignment_history` is owned by `room`. Every occupy / release / move of a bed goes through `BedOccupancyService`. Each stateful entity has an `<Entity>Policy` implementing the SRS section 10 transition table. It is used both to validate actions and to compute `allowedActions`.
 - **Transactions and locks:** one write request = one `@Transactional` Service call; READ COMMITTED plus explicit `FOR UPDATE`. Lock order is global: `bed → student_profile → dormitory_contract → invoice`; room transfer locks the two beds by ascending `bed_id`. Lock first, then re-check the condition.
 - **Scheduled jobs** (`@Scheduled`, single instance): select candidate IDs, then process each in its own `TransactionTemplate` transaction, lock the row and re-check the condition. Do not rely on `@Transactional(REQUIRES_NEW)` inside the same class as the `@Scheduled` method (proxy self-invocation is skipped). Jobs run as user `SYSTEM` and write `audit_log`.
-- **Security:** Spring Security form login `POST /api/auth/login`, BCrypt, Spring Session JDBC (cookie HttpOnly / Secure / SameSite=Lax, 30 min idle), CSRF via `CookieCsrfTokenRepository` (header `X-XSRF-TOKEN`). Three authorisation layers:
-  1. role by URL (`SecurityFilterChain`, `@PreAuthorize`) → 403;
-  2. object scope via `ScopeGuard` → **404**;
-  3. state via Policy → 409 with `errorCode`.
-
-  List and search endpoints filter scope **inside the SQL query**, using the unit from `CurrentUser`, never from request parameters. A must-change-password filter blocks every API except `/api/auth/me`, `change-password`, and `logout`.
+- **Security:** chỉ Keycloak OIDC/PKCE và Spring Security Resource Server JWT, cấu hình trong account/config/SecurityConfig. Actor lấy từ subject liên kết vào app_user; role/version/locked kiểm tra với dữ liệu DMS mới nhất, scope tiếp tục do ScopeGuard kiểm tra. Không có session/BCrypt fallback. AuthService/Impl gộp khóa tài khoản, reset và thu hồi token; IdentityAccountService/Impl gộp Admin REST và chuyển tài khoản. Xem README.md để chạy.
 - **Errors:** Services throw `BusinessException(errorCode, details)`, and a `@RestControllerAdvice` renders `{ errorCode, message, details }`. `DataIntegrityViolationException` is mapped from the DB constraint name to an `errorCode` (e.g. `ux_assignment_open_bed` → `BED_TAKEN`). Unexpected errors return 500 `INTERNAL_ERROR` with a `requestId`. A filter puts `requestId` in the MDC. Every state change goes through `StatusHistoryService.record(...)` in the same transaction.
 - **Schema and config:** Flyway owns the schema (`V1__init.sql` = `DB-DMS-schema.sql`; later changes are new migration files, never edits). Business parameters live in the `system_config` table via `ConfigService`; technical settings in `application.yml` plus environment variables (profiles `dev`, `prod`).
 - **Files:** incident photos (max 3, ≤ 5 MB each, JPEG/PNG/WebP checked by magic bytes) on volume `/data/uploads`, served only through a permission-checked endpoint; files are deleted if the transaction rolls back. Excel import and report export use Apache POI (.xlsx ≤ 5 MB).
@@ -68,14 +63,14 @@ Fixed constraints: React SPA + Spring Boot 3 (Java 17+) + PostgreSQL 15+; modula
 
 ### Frontend
 
-React SPA with Ant Design (themed from the design tokens), React Router, TanStack Query, React Hook Form + Zod, Axios (`withCredentials`, XSRF, 401 interceptor). Layout: `app/`, `services/api/`, `features/<module>/`, `pages/<role>/`, `components/`, `constants/statusConfig.ts`, `utils/errorMessages.ts`. Four root routes `/student`, `/staff`, `/technician`, `/admin`; the guard reads the role from `GET /api/auth/me`. After each action invalidate the related queries; on 409 refetch and show the message for the `errorCode`. Mobile-first (from 360 px) for Student and Technician; desktop for Staff and Admin. Vite dev server proxies `/api` to `localhost:8080`.
+React SPA with Ant Design (themed from the design tokens), React Router, TanStack Query, React Hook Form + Zod, Axios ( Bearer JWT, 401 interceptor). Layout: `app/`, `services/api/`, `features/<module>/`, `pages/<role>/`, `components/`, `constants/statusConfig.ts`, `utils/errorMessages.ts`. Four root routes `/student`, `/staff`, `/technician`, `/admin`; the guard reads the role from `GET /api/auth/me`. After each action invalidate the related queries; on 409 refetch and show the message for the `errorCode`. Mobile-first (from 360 px) for Student and Technician; desktop for Staff and Admin. Vite dev server proxies `/api` to `localhost:8080`.
 
 The UI template (shell) is in place; module work only fills in pages:
 
 - `app/router/{student,staff,technician,admin}Routes.tsx` hold every route of UI section 26, one file per role so members do not collide. Routes render `pages/CrudPage` using resources from `features/crud/resources.ts`, grouped CRUD tabs, or simple navigation home pages. Extend the resource configuration for basic CRUD; create a separate page when implementing a detailed workflow. `app/guards/RequireRole` enforces login, forced password change, then role (wrong role redirects to that role's home, not 403). `app/layouts/` has `StudentLayout` (bottom nav under 640 px), `TechnicianLayout`, and `SidebarShell` shared by `StaffLayout` and `AdminLayout` (sidebar from 1024 px, Drawer below).
 - Menus and role home paths live only in `constants/navigation.ts`. Labels, colours and icons for every status live only in `constants/statusConfig.ts` (three layers: DB status badge, derived chip, bed occupancy). Money and date formatting is in `utils/format.ts`.
 - Shared components (`components/index.ts`): `StatusBadge`, `DerivedChip`, `ConfirmDialog` / `useConfirm` (optional mandatory reason), `ActionBar` (renders only the buttons present in `allowedActions`), `FormField` (label, required mark, `aria-describedby` error), `StatusTimeline` + `stepsFromFlow`, `ResponsiveTable` (cards under 640 px), `PageHeader`, and presentational business components (`BedCard`, `RoomCard`, `InvoiceCard`, `ContractStatus`, `DepositLedger`, `NotificationItem`). Business components take props only; fetch in `features/<module>/`. Use `useApiErrorHandler` as a mutation `onError`.
-- Running without the backend: copy `DMS/frontend/.env.example` to `.env.local` (git-ignored) to get a fake `/api/auth/me` in `npm run dev`. Switch role by opening any page with `?mockRole=student|student-must-change|student-no-contract|staff|staff-cross|technician|admin` (`?mockRole=off` clears it). The mock never applies to a production build.
+- Authentication uses Keycloak and backend /me. Không tạo demo/mock hoặc nhánh legacy. LoginPage và ChangePasswordPage dùng trực tiếp luồng Keycloak; helpers và tín hiệu nhiều tab nằm trong services/api/auth.ts. Hạn chế file mới: ưu tiên file sẵn có, chỉ tách Service/Impl khi có trách nhiệm riêng cần thiết.
 
 ### Deployment
 
@@ -106,3 +101,5 @@ These are easy to violate if you only read one file:
 - Student accounts come from an Admin Excel import; login is by student ID with a default password and a forced change on first login.
 - Targets: ~1,500 students; 95% of requests under 2 s at 100 concurrent users; load tests with JMeter or k6.
 - Out of MVP scope: payment gateway, QR access, visitors, IoT meters, chatbot, roommate matching, auto-assignment, email and realtime notifications.
+
+Current Keycloak integration: IdentityAccountService/Impl and IdentityAccountService/Impl keep Vietnamese contracts. Secret is backend-only, realm template has no demo users. Compose includes separate Keycloak DB. All detailed business permissions remain in ScopeGuard. Do not edit V1–V4. Keycloak external changes may leave issued JWTs valid until five-minute TTL; DMS changes revoke via security_version.

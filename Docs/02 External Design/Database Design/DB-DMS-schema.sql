@@ -1,8 +1,10 @@
 -- =====================================================================
 -- DMS - Hệ thống quản lý ký túc xá sinh viên
--- Lược đồ CSDL, bản 0.2 (10/10/2026): chốt Q-DB-01..10 theo thẩm định của nhóm
+-- Lược đồ nghiệp vụ, bản 0.4 (13/10/2026): thêm phiên bản bảo mật tài khoản
 -- DBMS: PostgreSQL 16
--- Căn cứ: SRS-DMS.md v0.5. Giải thích chi tiết: DB-Design-DMS.md
+-- Căn cứ: SRS-DMS.md v0.7. Giải thích chi tiết: DB-Design-DMS.md v0.4
+-- Đây là snapshot bảng nghiệp vụ hiện tại, gồm cột của migration V3.
+-- Ứng dụng nâng cấp bằng Flyway V1/V2/V3; V2 tạo bảng Spring Session riêng.
 --
 -- Quy ước:
 --   * Tên bảng, cột: snake_case, số ít.
@@ -26,9 +28,10 @@ CREATE TABLE management_unit (
 );
 
 CREATE TABLE app_user (
+    keycloak_user_id     VARCHAR(255), -- subject Keycloak, không ghép bằng username
     id                    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     username              VARCHAR(50)  NOT NULL UNIQUE,  -- mã SV với sinh viên
-    password_hash         VARCHAR(100) NOT NULL,         -- BCrypt
+    password_hash         VARCHAR(100),         -- NULL khi dùng Keycloak; BCrypt chỉ legacy-session
     role                  VARCHAR(20)  NOT NULL
                           CHECK (role IN ('STUDENT','STAFF','TECHNICIAN','ADMIN')),
     full_name             VARCHAR(100) NOT NULL,
@@ -39,6 +42,8 @@ CREATE TABLE app_user (
     locked                BOOLEAN NOT NULL DEFAULT FALSE, -- khóa bởi Admin
     failed_login_count    INT     NOT NULL DEFAULT 0,
     locked_until          TIMESTAMPTZ,                    -- khóa tạm 15 phút sau 5 lần sai
+    security_version      BIGINT NOT NULL DEFAULT 0       -- tăng để thu hồi phiên đăng nhập cũ
+                          CONSTRAINT ck_user_security_version CHECK (security_version >= 0),
     created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
     -- Staff, KTV bắt buộc thuộc một đơn vị; Student, Admin không gắn đơn vị
     CONSTRAINT ck_user_unit CHECK (
@@ -49,6 +54,8 @@ CREATE TABLE app_user (
 
 -- Hồ sơ sinh viên, 1-1 với app_user. Mọi bảng nghiệp vụ tham chiếu sinh viên
 -- qua student_profile để CSDL đảm bảo "student_id thật sự là sinh viên".
+CREATE UNIQUE INDEX ux_app_user_keycloak_user_id ON app_user(keycloak_user_id) WHERE keycloak_user_id IS NOT NULL;
+
 CREATE TABLE student_profile (
     user_id            BIGINT PRIMARY KEY REFERENCES app_user(id),
     student_code       VARCHAR(20)  NOT NULL UNIQUE,
