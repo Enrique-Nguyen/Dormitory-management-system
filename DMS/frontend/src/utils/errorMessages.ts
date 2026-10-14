@@ -34,6 +34,11 @@ const messages: Record<string, (d: Details) => string> = {
     'Dữ liệu vừa được người khác thay đổi. Vui lòng thử lại.',
   FILE_TOO_LARGE: (d) =>
     `File vượt quá ${d.maxMb ?? ''} MB. Vui lòng chọn file nhỏ hơn.`,
+  DUPLICATE_VALUE: () => 'Giá trị này đã tồn tại. Vui lòng nhập giá trị khác.',
+  METHOD_NOT_ALLOWED: () =>
+    'Thao tác không được hỗ trợ. Hãy tải lại trang rồi thử lại.',
+  UNSUPPORTED_MEDIA_TYPE: () =>
+    'Định dạng dữ liệu gửi lên không được hỗ trợ. Hãy tải lại trang rồi thử lại.',
   INTERNAL_ERROR: (d) =>
     `Hệ thống gặp lỗi. Vui lòng thử lại sau (mã yêu cầu: ${d.requestId ?? 'không có'}).`,
 
@@ -54,11 +59,43 @@ const messages: Record<string, (d: Details) => string> = {
   USERNAME_EXISTS: (d) =>
     `Tên đăng nhập ${d.username ?? ''} đã tồn tại. Vui lòng chọn tên khác.`,
 
+  STUDENT_CODE_EXISTS: () =>
+    'Mã sinh viên đã tồn tại. Kiểm tra lại mã hoặc tìm hồ sơ đã có.',
+  STUDENT_HAS_ACTIVE_CONTRACT: () =>
+    'Sinh viên đang có chỗ ở hoặc giữ chỗ nên không đổi được giới tính. Hãy trả phòng trước.',
+  CROSS_UNIT_ONLY_STAFF: () =>
+    'Quyền tổng hợp chỉ cấp được cho tài khoản Staff.',
+  CONFIG_VALUE_INVALID: (d) =>
+    `Giá trị không hợp lệ${d.key ? ` cho ${String(d.key)}` : ''}. Kiểm tra lại rồi lưu.`,
+
   // 5.3 Phòng, giường
+  BED_CODE_EXISTS: () => 'Mã giường đã có trong phòng này.',
+  LEADER_ALREADY_ASSIGNED: () =>
+    'Sinh viên đang là trưởng phòng của phòng khác. Gỡ vai trò đó trước.',
+  LEADER_NOT_STAYING: (d) =>
+    `Sinh viên này không đang ở trong phòng${d.roomCode ? ` ${String(d.roomCode)}` : ''}. Chọn sinh viên đang ở phòng.`,
+  NOT_STAYING: () =>
+    'Bạn hiện không ở trong ký túc xá nên không dùng được chức năng này.',
   BED_TAKEN: (d) =>
     `Giường ${d.bedCode ?? ''} vừa được phân cho sinh viên khác. Vui lòng chọn giường khác.`,
   BED_NOT_AVAILABLE: (d) =>
     `Giường ${d.bedCode ?? ''} hoặc phòng đang không hoạt động. Vui lòng chọn giường khác.`,
+
+  // 5.4+ Đăng ký, kỳ hè, bảo trì, hóa đơn
+  PERIOD_NOT_OPEN: () =>
+    'Đợt đăng ký chưa mở hoặc đã đóng. Hãy chờ đợt tiếp theo hoặc liên hệ Ban quản lý.',
+  UNIT_NOT_IN_PERIOD: () =>
+    'Đợt này không áp dụng cho đơn vị đã chọn. Hãy chọn đơn vị khác.',
+  APPLICATION_HAS_CONTRACT: () =>
+    'Đơn đã sinh hợp đồng nên không thể hủy. Hãy liên hệ Ban quản lý để xử lý hợp đồng.',
+  PHOTO_INVALID: () =>
+    'Ảnh không hợp lệ. Chỉ nhận tối đa 3 ảnh JPEG, PNG hoặc WebP, mỗi ảnh không quá 5 MB.',
+  PHOTO_UPLOAD_FAILED: () => 'Không lưu được ảnh. Vui lòng thử lại.',
+  TICKET_LOCATION_INVALID: () =>
+    'Chọn một phòng hoặc một khu vực chung (tòa và tầng), không chọn cả hai.',
+  TECHNICIAN_OUT_OF_UNIT: () =>
+    'Kỹ thuật viên không thuộc đơn vị của ticket. Chọn kỹ thuật viên khác.',
+  INVOICE_ALREADY_PAID: () => 'Hóa đơn đã được xác nhận thanh toán trước đó.',
 }
 
 export function errorMessage(error: unknown): string {
@@ -66,7 +103,8 @@ export function errorMessage(error: unknown): string {
     const { errorCode, details, requestId } = error.response.data
     const build = messages[errorCode]
     if (build) return build({ ...details, requestId })
-    return error.response.data.message
+    // Mã chưa có câu tiếng Việt: không hiện chuỗi mã thô (backend đặt message = errorCode).
+    return `Không thực hiện được thao tác (mã: ${errorCode}). Vui lòng thử lại hoặc liên hệ Ban quản lý.`
   }
   if (axios.isAxiosError(error)) {
     // Có phản hồi nhưng không theo khuôn { errorCode }: CSRF bị từ chối, proxy 502/504...

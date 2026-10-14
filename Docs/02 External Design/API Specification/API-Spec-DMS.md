@@ -1,6 +1,6 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.4**, 13/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.5**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.6 (mục 3, 6.2, 10), `SAD-DMS.md` v1.0, `DB-Design-DMS.md` v0.3, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
@@ -12,12 +12,13 @@
 | 0.2 | 10/10/2026 | Theo thẩm định: Staff tạo ticket của phòng (`roomId`); xem trước trả phòng cảnh báo ticket chưa kết luận chi phí; xem trước điện nước trả phòng thiếu trưởng phòng và thiếu chỉ số; một thông báo `ROOM` cho mỗi hóa đơn điện nước; tổng hóa đơn không âm sau điều chỉnh; quy ước tên hành động không đổi trạng thái; `link` của thông báo do backend suy ra; chốt Q-API-01..07; trừ cọc chia cho người Staff chọn (`chargedStudentIds`, endpoint `chargeable-students`) |
 | 0.3 | 13/10/2026 | Bổ sung GET chi tiết/DELETE danh mục và DELETE phòng/giường chưa có lịch sử cho khung CRUD; ghi rõ giới hạn triển khai và dẫn README backend |
 | 0.4 | 13/10/2026 | Chốt phạm vi khung CRUD BE + React; bổ sung hồ sơ sinh viên, hợp đồng/hóa đơn chờ, yêu cầu/lựa chọn chờ, chỉ số, sửa/xóa thông báo và các ngoại lệ chỉ đọc |
+| 0.5 | 14/10/2026 | Theo code review: bổ sung mã `RESOURCE_IN_USE`, `DUPLICATE_VALUE`, `METHOD_NOT_ALLOWED`, `UNSUPPORTED_MEDIA_TYPE`, `STUDENT_HAS_ACTIVE_CONTRACT`, `STUDENT_CODE_EXISTS`, `BED_CODE_EXISTS`, `LEADER_ALREADY_ASSIGNED`, `APPLICATION_HAS_CONTRACT`; ràng buộc CSDL ngoài danh sách ánh xạ theo SQLState thay vì luôn là `CONCURRENT_UPDATE`; hủy đơn APPROVED đã có hợp đồng bị chặn; PATCH sinh viên giữ trường không gửi |
 
 ---
 
 ## 1. Phạm vi và cách đọc
 
-Bổ sung triển khai 13/10/2026: khung backend trên nhánh `develop-quyennnv` có thêm GET chi tiết và DELETE cho danh mục `management-units`, `buildings`, `room-types`, `semesters`, `priority-categories`; đọc dùng `/api/<resource>/{id}`, xóa dùng cùng đường dẫn ghi của POST/PATCH. DELETE chỉ áp dụng dữ liệu chưa bị tham chiếu; FK từ chối thì trả 409 `CONCURRENT_UPDATE`.
+Bổ sung triển khai 13/10/2026: khung backend trên nhánh `develop-quyennnv` có thêm GET chi tiết và DELETE cho danh mục `management-units`, `buildings`, `room-types`, `semesters`, `priority-categories`; đọc dùng `/api/<resource>/{id}`, xóa dùng cùng đường dẫn ghi của POST/PATCH. DELETE chỉ áp dụng dữ liệu chưa bị tham chiếu; FK từ chối thì trả 409 `RESOURCE_IN_USE`.
 
 Có thêm DELETE `/api/rooms/{id}` và `/api/beds/{id}` cho dữ liệu chưa từng có phân phòng. Phòng/giường đã có lịch sử không được xóa, trả 409 `ROOM_OCCUPIED` hoặc `BED_OCCUPIED`. Thay đổi này phục vụ khung CRUD. Hợp đồng/hóa đơn chỉ ghi/xóa hồ sơ chờ chưa phát sinh theo mục 1.1; sổ cọc luôn chỉ đọc.
 
@@ -828,6 +829,10 @@ Câu tiếng Việt là gợi ý cho `errorMessages.ts`; `{x}` lấy từ `detai
 | `NOT_FOUND` | 404 | Không tìm thấy dữ liệu hoặc bạn không có quyền xem |
 | `INVALID_STATE_TRANSITION` | 409 | Thao tác không còn hợp lệ vì trạng thái đã thay đổi ({currentStatus}). Trang đã được tải lại |
 | `CONCURRENT_UPDATE` | 409 | Dữ liệu vừa được người khác thay đổi. Vui lòng thử lại |
+| `RESOURCE_IN_USE` | 409 | Dữ liệu đã có lịch sử hoặc đang được sử dụng, không thể sửa/xóa trực tiếp |
+| `DUPLICATE_VALUE` | 409 | Giá trị đã tồn tại, vui lòng nhập giá trị khác |
+| `METHOD_NOT_ALLOWED` | 405 | Phương thức HTTP không được hỗ trợ cho đường dẫn này |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | Kiểu nội dung gửi lên không được hỗ trợ |
 | `FILE_TOO_LARGE` | 413 | File vượt quá {maxMb} MB |
 | `INTERNAL_ERROR` | 500 | Hệ thống gặp lỗi. Mã tra cứu: {requestId} |
 
@@ -842,6 +847,8 @@ Câu tiếng Việt là gợi ý cho `errorMessages.ts`; `{x}` lấy từ `detai
 | `WRONG_CURRENT_PASSWORD` | 400 | Mật khẩu hiện tại không đúng |
 | `PASSWORD_POLICY` | 400 | Mật khẩu mới phải 8–64 ký tự, có chữ và số, khác mật khẩu cũ |
 | `USERNAME_EXISTS` | 409 | Tên đăng nhập {username} đã tồn tại |
+| `STUDENT_CODE_EXISTS` | 409 | Mã sinh viên đã tồn tại |
+| `STUDENT_HAS_ACTIVE_CONTRACT` | 409 | Sinh viên đang có chỗ ở hoặc giữ chỗ, không đổi giới tính được |
 | `CROSS_UNIT_ONLY_STAFF` | 409 | Chỉ cấp quyền tổng hợp cho tài khoản Staff |
 | `IMPORT_FILE_INVALID` | 400 | File không đúng mẫu. Thiếu cột: {missingColumns} |
 | `CONFIG_VALUE_INVALID` | 400 | Giá trị không hợp lệ cho {key} |
@@ -856,6 +863,8 @@ Câu tiếng Việt là gợi ý cho `errorMessages.ts`; `{x}` lấy từ `detai
 | `ROOM_OCCUPIED` | 409 | Phòng {roomCode} còn {count} sinh viên đang ở hoặc giữ chỗ |
 | `BED_OCCUPIED` | 409 | Giường {bedCode} đang có người ở hoặc giữ chỗ |
 | `ROOM_CODE_EXISTS` | 409 | Mã phòng {code} đã có trong tòa này |
+| `BED_CODE_EXISTS` | 409 | Mã giường đã có trong phòng này |
+| `LEADER_ALREADY_ASSIGNED` | 409 | Sinh viên đang là trưởng phòng của phòng khác |
 | `SEMESTER_OVERLAP` | 409 | Thời gian trùng với học kỳ {semesterName} |
 | `LEADER_NOT_STAYING` | 409 | Sinh viên này không đang ở trong phòng {roomCode} |
 | `STUDENT_ALREADY_ASSIGNED` | 409 | Sinh viên đã có chỗ ở hoặc đang giữ chỗ |
@@ -868,6 +877,7 @@ Câu tiếng Việt là gợi ý cho `errorMessages.ts`; `{x}` lấy từ `detai
 | `UNIT_NOT_IN_PERIOD` | 400 | Đợt này không áp dụng cho đơn vị đã chọn |
 | `APPLICATION_EXISTS` | 409 | Bạn đã có đơn trong đợt này |
 | `CONTRACT_EXISTS` | 409 | Bạn đang có hợp đồng còn hiệu lực. Hãy dùng chức năng gia hạn |
+| `APPLICATION_HAS_CONTRACT` | 409 | Đơn đã sinh hợp đồng nên không thể hủy. Hãy liên hệ Ban quản lý |
 | `SUMMER_CHOICE_EXISTS` | 409 | Bạn đã gửi lựa chọn cho kỳ hè này |
 | `TEMP_LEAVE_NOT_EXTENDED` | 409 | Hợp đồng cần được gia hạn sang năm học sau trước khi tạm rời hè |
 | `SUMMER_CHOICE_NOT_APPROVED` | 409 | Lựa chọn tạm rời hè chưa được duyệt |
@@ -931,7 +941,9 @@ Theo `DB-Design-DMS.md` mục 4; `GlobalExceptionHandler` đọc tên ràng bu�
 | CHECK nguyên nhân, chi phí của `maintenance_request` | `COST_INVALID` |
 | `CHECK (total_amount >= 0)` của `invoice` | `ADJUSTMENT_INVALID` |
 | `EXCLUDE` của `semester` | `SEMESTER_OVERLAP` |
-| Ràng buộc khác | `CONCURRENT_UPDATE` (ghi log mức WARN kèm tên ràng buộc) |
+| `ux_room_leader` | `LEADER_ALREADY_ASSIGNED` |
+| UNIQUE `student_code`, UNIQUE `(room_id, code)` của giường | `STUDENT_CODE_EXISTS`, `BED_CODE_EXISTS` |
+| Ràng buộc khác, theo SQLState | UNIQUE / EXCLUDE (23505, 23P01) → 409 `DUPLICATE_VALUE`; khóa ngoại (23503) → 409 `RESOURCE_IN_USE`; NOT NULL / CHECK (23502, 23514) → 400 `VALIDATION_FAILED`; còn lại → 409 `CONCURRENT_UPDATE` (ghi log mức WARN kèm tên ràng buộc) |
 
 ---
 

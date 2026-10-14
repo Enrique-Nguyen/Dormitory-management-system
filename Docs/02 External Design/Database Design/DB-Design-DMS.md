@@ -1,6 +1,7 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.3**, 10/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.4**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Thay đổi 0.4 (14/10/2026): mục 4 bổ sung ánh xạ `ux_room_leader`, `student_code`, `(room_id, code)` của giường và quy tắc theo SQLState cho ràng buộc chưa có tên trong danh sách
 > Căn cứ: `SRS-DMS.md` v0.5 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
 > DDL đầy đủ: [`DB-DMS-schema.sql`](DB-DMS-schema.sql) (đã chạy thử trên PostgreSQL 16.15, xem mục 9)
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
@@ -216,7 +217,10 @@ erDiagram
 | BR-10 Sổ cọc | CHECK dấu theo loại; `UNIQUE(contract_id) WHERE type='DEPOSIT'` và `='REFUND'`; `UNIQUE(contract_id, maintenance_request_id) WHERE type='DEDUCTION'` | → `DEPOSIT_INVALID` |
 | BR-10 Hoàn cọc bằng số dư | `move_out_record`: `refund_amount = GREATEST(deposit_balance, 0)` | |
 | FR-MNT-09 Nguyên nhân, chi phí | 4 CHECK trên `maintenance_request` | → `COST_INVALID` |
-| Học kỳ không chồng nhau | `EXCLUDE USING gist (daterange(...) WITH &&)` | |
+| Học kỳ không chồng nhau | `EXCLUDE USING gist (daterange(...) WITH &&)` | `semester_daterange_excl` → `SEMESTER_OVERLAP` |
+| Một trưởng phòng một phòng | `UNIQUE(leader_student_id) WHERE leader_student_id IS NOT NULL` | `ux_room_leader` → `LEADER_ALREADY_ASSIGNED` |
+| Mã sinh viên duy nhất; mã giường duy nhất trong phòng | `UNIQUE(student_code)`, `UNIQUE(room_id, code)` | → `STUDENT_CODE_EXISTS`, `BED_CODE_EXISTS` |
+| Ràng buộc còn lại | | UNIQUE / EXCLUDE → `DUPLICATE_VALUE`; khóa ngoại → `RESOURCE_IN_USE`; NOT NULL / CHECK → `VALIDATION_FAILED`; còn lại `CONCURRENT_UPDATE` |
 | Nhật ký chỉ ghi thêm | Trigger `tg_audit_log_append_only` | |
 
 ### Service vẫn phải kiểm tra (CSDL không diễn đạt gọn được)
