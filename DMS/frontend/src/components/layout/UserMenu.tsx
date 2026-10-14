@@ -2,13 +2,9 @@ import { KeyOutlined, LogoutOutlined } from '@ant-design/icons'
 import { App, Avatar, Button, Dropdown, type MenuProps } from 'antd'
 import { Link } from 'react-router'
 import { useState } from 'react'
-import {
-  CHANGE_PASSWORD_PATH,
-  roleLabel,
-  type NavItem,
-} from '../../constants/navigation'
+import { CHANGE_PASSWORD_PATH, roleLabel, type NavItem } from '../../constants/navigation'
 import { useMe } from '../../features/account/useMe'
-import { logout } from '../../services/api/auth'
+import { hasAnyPermission, logout } from '../../services/api/auth'
 import { useViewport } from '../../hooks/useViewport'
 import { errorMessage } from '../../utils/errorMessages'
 
@@ -44,11 +40,13 @@ export default function UserMenu({ extraItems = [] }: Props) {
       type: 'group',
       label: `${me.fullName} · ${roleLabel[me.role]}`,
     },
-    ...extraItems.map((item) => ({
-      key: item.path,
-      icon: item.icon && <item.icon />,
-      label: <Link to={item.path}>{item.label}</Link>,
-    })),
+    ...extraItems
+      .filter((item) => hasAnyPermission(me, item.permissions))
+      .map((item) => ({
+        key: item.path,
+        icon: item.icon && <item.icon />,
+        label: <Link to={item.path}>{item.label}</Link>,
+      })),
     ...(extraItems.length > 0 ? [{ type: 'divider' as const }] : []),
     {
       key: 'password',
@@ -78,10 +76,21 @@ export default function UserMenu({ extraItems = [] }: Props) {
           borderRadius: 'var(--radius-full)',
         }}
       >
-        <Avatar size={28} style={{ background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)', fontWeight: 600, fontSize: 13 }}>
+        <Avatar
+          size={28}
+          style={{
+            background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)',
+            fontWeight: 600,
+            fontSize: 13,
+          }}
+        >
           {me.fullName.trim().split(/\s+/).pop()?.[0]?.toUpperCase()}
         </Avatar>
-        {showName && <span style={{ fontWeight: 500, fontSize: 13, color: 'var(--color-heading)' }}>{me.fullName}</span>}
+        {showName && (
+          <span style={{ fontWeight: 500, fontSize: 13, color: 'var(--color-heading)' }}>
+            {me.fullName}
+          </span>
+        )}
       </Button>
     </Dropdown>
   )

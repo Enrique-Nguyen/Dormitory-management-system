@@ -1,10 +1,17 @@
+import { Permission } from '../../constants/authorization'
 import { Layout, Menu } from 'antd'
 import { Link, Outlet, useLocation } from 'react-router'
 import NotificationBell from '../../components/layout/NotificationBell'
 import UserMenu from '../../components/layout/UserMenu'
 import { useMe } from '../../features/account/useMe'
-import { findActivePath, STUDENT_MAINTENANCE_PATH, studentBottomNav, studentMoreNav } from '../../constants/navigation'
+import {
+  findActivePath,
+  STUDENT_MAINTENANCE_PATH,
+  studentBottomNav,
+  studentMoreNav,
+} from '../../constants/navigation'
 import { useViewport } from '../../hooks/useViewport'
+import { hasAnyPermission, hasPermission } from '../../services/api/auth'
 
 // Thông báo đã có chuông trên header nên không lặp trong menu
 const moreNav = studentMoreNav.filter((item) => item.path !== '/student/notifications')
@@ -19,7 +26,9 @@ export default function StudentLayout() {
   const isMobile = viewport === 'mobile'
   const { pathname } = useLocation()
   const { data: me } = useMe()
-  const active = findActivePath(allNav, pathname)
+  const visibleNav = allNav.filter((item) => hasAnyPermission(me, item.permissions))
+  const visibleMoreNav = moreNav.filter((item) => hasAnyPermission(me, item.permissions))
+  const active = findActivePath(visibleNav, pathname)
   // Tab Báo hỏng luôn mở được, nhưng chỉ dùng khi đang ở; nếu không trang sẽ giải thích lý do (UI 4.1)
   const canReport = me?.student?.hasActiveContract ?? false
 
@@ -36,14 +45,19 @@ export default function StudentLayout() {
             <Menu
               mode="horizontal"
               selectedKeys={active ? [active] : []}
-              items={allNav.map((item) => ({ key: item.path, label: <Link to={item.path}>{item.label}</Link> }))}
+              items={visibleNav.map((item) => ({
+                key: item.path,
+                label: <Link to={item.path}>{item.label}</Link>,
+              }))}
               style={{ borderBottom: 0, background: 'transparent' }}
             />
           </nav>
         )}
         {isMobile && <div style={{ flex: 1 }} />}
-        <NotificationBell to="/student/notifications" />
-        <UserMenu extraItems={isMobile ? moreNav : []} />
+        {hasPermission(me, Permission.NOTIFICATION_READ) && (
+          <NotificationBell to="/student/notifications" />
+        )}
+        <UserMenu extraItems={isMobile ? visibleMoreNav : []} />
       </Layout.Header>
 
       <Layout.Content className={isMobile ? 'dms-with-bottom-nav' : undefined}>
@@ -54,17 +68,24 @@ export default function StudentLayout() {
 
       {isMobile && (
         <nav className="dms-bottom-nav" aria-label="Điều hướng chính">
-          {studentBottomNav.map((item) => {
-            const isActive = active === item.path
-            const limited = item.path === STUDENT_MAINTENANCE_PATH && !canReport
-            return (
-              <Link key={item.path} to={item.path} aria-current={isActive ? 'page' : undefined} data-limited={limited}>
-                {item.icon && <item.icon />}
-                <span>{item.label}</span>
-                {limited && <span className="sr-only">(chỉ dùng khi đang ở KTX)</span>}
-              </Link>
-            )
-          })}
+          {studentBottomNav
+            .filter((item) => hasAnyPermission(me, item.permissions))
+            .map((item) => {
+              const isActive = active === item.path
+              const limited = item.path === STUDENT_MAINTENANCE_PATH && !canReport
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  aria-current={isActive ? 'page' : undefined}
+                  data-limited={limited}
+                >
+                  {item.icon && <item.icon />}
+                  <span>{item.label}</span>
+                  {limited && <span className="sr-only">(chỉ dùng khi đang ở KTX)</span>}
+                </Link>
+              )
+            })}
         </nav>
       )}
     </Layout>

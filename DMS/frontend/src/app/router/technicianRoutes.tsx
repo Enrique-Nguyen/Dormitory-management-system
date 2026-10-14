@@ -1,3 +1,4 @@
+import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
 import { Navigate } from 'react-router'
 import CrudPage from '../../pages/CrudPage'
@@ -7,7 +8,7 @@ import TechnicianLayout from '../layouts/TechnicianLayout'
 // UI mục 22, 26. `notifications` không có trong danh sách route mục 26, nhưng UI 4.3 đặt chuông thông báo ở header KTV.
 export const technicianRoutes: RouteObject = {
   path: '/technician',
-  element: <RequireRole role="TECHNICIAN" />,
+  element: <RequireRole role={Role.TECHNICIAN} />,
   children: [
     {
       element: <TechnicianLayout />,

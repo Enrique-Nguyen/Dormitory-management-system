@@ -1,10 +1,14 @@
+import { Role } from '../../constants/authorization'
 import { Button, Result, Spin } from 'antd'
 import axios from 'axios'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { useMe } from '../../features/account/useMe'
-import { CHANGE_PASSWORD_PATH, roleHome } from '../../constants/navigation'
-import type { Role } from '../../types/auth'
-import { loginPath } from '../../services/api/auth'
+import {
+  CHANGE_PASSWORD_PATH,
+  permissionsForPath,
+  roleHome,
+} from '../../constants/navigation'
+import { hasAnyPermission, loginPath } from '../../services/api/auth'
 import { errorCodeOf } from '../../utils/errorMessages'
 
 interface Props {
@@ -18,18 +22,13 @@ interface Props {
  * Guard của mỗi cổng (UI 27.1). Thứ tự: chưa đăng nhập → /login; bắt buộc đổi mật khẩu → /change-password
  * (FR-ACC-03); sai vai trò → trang chủ của vai trò đó (không hiện 403).
  */
-export default function RequireRole({
-  role,
-  allowMustChangePassword = false,
-}: Props) {
+export default function RequireRole({ role, allowMustChangePassword = false }: Props) {
   const { data: me, isPending, error, refetch } = useMe()
   const location = useLocation()
 
   if (isPending) {
     return (
-      <div
-        style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}
-      >
+      <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
         <Spin size="large" aria-label="Đang tải" />
       </div>
     )
@@ -53,10 +52,7 @@ export default function RequireRole({
               ? 'expired'
               : undefined
       return (
-        <Navigate
-          to={loginPath(reason, location.pathname + location.search)}
-          replace
-        />
+        <Navigate to={loginPath(reason, location.pathname + location.search)} replace />
       )
     }
     return (
@@ -75,8 +71,26 @@ export default function RequireRole({
 
   if (me.mustChangePassword && !allowMustChangePassword)
     return <Navigate to={CHANGE_PASSWORD_PATH} replace />
-  if (role && me.role !== role)
+  if (
+    role &&
+    me.role !== role &&
+    !(me.role === Role.ADMIN && (role === Role.STAFF || role === Role.TECHNICIAN))
+  )
     return <Navigate to={roleHome[me.role]} replace />
+
+  if (role && !hasAnyPermission(me, permissionsForPath(location.pathname)))
+    return (
+      <Result
+        status="403"
+        title="Không có quyền truy cập"
+        subTitle="Tài khoản chưa được cấp quyền xem màn hình này."
+        extra={
+          <Button onClick={() => window.location.assign(roleHome[me.role])}>
+            Về trang chủ
+          </Button>
+        }
+      />
+    )
 
   return <Outlet />
 }

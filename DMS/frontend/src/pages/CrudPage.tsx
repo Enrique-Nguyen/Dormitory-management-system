@@ -1,3 +1,4 @@
+import { Action, Permission, Role, permissionFor } from '../constants/authorization'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   App,
@@ -11,6 +12,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Result,
   Select,
   Space,
   Switch,
@@ -32,6 +34,7 @@ import {
 import { resources } from '../features/crud/resources'
 import type { CrudField, CrudRecord } from '../features/crud/types'
 import { api } from '../services/api/client'
+import { hasPermission } from '../services/api/auth'
 import { errorMessage } from '../utils/errorMessages'
 
 const labels: Record<string, string> = {
@@ -50,10 +53,10 @@ const labels: Record<string, string> = {
   PAID: 'Đã thanh toán',
   M: 'Nam',
   F: 'Nữ',
-  STAFF: 'Quản lý',
-  ADMIN: 'Quản trị',
-  STUDENT: 'Sinh viên',
-  TECHNICIAN: 'Kỹ thuật viên',
+  [Role.STAFF]: 'Quản lý',
+  [Role.ADMIN]: 'Quản trị',
+  [Role.STUDENT]: 'Sinh viên',
+  [Role.TECHNICIAN]: 'Kỹ thuật viên',
   ROOM_FEE: 'Phí phòng',
   UTILITY: 'Điện nước',
   ELECTRIC: 'Điện',
@@ -87,13 +90,7 @@ function hasPeriodOpened(value: unknown) {
   return new Date(String(value)).getTime() <= Date.now()
 }
 
-function LookupInput({
-  field,
-  disabled,
-}: {
-  field: CrudField
-  disabled?: boolean
-}) {
+function LookupInput({ field, disabled }: { field: CrudField; disabled?: boolean }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['crud-lookup', field.lookup],
     queryFn: () => getLookupRecords(field.lookup!),
@@ -138,11 +135,7 @@ function CrudInput({ field }: { field: CrudField }) {
   switch (field.kind) {
     case 'number':
       return (
-        <InputNumber
-          style={{ width: '100%' }}
-          min={field.min ?? 0}
-          max={field.max}
-        />
+        <InputNumber style={{ width: '100%' }} min={field.min ?? 0} max={field.max} />
       )
     case 'date':
       return <Input type="date" />
@@ -166,27 +159,41 @@ export default function CrudPage({ resource }: { resource: string }) {
   const { id: routeId } = useParams()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
-  const [editing, setEditing] = useState<CrudRecord | null | undefined>(
-    undefined,
-  )
+  const [editing, setEditing] = useState<CrudRecord | null | undefined>(undefined)
   const [detail, setDetail] = useState<CrudRecord | undefined>()
   const [busy, setBusy] = useState(false)
   const [form] = Form.useForm()
   const scopeValue = Form.useWatch('scope', form)
   const typeValue = Form.useWatch('type', form)
+  const userRoleValue = Form.useWatch('role', form)
   const role = me?.role
-  const canWrite =
-    !config.readOnly && !!role && !!config.writeRoles?.includes(role)
+  const canRead = hasPermission(me, permissionFor(config.permission, Action.READ))
+  const canUpdate =
+    !config.readOnly &&
+    hasPermission(me, permissionFor(config.permission, Action.UPDATE))
+  const canDelete =
+    !config.readOnly &&
+    hasPermission(
+      me,
+      resource === 'users'
+        ? Permission.USER_LOCK
+        : permissionFor(config.permission, Action.DELETE),
+    )
   const canCreate =
-    canWrite &&
+    !config.readOnly &&
+    hasPermission(me, permissionFor(config.permission, Action.CREATE)) &&
     !config.singleton &&
-    !['configs'].includes(resource) &&
-    (config.createRoles ?? config.writeRoles)?.includes(role!)
+    resource !== 'configs'
+  const canWrite = canCreate || canUpdate || canDelete
   const idKey = config.idKey ?? 'id'
-  const writeEndpoint = config.writeEndpoint ?? config.endpoint
+  const writeEndpoint =
+    resource === 'students' && role === Role.ADMIN
+      ? '/admin/students'
+      : (config.writeEndpoint ?? config.endpoint)
   const detailEndpoint = config.detailEndpoint ?? config.endpoint
   const { data, error, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['crud', resource, page, config.localSearch ? '' : search],
+    queryKey: ['crud', me?.id, resource, page, config.localSearch ? '' : search],
+    enabled: canRead,
     queryFn: async () =>
       normalizePage(
         (
@@ -203,21 +210,46 @@ export default function CrudPage({ resource }: { resource: string }) {
   const rows =
     config.localSearch && search
       ? data?.content.filter((row) =>
-          JSON.stringify(row)
-            .toLocaleLowerCase()
-            .includes(search.toLocaleLowerCase()),
+          JSON.stringify(row).toLocaleLowerCase().includes(search.toLocaleLowerCase()),
         )
       : data?.content
-  const fields = editing
+  const baseFields = editing
     ? (config.editFields ?? config.fields).filter((field) => !field.createOnly)
     : (config.createFields ?? config.fields).filter((field) => !field.editOnly)
+  const fields = baseFields
+    .filter(
+      (field) =>
+        !(resource === 'users' && editing?.role === Role.STUDENT && field.name === 'role'),
+    )
+    .filter(
+      (field) =>
+        !(
+          resource === 'users' &&
+          field.name === 'managementUnitId' &&
+          (userRoleValue === Role.ADMIN || editing?.role === Role.STUDENT)
+        ),
+    )
+    .map((field) =>
+      field.name === 'contractId' && role === Role.ADMIN
+        ? { ...field, lookup: '/contracts' }
+        : field,
+    )
+    .map((field) =>
+      resource === 'users' && field.name === 'managementUnitId'
+        ? {
+            ...field,
+            required:
+              userRoleValue === Role.STAFF || userRoleValue === Role.TECHNICIAN,
+          }
+        : field,
+    )
   const visible = (field: CrudField) =>
     !field.visibleWhen ||
     (field.visibleWhen.field === 'scope' ? scopeValue : typeValue) ===
       field.visibleWhen.value
 
   useEffect(() => {
-    if (!routeId) return
+    if (!routeId || !canRead) return
     let cancelled = false
     api
       .get(`${detailEndpoint}/${routeId}`)
@@ -230,13 +262,30 @@ export default function CrudPage({ resource }: { resource: string }) {
     return () => {
       cancelled = true
     }
-  }, [routeId, detailEndpoint, message])
+  }, [routeId, detailEndpoint, message, canRead])
 
+  /** Quyền thao tác không thay thế điều kiện trạng thái hoặc người sở hữu bản ghi. */
+  function canChangeRow(row: CrudRecord) {
+    return (
+      (!config.editStates || config.editStates.includes(String(row.status))) &&
+      (!config.rowOwned || role === Role.ADMIN || row[config.rowOwned] === me?.id) &&
+      !(role === Role.STAFF && ['applications', 'summer'].includes(resource))
+    )
+  }
   function canEditRow(row: CrudRecord) {
     return (
-      canWrite &&
-      (!config.editStates || config.editStates.includes(String(row.status))) &&
-      (!config.rowOwned || row[config.rowOwned] === me?.id)
+      canUpdate &&
+      canChangeRow(row) &&
+      !(resource === 'maintenance' && role === Role.TECHNICIAN)
+    )
+  }
+  function canDeleteRow(row: CrudRecord) {
+    return (
+      canDelete &&
+      canChangeRow(row) &&
+      !config.singleton &&
+      resource !== 'configs' &&
+      !(resource === 'users' && (row.locked === true || row.id === me?.id))
     )
   }
   async function refresh() {
@@ -247,16 +296,17 @@ export default function CrudPage({ resource }: { resource: string }) {
   function canResetPassword(row: CrudRecord) {
     return (
       ['users', 'students', 'adminStudents'].includes(resource) &&
-      (role === 'ADMIN' || (role === 'STAFF' && resource === 'students')) &&
+      hasPermission(
+        me,
+        resource === 'users'
+          ? Permission.USER_RESET_PASSWORD
+          : Permission.STUDENT_RESET_PASSWORD,
+      ) &&
       row.id !== me?.id
     )
   }
   function showTemporaryPassword(result: unknown, username?: unknown) {
-    if (
-      !result ||
-      typeof result !== 'object' ||
-      !('temporaryPassword' in result)
-    )
+    if (!result || typeof result !== 'object' || !('temporaryPassword' in result))
       return false
     const password = (result as CrudRecord).temporaryPassword
     if (typeof password !== 'string' || !password) return false
@@ -266,14 +316,12 @@ export default function CrudPage({ resource }: { resource: string }) {
       content: (
         <>
           {!!username && (
-            <Typography.Paragraph>
-              Tài khoản: {String(username)}
-            </Typography.Paragraph>
+            <Typography.Paragraph>Tài khoản: {String(username)}</Typography.Paragraph>
           )}
           <Typography.Paragraph copyable>{password}</Typography.Paragraph>
           <Typography.Paragraph>
-            Cung cấp mật khẩu này cho đúng chủ tài khoản. Người dùng phải đổi
-            mật khẩu ở lần đăng nhập tiếp theo.
+            Cung cấp mật khẩu này cho đúng chủ tài khoản. Người dùng phải đổi mật khẩu ở
+            lần đăng nhập tiếp theo.
           </Typography.Paragraph>
         </>
       ),
@@ -290,8 +338,8 @@ export default function CrudPage({ resource }: { resource: string }) {
       cancelText: 'Hủy',
       onOk: async () => {
         try {
-          // Admin dùng API quản trị chung; Staff dùng API sinh viên kiểm tra đúng đơn vị tại BE.
-          const endpoint = role === 'ADMIN' ? '/admin/users' : '/students'
+          // Màn tài khoản dùng API User; màn sinh viên kiểm tra quyền/phạm vi tại API Student.
+          const endpoint = resource === 'users' ? '/admin/users' : '/students'
           const result = await writeCrudRecord(
             `${endpoint}/${row.id}/reset-password`,
             'post',
@@ -307,12 +355,13 @@ export default function CrudPage({ resource }: { resource: string }) {
     })
   }
   async function openEditor(row?: CrudRecord) {
+    if (row ? !canEditRow(row) : !canCreate) return
     form.resetFields()
     if (!row) {
       setEditing(null)
       form.setFieldsValue({
         active: true,
-        role: 'STAFF',
+        role: Role.STAFF,
         type: 'ROOM_FEE',
         scope: 'UNIT',
         unitId: me?.managementUnit?.id,
@@ -323,8 +372,7 @@ export default function CrudPage({ resource }: { resource: string }) {
       const selected =
         config.singleton || config.localSearch || resource === 'configs'
           ? row
-          : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
-              .data as CrudRecord)
+          : ((await api.get(`${detailEndpoint}/${row[idKey]}`)).data as CrudRecord)
       setEditing(selected)
       const initial = { ...selected }
       for (const field of config.fields)
@@ -333,7 +381,10 @@ export default function CrudPage({ resource }: { resource: string }) {
             .toLocaleString('sv-SE')
             .slice(0, 16)
             .replace(' ', 'T')
-      if (resource === 'myApplications' && Array.isArray(selected.priorities))
+      if (
+        ['myApplications', 'applications'].includes(resource) &&
+        Array.isArray(selected.priorities)
+      )
         initial.priorityCategoryIds = selected.priorities.map(
           (p) => (p as CrudRecord).categoryId,
         )
@@ -343,6 +394,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     }
   }
   async function saveRecord(values: Record<string, unknown>) {
+    if (editing ? !canEditRow(editing) : !canCreate) return
     setBusy(true)
     try {
       const payload: Record<string, unknown> = {}
@@ -350,22 +402,14 @@ export default function CrudPage({ resource }: { resource: string }) {
         const value = values[field.name]
         if (value == null || value === '') continue
         payload[field.name] =
-          field.kind === 'datetime'
-            ? new Date(String(value)).toISOString()
-            : value
+          field.kind === 'datetime' ? new Date(String(value)).toISOString() : value
       }
       // Các DTO sửa chỉ số/thông báo cần giữ lại định danh/phạm vi đã chọn khi tạo.
       if (editing && ['readings', 'notifications'].includes(resource))
         for (const field of config.fields.filter((f) => f.createOnly))
-          if (editing[field.name] != null)
-            payload[field.name] = editing[field.name]
-      if (
-        resource === 'periods' &&
-        editing &&
-        hasPeriodOpened(editing.openAt)
-      ) {
-        for (const key of Object.keys(payload))
-          if (key !== 'closeAt') delete payload[key]
+          if (editing[field.name] != null) payload[field.name] = editing[field.name]
+      if (resource === 'periods' && editing && hasPeriodOpened(editing.openAt)) {
+        for (const key of Object.keys(payload)) if (key !== 'closeAt') delete payload[key]
       }
       let body: unknown = payload
       if (!editing && config.createFormat === 'multipart') {
@@ -386,9 +430,7 @@ export default function CrudPage({ resource }: { resource: string }) {
         resource === 'configs' ? 'put' : editing ? 'patch' : 'post',
         body,
       )
-      if (
-        !showTemporaryPassword(result, payload.username ?? payload.studentCode)
-      )
+      if (!showTemporaryPassword(result, payload.username ?? payload.studentCode))
         void message.success('Đã lưu')
       setEditing(undefined)
       await refresh()
@@ -411,6 +453,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     }
   }
   function deleteRecord(row: CrudRecord) {
+    if (!canDeleteRow(row)) return
     let reason = ''
     modal.confirm({
       title: `${config.deleteLabel ?? 'Xóa'} bản ghi này?`,
@@ -459,22 +502,80 @@ export default function CrudPage({ resource }: { resource: string }) {
           resource === 'myRoom'
           ? row
           : resource === 'deposits'
-            ? ((await api.get(`/contracts/${row.id}/deposit`))
-                .data as CrudRecord)
-            : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
-                .data as CrudRecord),
+            ? ((await api.get(`/contracts/${row.id}/deposit`)).data as CrudRecord)
+            : ((await api.get(`${detailEndpoint}/${row[idKey]}`)).data as CrudRecord),
       )
     } catch (e) {
       void message.error(errorMessage(e))
     }
   }
+  /** KTV cập nhật tiến độ ticket được giao; không sửa nội dung báo hỏng của người tạo. */
+  function updateMaintenanceProgress(action: string) {
+    if (
+      !detail ||
+      !hasPermission(me, Permission.MAINTENANCE_UPDATE) ||
+      !Array.isArray(detail.allowedActions) ||
+      !detail.allowedActions.includes(action)
+    )
+      return
+    const target = detail.id
+    let note = ''
+    modal.confirm({
+      title: {
+        start: 'Bắt đầu sửa chữa?',
+        'add-note': 'Thêm ghi chú tiến độ',
+        resolve: 'Hoàn thành sửa chữa',
+      }[action],
+      content:
+        action === 'start' ? (
+          'Cập nhật trạng thái ticket được giao.'
+        ) : (
+          <Input.TextArea
+            placeholder="Ghi chú (từ 5 đến 500 ký tự)"
+            maxLength={500}
+            onChange={(event) => {
+              note = event.target.value
+            }}
+          />
+        ),
+      okText: 'Cập nhật',
+      cancelText: 'Đóng',
+      onOk: async () => {
+        if (action !== 'start' && note.trim().length < 5) {
+          void message.error('Nhập ghi chú ít nhất 5 ký tự')
+          throw new Error('Thiếu ghi chú')
+        }
+        try {
+          setDetail(
+            (await writeCrudRecord(
+              `/maintenance-requests/${target}/${action === 'add-note' ? 'notes' : action}`,
+              'post',
+              action === 'start' ? undefined : { note: note.trim() },
+            )) as CrudRecord,
+          )
+          await refresh()
+        } catch (failure) {
+          void message.error(errorMessage(failure))
+          throw failure
+        }
+      },
+    })
+  }
   const detailFields = [
     ...config.columns,
     ...config.fields.map((field) => ({ key: field.name, label: field.label })),
   ].filter(
-    (item, index, list) =>
-      list.findIndex((other) => other.key === item.key) === index,
+    (item, index, list) => list.findIndex((other) => other.key === item.key) === index,
   )
+
+  if (!canRead)
+    return (
+      <Result
+        status="403"
+        title="Không có quyền xem màn hình này"
+        subTitle="Quyền thao tác được quản lý theo vai trò tại máy chủ."
+      />
+    )
 
   return (
     <>
@@ -505,12 +606,7 @@ export default function CrudPage({ resource }: { resource: string }) {
         }
       />
       {config.note && (
-        <Alert
-          style={{ marginBottom: 16 }}
-          type="info"
-          title={config.note}
-          showIcon
-        />
+        <Alert style={{ marginBottom: 16 }} type="info" title={config.note} showIcon />
       )}
       <Card>
         <Input.Search
@@ -551,9 +647,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                 : {
                     current: page,
                     pageSize: 20,
-                    total: config.localSearch
-                      ? rows?.length
-                      : data?.totalElements,
+                    total: config.localSearch ? rows?.length : data?.totalElements,
                     showSizeChanger: false,
                     onChange: setPage,
                   }
@@ -591,37 +685,23 @@ export default function CrudPage({ resource }: { resource: string }) {
                         Sửa
                       </Button>
                     )}
-                    {canEditRow(row) &&
-                      !config.singleton &&
-                      resource !== 'configs' &&
-                      !(
-                        resource === 'users' &&
-                        (row.locked === true || row.id === me?.id)
-                      ) &&
-                      !(resource === 'students' && role !== 'ADMIN') && (
-                        <Button
-                          size="small"
-                          danger
-                          onClick={() => deleteRecord(row)}
-                        >
-                          {config.deleteLabel ?? 'Xóa'}
-                        </Button>
-                      )}
+                    {canDeleteRow(row) && (
+                      <Button size="small" danger onClick={() => deleteRecord(row)}>
+                        {config.deleteLabel ?? 'Xóa'}
+                      </Button>
+                    )}
                     {canResetPassword(row) && (
                       <Button size="small" onClick={() => resetPassword(row)}>
                         Reset mật khẩu
                       </Button>
                     )}
                     {resource === 'users' &&
-                      role === 'ADMIN' &&
+                      hasPermission(me, Permission.USER_UNLOCK) &&
                       row.locked === true && (
                         <Button
                           size="small"
                           onClick={() => {
-                            void writeCrudRecord(
-                              `/admin/users/${row.id}/unlock`,
-                              'post',
-                            )
+                            void writeCrudRecord(`/admin/users/${row.id}/unlock`, 'post')
                               .then(refresh)
                               .catch((e) => message.error(errorMessage(e)))
                           }}
@@ -661,17 +741,13 @@ export default function CrudPage({ resource }: { resource: string }) {
               (field) =>
                 !(
                   resource === 'maintenance' &&
-                  role === 'STUDENT' &&
+                  role === Role.STUDENT &&
                   field.name === 'roomId'
                 ),
             )
             .map((field) =>
               field.kind === 'select' ? (
-                <Form.Item
-                  key={field.name}
-                  label={field.label}
-                  required={field.required}
-                >
+                <Form.Item key={field.name} label={field.label} required={field.required}>
                   <LookupInput field={field} />
                 </Form.Item>
               ) : (
@@ -721,14 +797,36 @@ export default function CrudPage({ resource }: { resource: string }) {
                 children: display(readValue(detail, item.key)),
               }))}
             />
+            {resource === 'maintenance' &&
+              hasPermission(me, Permission.MAINTENANCE_UPDATE) &&
+              Array.isArray(detail.allowedActions) && (
+                <Space wrap style={{ marginTop: 16 }}>
+                  {['start', 'add-note', 'resolve']
+                    .filter((action) =>
+                      (detail.allowedActions as string[]).includes(action),
+                    )
+                    .map((action) => (
+                      <Button
+                        key={action}
+                        onClick={() => updateMaintenanceProgress(action)}
+                      >
+                        {
+                          {
+                            start: 'Bắt đầu',
+                            'add-note': 'Ghi chú tiến độ',
+                            resolve: 'Hoàn thành',
+                          }[action]
+                        }
+                      </Button>
+                    ))}
+                </Space>
+              )}
             {resource === 'rooms' && Array.isArray(detail.beds) && (
               <BedCrudPanel
                 roomId={Number(detail.id)}
                 beds={detail.beds as CrudRecord[]}
                 reload={async () => {
-                  setDetail(
-                    (await api.get(`/rooms/${detail.id}`)).data as CrudRecord,
-                  )
+                  setDetail((await api.get(`/rooms/${detail.id}`)).data as CrudRecord)
                   await refresh()
                 }}
               />
@@ -773,10 +871,16 @@ function BedCrudPanel({
   reload: () => Promise<void>
 }) {
   const { message, modal } = App.useApp()
+  const { data: me } = useMe()
+  const canRead = hasPermission(me, Permission.BED_READ)
+  const canCreate = hasPermission(me, Permission.BED_CREATE)
+  const canUpdate = hasPermission(me, Permission.BED_UPDATE)
+  const canDelete = hasPermission(me, Permission.BED_DELETE)
   const [form] = Form.useForm()
   const [editing, setEditing] = useState<CrudRecord | null | undefined>()
   const [busy, setBusy] = useState(false)
   async function save(values: Record<string, unknown>) {
+    if (editing ? !canUpdate : !canCreate) return
     setBusy(true)
     try {
       await writeCrudRecord(
@@ -792,19 +896,22 @@ function BedCrudPanel({
       setBusy(false)
     }
   }
+  if (!canRead) return null
   return (
     <Card
       title="Giường trong phòng"
       style={{ marginTop: 16 }}
       extra={
-        <Button
-          onClick={() => {
-            form.resetFields()
-            setEditing(null)
-          }}
-        >
-          Thêm giường
-        </Button>
+        canCreate && (
+          <Button
+            onClick={() => {
+              form.resetFields()
+              setEditing(null)
+            }}
+          >
+            Thêm giường
+          </Button>
+        )
       }
     >
       <Table<CrudRecord>
@@ -823,35 +930,39 @@ function BedCrudPanel({
             title: 'Thao tác',
             render: (_, bed) => (
               <Space>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    form.setFieldsValue({ code: bed.code })
-                    setEditing(bed)
-                  }}
-                >
-                  Sửa
-                </Button>
-                <Button
-                  size="small"
-                  danger
-                  onClick={() =>
-                    modal.confirm({
-                      title: 'Xóa giường chưa có lịch sử?',
-                      onOk: async () => {
-                        try {
-                          await writeCrudRecord(`/beds/${bed.id}`, 'delete')
-                          await reload()
-                        } catch (e) {
-                          void message.error(errorMessage(e))
-                          throw e
-                        }
-                      },
-                    })
-                  }
-                >
-                  Xóa
-                </Button>
+                {canUpdate && (
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      form.setFieldsValue({ code: bed.code })
+                      setEditing(bed)
+                    }}
+                  >
+                    Sửa
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    size="small"
+                    danger
+                    onClick={() =>
+                      modal.confirm({
+                        title: 'Xóa giường chưa có lịch sử?',
+                        onOk: async () => {
+                          try {
+                            await writeCrudRecord(`/beds/${bed.id}`, 'delete')
+                            await reload()
+                          } catch (e) {
+                            void message.error(errorMessage(e))
+                            throw e
+                          }
+                        },
+                      })
+                    }
+                  >
+                    Xóa
+                  </Button>
+                )}
               </Space>
             ),
           },

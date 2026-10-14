@@ -1,13 +1,15 @@
+import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
 import { Navigate } from 'react-router'
 import CrudPage from '../../pages/CrudPage'
 import RequireRole from '../guards/RequireRole'
 import AdminLayout from '../layouts/AdminLayout'
+import { staffRoutes } from './staffRoutes'
 
 // UI mục 23, 26. Toàn bộ cổng Admin do TV1 phụ trách (UI 27.3).
 export const adminRoutes: RouteObject = {
   path: '/admin',
-  element: <RequireRole role="ADMIN" />,
+  element: <RequireRole role={Role.ADMIN} />,
   children: [
     {
       element: <AdminLayout />,
@@ -27,6 +29,10 @@ export const adminRoutes: RouteObject = {
         },
         { path: 'configs', element: <CrudPage resource="configs" /> },
         { path: 'audit-logs', element: <CrudPage resource="audit" /> },
+        // Admin dùng lại các màn nghiệp vụ; backend vẫn kiểm tra trạng thái và lịch sử.
+        ...(staffRoutes.children?.[0].children ?? []).filter(
+          (route) => !route.index && route.path !== 'students',
+        ),
       ],
     },
   ],

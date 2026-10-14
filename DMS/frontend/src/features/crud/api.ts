@@ -34,9 +34,7 @@ export function readValue(row: CrudRecord, path: string): unknown {
 }
 
 /** Lookup tải đủ các trang được phép, để chọn tham chiếu mà không phải gõ ID. */
-export async function getLookupRecords(
-  endpoint: string,
-): Promise<CrudRecord[]> {
+export async function getLookupRecords(endpoint: string): Promise<CrudRecord[]> {
   const all: CrudRecord[] = []
   for (let page = 0; page < 100; page++) {
     const { data } = await api.get(endpoint, { params: { page, size: 100 } })
@@ -57,8 +55,6 @@ export async function writeCrudRecord(
   method: 'post' | 'patch' | 'put' | 'delete',
   values?: unknown,
 ) {
-  // Sau khi tải lại trang, cookie CSRF có thể đã hết hạn; lấy token trước mọi thao tác ghi.
-  await api.get('/auth/csrf')
-  return (await api.request({ url: endpoint, method, data: values }))
-    .data as unknown
+  // Axios gắn Bearer token Keycloak; backend kiểm quyền và phạm vi ở từng thao tác.
+  return (await api.request({ url: endpoint, method, data: values })).data as unknown
 }

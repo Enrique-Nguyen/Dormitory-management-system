@@ -1,3 +1,4 @@
+import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
 import { Navigate } from 'react-router'
 import CrudPage from '../../pages/CrudPage'
@@ -9,7 +10,7 @@ import StaffLayout from '../layouts/StaffLayout'
 // UI mục 26. Thay `element` bằng trang thật của bạn (pages/staff/...). Phụ trách theo UI 27.3.
 export const staffRoutes: RouteObject = {
   path: '/staff',
-  element: <RequireRole role="STAFF" />,
+  element: <RequireRole role={Role.STAFF} />,
   children: [
     {
       element: <StaffLayout />,
