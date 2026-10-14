@@ -187,14 +187,7 @@ public class RoomServiceImpl implements RoomService {
         r.setGender(requireValue(input.gender(), "gender"));
         r.setStatus("ACTIVE");
         rooms.saveAndFlush(r);
-        for (int i = 1; i <= type.getBedCount(); i++) {
-            var bed = new Bed();
-            bed.setRoomId(r.getId());
-            bed.setCode(String.format("%02d", i));
-            bed.setStatus("ACTIVE");
-            beds.save(bed);
-        }
-        beds.flush();
+        syncBeds(r, type.getBedCount());
         audit.record(current.get().id(), "ROOM_CREATE", "ROOM", r.getId(), null, input, null);
         return toRoomResponse(r, true);
     }
@@ -224,11 +217,21 @@ public class RoomServiceImpl implements RoomService {
         if (input.gender() != null) {
             r.setGender(input.gender());
         }
+        boolean typeChanged =
+                input.roomTypeId() != null && !input.roomTypeId().equals(r.getRoomTypeId());
         if (input.roomTypeId() != null) {
             references.requireActiveRoomType(input.roomTypeId());
             r.setRoomTypeId(input.roomTypeId());
         }
         rooms.saveAndFlush(r);
+        if (typeChanged) {
+            // Số giường phải khớp loại phòng mới, nếu không công suất hiển thị và giá sẽ lệch nhau.
+            syncBeds(
+                    r,
+                    types.findById(r.getRoomTypeId())
+                            .orElseThrow(BusinessException::notFound)
+                            .getBedCount());
+        }
         audit.record(current.get().id(), "ROOM_UPDATE", "ROOM", id, null, input, null);
         return toRoomResponse(r, true);
     }
@@ -380,6 +383,40 @@ public class RoomServiceImpl implements RoomService {
                 before,
                 null,
                 trimRequiredText(reason, "reason"));
+    }
+
+    /**
+     * Đưa số giường của phòng về đúng sức chứa của loại phòng. Thêm giường mang mã hai chữ số còn
+     * thiếu; bớt giường từ mã lớn nhất và chỉ bớt giường chưa từng có phân phòng (lịch sử không
+     * bị xóa). Gọi sau khi đã khóa các giường của phòng.
+     */
+    private void syncBeds(Room r, int target) {
+        var existing = new ArrayList<>(beds.findAll((b, q, cb) -> cb.equal(b.get("roomId"), r.getId())));
+        existing.sort(java.util.Comparator.comparing(Bed::getCode));
+        Set<String> used = new java.util.HashSet<>();
+        existing.forEach(b -> used.add(b.getCode()));
+        for (int number = 1; existing.size() < target; number++) {
+            String code = String.format("%02d", number);
+            if (used.add(code)) {
+                var bed = new Bed();
+                bed.setRoomId(r.getId());
+                bed.setCode(code);
+                bed.setStatus("ACTIVE");
+                existing.add(beds.save(bed));
+            }
+        }
+        for (int i = existing.size() - 1; i >= 0 && existing.size() > target; i--) {
+            var bed = existing.get(i);
+            Long bedId = bed.getId();
+            if (!assignments.exists((a, q, cb) -> cb.equal(a.get("bedId"), bedId))) {
+                beds.delete(bed);
+                existing.remove(i);
+            }
+        }
+        beds.flush();
+        if (existing.size() > target) {
+            throw BusinessException.conflict("BED_OCCUPIED");
+        }
     }
 
     private Room findAccessibleRoom(Long id, boolean writing) {

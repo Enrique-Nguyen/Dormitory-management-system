@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.api.AccountDtos.TemporaryPassword;
 import vn.edu.tlu.dms.account.api.StudentManagementController.StudentInput;
+import vn.edu.tlu.dms.account.api.StudentManagementController.StudentPatch;
 import vn.edu.tlu.dms.account.service.StudentManagementService;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
@@ -138,30 +139,17 @@ public class StudentManagementServiceImpl implements StudentManagementService {
 
     @Transactional
     @Override()
-    public Map<String, Object> updateStudent(Long id, StudentInput in) {
+    public Map<String, Object> updateStudent(Long id, StudentPatch in) {
         var before = getStudentById(id);
         // Quyền tổng hợp không cấp quyền ghi. Phải có ít nhất một bản ghi thuộc đúng đơn vị.
         if (current.get().is("STAFF")) {
-            Long unit = current.get().unitId();
-            boolean own =
-                    Boolean.TRUE.equals(
-                            jdbc.queryForObject(
-                                    "SELECT EXISTS(SELECT 1 FROM room_application WHERE"
-                                        + " student_id=? AND preferred_unit_id=?) OR EXISTS(SELECT"
-                                        + " 1 FROM room_assignment_history a JOIN bed b ON"
-                                        + " b.id=a.bed_id JOIN room r ON r.id=b.room_id JOIN"
-                                        + " building bd ON bd.id=r.building_id WHERE a.student_id=?"
-                                        + " AND bd.management_unit_id=?)",
-                                    Boolean.class,
-                                    id,
-                                    unit,
-                                    id,
-                                    unit));
-            if (!own) {
-                throw BusinessException.notFound();
-            }
+            requireOwnStudent(id);
         }
-        if (!in.gender().equals(before.get("gender"))
+        jdbc.queryForObject("SELECT id FROM app_user WHERE id=? FOR UPDATE", Long.class, id);
+        String studentCode = merged(in.studentCode(), before.get("studentCode"), "studentCode");
+        String fullName = merged(in.fullName(), before.get("fullName"), "fullName");
+        String gender = merged(in.gender(), before.get("gender"), "gender");
+        if (!gender.equals(before.get("gender"))
                 && Boolean.TRUE.equals(
                         jdbc.queryForObject(
                                 "SELECT EXISTS(SELECT 1 FROM room_assignment_history WHERE"
@@ -172,25 +160,62 @@ public class StudentManagementServiceImpl implements StudentManagementService {
         }
         jdbc.update(
                 "UPDATE app_user SET username=?,full_name=?,phone=? WHERE id=?",
-                in.studentCode().trim(),
-                in.fullName().trim(),
-                in.phone(),
+                studentCode,
+                fullName,
+                keep(in.phone(), before.get("phone")),
                 id);
         jdbc.update(
                 "UPDATE student_profile SET"
                     + " student_code=?,gender=?,date_of_birth=?,faculty=?,cohort=?,hometown=?,emergency_contact=?"
                     + " WHERE user_id=?",
-                in.studentCode().trim(),
-                in.gender(),
-                in.dateOfBirth(),
-                in.faculty(),
-                in.cohort(),
-                in.hometown(),
-                in.emergencyContact(),
+                studentCode,
+                gender,
+                keep(in.dateOfBirth(), before.get("dateOfBirth")),
+                keep(in.faculty(), before.get("faculty")),
+                keep(in.cohort(), before.get("cohort")),
+                keep(in.hometown(), before.get("hometown")),
+                keep(in.emergencyContact(), before.get("emergencyContact")),
                 id);
         var after = getStudentById(id);
         audit.record(current.get().id(), "STUDENT_UPDATE", "USER", id, before, after, null);
         return after;
+    }
+
+    /** Trường bắt buộc: không gửi thì giữ giá trị cũ, gửi chuỗi trống thì báo lỗi. */
+    private static String merged(String requested, Object stored, String field) {
+        if (requested == null) {
+            return String.valueOf(stored);
+        }
+        if (requested.isBlank()) {
+            throw BusinessException.invalid(field, "Không để trống");
+        }
+        return requested.trim();
+    }
+
+    private static Object keep(Object requested, Object stored) {
+        return requested != null ? requested : stored;
+    }
+
+    /** Ghi cần ít nhất một hồ sơ/nguyện vọng thuộc đúng đơn vị của Staff, không tính quyền tổng hợp. */
+    private void requireOwnStudent(Long id) {
+        Long unit = current.get().unitId();
+        boolean own =
+                Boolean.TRUE.equals(
+                        jdbc.queryForObject(
+                                "SELECT EXISTS(SELECT 1 FROM room_application WHERE"
+                                    + " student_id=? AND preferred_unit_id=?) OR EXISTS(SELECT"
+                                    + " 1 FROM room_assignment_history a JOIN bed b ON"
+                                    + " b.id=a.bed_id JOIN room r ON r.id=b.room_id JOIN"
+                                    + " building bd ON bd.id=r.building_id WHERE a.student_id=?"
+                                    + " AND bd.management_unit_id=?)",
+                                Boolean.class,
+                                id,
+                                unit,
+                                id,
+                                unit));
+        if (!own) {
+            throw BusinessException.notFound();
+        }
     }
 
     @Transactional
@@ -219,24 +244,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
     public TemporaryPassword resetStudentPassword(Long id) {
         guard.requireRole("STAFF");
         getStudentById(id);
-        // Tái dùng kiểm tra phạm vi ghi bằng truy vấn riêng, không cho reset ngoài đơn vị.
-        boolean own =
-                Boolean.TRUE.equals(
-                        jdbc.queryForObject(
-                                "SELECT EXISTS(SELECT 1 FROM room_application WHERE student_id=?"
-                                    + " AND preferred_unit_id=?) OR EXISTS(SELECT 1 FROM"
-                                    + " room_assignment_history a JOIN bed b ON b.id=a.bed_id JOIN"
-                                    + " room r ON r.id=b.room_id JOIN building bd ON"
-                                    + " bd.id=r.building_id WHERE a.student_id=? AND"
-                                    + " bd.management_unit_id=?)",
-                                Boolean.class,
-                                id,
-                                current.get().unitId(),
-                                id,
-                                current.get().unitId()));
-        if (!own) {
-            throw BusinessException.notFound();
-        }
+        requireOwnStudent(id);
         String password = "Kt7" + UUID.randomUUID().toString().replace("-", "").substring(0, 13);
         jdbc.update(
                 "UPDATE app_user SET password_hash=?,must_change_password=TRUE WHERE id=?",

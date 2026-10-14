@@ -2,6 +2,7 @@ package vn.edu.tlu.dms.account.service;
 
 import vn.edu.tlu.dms.account.api.AccountDtos.TemporaryPassword;
 import vn.edu.tlu.dms.account.api.StudentManagementController.StudentInput;
+import vn.edu.tlu.dms.account.api.StudentManagementController.StudentPatch;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 
 import java.util.List;
@@ -31,7 +32,7 @@ public interface StudentManagementService {
      * Sửa các trường hồ sơ được phép, kiểm tra vai trò và phạm vi; dữ liệu bỏ trống không dùng để
      * xóa tùy tiện lịch sử.
      */
-    Map<String, Object> updateStudent(Long id, StudentInput in);
+    Map<String, Object> updateStudent(Long id, StudentPatch in);
 
     /**
      * Admin xóa sinh viên chưa có dữ liệu liên quan; từ chối nếu hồ sơ đã phát sinh lịch sử hoặc

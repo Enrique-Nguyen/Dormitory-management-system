@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.contract.service.ContractService;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -61,6 +62,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
 
     private final JdbcTemplate jdbc;
 
+    private final ContractService contracts;
+
     public RoomApplicationServiceImpl(
             RoomApplicationRepository applications,
             RegistrationPeriodRepository periods,
@@ -72,7 +75,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
             CurrentUser current,
             ScopeGuard guard,
             StatusHistoryService history,
-            JdbcTemplate jdbc) {
+            JdbcTemplate jdbc,
+            ContractService contracts) {
         this.applications = applications;
         this.periods = periods;
         this.periodUnits = periodUnits;
@@ -84,6 +88,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         this.guard = guard;
         this.history = history;
         this.jdbc = jdbc;
+        this.contracts = contracts;
     }
 
     @Override()
@@ -193,7 +198,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
     public Response updateDraftApplication(Long id, Input input) {
         guard.requireRole("STUDENT");
         var a = loadAccessibleApplication(id, true);
-        RoomApplicationPolicy.requireAction(a, current.get(), "edit");
+        RoomApplicationPolicy.requireAction(a, current.get(), "edit", false);
         if (input.periodId() != null && !input.periodId().equals(a.getPeriodId())) {
             throw BusinessException.invalid("periodId", "Không đổi đợt của đơn đã tạo");
         }
@@ -219,7 +224,12 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
     @Override()
     public Response performApplicationAction(Long id, String action, String reason) {
         var a = loadAccessibleApplication(id, true);
-        RoomApplicationPolicy.requireAction(a, current.get(), action);
+        boolean liveContract = hasLiveContract(a);
+        if (action.equals("cancel") && liveContract) {
+            // Hợp đồng PENDING/ACTIVE sinh từ đơn này phải được xử lý trước, tránh hợp đồng mồ côi.
+            throw BusinessException.conflict("APPLICATION_HAS_CONTRACT");
+        }
+        RoomApplicationPolicy.requireAction(a, current.get(), action, liveContract);
         if (action.equals("submit")) {
             validateApplicationPeriod(a);
             if (rooms.hasPendingOrActiveContract(a.getStudentId())) {
@@ -253,6 +263,10 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         applications.saveAndFlush(a);
         history.record("APPLICATION", id, before, a.getStatus(), current.get().id(), reason);
         return toApplicationResponse(a, true);
+    }
+
+    private boolean hasLiveContract(RoomApplication a) {
+        return a.getStatus().equals("APPROVED") && contracts.hasLiveContractForApplication(a.getId());
     }
 
     private RoomApplication loadAccessibleApplication(Long id, boolean writing) {
@@ -352,7 +366,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                 a.getStatusReason(),
                 a.getSubmittedAt(),
                 priorityRows,
-                detail ? RoomApplicationPolicy.allowedActions(a, current.get()) : null,
+                detail ? RoomApplicationPolicy.allowedActions(a, current.get(), hasLiveContract(a)) : null,
                 detail ? history.list("APPLICATION", a.getId()) : null);
     }
 }

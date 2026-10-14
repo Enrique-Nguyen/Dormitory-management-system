@@ -40,10 +40,17 @@ public class MaintenanceCrudServiceImpl implements MaintenanceCrudService {
     }
 
     private void requireOpenRequestOfCreator(Long id) {
-        jdbc.queryForObject(
-                "SELECT id FROM maintenance_request WHERE id=? FOR UPDATE", Long.class, id);
-        var request = requests.getMaintenanceRequestById(id);
-        if (!current.get().id().equals(request.requesterId()) || !"OPEN".equals(request.status())) {
+        // Kiểm tra bằng JDBC để không nạp entity vào persistence context: các lệnh UPDATE bằng JDBC
+        // bên dưới đi vòng Hibernate, nếu entity đã nằm trong cache cấp 1 thì phản hồi sẽ cũ.
+        var rows =
+                jdbc.query(
+                        "SELECT requester_id,status FROM maintenance_request WHERE id=? FOR UPDATE",
+                        (r, i) -> new Object[] {r.getLong(1), r.getString(2)},
+                        id);
+        if (rows.isEmpty() || !current.get().id().equals(rows.get(0)[0])) {
+            throw BusinessException.notFound();
+        }
+        if (!"OPEN".equals(rows.get(0)[1])) {
             throw BusinessException.conflict("RESOURCE_IN_USE");
         }
     }

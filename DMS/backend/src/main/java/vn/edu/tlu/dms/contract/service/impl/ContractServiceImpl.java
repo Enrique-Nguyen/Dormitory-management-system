@@ -102,6 +102,15 @@ public class ContractServiceImpl implements ContractService {
                 .orElse(null);
     }
 
+    @Override
+    public boolean hasLiveContractForApplication(Long applicationId) {
+        return repository.exists(
+                (root, query, builder) ->
+                        builder.and(
+                                builder.equal(root.get("applicationId"), applicationId),
+                                root.get("status").in("PENDING", "ACTIVE")));
+    }
+
     private ContractDtos.Response toContractResponse(DormitoryContract contract, boolean detail) {
         // Chỉ quảng bá hành động đã triển khai. Kích hoạt/trả phòng cần transaction liên module.
         return new ContractDtos.Response(

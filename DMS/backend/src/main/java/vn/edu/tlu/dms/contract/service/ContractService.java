@@ -47,4 +47,12 @@ public interface ContractService {
      * @return chi tiết hợp đồng hiện tại; null nếu chưa có hợp đồng phù hợp
      */
     ContractDtos.Response getMyCurrentContract();
+
+    /**
+     * Kiểm tra đơn đăng ký đã sinh hợp đồng PENDING hoặc ACTIVE hay chưa.
+     *
+     * @param applicationId mã định danh đơn đăng ký
+     * @return true nếu còn hợp đồng sống tham chiếu đơn này
+     */
+    boolean hasLiveContractForApplication(Long applicationId);
 }

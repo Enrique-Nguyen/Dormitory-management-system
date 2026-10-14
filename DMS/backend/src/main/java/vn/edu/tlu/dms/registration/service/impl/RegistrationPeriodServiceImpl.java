@@ -160,6 +160,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                 (r, i) -> r.getLong(1),
                 id);
         var period = periods.findById(id).orElseThrow(BusinessException::notFound);
+        requireWritablePeriodUnits(id);
         if (!period.getOpenAt().isAfter(OffsetDateTime.now())) {
             if (input.semesterId() != null
                     || input.kind() != null
@@ -189,10 +190,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         var period = periods.findById(id).orElseThrow(BusinessException::notFound);
         jdbc.queryForObject(
                 "SELECT id FROM registration_period WHERE id=? FOR UPDATE", Long.class, id);
-        if (!periodUnitIds(id).contains(current.get().unitId())
-                || (!current.get().crossUnitAccess() && periodUnitIds(id).size() > 1)) {
-            throw BusinessException.notFound();
-        }
+        requireWritablePeriodUnits(id);
         if (!period.getOpenAt().isAfter(OffsetDateTime.now())
                 || Boolean.TRUE.equals(
                         jdbc.queryForObject(
@@ -322,6 +320,18 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         return units.findAll((r, q, b) -> b.equal(r.get("periodId"), id)).stream()
                 .map(RegistrationPeriodUnit::getManagementUnitId)
                 .toList();
+    }
+
+    /**
+     * Ghi (sửa/xóa) cần đúng đơn vị của mình nằm trong đợt; Staff thường không được ghi đè đợt dùng
+     * chung với đơn vị khác. Đọc dữ liệu sau khi đã khóa bản ghi đợt.
+     */
+    private void requireWritablePeriodUnits(Long id) {
+        var actor = current.get();
+        var unitIds = periodUnitIds(id);
+        if (!unitIds.contains(actor.unitId()) || (!actor.crossUnitAccess() && unitIds.size() > 1)) {
+            throw BusinessException.notFound();
+        }
     }
 
     private void checkPeriodScope(Long id) {

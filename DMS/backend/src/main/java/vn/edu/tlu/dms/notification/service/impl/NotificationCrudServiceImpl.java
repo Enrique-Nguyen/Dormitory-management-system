@@ -14,7 +14,6 @@ import vn.edu.tlu.dms.notification.service.NotificationCrudService;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /** CRUD thông báo thủ công của người đăng. Không sửa/xóa thông báo hệ thống. */
 @Service
@@ -80,10 +79,10 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
                                 + " notification WHERE id=?",
                         id);
         if (!input.scope().equals(row.get("scope"))
-                || !Objects.equals(input.unitId(), row.get("managementUnitId"))
-                || !Objects.equals(input.buildingId(), row.get("buildingId"))
-                || !Objects.equals(input.roomId(), row.get("roomId"))
-                || !Objects.equals(input.floor(), row.get("floor"))) {
+                || !sameNumber(input.unitId(), row.get("managementUnitId"))
+                || !sameNumber(input.buildingId(), row.get("buildingId"))
+                || !sameNumber(input.roomId(), row.get("roomId"))
+                || !sameNumber(input.floor(), row.get("floor"))) {
             throw BusinessException.invalid("scope", "Không đổi phạm vi thông báo đã đăng");
         }
         jdbc.update(
@@ -94,6 +93,14 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
         audit.record(
                 current.get().id(), "NOTIFICATION_UPDATE", "NOTIFICATION", id, null, input, null);
         return getPublished(id);
+    }
+
+    /** So sánh theo giá trị số: DTO dùng Short/Long còn JDBC trả Integer/Long cho cùng một cột. */
+    private static boolean sameNumber(Number requested, Object stored) {
+        if (requested == null || stored == null) {
+            return requested == null && stored == null;
+        }
+        return stored instanceof Number number && requested.longValue() == number.longValue();
     }
 
     @Transactional

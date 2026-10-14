@@ -17,7 +17,6 @@ import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
 import vn.edu.tlu.dms.common.support.PageQuery;
-import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -36,8 +35,6 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     private final ScopeGuard scopeGuard;
 
-    private final RoomReferenceService rooms;
-
     private final AccountReferenceService accounts;
 
     private final JdbcTemplate jdbc;
@@ -49,7 +46,6 @@ public class InvoiceServiceImpl implements InvoiceService {
             InvoiceItemRepository items,
             CurrentUser currentUser,
             ScopeGuard scopeGuard,
-            RoomReferenceService rooms,
             AccountReferenceService accounts,
             JdbcTemplate jdbc,
             StatusHistoryService historyService) {
@@ -57,7 +53,6 @@ public class InvoiceServiceImpl implements InvoiceService {
         this.items = items;
         this.currentUser = currentUser;
         this.scopeGuard = scopeGuard;
-        this.rooms = rooms;
         this.accounts = accounts;
         this.jdbc = jdbc;
         this.historyService = historyService;
@@ -107,24 +102,9 @@ public class InvoiceServiceImpl implements InvoiceService {
                 (row, index) -> row.getLong(1),
                 id);
         Invoice invoice = findAccessibleInvoice(id);
-        if (invoice.getRoomId() != null) {
-            scopeGuard.requireUnit(rooms.getRoomLocation(invoice.getRoomId()).unitId());
-        } else {
-            Boolean inOwnUnit =
-                    jdbc.queryForObject(
-                            """
-                            SELECT EXISTS (
-                                SELECT 1 FROM room_assignment_history a
-                                JOIN bed b ON b.id = a.bed_id JOIN room r ON r.id = b.room_id
-                                JOIN building bd ON bd.id = r.building_id
-                                WHERE a.student_id = ? AND bd.management_unit_id = ?)
-                            """,
-                            Boolean.class,
-                            invoice.getStudentId(),
-                            currentUser.get().unitId());
-            if (!Boolean.TRUE.equals(inOwnUnit)) {
-                throw BusinessException.notFound();
-            }
+        // Quyền tổng hợp chỉ mở rộng quyền đọc; ghi cần đúng đơn vị của hóa đơn (kỳ/phòng của nó).
+        if (!invoices.isInStaffUnit(id, currentUser.get().unitId())) {
+            throw BusinessException.notFound();
         }
         if (!invoice.getStatus().equals("UNPAID")) {
             throw BusinessException.conflict("INVOICE_ALREADY_PAID");
@@ -176,26 +156,11 @@ public class InvoiceServiceImpl implements InvoiceService {
                         : null;
         // Quyền tổng hợp chỉ mở rộng quyền đọc; quyền ghi cần đúng đơn vị của hóa đơn.
         List<String> actions = List.of();
-        if (detail && currentUser.get().is("STAFF") && invoice.getStatus().equals("UNPAID")) {
-            if (invoice.getRoomId() != null
-                    && rooms.getRoomLocation(invoice.getRoomId())
-                            .unitId()
-                            .equals(currentUser.get().unitId())) {
-                actions = List.of("confirm-payment");
-            } else if (invoice.getStudentId() != null
-                    && Boolean.TRUE.equals(
-                            jdbc.queryForObject(
-                                    """
-                                    SELECT EXISTS (SELECT 1 FROM room_assignment_history a
-                                    JOIN bed b ON b.id = a.bed_id JOIN room r ON r.id = b.room_id
-                                    JOIN building bd ON bd.id = r.building_id
-                                    WHERE a.student_id = ? AND bd.management_unit_id = ?)
-                                    """,
-                                    Boolean.class,
-                                    invoice.getStudentId(),
-                                    currentUser.get().unitId()))) {
-                actions = List.of("confirm-payment");
-            }
+        if (detail
+                && currentUser.get().is("STAFF")
+                && invoice.getStatus().equals("UNPAID")
+                && invoices.isInStaffUnit(invoice.getId(), currentUser.get().unitId())) {
+            actions = List.of("confirm-payment");
         }
         return new InvoiceDtos.Response(
                 invoice.getId(),

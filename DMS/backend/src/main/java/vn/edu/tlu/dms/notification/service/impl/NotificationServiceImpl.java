@@ -217,30 +217,34 @@ public class NotificationServiceImpl implements NotificationService {
     @Override()
     public void notifyActiveStudentsOfSummerPeriod(
             Long periodId, String periodName, List<Long> unitIds, Long actorId) {
-        for (Long unitId : unitIds) {
-            List<Long> studentIds =
-                    jdbc.query(
-                            """
-                            SELECT DISTINCT c.student_id FROM dormitory_contract c
-                            JOIN room_assignment_history a ON a.contract_id = c.id
-                            JOIN bed b ON b.id = a.bed_id JOIN room r ON r.id = b.room_id
-                            JOIN building bd ON bd.id = r.building_id
-                            WHERE c.status = 'ACTIVE' AND bd.management_unit_id = ?
-                            """,
-                            (row, index) -> row.getLong(1),
-                            unitId);
-            for (Long studentId : studentIds) {
-                Notification notification = new Notification();
-                notification.setScope("USER");
-                notification.setUserId(studentId);
-                notification.setTitle("Mở đợt đăng ký hè");
-                notification.setBody(periodName);
-                notification.setSourceType("SUMMER_PERIOD_OPENED");
-                notification.setSourceId(periodId);
-                notification.setCreatedBy(actorId);
-                notification.setCreatedAt(OffsetDateTime.now());
-                repository.save(notification);
-            }
+        if (unitIds == null || unitIds.isEmpty()) {
+            return;
+        }
+        // Chỉ xét chỗ ở hiện hành (ended_at IS NULL) và gộp các đơn vị trong một truy vấn để mỗi
+        // sinh viên chỉ nhận một thông báo.
+        List<Long> studentIds =
+                jdbc.query(
+                        """
+                        SELECT DISTINCT c.student_id FROM dormitory_contract c
+                        JOIN room_assignment_history a ON a.contract_id = c.id
+                        JOIN bed b ON b.id = a.bed_id JOIN room r ON r.id = b.room_id
+                        JOIN building bd ON bd.id = r.building_id
+                        WHERE c.status = 'ACTIVE' AND a.ended_at IS NULL
+                          AND bd.management_unit_id = ANY (?)
+                        """,
+                        (row, index) -> row.getLong(1),
+                        (Object) unitIds.toArray(new Long[0]));
+        for (Long studentId : studentIds) {
+            Notification notification = new Notification();
+            notification.setScope("USER");
+            notification.setUserId(studentId);
+            notification.setTitle("Mở đợt đăng ký hè");
+            notification.setBody(periodName);
+            notification.setSourceType("SUMMER_PERIOD_OPENED");
+            notification.setSourceId(periodId);
+            notification.setCreatedBy(actorId);
+            notification.setCreatedAt(OffsetDateTime.now());
+            repository.save(notification);
         }
         repository.flush();
     }
