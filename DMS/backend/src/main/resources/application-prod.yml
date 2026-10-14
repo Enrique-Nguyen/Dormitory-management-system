@@ -1,7 +1,3 @@
 # Chạy thật sau nginx (TLS). DB_URL, DB_USERNAME, DB_PASSWORD lấy từ biến môi trường.
 server:
-  servlet:
-    session:
-      cookie:
-        secure: true
   forward-headers-strategy: framework

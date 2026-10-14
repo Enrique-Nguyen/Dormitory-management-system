@@ -13,10 +13,6 @@ spring:
       ddl-auto: validate          # Flyway quản lý schema; Hibernate kiểm tra entity khớp migration
   flyway:
     locations: classpath:db/migration
-  session:
-    jdbc:
-      initialize-schema: never    # bảng spring_session tạo bằng migration V2
-    timeout: 30m                  # NFR-SEC-04
   servlet:
     multipart:
       max-file-size: 5MB
@@ -28,11 +24,6 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
-  servlet:
-    session:
-      cookie:
-        http-only: true
-        same-site: lax
 
 management:
   endpoints:
@@ -41,8 +32,15 @@ management:
         include: health
 
 dms:
+  keycloak-bootstrap:
+    enabled: ${DMS_KEYCLOAK_BOOTSTRAP_ENABLED:false}
+    username: ${DMS_KEYCLOAK_INITIAL_ADMIN_USERNAME:admin}
+    password: ${DMS_KEYCLOAK_INITIAL_ADMIN_PASSWORD:}
+    credential-file: ${DMS_KEYCLOAK_CREDENTIAL_FILE:./data/local-run/keycloak-accounts.local}
+  keycloak:
+    server-url: ${KEYCLOAK_URL:http://localhost:8180}
+    realm: ${KEYCLOAK_REALM:dms}
+    audience: dms-api
+    admin-client-id: dms-admin
+    admin-client-secret: ${DMS_KEYCLOAK_ADMIN_CLIENT_SECRET:}
   upload-dir: ${DMS_UPLOAD_DIR:./data/uploads}
-  bootstrap-admin:
-    enabled: ${DMS_BOOTSTRAP_ADMIN_ENABLED:false}
-    username: ${DMS_BOOTSTRAP_ADMIN_USERNAME:admin}
-    password: ${DMS_BOOTSTRAP_ADMIN_PASSWORD:}

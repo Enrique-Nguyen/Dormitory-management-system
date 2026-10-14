@@ -1,8 +1,10 @@
 package vn.edu.tlu.dms;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -19,15 +21,16 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import vn.edu.tlu.dms.account.security.DmsPrincipal;
+import vn.edu.tlu.dms.account.domain.AppUser;
+import vn.edu.tlu.dms.account.service.IdentityAccountService;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -38,7 +41,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /** Kiểm thử API trên PostgreSQL thật: mapping, ràng buộc, phạm vi và luồng trạng thái. */
-@SpringBootTest(properties = "dms.upload-dir=${java.io.tmpdir}/dms-upload-integration")
+@SpringBootTest(properties = {"dms.upload-dir=${java.io.tmpdir}/dms-upload-integration"})
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 @Transactional
@@ -50,9 +53,11 @@ class CrudApiIntegrationTest {
 
     @Autowired ObjectMapper mapper;
 
-    @Autowired PasswordEncoder passwordEncoder;
-
     @Autowired EntityManager entityManager;
+
+    @MockitoBean JwtDecoder decoder;
+
+    @MockitoBean IdentityAccountService identities;
 
     private Long adminId;
 
@@ -82,6 +87,15 @@ class CrudApiIntegrationTest {
 
     @BeforeEach
     void createFixtureData() {
+        doAnswer(
+                        invocation -> {
+                            AppUser user = invocation.getArgument(0);
+                            user.setKeycloakUserId(UUID.randomUUID().toString());
+                            user.setPasswordHash(null);
+                            return null;
+                        })
+                .when(identities)
+                .provisionAccount(any(AppUser.class), anyString());
         suffix = UUID.randomUUID().toString().substring(0, 6);
         firstUnitId =
                 jdbc.queryForObject("SELECT id FROM management_unit WHERE code = 'K1'", Long.class);
@@ -141,8 +155,7 @@ class CrudApiIntegrationTest {
                                     .file(data)
                                     .file(validPhoto)
                                     .file(invalidPhoto)
-                                    .with(asUser(staffId, "STAFF"))
-                                    .with(csrf()))
+                                    .with(asUser(staffId, "STAFF")))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errorCode").value("PHOTO_INVALID"));
             assertThat(
@@ -192,7 +205,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/" + firstRoomId + "/status")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"status\":\"MAINTENANCE\",\"reason\":\"x    \"}"))
                 .andExpect(status().isBadRequest());
@@ -204,7 +216,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/rooms")
                                         .with(asUser(staffId, "STAFF"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(
                                                 """
@@ -221,12 +232,11 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/rooms/" + id)
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"code\":\"A103\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("A103"));
-        mvc.perform(delete("/api/rooms/" + id).with(asUser(staffId, "STAFF")).with(csrf()))
+        mvc.perform(delete("/api/rooms/" + id).with(asUser(staffId, "STAFF")))
                 .andExpect(status().isNoContent());
         assertThat(
                         jdbc.queryForObject(
@@ -251,7 +261,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/rooms/" + otherRoomId)
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"code\":\"INVALID\"}"))
                 .andExpect(status().isNotFound());
@@ -264,7 +273,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
@@ -280,7 +288,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
@@ -297,7 +304,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/admin/management-units")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(
                                                 "{\"code\":\"U"
@@ -311,15 +317,11 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/admin/management-units/" + id)
                                 .with(asUser(adminId, "ADMIN"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"name\":\"Đơn vị cập nhật\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("U" + suffix));
-        mvc.perform(
-                        delete("/api/admin/management-units/" + id)
-                                .with(asUser(adminId, "ADMIN"))
-                                .with(csrf()))
+        mvc.perform(delete("/api/admin/management-units/" + id).with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isNoContent());
     }
 
@@ -333,7 +335,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/semesters")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
@@ -347,28 +348,18 @@ class CrudApiIntegrationTest {
     void applicationWorkflowRecordsHistoryAndRejectsRepeatedActions() throws Exception {
         Long periodId = createOpenPeriod();
         Long id = createDraftApplication(periodId);
-        mvc.perform(
-                        post("/api/applications/" + id + "/submit")
-                                .with(asUser(studentId, "STUDENT"))
-                                .with(csrf()))
+        mvc.perform(post("/api/applications/" + id + "/submit").with(asUser(studentId, "STUDENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SUBMITTED"));
         mvc.perform(
                         post("/api/applications/" + id + "/approve")
-                                .with(asUser(otherStaffId, "STAFF"))
-                                .with(csrf()))
+                                .with(asUser(otherStaffId, "STAFF")))
                 .andExpect(status().isNotFound());
-        mvc.perform(
-                        post("/api/applications/" + id + "/approve")
-                                .with(asUser(staffId, "STAFF"))
-                                .with(csrf()))
+        mvc.perform(post("/api/applications/" + id + "/approve").with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APPROVED"))
                 .andExpect(jsonPath("$.timeline.length()").value(3));
-        mvc.perform(
-                        post("/api/applications/" + id + "/approve")
-                                .with(asUser(staffId, "STAFF"))
-                                .with(csrf()))
+        mvc.perform(post("/api/applications/" + id + "/approve").with(asUser(staffId, "STAFF")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("INVALID_STATE_TRANSITION"));
     }
@@ -379,7 +370,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/registration-periods")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
@@ -393,7 +383,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/registration-periods")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
@@ -420,8 +409,7 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 multipart("/api/maintenance-requests")
                                         .file(data)
-                                        .with(asUser(staffId, "STAFF"))
-                                        .with(csrf()))
+                                        .with(asUser(staffId, "STAFF")))
                         .andExpect(status().isCreated())
                         .andReturn()
                         .getResponse()
@@ -433,29 +421,25 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/maintenance-requests/" + id + "/assign")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"technicianId\":" + technicianId + "}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ASSIGNED"));
         mvc.perform(
                         post("/api/maintenance-requests/" + id + "/start")
-                                .with(asUser(technicianId, "TECHNICIAN"))
-                                .with(csrf()))
+                                .with(asUser(technicianId, "TECHNICIAN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
         mvc.perform(
                         post("/api/maintenance-requests/" + id + "/resolve")
                                 .with(asUser(technicianId, "TECHNICIAN"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"note\":\"Đã thay bóng đèn\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RESOLVED"));
         mvc.perform(
                         post("/api/maintenance-requests/" + id + "/accept")
-                                .with(asUser(staffId, "STAFF"))
-                                .with(csrf()))
+                                .with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CLOSED"));
     }
@@ -476,8 +460,7 @@ class CrudApiIntegrationTest {
         for (int repeat = 0; repeat < 2; repeat++) {
             mvc.perform(
                             post("/api/notifications/" + id + "/read")
-                                    .with(asUser(studentId, "STUDENT"))
-                                    .with(csrf()))
+                                    .with(asUser(studentId, "STUDENT")))
                     .andExpect(status().isNoContent());
         }
         mvc.perform(get("/api/notifications").with(asUser(studentId, "STUDENT")))
@@ -486,90 +469,11 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/notifications")
                                 .with(asUser(studentId, "STUDENT"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         "{\"scope\":\"ALL\",\"title\":\"Hi\",\"body\":\"Nội"
                                                 + " dung\"}"))
                 .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void realLoginCreatesSessionAndPasswordFlagsApplyToExistingSessions() throws Exception {
-        String username =
-                jdbc.queryForObject(
-                        "SELECT username FROM app_user WHERE id=?", String.class, adminId);
-        var login =
-                mvc.perform(
-                                post("/api/auth/login")
-                                        .with(csrf())
-                                        .contentType(MediaType.APPLICATION_JSON)
-                                        .content(
-                                                mapper.writeValueAsString(
-                                                        Map.of(
-                                                                "username",
-                                                                username,
-                                                                "password",
-                                                                "Password123"))))
-                        .andExpect(status().isOk())
-                        .andExpect(jsonPath("$.role").value("ADMIN"))
-                        .andReturn();
-        var session = login.getResponse().getCookie("SESSION");
-        assertThat(session).isNotNull();
-        mvc.perform(get("/api/auth/me").cookie(session)).andExpect(status().isOk());
-        jdbc.update("UPDATE app_user SET must_change_password = true WHERE id = ?", adminId);
-        entityManager.clear();
-        mvc.perform(get("/api/admin/users").cookie(session))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.errorCode").value("PASSWORD_CHANGE_REQUIRED"));
-        mvc.perform(
-                        post("/api/auth/change-password")
-                                .cookie(session)
-                                .with(csrf())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        "{\"currentPassword\":\"Password123\",\"newPassword\":\"NewPassword123\"}"))
-                .andExpect(status().isNoContent());
-        mvc.perform(get("/api/admin/users").cookie(session)).andExpect(status().isOk());
-        jdbc.update("UPDATE app_user SET locked = true WHERE id = ?", adminId);
-        entityManager.clear();
-        mvc.perform(get("/api/auth/me").cookie(session))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.errorCode").value("ACCOUNT_LOCKED"));
-    }
-
-    @Test
-    void invalidLoginAttemptsPersistAndTemporarilyLockAccount() throws Exception {
-        String username =
-                jdbc.queryForObject(
-                        "SELECT username FROM app_user WHERE id=?", String.class, studentId);
-        for (int attempt = 1; attempt <= 5; attempt++) {
-            var result =
-                    mvc.perform(
-                            post("/api/auth/login")
-                                    .with(csrf())
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(
-                                            mapper.writeValueAsString(
-                                                    Map.of(
-                                                            "username",
-                                                            username,
-                                                            "password",
-                                                            "wrong"))));
-            if (attempt < 5) {
-                result.andExpect(status().isUnauthorized())
-                        .andExpect(jsonPath("$.errorCode").value("INVALID_CREDENTIALS"));
-            } else {
-                result.andExpect(status().isForbidden())
-                        .andExpect(jsonPath("$.errorCode").value("ACCOUNT_TEMP_LOCKED"));
-            }
-        }
-        assertThat(
-                        jdbc.queryForObject(
-                                "SELECT failed_login_count FROM app_user WHERE id=?",
-                                Integer.class,
-                                studentId))
-                .isEqualTo(5);
     }
 
     @Test
@@ -605,7 +509,7 @@ class CrudApiIntegrationTest {
                 .andExpect(jsonPath("$.totalElements").value(1));
         mvc.perform(get("/api/contracts/" + contractId).with(asUser(otherStaffId, "STAFF")))
                 .andExpect(status().isNotFound());
-        mvc.perform(delete("/api/rooms/" + firstRoomId).with(asUser(staffId, "STAFF")).with(csrf()))
+        mvc.perform(delete("/api/rooms/" + firstRoomId).with(asUser(staffId, "STAFF")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("ROOM_OCCUPIED"));
         Long invoiceId =
@@ -633,7 +537,6 @@ class CrudApiIntegrationTest {
                     mvc.perform(
                             post("/api/invoices/" + invoiceId + "/confirm-payment")
                                     .with(asUser(staffId, "STAFF"))
-                                    .with(csrf())
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(
                                             "{\"payerUserId\":"
@@ -658,7 +561,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/contracts")
                                         .with(asUser(staffId, "STAFF"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(
                                                 mapper.writeValueAsString(
@@ -693,18 +595,16 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/contracts/" + id)
                                 .with(asUser(otherStaffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"endDate\":\"2041-02-01\"}"))
                 .andExpect(status().isNotFound());
         mvc.perform(
                         patch("/api/contracts/" + id)
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"endDate\":\"2041-02-01\",\"status\":\"ACTIVE\"}"))
                 .andExpect(status().isBadRequest());
-        mvc.perform(delete("/api/contracts/" + id).with(asUser(staffId, "STAFF")).with(csrf()))
+        mvc.perform(delete("/api/contracts/" + id).with(asUser(staffId, "STAFF")))
                 .andExpect(status().isNoContent());
     }
 
@@ -725,7 +625,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/admin/students")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(json))
                         .andExpect(status().isOk())
@@ -740,13 +639,10 @@ class CrudApiIntegrationTest {
                                 .with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
-        mvc.perform(delete("/api/admin/students/" + id).with(asUser(adminId, "ADMIN")).with(csrf()))
+        mvc.perform(delete("/api/admin/students/" + id).with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isNoContent());
         createDraftApplication(createOpenPeriod());
-        mvc.perform(
-                        delete("/api/admin/students/" + studentId)
-                                .with(asUser(adminId, "ADMIN"))
-                                .with(csrf()))
+        mvc.perform(delete("/api/admin/students/" + studentId).with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isConflict());
     }
 
@@ -770,7 +666,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/utility-readings")
                                         .with(asUser(staffId, "STAFF"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(reading))
                         .andExpect(status().isOk())
@@ -781,13 +676,9 @@ class CrudApiIntegrationTest {
         Long readingId = mapper.readTree(created).get("id").asLong();
         mvc.perform(
                         delete("/api/utility-readings/" + readingId)
-                                .with(asUser(otherStaffId, "STAFF"))
-                                .with(csrf()))
+                                .with(asUser(otherStaffId, "STAFF")))
                 .andExpect(status().isNotFound());
-        mvc.perform(
-                        delete("/api/utility-readings/" + readingId)
-                                .with(asUser(staffId, "STAFF"))
-                                .with(csrf()))
+        mvc.perform(delete("/api/utility-readings/" + readingId).with(asUser(staffId, "STAFF")))
                 .andExpect(status().isNoContent());
         String invoice =
                 mapper.writeValueAsString(
@@ -806,7 +697,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/invoices")
                                         .with(asUser(staffId, "STAFF"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(invoice))
                         .andExpect(status().isOk())
@@ -817,7 +707,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/invoices/" + invoiceId)
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"totalAmount\":30000}"))
                 .andExpect(status().isOk())
@@ -825,33 +714,36 @@ class CrudApiIntegrationTest {
         mvc.perform(get("/api/invoices").param("q", "DN-").with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
-        mvc.perform(
-                        delete("/api/invoices/" + invoiceId)
-                                .with(asUser(staffId, "STAFF"))
-                                .with(csrf()))
+        mvc.perform(delete("/api/invoices/" + invoiceId).with(asUser(staffId, "STAFF")))
                 .andExpect(status().isNoContent());
     }
 
     private RequestPostProcessor asUser(Long id, String role) {
-        return authentication(
-                UsernamePasswordAuthenticationToken.authenticated(
-                        new DmsPrincipal(id, "fixture"),
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role))));
+        String identity =
+                jdbc.queryForObject(
+                        "SELECT keycloak_user_id FROM app_user WHERE id=?", String.class, id);
+        Long version =
+                jdbc.queryForObject(
+                        "SELECT security_version FROM app_user WHERE id=?", Long.class, id);
+        return jwt().jwt(
+                        builder ->
+                                builder.subject(identity)
+                                        .claim("realm_access", Map.of("roles", List.of(role)))
+                                        .claim("dms_security_version", version))
+                .authorities(new SimpleGrantedAuthority("ROLE_" + role));
     }
 
     private Long createUser(String role, Long unitId) {
         return jdbc.queryForObject(
-                """
-                INSERT INTO app_user(username,password_hash,role,full_name,management_unit_id,must_change_password)
-                VALUES(?,?,?,?,?,false)RETURNING id
-                """,
+                "INSERT INTO"
+                    + " app_user(username,role,full_name,management_unit_id,must_change_password,keycloak_user_id)"
+                    + " VALUES(?,?,?,?,false,?) RETURNING id",
                 Long.class,
                 role + "-" + unitId + "-" + suffix,
-                passwordEncoder.encode("Password123"),
                 role,
                 "Người dùng " + role,
-                unitId);
+                unitId,
+                UUID.randomUUID().toString());
     }
 
     private Long createBuilding(Long unitId, String code) {
@@ -908,7 +800,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/applications")
                                         .with(asUser(studentId, "STUDENT"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(
                                                 "{\"periodId\":"

@@ -1,26 +1,23 @@
 package vn.edu.tlu.dms.account.service;
 
 import vn.edu.tlu.dms.account.api.AccountDtos.Me;
-import vn.edu.tlu.dms.account.security.DmsPrincipal;
+import vn.edu.tlu.dms.account.api.AccountDtos.TemporaryPassword;
+import vn.edu.tlu.dms.account.domain.AppUser;
 
 public interface AuthService {
 
-    /**
-     * Khóa tài khoản khi kiểm tra mật khẩu để không mất số lần sai khi có request đồng thời. Không
-     * rollback BusinessException: đăng nhập thất bại vẫn phải lưu bộ đếm và hạn khóa. Mật khẩu và
-     * hash không được ghi log hoặc đưa vào response.
-     */
-    DmsPrincipal authenticate(String username, String password);
-
-    /**
-     * Trả thông tin người đăng nhập, vai trò, đơn vị và cờ bắt đổi mật khẩu; không trả mật khẩu
-     * hoặc hash.
-     */
+    /** Trả hồ sơ, vai trò và phạm vi nghiệp vụ của danh tính Keycloak đang đăng nhập. */
     Me getCurrentUser();
 
-    /**
-     * Kiểm tra mật khẩu hiện tại và quy tắc mật khẩu mới, cập nhật BCrypt và gỡ cờ bắt đổi mật
-     * khẩu.
-     */
-    void changePassword(String current, String next);
+    /** Khóa và đọc lại tài khoản mới nhất; bắt buộc gọi bên trong transaction ghi. */
+    AppUser lockAccount(Long id);
+
+    /** Tăng phiên bản bảo mật, đồng bộ Keycloak và thu hồi phiên để chặn token cũ ngay. */
+    void revokeSessions(AppUser user);
+
+    /** Cấp mật khẩu tạm tại Keycloak, bắt đổi lần đầu, xóa khóa tạm và ghi audit. */
+    TemporaryPassword resetPassword(AppUser user, Long actorId);
+
+    /** Thu hồi token và mọi phiên Keycloak của tài khoản hiện tại khi đăng xuất từ DMS. */
+    void revokeCurrentIdentitySessions();
 }

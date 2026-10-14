@@ -3,7 +3,6 @@ package vn.edu.tlu.dms.account.service.impl;
 import jakarta.persistence.criteria.Predicate;
 
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +15,8 @@ import vn.edu.tlu.dms.account.domain.AppUser;
 import vn.edu.tlu.dms.account.repository.AppUserRepository;
 import vn.edu.tlu.dms.account.repository.StudentProfileRepository;
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.account.service.AuthService;
+import vn.edu.tlu.dms.account.service.IdentityAccountService;
 import vn.edu.tlu.dms.account.service.UserService;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -42,13 +44,15 @@ public class UserServiceImpl implements UserService {
 
     private final AccountReferenceService references;
 
-    private final PasswordEncoder passwords;
-
     private final CurrentUser current;
 
     private final ScopeGuard guard;
 
     private final AuditService audit;
+
+    private final AuthService authService;
+
+    private final IdentityAccountService identities;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -56,17 +60,19 @@ public class UserServiceImpl implements UserService {
             AppUserRepository users,
             StudentProfileRepository students,
             AccountReferenceService references,
-            PasswordEncoder passwords,
             CurrentUser current,
             ScopeGuard guard,
-            AuditService audit) {
+            AuditService audit,
+            AuthService authService,
+            IdentityAccountService identities) {
         this.users = users;
         this.students = students;
         this.references = references;
-        this.passwords = passwords;
         this.current = current;
         this.guard = guard;
         this.audit = audit;
+        this.authService = authService;
+        this.identities = identities;
     }
 
     @Override
@@ -126,7 +132,9 @@ public class UserServiceImpl implements UserService {
         u.setLocked(false);
         u.setFailedLoginCount(0);
         u.setCreatedAt(OffsetDateTime.now());
-        u.setPasswordHash(passwords.encode(temporary));
+        u.setPasswordHash(null);
+        users.saveAndFlush(u);
+        identities.provisionAccount(u, temporary);
         users.saveAndFlush(u);
         audit.record(
                 current.get().id(),
@@ -143,8 +151,10 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public Profile update(Long id, Update input) {
         guard.requireRole("ADMIN");
-        var u = findUserById(id);
+        var u = authService.lockAccount(id);
         var before = toUserProfileResponse(u);
+        String previousUsername = u.getUsername();
+        Long previousUnitId = u.getManagementUnitId();
         if (input.fullName() != null) {
             u.setFullName(trimRequiredText(input.fullName(), "fullName"));
         }
@@ -184,7 +194,13 @@ public class UserServiceImpl implements UserService {
                 || input.cohort() != null) {
             throw BusinessException.invalid("studentCode", "Chỉ áp dụng cho sinh viên");
         }
+        // Phiên đã mở giữ thông tin đăng nhập/phạm vi cũ, nên phải đăng nhập lại khi đổi chúng.
+        if (!Objects.equals(previousUsername, u.getUsername())
+                || !Objects.equals(previousUnitId, u.getManagementUnitId())) {
+            authService.revokeSessions(u);
+        }
         users.saveAndFlush(u);
+        identities.synchronizeAccount(u);
         audit.record(
                 current.get().id(),
                 "USER_UPDATE",
@@ -203,9 +219,11 @@ public class UserServiceImpl implements UserService {
         if (id.equals(current.get().id())) {
             throw BusinessException.invalid("id", "Không tự khóa tài khoản đang dùng");
         }
-        var u = users.lockById(id).orElseThrow(BusinessException::notFound);
+        var u = authService.lockAccount(id);
         u.setLocked(true);
+        authService.revokeSessions(u);
         users.saveAndFlush(u);
+        identities.synchronizeAccount(u);
         audit.record(
                 current.get().id(),
                 "USER_LOCK",
@@ -220,11 +238,14 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void unlock(Long id) {
         guard.requireRole("ADMIN");
-        var u = users.lockById(id).orElseThrow(BusinessException::notFound);
+        var u = authService.lockAccount(id);
+        // Không hạ phiên bản bảo mật: mở khóa chỉ cho phép đăng nhập mới, phiên cũ vẫn bị thu hồi.
         u.setLocked(false);
         u.setLockedUntil(null);
         u.setFailedLoginCount(0);
+        identities.clearTemporaryLoginFailures(u);
         users.saveAndFlush(u);
+        identities.synchronizeAccount(u);
         audit.record(
                 current.get().id(), "USER_UNLOCK", "USER", id, null, Map.of("locked", false), null);
     }
@@ -233,26 +254,25 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public TemporaryPassword resetPassword(Long id) {
         guard.requireRole("ADMIN");
-        var u = users.lockById(id).orElseThrow(BusinessException::notFound);
-        String temporary = generateTemporaryPassword();
-        u.setPasswordHash(passwords.encode(temporary));
-        u.setMustChangePassword(true);
-        users.saveAndFlush(u);
-        audit.record(current.get().id(), "USER_RESET_PASSWORD", "USER", id, null, null, null);
-        return new TemporaryPassword(id, temporary);
+        var u = authService.lockAccount(id);
+        return authService.resetPassword(u, current.get().id());
     }
 
     @Override
     @Transactional
     public void crossUnitAccess(Long id, boolean enabled) {
         guard.requireRole("ADMIN");
-        var u = findUserById(id);
+        var u = authService.lockAccount(id);
         if (!u.getRole().equals("STAFF")) {
             throw BusinessException.conflict("CROSS_UNIT_ONLY_STAFF");
         }
         boolean before = u.getCrossUnitAccess();
         u.setCrossUnitAccess(enabled);
+        if (before != enabled) {
+            authService.revokeSessions(u);
+        }
         users.saveAndFlush(u);
+        identities.synchronizeAccount(u);
         audit.record(
                 current.get().id(), "USER_CROSS_UNIT_ACCESS", "USER", id, before, enabled, null);
     }
@@ -265,7 +285,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public Profile updateProfile(ProfileInput input) {
-        var u = findUserById(current.get().id());
+        var u = authService.lockAccount(current.get().id());
+        // kiểm tra lại phiên sau khi chờ khóa tài khoản
+        current.get();
         if (input.phone() != null) {
             u.setPhone(input.phone().trim());
         }
