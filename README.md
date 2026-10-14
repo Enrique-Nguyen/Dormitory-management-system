@@ -178,3 +178,40 @@ Trước khi chuyển đã lưu bản nguồn local trong `backend/data/keycloak
 Sau khi dọn: xóa/gộp 31 file, giảm số file mới chưa commit từ 38 xuống 9. Cấu hình, controller và bootstrap Keycloak dùng các file hiện có; thu hồi token/reset mật khẩu nằm trong AuthServiceImpl; cấp/chuyển danh tính nằm trong KeycloakIdentityAccountServiceImpl. Adapter, điều hướng và sự kiện đăng nhập gom vào frontend/src/services/api/auth.ts; trang quên mật khẩu gom vào LoginPage. Hướng dẫn chạy gom tại README này, script khởi động Keycloak gom vào start-local.ps1.
 
 Backend clean verify đạt 33/33 test trên PostgreSQL kiểm thử riêng, không bỏ các kiểm tra CRUD/JWT. Các test session/CSRF của luồng đã loại bỏ được dọn; bộ CRUD dùng JWT. Backend clean package và React lint/build đạt. Sau khi khởi động lại, token Keycloak thật đã kiểm tra thành công CRUD sinh viên, role, khóa/mở khóa, reset và thu hồi token/logout. Giao diện đăng nhập, quên mật khẩu và chuyển hướng Keycloak PKCE S256 hoạt động. Các migration V1–V4 giữ nguyên; tài khoản/mật khẩu người dùng thật không bị reset khi dọn file.
+
+## Phân quyền Role → thao tác (cập nhật 14/10/2026)
+
+Theo quyết định mới của người phụ trách, ADMIN có mọi quyền nghiệp vụ trên toàn hệ thống. ADMIN không cần gắn management_unit_id; bỏ giới hạn đơn vị/chủ sở hữu/người được giao khi xác định quyền, nhưng vẫn phải qua trạng thái, ràng buộc dữ liệu, đối tượng sinh viên thật và lịch sử/audit. Không đổi hoặc giả vai trò/người thao tác để vượt phạm vi.
+
+Khung tham khảo RolePrivilege của HR-V5: `ScopeGuard` khai ma trận cố định cho bốn role, mỗi mã là `<RESOURCE>_<READ|CREATE|UPDATE|DELETE>`. READ dùng cho tìm kiếm và xem chi tiết; khóa/mở khóa/reset/gán phạm vi tài khoản có mã riêng. `/api/auth/me` trả thêm `permissions: string[]`; React dùng danh sách này cho menu, route và từng nút. API khai quyền bằng @RequirePrivilege giống V5; Spring Security Method Security kiểm tra trước thân Controller. Service Impl tiếp tục kiểm quyền nội bộ, phạm vi và trạng thái. Không chỉ dựa vào việc ẩn nút.
+
+- ADMIN: mọi quyền quản trị và nghiệp vụ ở mọi đơn vị; tài khoản và người thao tác trong audit vẫn là ADMIN thực.
+- STAFF: nghiệp vụ trong đơn vị được giao; crossUnitAccess chỉ mở rộng đọc. Đơn/yêu cầu do sinh viên tạo không mặc nhiên cho Staff tạo hoặc hủy thay sinh viên; quyền sửa/xét duyệt phụ thuộc endpoint và trạng thái.
+- TECHNICIAN: đọc/cập nhật tiến độ ticket được giao, không CRUD dữ liệu phòng/hợp đồng/hóa đơn.
+- STUDENT: dữ liệu cá nhân và phòng đang ở; đơn/yêu cầu của mình, không sửa role hoặc ID người sở hữu.
+
+Đổi role của tài khoản Staff/KTV/Admin qua PATCH `/api/admin/users/{id}` hỗ trợ trường `role`, đồng bộ Keycloak và thu hồi token cũ. Staff/KTV phải có đơn vị; chuyển sang ADMIN xóa đơn vị và cờ tổng hợp; không chuyển hồ sơ STUDENT thành tài khoản cán bộ, không tự đổi role tài khoản đang sử dụng. ADMIN tạo đơn đăng ký hộ sinh viên bằng `studentId` rõ ràng; STUDENT không được gửi ID của người khác.
+
+Ma trận hiện cố định trong code, chưa có bảng/màn quản trị tick quyền động như HR-V5. Không thêm migration hoặc file Service riêng cho cùng trách nhiệm. Sổ cọc/audit vẫn giữ chỉ đọc, hồ sơ có lịch sử và trạng thái vẫn chịu ràng buộc xóa/hủy như trước.
+
+Kiểm chứng cập nhật phân quyền: backend clean verify đạt **44/44 test** (11 test mới trong hai file test đã có), clean package đạt; React lint/build và kiểm tra quyền/điều hướng đạt. Đã kiểm tra bằng token Keycloak thật và đăng nhập tài khoản kiểm thử tạm để thấy đầy đủ menu nghiệp vụ, nút Thêm mới/form phòng trong cổng Admin. Đã dọn danh tính/mật khẩu kiểm thử và khóa lại hồ sơ audit. Không thêm file source hoặc migration; máy chủ local đã chạy lại với mã mới.
+
+### Khai quyền API bằng @RequirePrivilege — 14/10/2026
+
+Mọi hàm REST mapped trong ứng dụng khai `@RequirePrivilege(Permission.ROOM_CREATE)` hoặc một danh sách như `@RequirePrivilege({Permission.ROOM_TYPE_READ, Permission.ROOM_CREATE, Permission.ROOM_UPDATE})`. Nhiều mã dùng OR: có ít nhất một quyền mới được chạy API. Danh sách OR phù hợp API tra cứu cho form; thao tác ghi phải khai riêng CREATE/UPDATE/DELETE, không ghép quyền thêm/sửa để mở cả hai.
+
+`common/security/RequirePrivilege.java` chỉ khai annotation; `ScopeGuard.hasDeclaredPrivilege` đọc khai báo trên hàm thật, dùng khai báo lớp nếu hàm chưa khai, và kiểm role với dữ liệu tài khoản hiện tại. `SecurityConfig` bật Spring Security Method Security và đăng ký AuthorizationManagerBeforeMethodInterceptor: thiếu annotation, mảng rỗng hoặc không có quyền thì trả 403 trước thân Controller. Chưa đăng nhập/token không hợp lệ vẫn bị filter chain trả 401. Annotation ở hàm thay thế annotation lớp; Admin không vượt qua mã quyền chưa đăng ký.
+
+Service Impl vẫn giữ kiểm tra quyền cho lời gọi nội bộ, phạm vi đơn vị/chủ sở hữu, trạng thái và ràng buộc dữ liệu; việc thêm annotation không biến dữ liệu đang dùng thành dữ liệu được phép xóa. ADMIN tiếp tục có mọi quyền nghiệp vụ đã đăng ký trên toàn hệ thống. Frontend và `/api/auth/me.permissions` giữ nguyên mã quyền hiện có.
+
+Ở bước bổ sung annotation chỉ thêm một file source là `RequirePrivilege.java`; không thêm migration, Aspect/Service mới hoặc dependency V5. Bộ test kiểm OR, chặn trước thân Controller, lớp/hàm, thiếu/rỗng/sai annotation và quét mọi API để không bỏ sót quyền. Backend clean verify đạt **53/53 test**.
+
+### Constants dùng chung — 15/10/2026
+
+Backend khai mã cố định tại `common/constants/DmsConstants.java`: `Role`, `Action`, `Resource`, `Permission` và các nhóm trạng thái theo nghiệp vụ. Controller dùng `@RequirePrivilege(Permission.ROOM_CREATE)`; Service Impl dùng cùng mã trong `requirePermission`. `ScopeGuard` vẫn quyết định role nào được cấp quyền; khai một hằng số không tự cấp thêm quyền cho role. Các nhóm có constructor private và tập mã bất biến để tránh thay đổi cấu hình quyền lúc chạy.
+
+React dùng `frontend/src/constants/authorization.ts` cho role, nghiệp vụ và quyền, kèm kiểu TypeScript suy ra từ hằng số. `permissionFor` chỉ nhận mã đã đăng ký; mã không hợp lệ không mở menu/nút CRUD. Quyền thực tế vẫn lấy từ `/api/auth/me.permissions`. Backend và frontend giữ nguyên mã `<RESOURCE>_<ACTION>`, không đổi dữ liệu đã lưu, format JWT hoặc các migration Flyway đã áp dụng.
+
+Constants dành cho mã cố định của ứng dụng. URL, port, realm, client ID và secret tiếp tục cấu hình qua biến môi trường; các ngưỡng nghiệp vụ tiếp tục đọc `system_config`. Không đưa mật khẩu/secret vào Constants. Khi thêm quyền, cập nhật danh mục Constants, ma trận `ScopeGuard`, annotation API và khai báo frontend tương ứng, rồi chạy test phân quyền.
+
+Kiểm chứng: **55/55 test backend** đạt, gồm baseline giữ nguyên toàn bộ danh sách quyền ADMIN/STAFF/STUDENT/TECHNICIAN và kiểm danh mục 103 mã quyền. Đã đối chiếu mã role/action/resource/permission của React với class backend đã biên dịch và giữ nguyên 12 regex DTO. Backend clean package và React lint/build đạt; API dùng token Keycloak thật kiểm tra CRUD, khóa/mở khóa, reset và thu hồi phiên thành công. Bản local đã chạy lại, danh tính/mật khẩu kiểm thử được dọn. Bước này chỉ thêm hai file Constants; không thêm migration.

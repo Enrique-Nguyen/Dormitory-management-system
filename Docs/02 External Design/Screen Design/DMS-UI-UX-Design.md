@@ -2012,3 +2012,7 @@ Trả phòng
 ```
 
 Đây là trục chính để mở rộng wireframe, prototype Figma và sau đó triển khai React.
+
+## Cập nhật cổng Admin và quyền CRUD — 14/10/2026
+
+Admin được làm mọi nghiệp vụ, truy cập các màn quản trị và nghiệp vụ trong cổng `/admin`; dùng lại trang CRUD của Staff và danh sách quyền `permissions` từ `/api/auth/me`. Menu/route kiểm READ, nút thêm/sửa/xóa kiểm đúng mã thao tác, riêng nút khóa/mở khóa/reset có quyền riêng. Admin được sửa/hủy bản ghi của người khác khi trạng thái cho phép. Technician chỉ có nút tiến độ của ticket được giao; Student giữ phạm vi cá nhân. Không tạo trang mới cho từng vai trò nếu dùng chung form CRUD.

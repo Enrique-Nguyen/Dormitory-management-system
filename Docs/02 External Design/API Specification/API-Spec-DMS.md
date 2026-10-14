@@ -1,7 +1,7 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.6**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.7 (mục 3, 6.2, 10), `SAD-DMS.md` v1.1, `DB-Design-DMS.md` v0.4, `DMS-UI-UX-Design.md` (mục 27.2)
+> **Phiên bản 0.7**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.9 (mục 3, 6.2, 10), `SAD-DMS.md` v1.2, `DB-Design-DMS.md` v0.5, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
 ### Lịch sử thay đổi
@@ -14,6 +14,7 @@
 | 0.4 | 13/10/2026 | Chốt phạm vi khung CRUD BE + React; bổ sung hồ sơ sinh viên, hợp đồng/hóa đơn chờ, yêu cầu/lựa chọn chờ, chỉ số, sửa/xóa thông báo và các ngoại lệ chỉ đọc |
 | 0.5 | 13/10/2026 | Đồng bộ login/logout Spring Security, CSRF và thu hồi phiên; đổi/reset mật khẩu yêu cầu đăng nhập lại, reset Staff theo BR-07, giới hạn BCrypt và bỏ demo/mock |
 | 0.6 | 14/10/2026 | Keycloak OIDC/PKCE, Bearer JWT, /me và logout thu hồi version; tạo/reset/khóa tài khoản qua Admin REST |
+| 0.7 | 14/10/2026 | ADMIN toàn quyền nghiệp vụ; permissions trong /me, quyền CRUD theo role, PATCH role tài khoản và tạo đơn hộ sinh viên |
 
 ---
 
@@ -218,7 +219,7 @@ Mỗi bảng tương ứng một module của SAD. "Phạm vi" nhắc lại các
 | GET | `/api/admin/users` | A | Lọc `role`, `unitId`, `locked`, `q` | FR-ACC-06 |
 | POST | `/api/admin/users` | A | Tạo Staff / Technician / Admin: `{ username, fullName, phone, role, managementUnitId }`; trả mật khẩu tạm một lần (mục 4.1) | FR-ACC-06 |
 | GET | `/api/admin/users/{id}` | A | Chi tiết | FR-ACC-06 |
-| PATCH | `/api/admin/users/{id}` | A | Sửa `fullName`, `phone`, `managementUnitId`; với sinh viên thêm `studentCode`, `gender`, `dateOfBirth`, `faculty`, `cohort`. Đổi username/đơn vị thu hồi phiên | FR-ACC-04, 06 |
+| PATCH | `/api/admin/users/{id}` | A | Sửa `fullName`, `phone`, `role` (Staff/KTV/Admin), `managementUnitId`; với sinh viên thêm `studentCode`, `gender`, `dateOfBirth`, `faculty`, `cohort`. Đổi username/role/đơn vị thu hồi token cũ | FR-ACC-04, 06 |
 | POST | `/api/admin/users/{id}/lock` | A | `{ reason }`; thu hồi phiên, không tự khóa tài khoản đang dùng | FR-ACC-06 |
 | POST | `/api/admin/users/{id}/unlock` | A | Mở khóa, xóa đếm đăng nhập sai/khóa tạm; không phục hồi phiên cũ | FR-ACC-02, 06 |
 | POST | `/api/admin/users/{id}/reset-password` | A | Như Staff nhưng cho mọi tài khoản | FR-ACC-07 |
@@ -1074,3 +1075,31 @@ Chốt ngày 10/10/2026 theo thẩm định của nhóm.
 
 
 Ghi chú dọn cấu trúc 14/10/2026: chỉ giữ Keycloak; dùng lại AuthController, SecurityConfig, BootstrapAdmin và AuthService/Impl. Không tạo lớp legacy hay Service chuyển đổi riêng. Migration đã áp dụng và các kiểm thử JWT/CRUD cần thiết được giữ. Hướng dẫn chạy gom vào README gốc.
+
+## Phân quyền Role → thao tác (cập nhật 14/10/2026)
+
+Theo quyết định mới của người phụ trách, ADMIN có mọi quyền nghiệp vụ trên toàn hệ thống. ADMIN không cần gắn management_unit_id; bỏ giới hạn đơn vị/chủ sở hữu/người được giao khi xác định quyền, nhưng vẫn phải qua trạng thái, ràng buộc dữ liệu, đối tượng sinh viên thật và lịch sử/audit. Không đổi hoặc giả vai trò/người thao tác để vượt phạm vi.
+
+Khung tham khảo RolePrivilege của HR-V5: `ScopeGuard` khai ma trận cố định cho bốn role, mỗi mã là `<RESOURCE>_<READ|CREATE|UPDATE|DELETE>`. READ dùng cho tìm kiếm và xem chi tiết; khóa/mở khóa/reset/gán phạm vi tài khoản có mã riêng. `/api/auth/me` trả thêm `permissions: string[]`; React dùng danh sách này cho menu, route và từng nút. API khai quyền bằng @RequirePrivilege giống V5; Spring Security Method Security kiểm tra trước thân Controller. Service Impl tiếp tục kiểm quyền nội bộ, phạm vi và trạng thái. Không chỉ dựa vào việc ẩn nút.
+
+- ADMIN: mọi quyền quản trị và nghiệp vụ ở mọi đơn vị; tài khoản và người thao tác trong audit vẫn là ADMIN thực.
+- STAFF: nghiệp vụ trong đơn vị được giao; crossUnitAccess chỉ mở rộng đọc. Đơn/yêu cầu do sinh viên tạo không mặc nhiên cho Staff tạo hoặc hủy thay sinh viên; quyền sửa/xét duyệt phụ thuộc endpoint và trạng thái.
+- TECHNICIAN: đọc/cập nhật tiến độ ticket được giao, không CRUD dữ liệu phòng/hợp đồng/hóa đơn.
+- STUDENT: dữ liệu cá nhân và phòng đang ở; đơn/yêu cầu của mình, không sửa role hoặc ID người sở hữu.
+
+Đổi role của tài khoản Staff/KTV/Admin qua PATCH `/api/admin/users/{id}` hỗ trợ trường `role`, đồng bộ Keycloak và thu hồi token cũ. Staff/KTV phải có đơn vị; chuyển sang ADMIN xóa đơn vị và cờ tổng hợp; không chuyển hồ sơ STUDENT thành tài khoản cán bộ, không tự đổi role tài khoản đang sử dụng. ADMIN tạo đơn đăng ký hộ sinh viên bằng `studentId` rõ ràng; STUDENT không được gửi ID của người khác.
+
+Ma trận hiện cố định trong code, chưa có bảng/màn quản trị tick quyền động như HR-V5. Không thêm migration hoặc file Service riêng cho cùng trách nhiệm. Sổ cọc/audit vẫn giữ chỉ đọc, hồ sơ có lịch sử và trạng thái vẫn chịu ràng buộc xóa/hủy như trước.
+
+
+Trong bảng endpoint, vai trò ghi ở cột là quyền của người dùng thông thường; ADMIN được dùng thêm mọi endpoint nghiệp vụ theo quy tắc mới. Endpoint cá nhân vẫn là dữ liệu của tài khoản hiện tại; thao tác hộ sinh viên dùng endpoint nghiệp vụ và ID sinh viên/hợp đồng đích rõ ràng. Các mẫu auth/session lịch sử ở mục 4.1 không được dùng cho luồng Keycloak hiện hành.
+
+### Khai quyền API bằng @RequirePrivilege — 14/10/2026
+
+Mọi hàm REST mapped trong ứng dụng khai `@RequirePrivilege(Permission.ROOM_CREATE)` hoặc một danh sách như `@RequirePrivilege({Permission.ROOM_TYPE_READ, Permission.ROOM_CREATE, Permission.ROOM_UPDATE})`. Nhiều mã dùng OR: có ít nhất một quyền mới được chạy API. Danh sách OR phù hợp API tra cứu cho form; thao tác ghi phải khai riêng CREATE/UPDATE/DELETE, không ghép quyền thêm/sửa để mở cả hai.
+
+`common/security/RequirePrivilege.java` chỉ khai annotation; `ScopeGuard.hasDeclaredPrivilege` đọc khai báo trên hàm thật, dùng khai báo lớp nếu hàm chưa khai, và kiểm role với dữ liệu tài khoản hiện tại. `SecurityConfig` bật Spring Security Method Security và đăng ký AuthorizationManagerBeforeMethodInterceptor: thiếu annotation, mảng rỗng hoặc không có quyền thì trả 403 trước thân Controller. Chưa đăng nhập/token không hợp lệ vẫn bị filter chain trả 401. Annotation ở hàm thay thế annotation lớp; Admin không vượt qua mã quyền chưa đăng ký.
+
+Service Impl vẫn giữ kiểm tra quyền cho lời gọi nội bộ, phạm vi đơn vị/chủ sở hữu, trạng thái và ràng buộc dữ liệu; việc thêm annotation không biến dữ liệu đang dùng thành dữ liệu được phép xóa. ADMIN tiếp tục có mọi quyền nghiệp vụ đã đăng ký trên toàn hệ thống. Frontend và `/api/auth/me.permissions` giữ nguyên mã quyền hiện có.
+
+Ở bước bổ sung annotation chỉ thêm một file source là `RequirePrivilege.java`; không thêm migration, Aspect/Service mới hoặc dependency V5. Bộ test kiểm OR, chặn trước thân Controller, lớp/hàm, thiếu/rỗng/sai annotation và quét mọi API để không bỏ sót quyền. Backend clean verify đạt **53/53 test**.
