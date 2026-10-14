@@ -30,12 +30,12 @@ export default function FormField({ label, required, error, hint, children }: Pr
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <label htmlFor={id} style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+      <label htmlFor={id} style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 13, color: 'var(--color-heading)' }}>
         {label}
         {required && (
           <>
             {' '}
-            <span aria-hidden="true">*</span>
+            <span aria-hidden="true" style={{ color: 'var(--color-danger)', fontWeight: 'bold' }}>*</span>
             <span className="sr-only"> (bắt buộc)</span>
           </>
         )}
@@ -48,12 +48,12 @@ export default function FormField({ label, required, error, hint, children }: Pr
         'aria-describedby': describedBy,
       })}
       {hint && (
-        <div id={hintId} style={{ color: '#6B7280', marginTop: 4 }}>
+        <div id={hintId} style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 4 }}>
           {hint}
         </div>
       )}
       {error && (
-        <div id={errorId} role="alert" style={{ color: '#B91C1C', marginTop: 4 }}>
+        <div id={errorId} role="alert" style={{ color: 'var(--color-danger)', fontSize: 12, fontWeight: 500, marginTop: 4 }}>
           {error}
         </div>
       )}

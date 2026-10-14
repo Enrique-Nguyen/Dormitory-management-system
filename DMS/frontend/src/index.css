@@ -1,20 +1,107 @@
+/* ==========================================================================
+   DMS - Dormitory Management System Design System & Stylesheet
+   Theo tiêu chuẩn thiết kế DMS-UI-UX-Design.md & SRS-DMS
+   ========================================================================== */
+
 :root {
+  /* Spacing Scale (bội số 4) */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
+  --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Primary Brand Colors (Blue - University Portal) */
   --color-primary: #1d4ed8;
-  --color-bg: #f5f7fa;
+  --color-primary-hover: #2563eb;
+  --color-primary-active: #1e40af;
+  --color-primary-light: #eff6ff;
+  --color-primary-border: #bfdbfe;
+
+  /* Neutral Backgrounds & Surfaces */
+  --color-bg: #f8fafc;
+  --color-bg-alt: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f8fafc;
+
+  /* Typography Colors */
+  --color-text: #1f2937;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+  --color-heading: #111827;
+
+  /* Border Colors */
   --color-border: #e5e7eb;
-  --bottom-nav-height: 56px;
+  --color-border-light: #f3f4f6;
+  --color-border-strong: #d1d5db;
+
+  /* Semantic Status Colors (Đạt tương phản >= 4.5:1) */
+  --color-success: #15803d;
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #bbf7d0;
+
+  --color-warning: #b45309;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
+
+  --color-info: #0369a1;
+  --color-info-bg: #f0f9ff;
+  --color-info-border: #bae6fd;
+
+  --color-neutral: #4b5563;
+  --color-neutral-bg: #f3f4f6;
+
+  /* Elevation & Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0, 0, 0, 0.07);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-card-hover: 0 10px 20px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+
+  /* Border Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 320ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout dimensions */
+  --bottom-nav-height: 60px;
+  --header-height: 60px;
+  --sider-width: 250px;
 }
+
+/* ==========================================================================
+   Base & Resets
+   ========================================================================== */
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 html,
@@ -25,26 +112,221 @@ body,
 
 body {
   margin: 0;
+  font-family: 'Be Vietnam Pro', Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--color-text);
   background: var(--color-bg);
+  line-height: 1.5;
 }
 
-/* Focus ring rõ cho thao tác bằng bàn phím (UI/UX 25A) */
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Accessible Keyboard Focus Ring (UI/UX 25A) */
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
-/* Trang đăng nhập / đổi mật khẩu: một cột tối đa 400 px, co được dưới 360 px (minmax(0) để nội dung dài không đẩy tràn) */
+/* ==========================================================================
+   Auth Pages Styling (Login, Change Password, Forgot Password)
+   ========================================================================== */
+
 .dms-auth-page {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: minmax(0, 400px);
+  display: flex;
+  align-items: center;
   justify-content: center;
-  align-content: center;
   padding: var(--space-4);
+  position: relative;
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(29, 78, 216, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(14, 116, 144, 0.06) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(248, 250, 252, 1) 0px, transparent 100%);
+  background-attachment: fixed;
+  overflow: hidden;
 }
 
-/* Nội dung trang: 16 px lề bên trên mobile, 24 px từ tablet */
+/* Decorative ambient background blur lights */
+.dms-auth-page::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 300px;
+  background: linear-gradient(135deg, rgba(29, 78, 216, 0.15), rgba(14, 116, 144, 0.1));
+  filter: blur(80px);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dms-auth-card {
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  z-index: 1;
+  background: var(--color-surface);
+  border: 1px solid rgba(229, 231, 235, 0.85);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 35px -10px rgba(15, 23, 42, 0.08), 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+  padding: var(--space-6);
+  transition: box-shadow var(--transition-normal);
+}
+
+@media (min-width: 640px) {
+  .dms-auth-card {
+    padding: var(--space-8);
+  }
+}
+
+.dms-auth-header {
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.dms-auth-logo-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #ffffff;
+  border-radius: var(--radius-lg);
+  font-size: 24px;
+  font-weight: 700;
+  box-shadow: 0 8px 16px -4px rgba(29, 78, 216, 0.35);
+  margin-bottom: var(--space-3);
+}
+
+.dms-auth-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-heading);
+  letter-spacing: -0.01em;
+}
+
+.dms-auth-subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.dms-auth-footer {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-light);
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ==========================================================================
+   Header & Navigation
+   ========================================================================== */
+
+.dms-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--header-height);
+  padding: 0 var(--space-4);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+@media (min-width: 640px) {
+  .dms-topbar {
+    padding: 0 var(--space-6);
+  }
+}
+
+.dms-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--color-primary);
+  text-decoration: none;
+  letter-spacing: -0.02em;
+}
+
+.dms-brand-logo:hover {
+  color: var(--color-primary-hover);
+}
+
+.dms-brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: #ffffff;
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px -1px rgba(29, 78, 216, 0.3);
+}
+
+.dms-portal-tag {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-alt);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-left: 2px;
+}
+
+/* Topbar Search Input */
+.dms-topbar-search .ant-input-affix-wrapper {
+  background: var(--color-bg-alt);
+  border-color: transparent;
+  border-radius: var(--radius-full);
+  padding-left: 14px;
+  padding-right: 14px;
+  transition: all var(--transition-fast);
+}
+
+.dms-topbar-search .ant-input-affix-wrapper:hover,
+.dms-topbar-search .ant-input-affix-wrapper:focus-within {
+  background: #ffffff;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+}
+
+/* ==========================================================================
+   Page Layout & Content
+   ========================================================================== */
+
 .dms-page {
   padding: var(--space-4);
   max-width: 1440px;
@@ -57,32 +339,42 @@ body {
   }
 }
 
-/* Chữ dài (mã phòng + badge + số tiền) xuống dòng gọn, không tràn ngang */
+.dms-page-header {
+  margin-bottom: var(--space-5);
+}
+
+.dms-page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-heading);
+  letter-spacing: -0.01em;
+}
+
+@media (min-width: 640px) {
+  .dms-page-title {
+    font-size: 24px;
+  }
+}
+
+.dms-page-subtitle {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+/* Text Wrapping Helper (mục 25A) */
 .dms-wrap {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-/* Cổng sinh viên / KTV: vùng chạm ≥ 44 px trên mobile */
-@media (max-width: 639px) {
-  .dms-touch .ant-btn,
-  .dms-touch .ant-input,
-  .dms-touch .ant-input-affix-wrapper,
-  .dms-touch .ant-select-selector {
-    min-height: 44px;
-  }
-}
+/* ==========================================================================
+   Mobile Bottom Navigation (UI 4.1)
+   ========================================================================== */
 
-/* Nút hành động chính của KTV: lớn, full-width */
-.dms-action-lg.ant-btn {
-  width: 100%;
-  min-height: 48px;
-  font-size: 16px;
-}
-
-/* Chừa chỗ cho bottom nav + vùng an toàn của điện thoại */
 .dms-with-bottom-nav {
-  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 12px);
 }
 
 .dms-bottom-nav {
@@ -94,8 +386,11 @@ body {
   display: flex;
   height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--color-border);
+  box-shadow: 0 -4px 12px 0 rgba(0, 0, 0, 0.03);
 }
 
 .dms-bottom-nav a,
@@ -105,14 +400,22 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   min-height: 44px;
-  font-size: 12px;
-  color: #4b5563;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
   text-decoration: none;
   background: none;
   border: 0;
   cursor: pointer;
+  position: relative;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.dms-bottom-nav a:active,
+.dms-bottom-nav button:active {
+  transform: scale(0.96);
 }
 
 .dms-bottom-nav a[aria-current='page'] {
@@ -120,14 +423,370 @@ body {
   font-weight: 600;
 }
 
+.dms-bottom-nav a[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 3px;
+  background: var(--color-primary);
+  border-radius: 0 0 3px 3px;
+}
+
 .dms-bottom-nav [data-limited='true'] {
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .dms-bottom-nav .anticon {
   font-size: 20px;
+  transition: transform var(--transition-fast);
 }
 
+.dms-bottom-nav a[aria-current='page'] .anticon {
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Business Components Styling
+   ========================================================================== */
+
+/* 1. Bed Card (Ô Giường KTX) */
+.dms-bed-card {
+  min-width: 88px;
+  min-height: 76px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: all var(--transition-fast);
+  position: relative;
+  user-select: none;
+}
+
+.dms-bed-card--clickable {
+  cursor: pointer;
+}
+
+.dms-bed-card--clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--color-primary);
+}
+
+.dms-bed-card--mine {
+  border: 2px solid var(--color-primary) !important;
+  background: #eff6ff !important;
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.15);
+}
+
+.dms-bed-card--broken {
+  background-color: #f3f4f6 !important;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 8px,
+    rgba(156, 163, 175, 0.25) 8px,
+    rgba(156, 163, 175, 0.25) 16px
+  ) !important;
+  border-color: #9ca3af !important;
+  color: #6b7280 !important;
+}
+
+.dms-bed-number {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dms-bed-status {
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.dms-bed-caption {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+/* 2. Room Card (Thẻ Phòng KTX) */
+.dms-room-card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: box-shadow var(--transition-normal), transform var(--transition-normal);
+}
+
+.dms-room-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.dms-bed-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.dms-bed-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.dms-bed-dot--occupied {
+  color: #15803d;
+}
+
+.dms-bed-dot--held {
+  color: #b45309;
+}
+
+.dms-bed-dot--free {
+  color: #9ca3af;
+}
+
+.dms-bed-dot--broken {
+  color: #dc2626;
+  font-weight: bold;
+}
+
+/* 3. Invoice Card (Thẻ Hóa Đơn) */
+.dms-invoice-card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+.dms-invoice-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.dms-invoice-amount {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-heading);
+  letter-spacing: -0.02em;
+}
+
+/* 4. Deposit Ledger (Sổ Cọc) */
+.dms-ledger-item {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+.dms-ledger-item:hover {
+  background: var(--color-bg-alt);
+}
+
+.dms-balance-callout {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 5. Notification Item */
+.dms-notification-item {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.dms-notification-item:hover {
+  background: var(--color-bg-alt);
+}
+
+.dms-notification-item--unread {
+  background: rgba(29, 78, 216, 0.04);
+}
+
+.dms-notification-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.dms-notification-dot--unread {
+  background: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.2);
+}
+
+.dms-notification-dot--read {
+  background: #cbd5e1;
+}
+
+/* 6. Dashboard Navigation Cards */
+.dms-nav-card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: all var(--transition-normal);
+  height: 100%;
+}
+
+.dms-nav-card:hover {
+  border-color: var(--color-primary-border);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.dms-nav-icon-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 20px;
+  margin-bottom: var(--space-3);
+  transition: all var(--transition-fast);
+}
+
+.dms-nav-card:hover .dms-nav-icon-box {
+  background: var(--color-primary);
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+/* ==========================================================================
+   Table & Ant Design Component Enhancements
+   ========================================================================== */
+
+/* Ant Design Table Polish */
+.ant-table-wrapper {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.ant-table-wrapper .ant-table {
+  border-radius: 0 !important;
+}
+
+.ant-table-thead > tr > th {
+  font-weight: 600 !important;
+  color: #475569 !important;
+  background: #f8fafc !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: #f8fafc !important;
+}
+
+/* Ant Design Card Polish */
+.ant-card {
+  border-radius: var(--radius-lg) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: var(--shadow-xs);
+}
+
+.ant-card-head {
+  border-bottom: 1px solid var(--color-border-light) !important;
+  font-weight: 600 !important;
+}
+
+/* Ant Design Button Polish */
+.ant-btn {
+  font-weight: 500 !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.ant-btn:active {
+  transform: scale(0.98);
+}
+
+.ant-btn-primary {
+  box-shadow: 0 1px 2px 0 rgba(29, 78, 216, 0.25) !important;
+}
+
+.ant-btn-primary:hover {
+  box-shadow: 0 4px 8px -1px rgba(29, 78, 216, 0.35) !important;
+}
+
+/* Ant Design Tag & Badge Polish */
+.ant-tag {
+  border-radius: var(--radius-sm) !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+  padding: 0 8px !important;
+}
+
+/* Form Item Polish */
+.ant-form-item-label > label {
+  font-weight: 500 !important;
+  color: var(--color-heading) !important;
+}
+
+/* Modal & Drawer Polish */
+.ant-modal-content {
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-xl) !important;
+  overflow: hidden;
+}
+
+.ant-drawer-content {
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl) !important;
+}
+
+/* ==========================================================================
+   Responsive & Accessibility Utilities
+   ========================================================================== */
+
+/* Mobile Touch Area (>= 44px theo mục 25A) */
+@media (max-width: 639px) {
+  .dms-touch .ant-btn,
+  .dms-touch .ant-input,
+  .dms-touch .ant-input-affix-wrapper,
+  .dms-touch .ant-select-selector {
+    min-height: 44px !important;
+  }
+}
+
+/* Full-width large action button for Technician */
+.dms-action-lg.ant-btn {
+  width: 100%;
+  min-height: 48px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+
+/* Screen reader only utility */
 .sr-only {
   position: absolute;
   width: 1px;

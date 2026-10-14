@@ -52,7 +52,7 @@ export default function ResponsiveTable<T extends object>({
     )
   }
 
-  if (loading) return <Skeleton active />
+  if (loading) return <Skeleton active paragraph={{ rows: 4 }} />
   if (!data || data.length === 0) return <EmptyState title={emptyTitle} description={emptyDescription} />
 
   const actionColumn = columns.find((column) => column.key === 'actions')
@@ -61,7 +61,7 @@ export default function ResponsiveTable<T extends object>({
   return (
     <Flex vertical gap={12}>
       {data.map((record, index) => (
-        <Card key={rowKey(record)} size="small">
+        <Card key={rowKey(record)} size="small" style={{ borderRadius: 'var(--radius-lg)', borderColor: 'var(--color-border)' }}>
           {renderCard ? (
             renderCard(record)
           ) : (
@@ -70,20 +70,22 @@ export default function ResponsiveTable<T extends object>({
                 const raw = 'dataIndex' in column ? pick(record, column.dataIndex) : undefined
                 const content = column.render ? (column.render(raw, record, index) as ReactNode) : (raw as ReactNode)
                 return (
-                  <Flex key={column.key ?? i} justify="space-between" gap={12} className="dms-wrap" style={{ padding: '4px 0' }}>
-                    <span style={{ color: '#6B7280' }}>{column.title as ReactNode}</span>
-                    <span style={{ textAlign: 'right' }}>{content}</span>
+                  <Flex key={column.key ?? i} justify="space-between" gap={12} className="dms-wrap" style={{ padding: '6px 0', borderBottom: i < fieldColumns.length - 1 ? '1px dashed var(--color-border-light)' : undefined }}>
+                    <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>{column.title as ReactNode}</span>
+                    <span style={{ textAlign: 'right', fontWeight: 500, fontSize: 13 }}>{content}</span>
                   </Flex>
                 )
               })}
               {actionColumn?.render && (
-                <div style={{ marginTop: 8 }}>{actionColumn.render(undefined, record, index) as ReactNode}</div>
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border-light)' }}>
+                  {actionColumn.render(undefined, record, index) as ReactNode}
+                </div>
               )}
             </>
           )}
         </Card>
       ))}
-      {pagination && <Pagination simple align="center" {...pagination} />}
+      {pagination && <Pagination simple align="center" {...pagination} style={{ marginTop: 8 }} />}
     </Flex>
   )
 }
