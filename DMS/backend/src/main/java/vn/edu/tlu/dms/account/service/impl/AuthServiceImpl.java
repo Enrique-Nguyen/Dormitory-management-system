@@ -145,5 +145,7 @@ public class AuthServiceImpl implements AuthService {
         u.setPasswordHash(passwords.encode(next));
         u.setMustChangePassword(false);
         users.saveAndFlush(u);
+        // Actor trong request đã nạp với cờ cũ; bỏ để các lần đọc sau thấy cờ mới.
+        currentUser.invalidate();
     }
 }

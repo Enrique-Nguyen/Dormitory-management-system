@@ -26,7 +26,14 @@ const ref = (
   lookup: string,
   lookupLabel = 'name',
   required = true,
-): CrudField => ({ name, label, kind: 'select', required, lookup, lookupLabel })
+): CrudField => ({
+  name,
+  label,
+  kind: 'select',
+  required,
+  lookup,
+  lookupLabel,
+})
 const date = (name: string, label: string): CrudField => ({
   name,
   label,
@@ -250,6 +257,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Phòng từng có phân phòng không được xóa. Xem chi tiết để quản lý giường.',
   },
   periods: {
+    closeAtOnlyAfterOpen: true,
     title: 'Đợt đăng ký',
     endpoint: '/registration-periods',
     fields: [
@@ -422,6 +430,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'CRUD lựa chọn chờ; chưa tự gia hạn hay thay đổi chỗ ở.',
   },
   storage: {
+    inlineDetail: true,
     title: 'Kho gửi đồ',
     endpoint: '/storage-records',
     fields: [],
@@ -437,6 +446,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Khung tra cứu. Gửi/nhận đồ gắn với luồng tạm rời hè nên chưa triển khai thao tác chi tiết.',
   },
   readings: {
+    keepCreateOnlyOnEdit: true,
     title: 'Chỉ số điện nước',
     endpoint: '/utility-readings',
     fields: [
@@ -565,6 +575,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Người tạo sửa/hủy khi ticket còn mở; các thao tác xử lý chi tiết chưa đưa vào màn CRUD.',
   },
   notifications: {
+    keepCreateOnlyOnEdit: true,
     title: 'Thông báo đã đăng',
     endpoint: '/notifications/published',
     writeEndpoint: '/notifications',
@@ -600,6 +611,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Chỉ quản lý thông báo thủ công của mình. Sửa nội dung giữ phạm vi người nhận.',
   },
   inbox: {
+    inlineDetail: true,
     title: 'Hộp thư thông báo',
     endpoint: '/notifications',
     fields: [],
@@ -643,6 +655,9 @@ export const resources: Record<string, CrudResource> = {
     note: 'Nhật ký chỉ đọc, hệ thống tự ghi khi thêm/sửa/xóa.',
   },
   configs: {
+    writeMethod: 'put',
+    noCreate: true,
+    inlineDetail: true,
     title: 'Cấu hình hệ thống',
     endpoint: '/admin/configs',
     fields: [text('value', 'Giá trị', true, 100)],
@@ -659,6 +674,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Chỉ sửa các khóa cấu hình đã có.',
   },
   myRoom: {
+    inlineDetail: true,
     title: 'Phòng của tôi',
     endpoint: '/me/room',
     fields: [],

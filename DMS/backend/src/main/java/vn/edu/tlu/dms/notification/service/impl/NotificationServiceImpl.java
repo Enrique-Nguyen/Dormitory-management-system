@@ -59,6 +59,7 @@ public class NotificationServiceImpl implements NotificationService {
             int page, int size, Boolean unread, String keyword) {
         PageQuery.of(page, size, null, Set.of("id"), "id,desc");
         Long userId = currentUser.get().id();
+        String portal = currentUser.get().is("STUDENT") ? "/student" : "/staff";
         String filter = unread == null ? "" : unread ? " AND NOT is_read" : " AND is_read";
         filter += " AND (title ILIKE ? OR body ILIKE ?)";
         String pattern = "%" + keyword.trim() + "%";
@@ -85,6 +86,7 @@ public class NotificationServiceImpl implements NotificationService {
                                                 ? "MANUAL"
                                                 : row.getString("source_type"),
                                         notificationLink(
+                                                portal,
                                                 row.getString("source_type"),
                                                 row.getObject("source_id", Long.class)),
                                         row.getObject("created_at", OffsetDateTime.class),
@@ -249,11 +251,10 @@ public class NotificationServiceImpl implements NotificationService {
         repository.flush();
     }
 
-    private String notificationLink(String source, Long id) {
+    private String notificationLink(String portal, String source, Long id) {
         if (source == null || id == null) {
             return null;
         }
-        String portal = currentUser.get().is("STUDENT") ? "/student" : "/staff";
         return switch (source) {
             case "SUMMER_PERIOD_OPENED" -> portal + "/summer";
             case "APPLICATION_APPROVED", "BED_HELD" -> portal + "/applications/" + id;

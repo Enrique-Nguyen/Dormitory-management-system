@@ -60,8 +60,13 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                 + " u.id,u.username,u.full_name,u.phone,u.locked,p.student_code,p.gender,p.date_of_birth,p.faculty,p.cohort,p.hometown,p.emergency_contact"
                 + " FROM app_user u JOIN student_profile p ON p.user_id=u.id";
 
+    private boolean seesAllUnits() {
+        var actor = current.get();
+        return actor.is("ADMIN") || actor.crossUnitAccess();
+    }
+
     private String scope() {
-        if (current.get().is("ADMIN") || current.get().crossUnitAccess()) {
+        if (seesAllUnits()) {
             return "TRUE";
         }
         return "(EXISTS (SELECT 1 FROM room_assignment_history a JOIN bed b ON b.id=a.bed_id JOIN"
@@ -71,7 +76,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
     }
 
     private List<Object> scopeParameters() {
-        return current.get().is("ADMIN") || current.get().crossUnitAccess()
+        return seesAllUnits()
                 ? new ArrayList<>()
                 : new ArrayList<>(List.of(current.get().unitId(), current.get().unitId()));
     }

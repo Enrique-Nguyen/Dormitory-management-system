@@ -48,6 +48,8 @@ export async function getLookupRecords(
       result.content.length === 0
     )
       break
+    if (page === 99)
+      console.warn(`Lookup ${endpoint} chạm trần 100 trang, danh sách bị cắt.`)
   }
   return all
 }
@@ -57,8 +59,7 @@ export async function writeCrudRecord(
   method: 'post' | 'patch' | 'put' | 'delete',
   values?: unknown,
 ) {
-  // Sau khi tải lại trang, cookie CSRF có thể đã hết hạn; lấy token trước mọi thao tác ghi.
-  await api.get('/auth/csrf')
+  // Token CSRF hết hạn được interceptor trong services/api/client.ts làm mới và gửi lại một lần.
   return (await api.request({ url: endpoint, method, data: values }))
     .data as unknown
 }

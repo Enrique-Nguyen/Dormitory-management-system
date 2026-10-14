@@ -32,6 +32,7 @@ import {
 import { resources } from '../features/crud/resources'
 import type { CrudField, CrudRecord } from '../features/crud/types'
 import { api } from '../services/api/client'
+import { useApiErrorHandler } from '../hooks/useApiErrorHandler'
 import { errorMessage } from '../utils/errorMessages'
 
 const labels: Record<string, string> = {
@@ -98,6 +99,8 @@ function LookupInput({
     queryKey: ['crud-lookup', field.lookup],
     queryFn: () => getLookupRecords(field.lookup!),
     enabled: !!field.lookup,
+    // Danh mục tham chiếu ít đổi; refresh() vẫn invalidate sau mỗi lần ghi.
+    staleTime: 5 * 60 * 1000,
   })
   const options = field.lookup
     ? data?.map((row) => ({
@@ -162,6 +165,7 @@ export default function CrudPage({ resource }: { resource: string }) {
   const { data: me } = useMe()
   const { message, modal } = App.useApp()
   const queryClient = useQueryClient()
+  const handleError = useApiErrorHandler()
   const navigate = useNavigate()
   const { id: routeId } = useParams()
   const [search, setSearch] = useState('')
@@ -180,7 +184,7 @@ export default function CrudPage({ resource }: { resource: string }) {
   const canCreate =
     canWrite &&
     !config.singleton &&
-    !['configs'].includes(resource) &&
+    !config.noCreate &&
     (config.createRoles ?? config.writeRoles)?.includes(role!)
   const idKey = config.idKey ?? 'id'
   const writeEndpoint = config.writeEndpoint ?? config.endpoint
@@ -259,7 +263,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     }
     try {
       const selected =
-        config.singleton || config.localSearch || resource === 'configs'
+        config.singleton || config.localSearch || config.inlineDetail
           ? row
           : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
               .data as CrudRecord)
@@ -293,12 +297,12 @@ export default function CrudPage({ resource }: { resource: string }) {
             : value
       }
       // Các DTO sửa chỉ số/thông báo cần giữ lại định danh/phạm vi đã chọn khi tạo.
-      if (editing && ['readings', 'notifications'].includes(resource))
+      if (editing && config.keepCreateOnlyOnEdit)
         for (const field of config.fields.filter((f) => f.createOnly))
           if (editing[field.name] != null)
             payload[field.name] = editing[field.name]
       if (
-        resource === 'periods' &&
+        config.closeAtOnlyAfterOpen &&
         editing &&
         hasPeriodOpened(editing.openAt)
       ) {
@@ -321,7 +325,11 @@ export default function CrudPage({ resource }: { resource: string }) {
           : writeEndpoint
       const result = await writeCrudRecord(
         endpoint,
-        resource === 'configs' ? 'put' : editing ? 'patch' : 'post',
+        config.writeMethod && editing
+          ? config.writeMethod
+          : editing
+            ? 'patch'
+            : 'post',
         body,
       )
       if (result && typeof result === 'object' && 'temporaryPassword' in result)
@@ -349,7 +357,7 @@ export default function CrudPage({ resource }: { resource: string }) {
             })),
           )
       }
-      void message.error(errorMessage(e))
+      handleError(e)
     } finally {
       setBusy(false)
     }
@@ -386,7 +394,7 @@ export default function CrudPage({ resource }: { resource: string }) {
           void message.success('Đã cập nhật')
           await refresh()
         } catch (e) {
-          void message.error(errorMessage(e))
+          handleError(e)
           throw e
         }
       },
@@ -395,12 +403,7 @@ export default function CrudPage({ resource }: { resource: string }) {
   async function showDetail(row: CrudRecord) {
     try {
       setDetail(
-        config.singleton ||
-          config.localSearch ||
-          resource === 'configs' ||
-          resource === 'inbox' ||
-          resource === 'storage' ||
-          resource === 'myRoom'
+        config.singleton || config.localSearch || config.inlineDetail
           ? row
           : resource === 'deposits'
             ? ((await api.get(`/contracts/${row.id}/deposit`))
@@ -556,7 +559,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                             'post',
                           )
                             .then(refresh)
-                            .catch((e) => message.error(errorMessage(e)))
+                            .catch(handleError)
                         }}
                       >
                         Mở khóa
@@ -705,7 +708,8 @@ function BedCrudPanel({
   beds: CrudRecord[]
   reload: () => Promise<void>
 }) {
-  const { message, modal } = App.useApp()
+  const { modal } = App.useApp()
+  const handleError = useApiErrorHandler()
   const [form] = Form.useForm()
   const [editing, setEditing] = useState<CrudRecord | null | undefined>()
   const [busy, setBusy] = useState(false)
@@ -720,7 +724,7 @@ function BedCrudPanel({
       setEditing(undefined)
       await reload()
     } catch (e) {
-      void message.error(errorMessage(e))
+      handleError(e)
     } finally {
       setBusy(false)
     }
@@ -776,7 +780,7 @@ function BedCrudPanel({
                           await writeCrudRecord(`/beds/${bed.id}`, 'delete')
                           await reload()
                         } catch (e) {
-                          void message.error(errorMessage(e))
+                          handleError(e)
                           throw e
                         }
                       },
