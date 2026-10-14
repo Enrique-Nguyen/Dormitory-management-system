@@ -1,0 +1,652 @@
+package vn.edu.tlu.dms.common.constants;
+
+import java.util.List;
+import java.util.Set;
+
+/**
+ * Mã dùng chung của DMS. Giá trị chuỗi là hợp đồng với CSDL, Keycloak và frontend; đổi tên biến
+ * Java được nhưng không tự ý đổi giá trị đã lưu hoặc đã công bố qua API. Cấu hình môi trường (URL,
+ * mật khẩu, secret) vẫn đọc từ properties hoặc biến môi trường.
+ */
+public final class DmsConstants {
+
+    public static final String PERMISSION_SEPARATOR = "_";
+
+    private DmsConstants() {}
+
+    /** Vai trò nghiệp vụ; ma trận quyền cụ thể được quản lý tại ScopeGuard. */
+    public static final class Role {
+        public static final String ADMIN = "ADMIN";
+        public static final String STAFF = "STAFF";
+        public static final String TECHNICIAN = "TECHNICIAN";
+        public static final String STUDENT = "STUDENT";
+
+        public static final Set<String> ALL = Set.of(ADMIN, STAFF, TECHNICIAN, STUDENT);
+        // API quản trị tài khoản không được chuyển hồ sơ sinh viên sang vai trò nhân sự.
+        public static final String MANAGEMENT_ROLE_PATTERN = STAFF + "|" + TECHNICIAN + "|" + ADMIN;
+
+        private Role() {}
+    }
+
+    /** Hành động phân quyền; READ bao gồm tìm kiếm và xem chi tiết. */
+    public static final class Action {
+        public static final String READ = "READ";
+        public static final String CREATE = "CREATE";
+        public static final String UPDATE = "UPDATE";
+        public static final String DELETE = "DELETE";
+        public static final String LOCK = "LOCK";
+        public static final String UNLOCK = "UNLOCK";
+        public static final String RESET_PASSWORD = "RESET_PASSWORD";
+        public static final String CROSS_UNIT_ACCESS = "CROSS_UNIT_ACCESS";
+
+        public static final List<String> CRUD = List.of(READ, CREATE, UPDATE, DELETE);
+
+        private Action() {}
+    }
+
+    /** Mã đối tượng/màn hình phân quyền; không phải tên bảng SQL. */
+    public static final class Resource {
+        public static final String USER = "USER";
+        public static final String STUDENT = "STUDENT";
+        public static final String MANAGEMENT_UNIT = "MANAGEMENT_UNIT";
+        public static final String BUILDING = "BUILDING";
+        public static final String PRIORITY_CATEGORY = "PRIORITY_CATEGORY";
+        public static final String ROOM_TYPE = "ROOM_TYPE";
+        public static final String SEMESTER = "SEMESTER";
+        public static final String ROOM = "ROOM";
+        public static final String BED = "BED";
+        public static final String REGISTRATION_PERIOD = "REGISTRATION_PERIOD";
+        public static final String ROOM_APPLICATION = "ROOM_APPLICATION";
+        public static final String CONTRACT = "CONTRACT";
+        public static final String CONTRACT_EXTENSION = "CONTRACT_EXTENSION";
+        public static final String ROOM_TRANSFER = "ROOM_TRANSFER";
+        public static final String MOVE_OUT = "MOVE_OUT";
+        public static final String SUMMER_REGISTRATION = "SUMMER_REGISTRATION";
+        public static final String STORAGE = "STORAGE";
+        public static final String UTILITY_RATE = "UTILITY_RATE";
+        public static final String UTILITY_READING = "UTILITY_READING";
+        public static final String INVOICE = "INVOICE";
+        public static final String DEPOSIT = "DEPOSIT";
+        public static final String MAINTENANCE = "MAINTENANCE";
+        public static final String NOTIFICATION = "NOTIFICATION";
+        public static final String PROFILE = "PROFILE";
+        public static final String CONFIG = "CONFIG";
+        public static final String AUDIT = "AUDIT";
+        public static final String DASHBOARD = "DASHBOARD";
+
+        private Resource() {}
+    }
+
+    /** Mã quyền đã đăng ký; hằng compile-time dùng được trực tiếp trong @RequirePrivilege. */
+    public static final class Permission {
+        public static final String USER_READ = Resource.USER + PERMISSION_SEPARATOR + Action.READ;
+        public static final String USER_CREATE =
+                Resource.USER + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String USER_UPDATE =
+                Resource.USER + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String USER_DELETE =
+                Resource.USER + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String STUDENT_READ =
+                Resource.STUDENT + PERMISSION_SEPARATOR + Action.READ;
+        public static final String STUDENT_CREATE =
+                Resource.STUDENT + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String STUDENT_UPDATE =
+                Resource.STUDENT + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String STUDENT_DELETE =
+                Resource.STUDENT + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String MANAGEMENT_UNIT_READ =
+                Resource.MANAGEMENT_UNIT + PERMISSION_SEPARATOR + Action.READ;
+        public static final String MANAGEMENT_UNIT_CREATE =
+                Resource.MANAGEMENT_UNIT + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String MANAGEMENT_UNIT_UPDATE =
+                Resource.MANAGEMENT_UNIT + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String MANAGEMENT_UNIT_DELETE =
+                Resource.MANAGEMENT_UNIT + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String BUILDING_READ =
+                Resource.BUILDING + PERMISSION_SEPARATOR + Action.READ;
+        public static final String BUILDING_CREATE =
+                Resource.BUILDING + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String BUILDING_UPDATE =
+                Resource.BUILDING + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String BUILDING_DELETE =
+                Resource.BUILDING + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String PRIORITY_CATEGORY_READ =
+                Resource.PRIORITY_CATEGORY + PERMISSION_SEPARATOR + Action.READ;
+        public static final String PRIORITY_CATEGORY_CREATE =
+                Resource.PRIORITY_CATEGORY + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String PRIORITY_CATEGORY_UPDATE =
+                Resource.PRIORITY_CATEGORY + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String PRIORITY_CATEGORY_DELETE =
+                Resource.PRIORITY_CATEGORY + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String ROOM_TYPE_READ =
+                Resource.ROOM_TYPE + PERMISSION_SEPARATOR + Action.READ;
+        public static final String ROOM_TYPE_CREATE =
+                Resource.ROOM_TYPE + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String ROOM_TYPE_UPDATE =
+                Resource.ROOM_TYPE + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String ROOM_TYPE_DELETE =
+                Resource.ROOM_TYPE + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String SEMESTER_READ =
+                Resource.SEMESTER + PERMISSION_SEPARATOR + Action.READ;
+        public static final String SEMESTER_CREATE =
+                Resource.SEMESTER + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String SEMESTER_UPDATE =
+                Resource.SEMESTER + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String SEMESTER_DELETE =
+                Resource.SEMESTER + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String ROOM_READ = Resource.ROOM + PERMISSION_SEPARATOR + Action.READ;
+        public static final String ROOM_CREATE =
+                Resource.ROOM + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String ROOM_UPDATE =
+                Resource.ROOM + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String ROOM_DELETE =
+                Resource.ROOM + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String BED_READ = Resource.BED + PERMISSION_SEPARATOR + Action.READ;
+        public static final String BED_CREATE = Resource.BED + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String BED_UPDATE = Resource.BED + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String BED_DELETE = Resource.BED + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String REGISTRATION_PERIOD_READ =
+                Resource.REGISTRATION_PERIOD + PERMISSION_SEPARATOR + Action.READ;
+        public static final String REGISTRATION_PERIOD_CREATE =
+                Resource.REGISTRATION_PERIOD + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String REGISTRATION_PERIOD_UPDATE =
+                Resource.REGISTRATION_PERIOD + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String REGISTRATION_PERIOD_DELETE =
+                Resource.REGISTRATION_PERIOD + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String ROOM_APPLICATION_READ =
+                Resource.ROOM_APPLICATION + PERMISSION_SEPARATOR + Action.READ;
+        public static final String ROOM_APPLICATION_CREATE =
+                Resource.ROOM_APPLICATION + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String ROOM_APPLICATION_UPDATE =
+                Resource.ROOM_APPLICATION + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String ROOM_APPLICATION_DELETE =
+                Resource.ROOM_APPLICATION + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String CONTRACT_READ =
+                Resource.CONTRACT + PERMISSION_SEPARATOR + Action.READ;
+        public static final String CONTRACT_CREATE =
+                Resource.CONTRACT + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String CONTRACT_UPDATE =
+                Resource.CONTRACT + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String CONTRACT_DELETE =
+                Resource.CONTRACT + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String CONTRACT_EXTENSION_READ =
+                Resource.CONTRACT_EXTENSION + PERMISSION_SEPARATOR + Action.READ;
+        public static final String CONTRACT_EXTENSION_CREATE =
+                Resource.CONTRACT_EXTENSION + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String CONTRACT_EXTENSION_UPDATE =
+                Resource.CONTRACT_EXTENSION + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String CONTRACT_EXTENSION_DELETE =
+                Resource.CONTRACT_EXTENSION + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String ROOM_TRANSFER_READ =
+                Resource.ROOM_TRANSFER + PERMISSION_SEPARATOR + Action.READ;
+        public static final String ROOM_TRANSFER_CREATE =
+                Resource.ROOM_TRANSFER + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String ROOM_TRANSFER_UPDATE =
+                Resource.ROOM_TRANSFER + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String ROOM_TRANSFER_DELETE =
+                Resource.ROOM_TRANSFER + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String MOVE_OUT_READ =
+                Resource.MOVE_OUT + PERMISSION_SEPARATOR + Action.READ;
+        public static final String MOVE_OUT_CREATE =
+                Resource.MOVE_OUT + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String MOVE_OUT_UPDATE =
+                Resource.MOVE_OUT + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String MOVE_OUT_DELETE =
+                Resource.MOVE_OUT + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String SUMMER_REGISTRATION_READ =
+                Resource.SUMMER_REGISTRATION + PERMISSION_SEPARATOR + Action.READ;
+        public static final String SUMMER_REGISTRATION_CREATE =
+                Resource.SUMMER_REGISTRATION + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String SUMMER_REGISTRATION_UPDATE =
+                Resource.SUMMER_REGISTRATION + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String SUMMER_REGISTRATION_DELETE =
+                Resource.SUMMER_REGISTRATION + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String STORAGE_READ =
+                Resource.STORAGE + PERMISSION_SEPARATOR + Action.READ;
+        public static final String STORAGE_CREATE =
+                Resource.STORAGE + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String STORAGE_UPDATE =
+                Resource.STORAGE + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String STORAGE_DELETE =
+                Resource.STORAGE + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String UTILITY_RATE_READ =
+                Resource.UTILITY_RATE + PERMISSION_SEPARATOR + Action.READ;
+        public static final String UTILITY_RATE_CREATE =
+                Resource.UTILITY_RATE + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String UTILITY_RATE_UPDATE =
+                Resource.UTILITY_RATE + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String UTILITY_RATE_DELETE =
+                Resource.UTILITY_RATE + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String UTILITY_READING_READ =
+                Resource.UTILITY_READING + PERMISSION_SEPARATOR + Action.READ;
+        public static final String UTILITY_READING_CREATE =
+                Resource.UTILITY_READING + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String UTILITY_READING_UPDATE =
+                Resource.UTILITY_READING + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String UTILITY_READING_DELETE =
+                Resource.UTILITY_READING + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String INVOICE_READ =
+                Resource.INVOICE + PERMISSION_SEPARATOR + Action.READ;
+        public static final String INVOICE_CREATE =
+                Resource.INVOICE + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String INVOICE_UPDATE =
+                Resource.INVOICE + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String INVOICE_DELETE =
+                Resource.INVOICE + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String DEPOSIT_READ =
+                Resource.DEPOSIT + PERMISSION_SEPARATOR + Action.READ;
+        public static final String DEPOSIT_CREATE =
+                Resource.DEPOSIT + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String DEPOSIT_UPDATE =
+                Resource.DEPOSIT + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String DEPOSIT_DELETE =
+                Resource.DEPOSIT + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String MAINTENANCE_READ =
+                Resource.MAINTENANCE + PERMISSION_SEPARATOR + Action.READ;
+        public static final String MAINTENANCE_CREATE =
+                Resource.MAINTENANCE + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String MAINTENANCE_UPDATE =
+                Resource.MAINTENANCE + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String MAINTENANCE_DELETE =
+                Resource.MAINTENANCE + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String NOTIFICATION_READ =
+                Resource.NOTIFICATION + PERMISSION_SEPARATOR + Action.READ;
+        public static final String NOTIFICATION_CREATE =
+                Resource.NOTIFICATION + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String NOTIFICATION_UPDATE =
+                Resource.NOTIFICATION + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String NOTIFICATION_DELETE =
+                Resource.NOTIFICATION + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String PROFILE_READ =
+                Resource.PROFILE + PERMISSION_SEPARATOR + Action.READ;
+        public static final String PROFILE_UPDATE =
+                Resource.PROFILE + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String CONFIG_READ =
+                Resource.CONFIG + PERMISSION_SEPARATOR + Action.READ;
+        public static final String CONFIG_UPDATE =
+                Resource.CONFIG + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String AUDIT_READ = Resource.AUDIT + PERMISSION_SEPARATOR + Action.READ;
+        public static final String DASHBOARD_READ =
+                Resource.DASHBOARD + PERMISSION_SEPARATOR + Action.READ;
+        public static final String STUDENT_RESET_PASSWORD =
+                Resource.STUDENT + PERMISSION_SEPARATOR + Action.RESET_PASSWORD;
+        public static final String USER_LOCK = Resource.USER + PERMISSION_SEPARATOR + Action.LOCK;
+        public static final String USER_UNLOCK =
+                Resource.USER + PERMISSION_SEPARATOR + Action.UNLOCK;
+        public static final String USER_RESET_PASSWORD =
+                Resource.USER + PERMISSION_SEPARATOR + Action.RESET_PASSWORD;
+        public static final String USER_CROSS_UNIT_ACCESS =
+                Resource.USER + PERMISSION_SEPARATOR + Action.CROSS_UNIT_ACCESS;
+
+        // Danh mục đóng: ADMIN có mọi mã trong danh mục, mã lạ vẫn bị từ chối.
+        public static final Set<String> ALL =
+                Set.of(
+                        USER_READ,
+                        USER_CREATE,
+                        USER_UPDATE,
+                        USER_DELETE,
+                        STUDENT_READ,
+                        STUDENT_CREATE,
+                        STUDENT_UPDATE,
+                        STUDENT_DELETE,
+                        MANAGEMENT_UNIT_READ,
+                        MANAGEMENT_UNIT_CREATE,
+                        MANAGEMENT_UNIT_UPDATE,
+                        MANAGEMENT_UNIT_DELETE,
+                        BUILDING_READ,
+                        BUILDING_CREATE,
+                        BUILDING_UPDATE,
+                        BUILDING_DELETE,
+                        PRIORITY_CATEGORY_READ,
+                        PRIORITY_CATEGORY_CREATE,
+                        PRIORITY_CATEGORY_UPDATE,
+                        PRIORITY_CATEGORY_DELETE,
+                        ROOM_TYPE_READ,
+                        ROOM_TYPE_CREATE,
+                        ROOM_TYPE_UPDATE,
+                        ROOM_TYPE_DELETE,
+                        SEMESTER_READ,
+                        SEMESTER_CREATE,
+                        SEMESTER_UPDATE,
+                        SEMESTER_DELETE,
+                        ROOM_READ,
+                        ROOM_CREATE,
+                        ROOM_UPDATE,
+                        ROOM_DELETE,
+                        BED_READ,
+                        BED_CREATE,
+                        BED_UPDATE,
+                        BED_DELETE,
+                        REGISTRATION_PERIOD_READ,
+                        REGISTRATION_PERIOD_CREATE,
+                        REGISTRATION_PERIOD_UPDATE,
+                        REGISTRATION_PERIOD_DELETE,
+                        ROOM_APPLICATION_READ,
+                        ROOM_APPLICATION_CREATE,
+                        ROOM_APPLICATION_UPDATE,
+                        ROOM_APPLICATION_DELETE,
+                        CONTRACT_READ,
+                        CONTRACT_CREATE,
+                        CONTRACT_UPDATE,
+                        CONTRACT_DELETE,
+                        CONTRACT_EXTENSION_READ,
+                        CONTRACT_EXTENSION_CREATE,
+                        CONTRACT_EXTENSION_UPDATE,
+                        CONTRACT_EXTENSION_DELETE,
+                        ROOM_TRANSFER_READ,
+                        ROOM_TRANSFER_CREATE,
+                        ROOM_TRANSFER_UPDATE,
+                        ROOM_TRANSFER_DELETE,
+                        MOVE_OUT_READ,
+                        MOVE_OUT_CREATE,
+                        MOVE_OUT_UPDATE,
+                        MOVE_OUT_DELETE,
+                        SUMMER_REGISTRATION_READ,
+                        SUMMER_REGISTRATION_CREATE,
+                        SUMMER_REGISTRATION_UPDATE,
+                        SUMMER_REGISTRATION_DELETE,
+                        STORAGE_READ,
+                        STORAGE_CREATE,
+                        STORAGE_UPDATE,
+                        STORAGE_DELETE,
+                        UTILITY_RATE_READ,
+                        UTILITY_RATE_CREATE,
+                        UTILITY_RATE_UPDATE,
+                        UTILITY_RATE_DELETE,
+                        UTILITY_READING_READ,
+                        UTILITY_READING_CREATE,
+                        UTILITY_READING_UPDATE,
+                        UTILITY_READING_DELETE,
+                        INVOICE_READ,
+                        INVOICE_CREATE,
+                        INVOICE_UPDATE,
+                        INVOICE_DELETE,
+                        DEPOSIT_READ,
+                        DEPOSIT_CREATE,
+                        DEPOSIT_UPDATE,
+                        DEPOSIT_DELETE,
+                        MAINTENANCE_READ,
+                        MAINTENANCE_CREATE,
+                        MAINTENANCE_UPDATE,
+                        MAINTENANCE_DELETE,
+                        NOTIFICATION_READ,
+                        NOTIFICATION_CREATE,
+                        NOTIFICATION_UPDATE,
+                        NOTIFICATION_DELETE,
+                        PROFILE_READ,
+                        PROFILE_UPDATE,
+                        CONFIG_READ,
+                        CONFIG_UPDATE,
+                        AUDIT_READ,
+                        DASHBOARD_READ,
+                        STUDENT_RESET_PASSWORD,
+                        USER_LOCK,
+                        USER_UNLOCK,
+                        USER_RESET_PASSWORD,
+                        USER_CROSS_UNIT_ACCESS);
+
+        private Permission() {}
+    }
+
+    /** Lệnh nghiệp vụ trong allowedActions; khác mã quyền CRUD và giữ nguyên giá trị API. */
+    public static final class BusinessAction {
+        public static final String EDIT = "edit";
+        public static final String DELETE = "delete";
+        public static final String SUBMIT = "submit";
+        public static final String APPROVE = "approve";
+        public static final String REJECT = "reject";
+        public static final String CANCEL = "cancel";
+        public static final String ASSIGN = "assign";
+        public static final String START = "start";
+        public static final String ADD_NOTE = "add-note";
+        public static final String RESOLVE = "resolve";
+        public static final String ACCEPT = "accept";
+        public static final String REOPEN = "reopen";
+
+        private BusinessAction() {}
+    }
+
+    /** Trạng thái phòng; MAINTENANCE là trạng thái phòng, không phải quyền bảo trì. */
+    public static final class RoomStatus {
+        public static final String ACTIVE = "ACTIVE";
+        public static final String MAINTENANCE = "MAINTENANCE";
+        public static final String CLOSED = "CLOSED";
+        public static final String PATTERN = ACTIVE + "|" + MAINTENANCE + "|" + CLOSED;
+
+        private RoomStatus() {}
+    }
+
+    /** Trạng thái giường; không dùng chung tập trạng thái của phòng. */
+    public static final class BedOperationStatus {
+        public static final String ACTIVE = "ACTIVE";
+        public static final String BROKEN = "BROKEN";
+        public static final String RETIRED = "RETIRED";
+        public static final String PATTERN = ACTIVE + "|" + BROKEN + "|" + RETIRED;
+
+        private BedOperationStatus() {}
+    }
+
+    /** Trạng thái đơn đăng ký; policy quyết định chuyển trạng thái hợp lệ. */
+    public static final class ApplicationStatus {
+        public static final String DRAFT = "DRAFT";
+        public static final String SUBMITTED = "SUBMITTED";
+        public static final String APPROVED = "APPROVED";
+        public static final String REJECTED = "REJECTED";
+        public static final String CANCELLED = "CANCELLED";
+
+        private ApplicationStatus() {}
+    }
+
+    /** Trạng thái phiếu bảo trì; không bỏ qua kiểm tra chủ sở hữu/đơn vị. */
+    public static final class MaintenanceStatus {
+        public static final String OPEN = "OPEN";
+        public static final String ASSIGNED = "ASSIGNED";
+        public static final String IN_PROGRESS = "IN_PROGRESS";
+        public static final String RESOLVED = "RESOLVED";
+        public static final String CLOSED = "CLOSED";
+        public static final String REJECTED = "REJECTED";
+        public static final String CANCELLED = "CANCELLED";
+
+        private MaintenanceStatus() {}
+    }
+
+    /** Các trạng thái hợp đồng được khung CRUD sử dụng. */
+    public static final class ContractStatus {
+        public static final String PENDING = "PENDING";
+        public static final String ACTIVE = "ACTIVE";
+
+        private ContractStatus() {}
+    }
+
+    /** Gia hạn/chuyển phòng chỉ được sửa/xóa khi yêu cầu còn chờ xử lý. */
+    public static final class StayRequestStatus {
+        public static final String PENDING = "PENDING";
+
+        private StayRequestStatus() {}
+    }
+
+    /** Trạng thái lựa chọn đăng ký hè được khung CRUD sử dụng. */
+    public static final class SummerStatus {
+        public static final String PENDING = "PENDING";
+
+        private SummerStatus() {}
+    }
+
+    /** Trạng thái hóa đơn trước và sau khi xác nhận thanh toán. */
+    public static final class InvoiceStatus {
+        public static final String UNPAID = "UNPAID";
+        public static final String PAID = "PAID";
+
+        private InvoiceStatus() {}
+    }
+
+    /** Mã giới tính hiện có trong DTO và CSDL. */
+    public static final class Gender {
+        public static final String M = "M";
+        public static final String F = "F";
+        public static final String PATTERN = M + "|" + F;
+
+        private Gender() {}
+    }
+
+    /** Loại học kỳ; SUMMER dùng cho học kỳ hè. */
+    public static final class SemesterType {
+        public static final String HK1 = "HK1";
+        public static final String HK2 = "HK2";
+        public static final String SUMMER = "SUMMER";
+        public static final String PATTERN = HK1 + "|" + HK2 + "|" + SUMMER;
+
+        private SemesterType() {}
+    }
+
+    /** Loại đợt đăng ký; độc lập với loại học kỳ. */
+    public static final class RegistrationKind {
+        public static final String REGULAR = "REGULAR";
+        public static final String SUMMER = "SUMMER";
+        public static final String PATTERN = REGULAR + "|" + SUMMER;
+
+        private RegistrationKind() {}
+    }
+
+    /** Loại công tơ điện/nước; DTO dùng cùng tập mã. */
+    public static final class MeterType {
+        public static final String ELECTRIC = "ELECTRIC";
+        public static final String WATER = "WATER";
+        public static final String PATTERN = ELECTRIC + "|" + WATER;
+
+        private MeterType() {}
+    }
+
+    /** Nhóm hỏng hóc; có thêm nhóm ngoài điện/nước. */
+    public static final class MaintenanceCategory {
+        public static final String ELECTRIC = "ELECTRIC";
+        public static final String WATER = "WATER";
+        public static final String FURNITURE = "FURNITURE";
+        public static final String DOOR_LOCK = "DOOR_LOCK";
+        public static final String OTHER = "OTHER";
+        public static final String PATTERN =
+                ELECTRIC + "|" + WATER + "|" + FURNITURE + "|" + DOOR_LOCK + "|" + OTHER;
+
+        private MaintenanceCategory() {}
+    }
+
+    /** Mức độ nghiêm trọng của phiếu bảo trì. */
+    public static final class MaintenanceSeverity {
+        public static final String LOW = "LOW";
+        public static final String MEDIUM = "MEDIUM";
+        public static final String HIGH = "HIGH";
+        public static final String PATTERN = LOW + "|" + MEDIUM + "|" + HIGH;
+
+        private MaintenanceSeverity() {}
+    }
+
+    /** Phương thức xác nhận thanh toán; không thay đổi dữ liệu đã lưu. */
+    public static final class PaymentMethod {
+        public static final String CASH = "CASH";
+        public static final String TRANSFER = "TRANSFER";
+        public static final String PATTERN = CASH + "|" + TRANSFER;
+
+        private PaymentMethod() {}
+    }
+
+    /** Phí phòng hoặc điện/nước; hai loại có trường tham chiếu khác nhau. */
+    public static final class InvoiceType {
+        public static final String ROOM_FEE = "ROOM_FEE";
+        public static final String UTILITY = "UTILITY";
+
+        private InvoiceType() {}
+    }
+
+    /** Phạm vi nhận thông báo; USER chỉ do hệ thống tạo, không nhận từ form thủ công. */
+    public static final class NotificationScope {
+        public static final String ALL = "ALL";
+        public static final String UNIT = "UNIT";
+        public static final String BUILDING = "BUILDING";
+        public static final String FLOOR = "FLOOR";
+        public static final String ROOM = "ROOM";
+        public static final String USER = "USER";
+
+        public static final String MANUAL_PATTERN =
+                ALL + "|" + UNIT + "|" + BUILDING + "|" + FLOOR + "|" + ROOM;
+
+        private NotificationScope() {}
+    }
+
+    /** Nguồn thông báo dùng để dựng liên kết tới nghiệp vụ. */
+    public static final class NotificationSource {
+        public static final String MANUAL = "MANUAL";
+        public static final String SUMMER_PERIOD_OPENED = "SUMMER_PERIOD_OPENED";
+        public static final String APPLICATION_APPROVED = "APPLICATION_APPROVED";
+        public static final String BED_HELD = "BED_HELD";
+        public static final String INVOICE_ISSUED = "INVOICE_ISSUED";
+        public static final String TICKET_STATUS_CHANGED = "TICKET_STATUS_CHANGED";
+
+        private NotificationSource() {}
+    }
+
+    /** Tên claim/attribute chung giữa bộ kiểm tra JWT và đồng bộ tài khoản Keycloak. */
+    public static final class KeycloakClaim {
+        public static final String REALM_ACCESS = "realm_access";
+        public static final String ROLES = "roles";
+        public static final String SECURITY_VERSION = "dms_security_version";
+        public static final String AUTHORITY_PREFIX = "ROLE_";
+
+        private KeycloakClaim() {}
+    }
+
+    /** Lựa chọn đăng ký hè; không thay đổi tập mã đang được khung CRUD chấp nhận. */
+    public static final class SummerChoice {
+        public static final String STAY = "STAY";
+        public static final String TEMP_LEAVE = "TEMP_LEAVE";
+        public static final String LEAVE = "LEAVE";
+        public static final Set<String> ALL = Set.of(STAY, TEMP_LEAVE, LEAVE);
+
+        private SummerChoice() {}
+    }
+
+    /** Khóa cấu hình nghiệp vụ lưu tại system_config; giá trị cấu hình vẫn lấy từ CSDL. */
+    public static final class ConfigKey {
+        public static final String CONTRACT_ACTIVATION_DAYS = "contract.activation_days";
+
+        private ConfigKey() {}
+    }
+
+    /**
+     * Mã sự kiện audit giữ nguyên dữ liệu lịch sử. Dù một số mã trùng quyền thao tác, audit là hợp
+     * đồng riêng; không đổi mã audit khi đổi cách đặt tên hoặc cấp quyền.
+     */
+    public static final class AuditAction {
+        public static final String BED_DELETE = "BED_DELETE";
+        public static final String BED_STATUS = "BED_STATUS";
+        public static final String BED_UPDATE = "BED_UPDATE";
+        public static final String CATALOG_PREFIX = "CATALOG_";
+        public static final String CONFIG_UPDATE = "CONFIG_UPDATE";
+        public static final String CRUD_CREATE = "CRUD_CREATE";
+        public static final String CRUD_DELETE = "CRUD_DELETE";
+        public static final String CRUD_UPDATE = "CRUD_UPDATE";
+        public static final String MAINTENANCE_UPDATE = "MAINTENANCE_UPDATE";
+        public static final String NOTIFICATION_DELETE = "NOTIFICATION_DELETE";
+        public static final String NOTIFICATION_UPDATE = "NOTIFICATION_UPDATE";
+        public static final String RATE_DELETE = "RATE_DELETE";
+        public static final String RATE_UPDATE = "RATE_UPDATE";
+        public static final String READING_CREATE = "READING_CREATE";
+        public static final String READING_DELETE = "READING_DELETE";
+        public static final String READING_UPDATE = "READING_UPDATE";
+        public static final String ROOM_CREATE = "ROOM_CREATE";
+        public static final String ROOM_DELETE = "ROOM_DELETE";
+        public static final String ROOM_LEADER_CHANGE = "ROOM_LEADER_CHANGE";
+        public static final String ROOM_STATUS = "ROOM_STATUS";
+        public static final String ROOM_UPDATE = "ROOM_UPDATE";
+        public static final String STUDENT_CREATE = "STUDENT_CREATE";
+        public static final String STUDENT_DELETE = "STUDENT_DELETE";
+        public static final String STUDENT_UPDATE = "STUDENT_UPDATE";
+        public static final String USER_CREATE = "USER_CREATE";
+        public static final String USER_CROSS_UNIT_ACCESS = "USER_CROSS_UNIT_ACCESS";
+        public static final String USER_LOCK = "USER_LOCK";
+        public static final String USER_RESET_PASSWORD = "USER_RESET_PASSWORD";
+        public static final String USER_UNLOCK = "USER_UNLOCK";
+        public static final String USER_UPDATE = "USER_UPDATE";
+
+        private AuditAction() {}
+    }
+}

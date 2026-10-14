@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.room.service.SemesterService;
 
 import java.net.URI;
@@ -25,16 +27,24 @@ public class SemesterController {
         this.service = service;
     }
 
+    // Danh mục dùng chung cho form; chỉ cần một quyền trong danh sách (OR).
+    @RequirePrivilege({
+        Permission.SEMESTER_READ,
+        Permission.REGISTRATION_PERIOD_CREATE,
+        Permission.REGISTRATION_PERIOD_UPDATE
+    })
     @GetMapping("/api/semesters")
     public List<SemesterResponse> getSemesterList() {
         return service.getAll();
     }
 
+    @RequirePrivilege(Permission.SEMESTER_READ)
     @GetMapping("/api/semesters/{id}")
     public SemesterResponse get(@PathVariable Long id) {
         return service.getById(id);
     }
 
+    @RequirePrivilege(Permission.SEMESTER_CREATE)
     @PostMapping("/api/semesters")
     public ResponseEntity<SemesterResponse> createSemester(
             @Valid @RequestBody SemesterRequest input) {
@@ -42,12 +52,14 @@ public class SemesterController {
         return ResponseEntity.created(URI.create("/api/semesters/" + result.id())).body(result);
     }
 
+    @RequirePrivilege(Permission.SEMESTER_UPDATE)
     @PatchMapping("/api/semesters/{id}")
     public SemesterResponse updateSemester(
             @PathVariable Long id, @Valid @RequestBody SemesterRequest input) {
         return service.update(id, input);
     }
 
+    @RequirePrivilege(Permission.SEMESTER_DELETE)
     @DeleteMapping("/api/semesters/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.deleteById(id);

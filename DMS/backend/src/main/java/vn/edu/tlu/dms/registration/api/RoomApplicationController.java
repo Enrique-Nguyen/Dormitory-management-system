@@ -11,8 +11,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.ReasonRequest;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Input;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Response;
 import vn.edu.tlu.dms.registration.service.RoomApplicationService;
@@ -29,6 +32,7 @@ public class RoomApplicationController {
         this.service = service;
     }
 
+    @RequirePrivilege(Permission.ROOM_APPLICATION_READ)
     @GetMapping("/api/applications")
     public PageResponse<Response> searchApplications(
             @RequestParam(defaultValue = "0") int page,
@@ -40,6 +44,7 @@ public class RoomApplicationController {
         return service.searchApplications(page, size, sort, periodId, status, false, q);
     }
 
+    @RequirePrivilege(Permission.ROOM_APPLICATION_READ)
     @GetMapping("/api/me/applications")
     public PageResponse<Response> getMyApplications(
             @RequestParam(defaultValue = "0") int page,
@@ -48,11 +53,13 @@ public class RoomApplicationController {
         return service.searchApplications(page, size, null, null, null, true, q);
     }
 
+    @RequirePrivilege(Permission.ROOM_APPLICATION_READ)
     @GetMapping("/api/applications/{id}")
     public Response getApplicationById(@PathVariable Long id) {
         return service.getApplicationById(id);
     }
 
+    @RequirePrivilege(Permission.ROOM_APPLICATION_CREATE)
     @PostMapping("/api/applications")
     public ResponseEntity<Response> createApplication(@Valid @RequestBody Input input) {
         var response = service.createApplication(input);
@@ -60,29 +67,34 @@ public class RoomApplicationController {
                 .body(response);
     }
 
+    @RequirePrivilege(Permission.ROOM_APPLICATION_UPDATE)
     @PatchMapping("/api/applications/{id}")
     public Response updateDraftApplication(@PathVariable Long id, @Valid @RequestBody Input input) {
         return service.updateDraftApplication(id, input);
     }
 
+    @RequirePrivilege(Permission.ROOM_APPLICATION_UPDATE)
     @PostMapping("/api/applications/{id}/submit")
     public Response submitApplication(@PathVariable Long id) {
-        return service.performApplicationAction(id, "submit", null);
+        return service.performApplicationAction(id, BusinessAction.SUBMIT, null);
     }
 
+    @RequirePrivilege(Permission.ROOM_APPLICATION_UPDATE)
     @PostMapping("/api/applications/{id}/approve")
     public Response approveApplication(@PathVariable Long id) {
-        return service.performApplicationAction(id, "approve", null);
+        return service.performApplicationAction(id, BusinessAction.APPROVE, null);
     }
 
+    @RequirePrivilege(Permission.ROOM_APPLICATION_UPDATE)
     @PostMapping("/api/applications/{id}/reject")
     public Response rejectApplication(
             @PathVariable Long id, @Valid @RequestBody ReasonRequest input) {
-        return service.performApplicationAction(id, "reject", input.reason());
+        return service.performApplicationAction(id, BusinessAction.REJECT, input.reason());
     }
 
+    @RequirePrivilege(Permission.ROOM_APPLICATION_DELETE)
     @PostMapping("/api/applications/{id}/cancel")
     public Response cancelApplication(@PathVariable Long id) {
-        return service.performApplicationAction(id, "cancel", null);
+        return service.performApplicationAction(id, BusinessAction.CANCEL, null);
     }
 }

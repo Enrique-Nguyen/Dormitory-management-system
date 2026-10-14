@@ -5,6 +5,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.KeycloakClaim;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -42,9 +43,9 @@ public class CurrentUserImpl implements CurrentUser {
                     if (rows.getBoolean("locked")) {
                         throw new BusinessException("ACCOUNT_LOCKED", 403);
                     }
-                    Map<String, Object> access = jwt.getClaimAsMap("realm_access");
-                    Object roles = access == null ? null : access.get("roles");
-                    Object version = jwt.getClaim("dms_security_version");
+                    Map<String, Object> access = jwt.getClaimAsMap(KeycloakClaim.REALM_ACCESS);
+                    Object roles = access == null ? null : access.get(KeycloakClaim.ROLES);
+                    Object version = jwt.getClaim(KeycloakClaim.SECURITY_VERSION);
                     if (!(roles instanceof Collection<?> values)
                             || !values.contains(rows.getString("role"))
                             || version == null

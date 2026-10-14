@@ -2,6 +2,10 @@ package vn.edu.tlu.dms.room.service.impl;
 
 import org.springframework.stereotype.Service;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
@@ -33,12 +37,17 @@ public class RoomTypeServiceImpl
 
     @Override
     protected void checkRead() {
-        guard.requireRole("STAFF", "STUDENT");
+        guard.requirePermission(Permission.ROOM_TYPE_READ);
     }
 
     @Override
     protected void checkWrite() {
-        guard.requireRole("STAFF");
+        guard.requireRole(Role.STAFF);
+    }
+
+    @Override
+    protected void checkPermission(String action) {
+        guard.requirePermission(Resource.ROOM_TYPE + DmsConstants.PERMISSION_SEPARATOR + action);
     }
 
     @Override

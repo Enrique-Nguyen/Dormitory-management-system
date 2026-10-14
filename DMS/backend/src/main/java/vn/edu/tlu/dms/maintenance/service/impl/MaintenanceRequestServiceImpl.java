@@ -7,6 +7,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -82,11 +86,14 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     @Override()
     public PageResponse<Response> searchMaintenanceRequests(
             int page, int size, String status, String category, String severity, String q) {
-        guard.requireRole("STUDENT", "STAFF", "TECHNICIAN");
+        guard.requirePermission(Permission.MAINTENANCE_READ);
+        guard.requireRole(Role.STUDENT, Role.STAFF, Role.TECHNICIAN);
         var actor = current.get();
         PageQuery.of(page, size, null, Set.of("id"), "id,desc");
         Long roomId =
-                actor.is("STUDENT") ? rooms.findCurrentStayingRoomId(actor.id()).orElse(-1L) : -1L;
+                actor.is(Role.STUDENT)
+                        ? rooms.findCurrentStayingRoomId(actor.id()).orElse(-1L)
+                        : -1L;
         return PageResponse.from(
                 requests.searchVisibleRequests(
                                 actor.role(),
@@ -104,6 +111,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
     @Override()
     public Response getMaintenanceRequestById(Long id) {
+        guard.requirePermission(Permission.MAINTENANCE_READ);
         return toMaintenanceResponse(loadAccessibleRequest(id, false), true);
     }
 
@@ -111,10 +119,11 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     @Transactional
     @Override()
     public Response createMaintenanceRequest(Create input, List<MultipartFile> files) {
-        guard.requireRole("STUDENT", "STAFF");
+        guard.requirePermission(Permission.MAINTENANCE_CREATE);
+        guard.requireRole(Role.STUDENT, Role.STAFF);
         var actor = current.get();
         var request = new MaintenanceRequest();
-        if (actor.is("STUDENT")) {
+        if (actor.is(Role.STUDENT)) {
             if (input.roomId() != null || input.buildingId() != null || input.floor() != null) {
                 throw new BusinessException("TICKET_LOCATION_INVALID", 400);
             }
@@ -145,12 +154,13 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         request.setCategory(input.category());
         request.setSeverity(input.severity());
         request.setDescription(input.description().trim());
-        request.setStatus("OPEN");
+        request.setStatus(MaintenanceStatus.OPEN);
         request.setCreatedAt(OffsetDateTime.now());
         requests.saveAndFlush(request);
         photos.savePhotos(request.getId(), files);
         photoRows.flush();
-        history.record("MAINTENANCE", request.getId(), null, "OPEN", actor.id(), null);
+        history.record(
+                "MAINTENANCE", request.getId(), null, MaintenanceStatus.OPEN, actor.id(), null);
         return toMaintenanceResponse(request, true);
     }
 
@@ -158,52 +168,64 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     @Transactional
     @Override()
     public Response assignTechnician(Long id, Long technicianId) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.MAINTENANCE_UPDATE);
+        guard.requireRole(Role.STAFF);
         var request = loadAccessibleRequest(id, true);
-        MaintenanceRequestPolicy.requireAction(request, current.get(), false, "assign");
+        MaintenanceRequestPolicy.requireAction(
+                request, current.get(), false, BusinessAction.ASSIGN);
         var technician = accounts.user(technicianId);
-        if (!technician.role().equals("TECHNICIAN")
+        if (!technician.role().equals(Role.TECHNICIAN)
                 || !Objects.equals(technician.unitId(), requestUnitId(request))) {
             throw BusinessException.conflict("TECHNICIAN_OUT_OF_UNIT");
         }
         request.setAssignedTo(technicianId);
-        changeStatusAndRecordHistory(request, "ASSIGNED", null);
+        changeStatusAndRecordHistory(request, MaintenanceStatus.ASSIGNED, null);
         return toMaintenanceResponse(request, true);
     }
 
     @Transactional
     @Override()
     public Response performMaintenanceAction(Long id, String action, String reason) {
+        guard.requirePermission(
+                action.equals(BusinessAction.CANCEL)
+                        ? Permission.MAINTENANCE_DELETE
+                        : Permission.MAINTENANCE_UPDATE);
         var request = loadAccessibleRequest(id, true);
         var actor = current.get();
         boolean staffCanAccept = staffCanAcceptRequest(request);
         MaintenanceRequestPolicy.requireAction(request, actor, staffCanAccept, action);
-        if (Set.of("reject", "reopen", "add-note", "resolve").contains(action)
+        if (Set.of(
+                                BusinessAction.REJECT,
+                                BusinessAction.REOPEN,
+                                BusinessAction.ADD_NOTE,
+                                BusinessAction.RESOLVE)
+                        .contains(action)
                 && (reason == null || reason.trim().length() < 5)) {
             throw BusinessException.invalid("reason", "Cần lý do hoặc ghi chú tối thiểu 5 ký tự");
         }
-        if (action.equals("accept")
-                && actor.is("STAFF")
+        if (action.equals(BusinessAction.ACCEPT)
+                && (actor.is(Role.STAFF) || actor.isAdmin())
                 && !actor.id().equals(request.getRequesterId())
                 && (reason == null || reason.trim().length() < 5)) {
             throw BusinessException.invalid("reason", "Nghiệm thu thay sinh viên cần lý do");
         }
         String next =
                 switch (action) {
-                    case "reject" -> "REJECTED";
-                    case "cancel" -> "CANCELLED";
-                    case "start", "reopen", "add-note" -> "IN_PROGRESS";
-                    case "resolve" -> "RESOLVED";
-                    case "accept" -> "CLOSED";
+                    case BusinessAction.REJECT -> MaintenanceStatus.REJECTED;
+                    case BusinessAction.CANCEL -> MaintenanceStatus.CANCELLED;
+                    case BusinessAction.START, BusinessAction.REOPEN, BusinessAction.ADD_NOTE ->
+                            MaintenanceStatus.IN_PROGRESS;
+                    case BusinessAction.RESOLVE -> MaintenanceStatus.RESOLVED;
+                    case BusinessAction.ACCEPT -> MaintenanceStatus.CLOSED;
                     default -> throw BusinessException.invalid("action", "Hành động không hỗ trợ");
                 };
-        if (next.equals("RESOLVED")) {
+        if (next.equals(MaintenanceStatus.RESOLVED)) {
             request.setResolvedAt(OffsetDateTime.now());
         }
-        if (action.equals("reopen")) {
+        if (action.equals(BusinessAction.REOPEN)) {
             request.setResolvedAt(null);
         }
-        if (next.equals("CLOSED")) {
+        if (next.equals(MaintenanceStatus.CLOSED)) {
             request.setClosedAt(OffsetDateTime.now());
         }
         changeStatusAndRecordHistory(request, next, reason);
@@ -212,12 +234,13 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
     @Override()
     public Path getAuthorizedPhotoFile(Long id, Long photoId) {
+        guard.requirePermission(Permission.MAINTENANCE_READ);
         loadAccessibleRequest(id, false);
         return photos.getPhotoFile(id, photoId);
     }
 
     private MaintenanceRequest loadAccessibleRequest(Long id, boolean writing) {
-        guard.requireRole("STUDENT", "STAFF", "TECHNICIAN");
+        guard.requireRole(Role.STUDENT, Role.STAFF, Role.TECHNICIAN);
         if (writing) {
             jdbc.query(
                     "SELECT id FROM maintenance_request WHERE id=? FOR UPDATE",
@@ -226,17 +249,17 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         }
         var request = requests.findById(id).orElseThrow(BusinessException::notFound);
         var actor = current.get();
-        if (actor.is("STUDENT")
+        if (actor.is(Role.STUDENT)
                 && !actor.id().equals(request.getRequesterId())
                 && !Objects.equals(
                         request.getRoomId(),
                         rooms.findCurrentStayingRoomId(actor.id()).orElse(-1L))) {
             throw BusinessException.notFound();
         }
-        if (actor.is("TECHNICIAN") && !actor.id().equals(request.getAssignedTo())) {
+        if (actor.is(Role.TECHNICIAN) && !actor.id().equals(request.getAssignedTo())) {
             throw BusinessException.notFound();
         }
-        if (actor.is("STAFF")) {
+        if (actor.is(Role.STAFF)) {
             if (writing) {
                 guard.requireUnit(requestUnitId(request));
             } else {
@@ -254,9 +277,9 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
     private boolean staffCanAcceptRequest(MaintenanceRequest r) {
         var actor = current.get();
-        return actor.is("STAFF")
+        return actor.is(Role.STAFF)
                 && Objects.equals(actor.unitId(), requestUnitId(r))
-                && (accounts.user(r.getRequesterId()).role().equals("STAFF")
+                && (accounts.user(r.getRequesterId()).role().equals(Role.STAFF)
                         || !Objects.equals(
                                 r.getRoomId(),
                                 rooms.findCurrentStayingRoomId(r.getRequesterId()).orElse(-1L)));
@@ -298,11 +321,21 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                 .toList()
                         : null,
                 detail
-                        ? (current.get().is("STAFF")
+                        ? (current.get().is(Role.STAFF)
                                         && !Objects.equals(current.get().unitId(), requestUnitId(r))
                                 ? List.of()
                                 : MaintenanceRequestPolicy.allowedActions(
-                                        r, current.get(), staffCanAcceptRequest(r)))
+                                                r, current.get(), staffCanAcceptRequest(r))
+                                        .stream()
+                                        .filter(
+                                                action ->
+                                                        guard.hasPermission(
+                                                                action.equals(BusinessAction.CANCEL)
+                                                                        ? Permission
+                                                                                .MAINTENANCE_DELETE
+                                                                        : Permission
+                                                                                .MAINTENANCE_UPDATE))
+                                        .toList())
                         : null,
                 detail ? history.list("MAINTENANCE", r.getId()) : null);
     }

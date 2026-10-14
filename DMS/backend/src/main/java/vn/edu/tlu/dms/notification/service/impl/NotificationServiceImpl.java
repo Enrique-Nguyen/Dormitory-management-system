@@ -5,6 +5,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.NotificationScope;
+import vn.edu.tlu.dms.common.constants.DmsConstants.NotificationSource;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -57,6 +61,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override()
     public PageResponse<NotificationDtos.Response> getMyNotifications(
             int page, int size, Boolean unread, String keyword) {
+        scopeGuard.requirePermission(Permission.NOTIFICATION_READ);
         PageQuery.of(page, size, null, Set.of("id"), "id,desc");
         Long userId = currentUser.get().id();
         String filter = unread == null ? "" : unread ? " AND NOT is_read" : " AND is_read";
@@ -64,14 +69,15 @@ public class NotificationServiceImpl implements NotificationService {
         String pattern = "%" + keyword.trim() + "%";
         Long total =
                 jdbc.queryForObject(
-                        "SELECT count(*) FROM v_user_notification WHERE user_id = ?" + filter,
+                        "SELECT count(*) FROM " + inboxSource() + filter,
                         Long.class,
                         userId,
                         pattern,
                         pattern);
         List<NotificationDtos.Response> notifications =
                 jdbc.query(
-                        "SELECT * FROM v_user_notification WHERE user_id = ?"
+                        "SELECT * FROM "
+                                + inboxSource()
                                 + filter
                                 + " ORDER BY created_at DESC, notification_id DESC LIMIT ? OFFSET"
                                 + " ?",
@@ -82,7 +88,7 @@ public class NotificationServiceImpl implements NotificationService {
                                         row.getString("title"),
                                         row.getString("body"),
                                         row.getString("source_type") == null
-                                                ? "MANUAL"
+                                                ? NotificationSource.MANUAL
                                                 : row.getString("source_type"),
                                         notificationLink(
                                                 row.getString("source_type"),
@@ -100,10 +106,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override()
     public NotificationDtos.UnreadCount getUnreadNotificationCount() {
+        scopeGuard.requirePermission(Permission.NOTIFICATION_READ);
         Long count =
                 jdbc.queryForObject(
-                        "SELECT count(*) FROM v_user_notification WHERE user_id = ? AND NOT"
-                                + " is_read",
+                        "SELECT count(*) FROM " + inboxSource() + " AND NOT is_read",
                         Long.class,
                         currentUser.get().id());
         return new NotificationDtos.UnreadCount(count);
@@ -115,14 +121,17 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     @Override()
     public void markNotificationAsRead(Long notificationId) {
+        scopeGuard.requirePermission(Permission.NOTIFICATION_READ);
         Long userId = currentUser.get().id();
         Boolean visible =
-                jdbc.queryForObject(
-                        "SELECT EXISTS (SELECT 1 FROM v_user_notification WHERE user_id = ? AND"
-                                + " notification_id = ?)",
-                        Boolean.class,
-                        userId,
-                        notificationId);
+                currentUser.get().isAdmin()
+                        ? repository.existsById(notificationId)
+                        : jdbc.queryForObject(
+                                "SELECT EXISTS (SELECT 1 FROM v_user_notification WHERE user_id = ?"
+                                        + " AND notification_id = ?)",
+                                Boolean.class,
+                                userId,
+                                notificationId);
         if (!Boolean.TRUE.equals(visible)) {
             throw BusinessException.notFound();
         }
@@ -138,7 +147,16 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     @Override()
     public void markAllNotificationsAsRead() {
+        scopeGuard.requirePermission(Permission.NOTIFICATION_READ);
         Long userId = currentUser.get().id();
+        if (currentUser.get().isAdmin()) {
+            // Đánh dấu cho chính Admin; không sửa trạng thái đã đọc của người nhận khác.
+            jdbc.update(
+                    "INSERT INTO notification_read(notification_id,user_id)"
+                            + " SELECT id,? FROM notification ON CONFLICT DO NOTHING",
+                    userId);
+            return;
+        }
         jdbc.update(
                 """
                 INSERT INTO notification_read (notification_id, user_id)
@@ -151,7 +169,8 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     @Override()
     public NotificationDtos.Response createManualNotification(NotificationDtos.Create input) {
-        scopeGuard.requireRole("STAFF");
+        scopeGuard.requirePermission(Permission.NOTIFICATION_CREATE);
+        scopeGuard.requireRole(Role.STAFF);
         validateNotificationScope(input);
         Notification notification = new Notification();
         notification.setScope(input.scope());
@@ -169,7 +188,7 @@ public class NotificationServiceImpl implements NotificationService {
                 notification.getScope(),
                 notification.getTitle(),
                 notification.getBody(),
-                "MANUAL",
+                NotificationSource.MANUAL,
                 null,
                 notification.getCreatedAt(),
                 false);
@@ -183,12 +202,12 @@ public class NotificationServiceImpl implements NotificationService {
                         + (input.roomId() == null ? 0 : 1);
         boolean valid =
                 switch (input.scope()) {
-                    case "ALL" -> fields == 0;
-                    case "UNIT" -> fields == 1 && input.unitId() != null;
-                    case "BUILDING" -> fields == 1 && input.buildingId() != null;
-                    case "FLOOR" ->
+                    case NotificationScope.ALL -> fields == 0;
+                    case NotificationScope.UNIT -> fields == 1 && input.unitId() != null;
+                    case NotificationScope.BUILDING -> fields == 1 && input.buildingId() != null;
+                    case NotificationScope.FLOOR ->
                             fields == 2 && input.buildingId() != null && input.floor() != null;
-                    case "ROOM" -> fields == 1 && input.roomId() != null;
+                    case NotificationScope.ROOM -> fields == 1 && input.roomId() != null;
                     default -> false;
                 };
         if (!valid) {
@@ -196,15 +215,25 @@ public class NotificationServiceImpl implements NotificationService {
                     "scope", "Các trường vị trí không khớp phạm vi thông báo");
         }
         switch (input.scope()) {
-            case "ALL" -> {
-                if (!currentUser.get().crossUnitAccess()) {
+            case NotificationScope.ALL -> {
+                if (!currentUser.get().canReadAllUnits()) {
                     throw new BusinessException("FORBIDDEN", 403);
                 }
             }
-            case "UNIT" -> scopeGuard.requireUnit(input.unitId());
-            case "BUILDING", "FLOOR" ->
+            case NotificationScope.UNIT -> {
+                if (!Boolean.TRUE.equals(
+                        jdbc.queryForObject(
+                                "SELECT EXISTS(SELECT 1 FROM management_unit WHERE id=?)",
+                                Boolean.class,
+                                input.unitId()))) {
+                    throw BusinessException.notFound();
+                }
+                scopeGuard.requireUnit(input.unitId());
+            }
+            case NotificationScope.BUILDING, NotificationScope.FLOOR ->
                     scopeGuard.requireUnit(rooms.getBuildingManagementUnitId(input.buildingId()));
-            case "ROOM" -> scopeGuard.requireUnit(rooms.getRoomLocation(input.roomId()).unitId());
+            case NotificationScope.ROOM ->
+                    scopeGuard.requireUnit(rooms.getRoomLocation(input.roomId()).unitId());
             default -> throw BusinessException.invalid("scope", "Phạm vi không hỗ trợ");
         }
     }
@@ -231,11 +260,11 @@ public class NotificationServiceImpl implements NotificationService {
                             unitId);
             for (Long studentId : studentIds) {
                 Notification notification = new Notification();
-                notification.setScope("USER");
+                notification.setScope(NotificationScope.USER);
                 notification.setUserId(studentId);
                 notification.setTitle("Mở đợt đăng ký hè");
                 notification.setBody(periodName);
-                notification.setSourceType("SUMMER_PERIOD_OPENED");
+                notification.setSourceType(NotificationSource.SUMMER_PERIOD_OPENED);
                 notification.setSourceId(periodId);
                 notification.setCreatedBy(actorId);
                 notification.setCreatedAt(OffsetDateTime.now());
@@ -249,13 +278,32 @@ public class NotificationServiceImpl implements NotificationService {
         if (source == null || id == null) {
             return null;
         }
-        String portal = currentUser.get().is("STUDENT") ? "/student" : "/staff";
+        String portal =
+                currentUser.get().is(Role.STUDENT)
+                        ? "/student"
+                        : currentUser.get().isAdmin() ? "/admin" : "/staff";
         return switch (source) {
-            case "SUMMER_PERIOD_OPENED" -> portal + "/summer";
-            case "APPLICATION_APPROVED", "BED_HELD" -> portal + "/applications/" + id;
-            case "INVOICE_ISSUED" -> portal + "/invoices";
-            case "TICKET_STATUS_CHANGED" -> portal + "/maintenance/" + id;
+            case NotificationSource.SUMMER_PERIOD_OPENED -> portal + "/summer";
+            case NotificationSource.APPLICATION_APPROVED, NotificationSource.BED_HELD ->
+                    portal + "/applications/" + id;
+            case NotificationSource.INVOICE_ISSUED -> portal + "/invoices";
+            case NotificationSource.TICKET_STATUS_CHANGED -> portal + "/maintenance/" + id;
             default -> null;
         };
+    }
+
+    /**
+     * Admin đọc toàn bộ thông báo nhưng isRead vẫn là trạng thái của chính Admin. Các role khác
+     * tiếp tục dùng view lọc đơn vị, chủ sở hữu và khoảng thời gian ở. Mỗi nguồn đều nhận đúng một
+     * tham số userId để giữ phân trang/lọc nhất quán.
+     */
+    private String inboxSource() {
+        if (!currentUser.get().isAdmin()) {
+            return "v_user_notification WHERE user_id = ?";
+        }
+        return "(SELECT n.id AS notification_id,n.scope,n.title,n.body,n.source_type,n.source_id,"
+                + " n.created_at,(nr.notification_id IS NOT NULL) AS is_read FROM notification n"
+                + " LEFT JOIN notification_read nr ON nr.notification_id=n.id AND nr.user_id=?)"
+                + " admin_inbox WHERE TRUE";
     }
 }

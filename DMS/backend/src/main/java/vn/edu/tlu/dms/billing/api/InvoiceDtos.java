@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.PaymentMethod;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
 
 import java.math.BigDecimal;
@@ -18,7 +19,7 @@ public final class InvoiceDtos {
     public record Payment(
             Long payerUserId,
             @Size(max = 100) String payerName,
-            @NotNull @Pattern(regexp = "CASH|TRANSFER") String paymentMethod) {}
+            @NotNull @Pattern(regexp = PaymentMethod.PATTERN) String paymentMethod) {}
 
     public record Item(
             Long id,

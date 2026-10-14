@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.billing.service.UtilityRateCrudService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 
 @RestController
 public class UtilityRateCrudController {
@@ -20,12 +22,14 @@ public class UtilityRateCrudController {
         this.service = service;
     }
 
+    @RequirePrivilege(Permission.UTILITY_RATE_UPDATE)
     @PatchMapping("/api/utility-rates/{id}")
     public Object updateRate(
             @PathVariable Long id, @Valid @RequestBody UtilityRateDtos.Create input) {
         return service.updateRate(id, input);
     }
 
+    @RequirePrivilege(Permission.UTILITY_RATE_DELETE)
     @DeleteMapping("/api/utility-rates/{id}")
     public ResponseEntity<Void> deleteRate(@PathVariable Long id) {
         service.deleteRate(id);

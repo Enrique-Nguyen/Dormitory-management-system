@@ -1,12 +1,19 @@
 package vn.edu.tlu.dms;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -532,6 +539,19 @@ class CrudApiIntegrationTest {
         mvc.perform(get("/api/me/invoices").with(asUser(studentId, "STUDENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
+        // API tổng hợp của ADMIN xem toàn hệ thống; /me vẫn chỉ là dữ liệu của chính ADMIN.
+        mvc.perform(get("/api/contracts").with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+        mvc.perform(get("/api/invoices").with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+        mvc.perform(get("/api/me/contracts").with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(get("/api/me/invoices").with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
         for (int attempt = 1; attempt <= 2; attempt++) {
             var result =
                     mvc.perform(
@@ -716,6 +736,395 @@ class CrudApiIntegrationTest {
                 .andExpect(jsonPath("$.totalElements").value(1));
         mvc.perform(delete("/api/invoices/" + invoiceId).with(asUser(staffId, "STAFF")))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void adminWithoutUnitCanManageRoomsInEveryUnit() throws Exception {
+        // ADMIN không cần giả vai STAFF hoặc gắn đơn vị để dùng CRUD nghiệp vụ.
+        mvc.perform(get("/api/rooms/" + otherRoomId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk());
+        String created =
+                mvc.perform(
+                                post("/api/rooms")
+                                        .with(asUser(adminId, "ADMIN"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                """
+                                                {"buildingId":%d,"roomTypeId":%d,"floor":2,"code":"B102","gender":"M"}
+                                                """
+                                                        .formatted(otherBuildingId, roomTypeId)))
+                        .andExpect(status().isCreated())
+                        .andExpect(jsonPath("$.beds.length()").value(2))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long roomId = mapper.readTree(created).get("id").asLong();
+        mvc.perform(
+                        get("/api/rooms")
+                                .param("buildingId", otherBuildingId.toString())
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2));
+        mvc.perform(
+                        patch("/api/rooms/" + roomId)
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"code\":\"B103\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("B103"));
+        mvc.perform(
+                        patch("/api/rooms/" + roomId)
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"code\":\"Không có quyền\"}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/rooms").with(asUser(studentId, "STUDENT")))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/rooms/" + roomId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isNoContent());
+        entityManager.flush();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT actor_id FROM audit_log WHERE action='ROOM_DELETE' AND"
+                                        + " entity_id=?",
+                                Long.class,
+                                roomId))
+                .isEqualTo(adminId);
+    }
+
+    @Test
+    void adminCanManageForeignRegistrationPeriodWhileAggregateStaffCannotWriteIt()
+            throws Exception {
+        Long semesterId = createSemester();
+        String created =
+                mvc.perform(
+                                post("/api/registration-periods")
+                                        .with(asUser(adminId, "ADMIN"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                """
+                                                {"semesterId":%d,"kind":"REGULAR","name":"Đợt đơn vị khác",
+                                                "openAt":"2040-08-01T08:00:00+07:00","closeAt":"2040-08-31T08:00:00+07:00",
+                                                "unitIds":[%d],"quotas":[{"buildingId":%d,"quota":10}]}
+                                                """
+                                                        .formatted(
+                                                                semesterId,
+                                                                otherUnitId,
+                                                                otherBuildingId)))
+                        .andExpect(status().isCreated())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long periodId = mapper.readTree(created).get("id").asLong();
+        jdbc.update("UPDATE app_user SET cross_unit_access=true WHERE id=?", staffId);
+        entityManager.clear();
+        mvc.perform(get("/api/registration-periods/" + periodId).with(asUser(staffId, "STAFF")))
+                .andExpect(status().isOk());
+        mvc.perform(
+                        patch("/api/registration-periods/" + periodId)
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"name\":\"Sửa ngoài phạm vi\"}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        patch("/api/registration-periods/" + periodId)
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"name\":\"ADMIN cập nhật\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("ADMIN cập nhật"));
+        mvc.perform(delete("/api/registration-periods/" + periodId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void adminCreatesAndProcessesApplicationOnBehalfWithoutChangingAuditActor() throws Exception {
+        Long periodId = createOpenPeriod();
+        jdbc.update(
+                "INSERT INTO registration_period_unit(period_id,management_unit_id) VALUES(?,?)",
+                periodId,
+                otherUnitId);
+        String created =
+                mvc.perform(
+                                post("/api/applications")
+                                        .with(asUser(adminId, "ADMIN"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                mapper.writeValueAsString(
+                                                        Map.of(
+                                                                "periodId", periodId,
+                                                                "preferredUnitId", otherUnitId,
+                                                                "studentId", studentId))))
+                        .andExpect(status().isCreated())
+                        .andExpect(jsonPath("$.student.id").value(studentId))
+                        .andExpect(jsonPath("$.timeline[0].actorId").value(adminId))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long applicationId = mapper.readTree(created).get("id").asLong();
+        mvc.perform(
+                        patch("/api/applications/" + applicationId)
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"note\":\"ADMIN sửa đơn hộ sinh viên\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.note").value("ADMIN sửa đơn hộ sinh viên"));
+        mvc.perform(
+                        post("/api/applications/" + applicationId + "/submit")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowedActions").value(hasItem("approve")));
+        mvc.perform(
+                        post("/api/applications/" + applicationId + "/approve")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+        // Có mọi quyền không có nghĩa là được bỏ qua trạng thái đã xử lý.
+        mvc.perform(
+                        post("/api/applications/" + applicationId + "/approve")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_STATE_TRANSITION"));
+        mvc.perform(
+                        post("/api/applications/" + applicationId + "/cancel")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+        entityManager.flush();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM status_history WHERE"
+                                    + " entity_type='APPLICATION' AND entity_id=? AND actor_id=?",
+                                Long.class,
+                                applicationId,
+                                adminId))
+                .isEqualTo(4);
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM status_history WHERE"
+                                    + " entity_type='APPLICATION' AND entity_id=? AND actor_id<>?",
+                                Long.class,
+                                applicationId,
+                                adminId))
+                .isZero();
+    }
+
+    @Test
+    void studentCannotForgeApplicantAndAdminMustChooseAStudent() throws Exception {
+        Long periodId = createOpenPeriod();
+        mvc.perform(
+                        post("/api/applications")
+                                .with(asUser(studentId, "STUDENT"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        mapper.writeValueAsString(
+                                                Map.of(
+                                                        "periodId", periodId,
+                                                        "preferredUnitId", firstUnitId,
+                                                        "studentId", adminId))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+        mvc.perform(
+                        post("/api/applications")
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        mapper.writeValueAsString(
+                                                Map.of(
+                                                        "periodId", periodId,
+                                                        "preferredUnitId", firstUnitId))))
+                .andExpect(status().isBadRequest());
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM room_application WHERE period_id=?",
+                                Long.class,
+                                periodId))
+                .isZero();
+    }
+
+    @Test
+    void adminCanWorkTicketAssignedToAnotherTechnicianButCannotRestartClosedTicket()
+            throws Exception {
+        Long otherTechnicianId = createUser("TECHNICIAN", otherUnitId);
+        MockMultipartFile data =
+                new MockMultipartFile(
+                        "data",
+                        "data.json",
+                        "application/json",
+                        """
+                        {"category":"ELECTRIC","severity":"MEDIUM","description":"Đèn hỏng ở đơn vị khác","buildingId":%d,"floor":1}
+                        """
+                                .formatted(otherBuildingId)
+                                .getBytes(StandardCharsets.UTF_8));
+        String created =
+                mvc.perform(
+                                multipart("/api/maintenance-requests")
+                                        .file(data)
+                                        .with(asUser(otherStaffId, "STAFF")))
+                        .andExpect(status().isCreated())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long ticketId = mapper.readTree(created).get("id").asLong();
+        mvc.perform(
+                        post("/api/maintenance-requests/" + ticketId + "/assign")
+                                .with(asUser(otherStaffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"technicianId\":" + otherTechnicianId + "}"))
+                .andExpect(status().isOk());
+        mvc.perform(
+                        post("/api/maintenance-requests/" + ticketId + "/start")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.assignedTo").value(otherTechnicianId))
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+        mvc.perform(
+                        post("/api/maintenance-requests/" + ticketId + "/resolve")
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"note\":\"ADMIN xác nhận đã sửa xong\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RESOLVED"));
+        mvc.perform(
+                        post("/api/maintenance-requests/" + ticketId + "/accept")
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"reason\":\"ADMIN nghiệm thu thay người yêu cầu\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CLOSED"));
+        mvc.perform(
+                        post("/api/maintenance-requests/" + ticketId + "/start")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_STATE_TRANSITION"));
+    }
+
+    @Test
+    void adminManagesForeignUtilityInvoiceAndStudentCannotUpdateIt() throws Exception {
+        String created =
+                mvc.perform(
+                                post("/api/invoices")
+                                        .with(asUser(adminId, "ADMIN"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                mapper.writeValueAsString(
+                                                        Map.of(
+                                                                "type",
+                                                                "UTILITY",
+                                                                "roomId",
+                                                                otherRoomId,
+                                                                "billingMonth",
+                                                                "2026-10-01",
+                                                                "totalAmount",
+                                                                20000,
+                                                                "dueDate",
+                                                                LocalDate.now()
+                                                                        .plusDays(7)
+                                                                        .toString()))))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long invoiceId = mapper.readTree(created).get("id").asLong();
+        mvc.perform(get("/api/invoices/" + invoiceId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/invoices/" + invoiceId).with(asUser(staffId, "STAFF")))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        patch("/api/invoices/" + invoiceId)
+                                .with(asUser(studentId, "STUDENT"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"totalAmount\":1}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(
+                        patch("/api/invoices/" + invoiceId)
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"totalAmount\":30000}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalAmount").value(30000));
+        mvc.perform(delete("/api/invoices/" + invoiceId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void adminCanEditAnotherPublishersNotificationWhileStaffCannot() throws Exception {
+        String created =
+                mvc.perform(
+                                post("/api/notifications")
+                                        .with(asUser(otherStaffId, "STAFF"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                mapper.writeValueAsString(
+                                                        Map.of(
+                                                                "scope",
+                                                                "UNIT",
+                                                                "unitId",
+                                                                otherUnitId,
+                                                                "title",
+                                                                "Thông báo khác " + suffix,
+                                                                "body",
+                                                                "Nội dung ban đầu"))))
+                        .andExpect(status().isCreated())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long notificationId = mapper.readTree(created).get("id").asLong();
+        mvc.perform(
+                        get("/api/notifications/published/" + notificationId)
+                                .with(asUser(staffId, "STAFF")))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        get("/api/notifications/published")
+                                .param("q", "Thông báo khác " + suffix)
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+        mvc.perform(
+                        patch("/api/notifications/" + notificationId)
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        mapper.writeValueAsString(
+                                                Map.of(
+                                                        "scope", "UNIT",
+                                                        "unitId", otherUnitId,
+                                                        "title", "ADMIN cập nhật",
+                                                        "body", "Nội dung mới"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("ADMIN cập nhật"));
+        mvc.perform(delete("/api/notifications/" + notificationId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void meExposesRoleSpecificCrudPermissions() throws Exception {
+        mvc.perform(get("/api/auth/me").with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_CREATE")))
+                .andExpect(jsonPath("$.permissions").value(hasItem("USER_CREATE")));
+        mvc.perform(get("/api/auth/me").with(asUser(staffId, "STAFF")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_CREATE")))
+                .andExpect(jsonPath("$.permissions").value(not(hasItem("USER_CREATE"))))
+                .andExpect(jsonPath("$.permissions").value(hasItem("CONTRACT_EXTENSION_UPDATE")))
+                .andExpect(
+                        jsonPath("$.permissions").value(not(hasItem("CONTRACT_EXTENSION_CREATE"))))
+                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_TRANSFER_UPDATE")))
+                .andExpect(jsonPath("$.permissions").value(not(hasItem("ROOM_TRANSFER_DELETE"))))
+                .andExpect(jsonPath("$.permissions").value(hasItem("SUMMER_REGISTRATION_READ")))
+                .andExpect(
+                        jsonPath("$.permissions")
+                                .value(not(hasItem("SUMMER_REGISTRATION_UPDATE"))));
+        mvc.perform(get("/api/auth/me").with(asUser(technicianId, "TECHNICIAN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions").value(hasItem("MAINTENANCE_UPDATE")))
+                .andExpect(jsonPath("$.permissions").value(not(hasItem("ROOM_CREATE"))));
+        mvc.perform(get("/api/auth/me").with(asUser(studentId, "STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_APPLICATION_CREATE")))
+                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_APPLICATION_DELETE")))
+                .andExpect(jsonPath("$.permissions").value(not(hasItem("INVOICE_UPDATE"))));
     }
 
     private RequestPostProcessor asUser(Long id, String role) {

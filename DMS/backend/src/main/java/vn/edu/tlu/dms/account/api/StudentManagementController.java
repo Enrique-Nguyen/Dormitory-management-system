@@ -16,7 +16,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.account.service.StudentManagementService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Gender;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 
 import java.time.LocalDate;
 import java.util.Map;
@@ -33,7 +36,7 @@ public class StudentManagementController {
     public record StudentInput(
             @NotBlank @Size(max = 20) String studentCode,
             @NotBlank @Size(max = 100) String fullName,
-            @NotBlank @Pattern(regexp = "M|F") String gender,
+            @NotBlank @Pattern(regexp = Gender.PATTERN) String gender,
             LocalDate dateOfBirth,
             @Size(max = 100) String faculty,
             @Size(max = 10) String cohort,
@@ -41,6 +44,7 @@ public class StudentManagementController {
             @Size(max = 200) String hometown,
             @Size(max = 200) String emergencyContact) {}
 
+    @RequirePrivilege(Permission.STUDENT_READ)
     @GetMapping({"/api/students", "/api/admin/students"})
     public PageResponse<Map<String, Object>> searchStudents(
             @RequestParam(defaultValue = "0") int page,
@@ -49,33 +53,39 @@ public class StudentManagementController {
         return service.searchStudents(page, size, q);
     }
 
+    @RequirePrivilege(Permission.STUDENT_READ)
     @GetMapping({"/api/students/{id}", "/api/admin/students/{id}"})
     public Map<String, Object> getStudentById(@PathVariable Long id) {
         return service.getStudentById(id);
     }
 
+    @RequirePrivilege(Permission.STUDENT_CREATE)
     @PostMapping("/api/admin/students")
     public AccountDtos.TemporaryPassword createStudent(@Valid @RequestBody StudentInput input) {
         return service.createStudent(input);
     }
 
+    @RequirePrivilege(Permission.STUDENT_UPDATE)
     @PatchMapping({"/api/students/{id}", "/api/admin/students/{id}"})
     public Map<String, Object> updateStudent(
             @PathVariable Long id, @Valid @RequestBody StudentInput input) {
         return service.updateStudent(id, input);
     }
 
+    @RequirePrivilege(Permission.STUDENT_DELETE)
     @DeleteMapping("/api/admin/students/{id}")
     public ResponseEntity<Void> deleteUnusedStudent(@PathVariable Long id) {
         service.deleteUnusedStudent(id);
         return ResponseEntity.noContent().build();
     }
 
+    @RequirePrivilege(Permission.STUDENT_RESET_PASSWORD)
     @PostMapping("/api/students/{id}/reset-password")
     public AccountDtos.TemporaryPassword resetStudentPassword(@PathVariable Long id) {
         return service.resetStudentPassword(id);
     }
 
+    @RequirePrivilege(Permission.MAINTENANCE_UPDATE)
     @GetMapping("/api/technicians")
     public Object getTechnicians() {
         return service.getTechnicians();

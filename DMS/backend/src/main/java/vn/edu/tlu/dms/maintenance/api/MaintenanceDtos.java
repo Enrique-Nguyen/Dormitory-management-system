@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceCategory;
+import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceSeverity;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
 
 import java.time.OffsetDateTime;
@@ -17,8 +19,8 @@ public final class MaintenanceDtos {
     private MaintenanceDtos() {}
 
     public record Create(
-            @NotBlank @Pattern(regexp = "ELECTRIC|WATER|FURNITURE|DOOR_LOCK|OTHER") String category,
-            @NotBlank @Pattern(regexp = "LOW|MEDIUM|HIGH") String severity,
+            @NotBlank @Pattern(regexp = MaintenanceCategory.PATTERN) String category,
+            @NotBlank @Pattern(regexp = MaintenanceSeverity.PATTERN) String severity,
             @NotBlank @Size(max = 1000) String description,
             @Positive Long roomId,
             @Positive Long buildingId,

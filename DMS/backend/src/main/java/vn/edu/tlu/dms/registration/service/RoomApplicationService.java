@@ -38,12 +38,12 @@ public interface RoomApplicationService {
     Response getApplicationById(Long id);
 
     /**
-     * Tạo đơn nháp cho sinh viên đăng nhập và ghi lịch sử tạo đơn trong cùng giao dịch. Mã sinh
-     * viên, trạng thái và điểm ưu tiên do hệ thống xác định để tránh giả mạo.
+     * Tạo đơn nháp cho sinh viên đăng nhập; ADMIN được tạo hộ sinh viên có studentId hợp lệ. Trạng
+     * thái, điểm ưu tiên do hệ thống xác định và lịch sử ghi tài khoản thực hiện.
      */
     Response createApplication(Input input);
 
-    /** Sửa thông tin đơn còn ở trạng thái nháp và thuộc sinh viên đăng nhập. */
+    /** Sửa đơn còn nháp của sinh viên đăng nhập; ADMIN được sửa đơn nháp ở mọi đơn vị. */
     Response updateDraftApplication(Long id, Input input);
 
     /**

@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceCategory;
+import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceSeverity;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.maintenance.service.MaintenanceCrudService;
 
 @RestController
@@ -24,15 +28,18 @@ public class MaintenanceCrudController {
     }
 
     public record Edit(
-            @NotBlank @Pattern(regexp = "ELECTRIC|WATER|FURNITURE|DOOR_LOCK|OTHER") String category,
-            @NotBlank @Pattern(regexp = "LOW|MEDIUM|HIGH") String severity,
+            @NotBlank @Pattern(regexp = MaintenanceCategory.PATTERN) String category,
+            @NotBlank @Pattern(regexp = MaintenanceSeverity.PATTERN) String severity,
             @NotBlank @Size(max = 1000) String description) {}
 
+    @RequirePrivilege(Permission.MAINTENANCE_UPDATE)
     @PatchMapping("/api/maintenance-requests/{id}")
     public Object updateRequest(@PathVariable Long id, @Valid @RequestBody Edit input) {
         return service.updateOpenRequest(id, input);
     }
 
+    // Xóa ở khung CRUD là hủy yêu cầu, không xóa lịch sử xử lý.
+    @RequirePrivilege(Permission.MAINTENANCE_DELETE)
     @DeleteMapping("/api/maintenance-requests/{id}")
     public ResponseEntity<Void> cancelRequest(@PathVariable Long id) {
         service.cancelOpenRequest(id);

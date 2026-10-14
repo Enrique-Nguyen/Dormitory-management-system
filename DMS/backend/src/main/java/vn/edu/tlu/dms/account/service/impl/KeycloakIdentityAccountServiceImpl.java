@@ -21,6 +21,8 @@ import vn.edu.tlu.dms.account.config.SecurityConfig.KeycloakProperties;
 import vn.edu.tlu.dms.account.domain.AppUser;
 import vn.edu.tlu.dms.account.repository.AppUserRepository;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.KeycloakClaim;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 
 import java.io.IOException;
@@ -46,7 +48,7 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
     private static final Logger LOGGER =
             LoggerFactory.getLogger(KeycloakIdentityAccountServiceImpl.class);
 
-    private static final Set<String> DMS_ROLES = Set.of("ADMIN", "STAFF", "TECHNICIAN", "STUDENT");
+    private static final Set<String> DMS_ROLES = Role.ALL;
 
     private final KeycloakProperties properties;
 
@@ -161,7 +163,8 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
         if (account.get("attributes") instanceof Map<?, ?> existing) {
             existing.forEach((key, value) -> attributes.put(key.toString(), value));
         }
-        attributes.put("dms_security_version", List.of(user.getSecurityVersion().toString()));
+        attributes.put(
+                KeycloakClaim.SECURITY_VERSION, List.of(user.getSecurityVersion().toString()));
         account.put("attributes", attributes);
     }
 
@@ -419,7 +422,7 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
                 status -> {
                     var existing = users.lockByUsername(adminUsername).orElse(null);
                     if (existing != null) {
-                        if (!"ADMIN".equals(existing.getRole())) {
+                        if (!Role.ADMIN.equals(existing.getRole())) {
                             throw BusinessException.conflict("BOOTSTRAP_USERNAME_IN_USE");
                         }
                         return;
@@ -427,7 +430,7 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
                     var admin = new AppUser();
                     admin.setUsername(adminUsername);
                     admin.setFullName("Quản trị viên DMS");
-                    admin.setRole("ADMIN");
+                    admin.setRole(Role.ADMIN);
                     admin.setCrossUnitAccess(false);
                     admin.setMustChangePassword(true);
                     admin.setLocked(false);

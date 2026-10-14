@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.registration.service.RegistrationPeriodService;
 import vn.edu.tlu.dms.registration.service.SummerCrudService;
 
@@ -27,11 +29,13 @@ public class SummerCrudController {
         this.periods = periods;
     }
 
+    @RequirePrivilege(Permission.REGISTRATION_PERIOD_READ)
     @GetMapping("/api/me/registration-periods/open")
     public Object openPeriods() {
         return periods.getOpenPeriodsForStudent();
     }
 
+    @RequirePrivilege(Permission.SUMMER_REGISTRATION_READ)
     @GetMapping({"/api/summer-choices", "/api/me/summer-choices"})
     public Object searchChoices(
             @RequestParam(defaultValue = "0") int page,
@@ -40,21 +44,25 @@ public class SummerCrudController {
         return service.searchChoices(page, size, q);
     }
 
+    @RequirePrivilege(Permission.SUMMER_REGISTRATION_READ)
     @GetMapping("/api/summer-choices/{id}")
     public Object getChoice(@PathVariable Long id) {
         return service.getChoice(id);
     }
 
+    @RequirePrivilege(Permission.SUMMER_REGISTRATION_CREATE)
     @PostMapping("/api/summer-choices")
     public Object createChoice(@RequestBody Map<String, Object> input) {
         return service.createChoice(input);
     }
 
+    @RequirePrivilege(Permission.SUMMER_REGISTRATION_UPDATE)
     @PatchMapping("/api/summer-choices/{id}")
     public Object updateChoice(@PathVariable Long id, @RequestBody Map<String, Object> input) {
         return service.updateChoice(id, input);
     }
 
+    @RequirePrivilege(Permission.SUMMER_REGISTRATION_DELETE)
     @DeleteMapping("/api/summer-choices/{id}")
     public ResponseEntity<Void> deleteChoice(@PathVariable Long id) {
         service.deleteChoice(id);

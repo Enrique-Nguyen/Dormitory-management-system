@@ -17,8 +17,10 @@ import vn.edu.tlu.dms.account.repository.ManagementUnitRepository;
 import vn.edu.tlu.dms.account.repository.StudentProfileRepository;
 import vn.edu.tlu.dms.account.service.AuthService;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
+import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.ResidencyLookup;
 
@@ -101,7 +103,8 @@ public class AuthServiceImpl implements AuthService {
                 unit,
                 u.getCrossUnitAccess(),
                 u.getMustChangePassword(),
-                student);
+                student,
+                ScopeGuard.permissionsForRole(u.getRole()));
     }
 
     @Override
@@ -135,7 +138,8 @@ public class AuthServiceImpl implements AuthService {
         users.saveAndFlush(user);
         identities.resetAccountPassword(user, temporary);
         identities.clearTemporaryLoginFailures(user);
-        audit.record(actorId, "USER_RESET_PASSWORD", "USER", user.getId(), null, null, null);
+        audit.record(
+                actorId, AuditAction.USER_RESET_PASSWORD, "USER", user.getId(), null, null, null);
         return new TemporaryPassword(user.getId(), temporary);
     }
 

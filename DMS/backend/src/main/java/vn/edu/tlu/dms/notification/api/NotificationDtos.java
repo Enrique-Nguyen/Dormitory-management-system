@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.NotificationScope;
+
 import java.time.OffsetDateTime;
 
 public final class NotificationDtos {
@@ -13,7 +15,7 @@ public final class NotificationDtos {
     private NotificationDtos() {}
 
     public record Create(
-            @NotBlank @Pattern(regexp = "ALL|UNIT|BUILDING|FLOOR|ROOM") String scope,
+            @NotBlank @Pattern(regexp = NotificationScope.MANUAL_PATTERN) String scope,
             @Positive Long unitId,
             @Positive Long buildingId,
             @Min(0) Short floor,

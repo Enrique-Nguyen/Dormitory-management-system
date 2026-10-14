@@ -2,6 +2,10 @@ package vn.edu.tlu.dms.registration.service.impl;
 
 import org.springframework.stereotype.Service;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -37,12 +41,18 @@ public class PriorityCategoryServiceImpl
 
     @Override
     protected void checkRead() {
-        guard.requireRole("STUDENT", "STAFF", "TECHNICIAN", "ADMIN");
+        guard.requirePermission(Permission.PRIORITY_CATEGORY_READ);
     }
 
     @Override
     protected void checkWrite() {
-        guard.requireRole("ADMIN");
+        guard.requireRole(Role.ADMIN);
+    }
+
+    @Override
+    protected void checkPermission(String action) {
+        guard.requirePermission(
+                Resource.PRIORITY_CATEGORY + DmsConstants.PERMISSION_SEPARATOR + action);
     }
 
     @Override
@@ -85,7 +95,7 @@ public class PriorityCategoryServiceImpl
         return ((PriorityCategoryRepository) repository)
                         .findAll(
                                 (r, q, b) ->
-                                        actor.is("STUDENT") || actor.is("TECHNICIAN")
+                                        actor.is(Role.STUDENT) || actor.is(Role.TECHNICIAN)
                                                 ? b.isTrue(r.get("active"))
                                                 : b.conjunction())
                         .stream()
@@ -99,7 +109,7 @@ public class PriorityCategoryServiceImpl
                 entity.getId(),
                 entity.getCode(),
                 entity.getName(),
-                (currentUser.get().is("STUDENT") || currentUser.get().is("TECHNICIAN")
+                (currentUser.get().is(Role.STUDENT) || currentUser.get().is(Role.TECHNICIAN)
                         ? null
                         : entity.getWeight()),
                 entity.getActive());

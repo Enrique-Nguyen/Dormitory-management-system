@@ -2,6 +2,10 @@ package vn.edu.tlu.dms.room.service.impl;
 
 import org.springframework.stereotype.Service;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -34,12 +38,17 @@ public class SemesterServiceImpl
 
     @Override
     protected void checkRead() {
-        guard.requireRole("STUDENT", "STAFF", "TECHNICIAN", "ADMIN");
+        guard.requirePermission(Permission.SEMESTER_READ);
     }
 
     @Override
     protected void checkWrite() {
-        guard.requireRole("STAFF");
+        guard.requireRole(Role.STAFF);
+    }
+
+    @Override
+    protected void checkPermission(String action) {
+        guard.requirePermission(Resource.SEMESTER + DmsConstants.PERMISSION_SEPARATOR + action);
     }
 
     @Override

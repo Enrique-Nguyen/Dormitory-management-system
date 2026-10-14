@@ -4,7 +4,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.support.SqlPage;
 
@@ -25,11 +27,12 @@ public class AuditController {
     }
 
     @GetMapping("/api/admin/audit-logs")
+    @RequirePrivilege(Permission.AUDIT_READ)
     public PageResponse<Map<String, Object>> searchAuditLogs(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "") String q) {
-        guard.requireRole("ADMIN");
+        guard.requirePermission(Permission.AUDIT_READ);
         var args = new ArrayList<Object>();
         args.add("%" + q + "%");
         args.add("%" + q + "%");

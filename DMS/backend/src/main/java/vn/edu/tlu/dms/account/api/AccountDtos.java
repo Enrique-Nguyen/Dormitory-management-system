@@ -5,7 +5,11 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.Gender;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+
 import java.time.LocalDate;
+import java.util.List;
 
 public final class AccountDtos {
 
@@ -28,21 +32,23 @@ public final class AccountDtos {
             UnitRef managementUnit,
             boolean crossUnitAccess,
             boolean mustChangePassword,
-            Student student) {}
+            Student student,
+            List<String> permissions) {}
 
     public record Create(
             @NotBlank @Size(max = 50) String username,
             @NotBlank @Size(max = 100) String fullName,
             @Size(max = 20) String phone,
-            @NotBlank @Pattern(regexp = "STAFF|TECHNICIAN|ADMIN") String role,
+            @NotBlank @Pattern(regexp = Role.MANAGEMENT_ROLE_PATTERN) String role,
             Long managementUnitId) {}
 
     public record Update(
             @Size(max = 100) String fullName,
             @Size(max = 20) String phone,
+            @Pattern(regexp = Role.MANAGEMENT_ROLE_PATTERN) String role,
             Long managementUnitId,
             @Size(max = 20) String studentCode,
-            @Pattern(regexp = "M|F") String gender,
+            @Pattern(regexp = Gender.PATTERN) String gender,
             LocalDate dateOfBirth,
             @Size(max = 100) String faculty,
             @Size(max = 10) String cohort) {}

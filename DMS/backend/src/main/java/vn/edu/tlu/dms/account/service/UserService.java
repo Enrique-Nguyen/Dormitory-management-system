@@ -27,8 +27,8 @@ public interface UserService {
 
     /**
      * Admin cập nhật các trường tài khoản được phép, kiểm tra vai trò và ghi audit; thu hồi toàn bộ
-     * phiên nếu tên đăng nhập hoặc đơn vị quản lý thay đổi để áp dụng phạm vi mới khi đăng nhập
-     * lại.
+     * phiên nếu tên đăng nhập, vai trò hoặc đơn vị quản lý thay đổi để áp dụng quyền/phạm vi mới
+     * khi đăng nhập lại.
      */
     Profile update(Long id, Update input);
 
