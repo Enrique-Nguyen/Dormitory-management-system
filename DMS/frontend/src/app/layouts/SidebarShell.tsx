@@ -1,6 +1,8 @@
+import { SearchInput } from '../../components/ui/FormControls'
+import { Button, Drawer } from '../../components/ui/Surface'
 import { Permission } from '../../constants/authorization'
 import { MenuOutlined } from '@ant-design/icons'
-import { Badge, Button, Drawer, Flex, Input, Layout, Menu, type MenuProps } from 'antd'
+import { Badge, Flex, Layout, Menu, type MenuProps } from 'antd'
 import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import NotificationBell from '../../components/layout/NotificationBell'
@@ -45,7 +47,9 @@ export default function SidebarShell({
   const allowedGroups = groups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => hasAnyPermission(me, item.permissions)),
+      items: group.items.filter((item) =>
+        hasAnyPermission(me, item.permissions),
+      ),
     }))
     .filter((group) => group.items.length > 0)
   const active = findActivePath(
@@ -60,7 +64,9 @@ export default function SidebarShell({
       <Link to={item.path} onClick={() => setDrawerOpen(false)}>
         <Flex justify="space-between" align="center">
           <span>{item.label}</span>
-          {badges[item.path] ? <Badge count={badges[item.path]} size="small" /> : null}
+          {badges[item.path] ? (
+            <Badge count={badges[item.path]} size="small" />
+          ) : null}
         </Flex>
       </Link>
     ),
@@ -81,7 +87,7 @@ export default function SidebarShell({
   })
 
   const search = onSearch && (
-    <Input.Search
+    <SearchInput
       allowClear
       placeholder={searchPlaceholder}
       onSearch={onSearch}
@@ -116,7 +122,7 @@ export default function SidebarShell({
             height: '100vh',
             overflow: 'auto',
             borderInlineEnd: '1px solid var(--color-border)',
-            background: '#FFFFFF',
+            background: 'var(--color-surface)',
           }}
         >
           <div
@@ -154,9 +160,10 @@ export default function SidebarShell({
             {!isMobile && search}
           </div>
           <div style={{ flex: 1 }} />
-          {notificationsPath && hasPermission(me, Permission.NOTIFICATION_READ) && (
-            <NotificationBell to={notificationsPath} />
-          )}
+          {notificationsPath &&
+            hasPermission(me, Permission.NOTIFICATION_READ) && (
+              <NotificationBell to={notificationsPath} />
+            )}
           <UserMenu />
         </Layout.Header>
         <Layout.Content>

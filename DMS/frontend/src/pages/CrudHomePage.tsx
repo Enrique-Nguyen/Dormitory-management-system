@@ -32,13 +32,18 @@ export default function CrudHomePage() {
         {items
           .filter(
             (item) =>
-              !item.path.endsWith('/dashboard') && hasAnyPermission(me, item.permissions),
+              !item.path.endsWith('/dashboard') &&
+              hasAnyPermission(me, item.permissions),
           )
           .map((item) => (
             <Col key={item.key} xs={24} sm={12} lg={8}>
               <Link
                 to={item.path}
-                style={{ display: 'block', height: '100%', textDecoration: 'none' }}
+                style={{
+                  display: 'block',
+                  height: '100%',
+                  textDecoration: 'none',
+                }}
               >
                 <div className="dms-nav-card" style={{ padding: '20px' }}>
                   <div
@@ -52,7 +57,9 @@ export default function CrudHomePage() {
                     <div className="dms-nav-icon-box">
                       {item.icon ? <item.icon /> : <AppstoreOutlined />}
                     </div>
-                    <ArrowRightOutlined style={{ color: '#9CA3AF', fontSize: 16 }} />
+                    <ArrowRightOutlined
+                      style={{ color: 'var(--color-text-muted)', fontSize: 16 }}
+                    />
                   </div>
                   <h3
                     style={{

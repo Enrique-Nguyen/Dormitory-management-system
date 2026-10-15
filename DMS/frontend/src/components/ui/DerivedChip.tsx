@@ -1,5 +1,9 @@
 import { Tag } from 'antd'
-import { derivedLabels, derivedToneColors, type DerivedLabel } from '../../constants/statusConfig'
+import {
+  derivedLabels,
+  derivedToneColors,
+  type DerivedLabel,
+} from '../../constants/statusConfig'
 
 interface Props {
   label: DerivedLabel
@@ -13,7 +17,12 @@ export default function DerivedChip({ label }: Props) {
     <Tag
       variant="outlined"
       icon={<Icon aria-hidden />}
-      style={{ color, borderColor: color, background: '#FFFFFF', marginInlineEnd: 0 }}
+      style={{
+        color,
+        borderColor: color,
+        background: 'var(--color-surface)',
+        marginInlineEnd: 0,
+      }}
     >
       {text}
     </Tag>

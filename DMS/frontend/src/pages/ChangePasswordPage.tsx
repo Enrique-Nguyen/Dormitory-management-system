@@ -1,4 +1,5 @@
-import { Alert, Button, Card, Typography } from 'antd'
+import { Button, Card } from '../components/ui/Surface'
+import { Alert, Typography } from 'antd'
 import { useState } from 'react'
 import { changeKeycloakPassword } from '../services/api/auth'
 import { errorMessage } from '../utils/errorMessages'
@@ -24,8 +25,20 @@ export default function ChangePasswordPage() {
         <Typography.Paragraph>
           Bạn sẽ được chuyển tới trang bảo mật để đổi mật khẩu đăng nhập.
         </Typography.Paragraph>
-        {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} />}
-        <Button type="primary" block loading={busy} onClick={() => void changePassword()}>
+        {error && (
+          <Alert
+            type="error"
+            showIcon
+            title={error}
+            style={{ marginBottom: 16 }}
+          />
+        )}
+        <Button
+          type="primary"
+          block
+          loading={busy}
+          onClick={() => void changePassword()}
+        >
           Tiếp tục đổi mật khẩu
         </Button>
       </Card>

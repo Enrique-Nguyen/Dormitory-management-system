@@ -1,5 +1,9 @@
 import { StarFilled, ToolOutlined } from '@ant-design/icons'
-import { bedOccupancy, bedOperation, type BedOccupancy } from '../../constants/statusConfig'
+import {
+  bedOccupancy,
+  bedOperation,
+  type BedOccupancy,
+} from '../../constants/statusConfig'
 
 interface Props {
   /** Số giường hiển thị trên ô ("03"). */
@@ -16,7 +20,14 @@ interface Props {
 }
 
 /** Một ô giường. Trạng thái luôn có chữ, không chỉ màu nền (Rule 03). */
-export default function BedCard({ number, occupancy, broken, isMine, caption, onClick }: Props) {
+export default function BedCard({
+  number,
+  occupancy,
+  broken,
+  isMine,
+  caption,
+  onClick,
+}: Props) {
   const { label, background, border } = bedOccupancy[occupancy]
   const stateLabel = broken ? bedOperation.BROKEN.label : label
   const Tag = onClick ? 'button' : 'div'
@@ -44,11 +55,24 @@ export default function BedCard({ number, occupancy, broken, isMine, caption, on
       }}
     >
       <div className="dms-bed-number">
-        {isMine && <StarFilled aria-hidden="true" style={{ color: '#D97706', fontSize: 13 }} />}
-        {broken && <ToolOutlined aria-hidden="true" style={{ color: '#DC2626', fontSize: 13 }} />}
+        {isMine && (
+          <StarFilled
+            aria-hidden="true"
+            style={{ color: 'var(--color-warning)', fontSize: 13 }}
+          />
+        )}
+        {broken && (
+          <ToolOutlined
+            aria-hidden="true"
+            style={{ color: 'var(--color-danger)', fontSize: 13 }}
+          />
+        )}
         <span>{number}</span>
       </div>
-      <div className="dms-bed-status" style={{ color: isMine ? '#1D4ED8' : undefined }}>
+      <div
+        className="dms-bed-status"
+        style={{ color: isMine ? 'var(--color-primary)' : undefined }}
+      >
         {isMine ? 'Bạn' : stateLabel}
       </div>
       {caption && <div className="dms-bed-caption">{caption}</div>}

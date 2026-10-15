@@ -1,9 +1,18 @@
-import { CheckCircleFilled, ClockCircleFilled, CloseCircleFilled } from '@ant-design/icons'
+import {
+  CheckCircleFilled,
+  ClockCircleFilled,
+  CloseCircleFilled,
+} from '@ant-design/icons'
 import { Timeline, Typography } from 'antd'
 import type { StepState, TimelineStep } from './timelineSteps'
 import { formatDateTime } from '../../utils/format'
 
-const stepColor: Record<StepState, string> = { done: '#15803D', current: '#1D4ED8', todo: '#9CA3AF', ended: '#B91C1C' }
+const stepColor: Record<StepState, string> = {
+  done: 'var(--color-success)',
+  current: 'var(--color-primary)',
+  todo: 'var(--color-text-muted)',
+  ended: 'var(--color-danger)',
+}
 
 export default function StatusTimeline({ steps }: { steps: TimelineStep[] }) {
   return (
@@ -23,11 +32,18 @@ export default function StatusTimeline({ steps }: { steps: TimelineStep[] }) {
         // Tiêu đề nằm trong content để cả khối hiện một cột, bên phải mốc (antd 6 đặt `title` ở phía đối diện)
         content: (
           <div className="dms-wrap">
-            <Typography.Text strong={step.state === 'current' || step.state === 'ended'} type={step.state === 'todo' ? 'secondary' : undefined}>
+            <Typography.Text
+              strong={step.state === 'current' || step.state === 'ended'}
+              type={step.state === 'todo' ? 'secondary' : undefined}
+            >
               {step.title}
             </Typography.Text>
             {step.description && <div>{step.description}</div>}
-            {step.at && <Typography.Text type="secondary">{formatDateTime(step.at)}</Typography.Text>}
+            {step.at && (
+              <Typography.Text type="secondary">
+                {formatDateTime(step.at)}
+              </Typography.Text>
+            )}
             {step.reason && <div>Lý do: {step.reason}</div>}
           </div>
         ),

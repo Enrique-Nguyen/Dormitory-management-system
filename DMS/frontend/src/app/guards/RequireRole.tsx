@@ -1,5 +1,6 @@
+import { Button } from '../../components/ui/Surface'
 import { Role } from '../../constants/authorization'
-import { Button, Result, Spin } from 'antd'
+import { Result, Spin } from 'antd'
 import axios from 'axios'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { useMe } from '../../features/account/useMe'

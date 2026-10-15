@@ -1,7 +1,17 @@
-import { ArrowRightOutlined, CrownOutlined, WarningOutlined } from '@ant-design/icons'
-import { Card, Flex, Tag } from 'antd'
+import { Card } from '../ui/Surface'
+import {
+  ArrowRightOutlined,
+  CrownOutlined,
+  WarningOutlined,
+} from '@ant-design/icons'
+import { Flex, Tag } from 'antd'
 import { Link } from 'react-router'
-import { bedOccupancy, bedOperation, roomOperation, type BedOccupancy } from '../../constants/statusConfig'
+import {
+  bedOccupancy,
+  bedOperation,
+  roomOperation,
+  type BedOccupancy,
+} from '../../constants/statusConfig'
 
 export interface RoomBed {
   occupancy: BedOccupancy
@@ -20,12 +30,24 @@ interface Props {
   to?: string
 }
 
-const dotSymbol: Record<BedOccupancy, string> = { OCCUPIED: '●', HELD: '◐', FREE: '○' }
+const dotSymbol: Record<BedOccupancy, string> = {
+  OCCUPIED: '●',
+  HELD: '◐',
+  FREE: '○',
+}
 
 /** Thẻ phòng cho Card View của Staff (UI mục 15). Số liệu chiếm dụng tính từ `beds`, không nhận số đã tính sẵn. */
-export default function RoomCard({ code, typeLabel, operation = 'ACTIVE', beds, leaderName, to }: Props) {
+export default function RoomCard({
+  code,
+  typeLabel,
+  operation = 'ACTIVE',
+  beds,
+  leaderName,
+  to,
+}: Props) {
   const usable = beds.filter((bed) => !bed.broken)
-  const count = (state: BedOccupancy) => usable.filter((bed) => bed.occupancy === state).length
+  const count = (state: BedOccupancy) =>
+    usable.filter((bed) => bed.occupancy === state).length
   const broken = beds.length - usable.length
   const occupied = count('OCCUPIED')
   const part = (n: number, label: string) => `${n} ${label.toLowerCase()}`
@@ -42,13 +64,21 @@ export default function RoomCard({ code, typeLabel, operation = 'ACTIVE', beds, 
       size="small"
       className="dms-room-card"
       title={
-        <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-heading)' }}>
+        <span
+          style={{
+            fontSize: 16,
+            fontWeight: 700,
+            color: 'var(--color-heading)',
+          }}
+        >
           {code}
         </span>
       }
       extra={operation !== 'ACTIVE' && <Tag color="warning">{op.label}</Tag>}
     >
-      <div style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>{typeLabel}</div>
+      <div style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+        {typeLabel}
+      </div>
       <div className="dms-bed-dots" aria-label={summary}>
         {beds.map((bed, i) => (
           <span
@@ -68,22 +98,56 @@ export default function RoomCard({ code, typeLabel, operation = 'ACTIVE', beds, 
           </span>
         ))}
       </div>
-      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{summary}</div>
-      <Flex vertical gap={6} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border-light)' }}>
+      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+        {summary}
+      </div>
+      <Flex
+        vertical
+        gap={6}
+        style={{
+          marginTop: 10,
+          paddingTop: 10,
+          borderTop: '1px solid var(--color-border-light)',
+        }}
+      >
         {leaderName ? (
-          <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <CrownOutlined style={{ color: '#D97706' }} />
-            <span>Trưởng phòng: <strong>{leaderName}</strong></span>
+          <div
+            style={{
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <CrownOutlined style={{ color: 'var(--color-warning)' }} />
+            <span>
+              Trưởng phòng: <strong>{leaderName}</strong>
+            </span>
           </div>
         ) : (
           occupied > 0 && (
-            <Tag icon={<WarningOutlined aria-hidden="true" />} variant="outlined" color="#B45309" style={{ background: '#FFFBEB' }}>
+            <Tag
+              icon={<WarningOutlined aria-hidden="true" />}
+              variant="outlined"
+              color="var(--color-warning)"
+              style={{ background: 'var(--color-warning-bg)' }}
+            >
               Chưa có trưởng phòng
             </Tag>
           )
         )}
         {to && (
-          <Link to={to} style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 500, color: 'var(--color-primary)' }}>
+          <Link
+            to={to}
+            style={{
+              fontSize: 13,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              fontWeight: 500,
+              color: 'var(--color-primary)',
+            }}
+          >
             <span>Xem chi tiết</span>
             <ArrowRightOutlined style={{ fontSize: 11 }} />
           </Link>

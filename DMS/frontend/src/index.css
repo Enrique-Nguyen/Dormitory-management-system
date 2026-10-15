@@ -15,65 +15,14 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  /* Primary Brand Colors (Blue - University Portal) */
-  --color-primary: #1d4ed8;
-  --color-primary-hover: #2563eb;
-  --color-primary-active: #1e40af;
-  --color-primary-light: #eff6ff;
-  --color-primary-border: #bfdbfe;
-
-  /* Neutral Backgrounds & Surfaces */
-  --color-bg: #f8fafc;
-  --color-bg-alt: #f1f5f9;
-  --color-surface: #ffffff;
-  --color-surface-hover: #f8fafc;
-
-  /* Typography Colors */
-  --color-text: #1f2937;
-  --color-text-secondary: #6b7280;
-  --color-text-muted: #9ca3af;
-  --color-heading: #111827;
-
-  /* Border Colors */
-  --color-border: #e5e7eb;
-  --color-border-light: #f3f4f6;
-  --color-border-strong: #d1d5db;
-
-  /* Semantic Status Colors (Đạt tương phản >= 4.5:1) */
-  --color-success: #15803d;
-  --color-success-bg: #f0fdf4;
-  --color-success-border: #bbf7d0;
-
-  --color-warning: #b45309;
-  --color-warning-bg: #fffbeb;
-  --color-warning-border: #fde68a;
-
-  --color-danger: #b91c1c;
-  --color-danger-bg: #fef2f2;
-  --color-danger-border: #fecaca;
-
-  --color-info: #0369a1;
-  --color-info-bg: #f0f9ff;
-  --color-info-border: #bae6fd;
-
-  --color-neutral: #4b5563;
-  --color-neutral-bg: #f3f4f6;
-
-  /* Elevation & Shadows */
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0, 0, 0, 0.07);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px 0 rgba(15, 23, 42, 0.04);
-  --shadow-card-hover: 0 10px 20px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+  /* Màu và shadow được initializeTheme() lấy từ app/theme.ts. */
 
   /* Border Radii */
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
   --radius-full: 9999px;
 
   /* Transitions */
@@ -83,7 +32,7 @@
 
   /* Layout dimensions */
   --bottom-nav-height: 60px;
-  --header-height: 60px;
+  --header-height: 64px;
   --sider-width: 250px;
 }
 
@@ -112,7 +61,15 @@ body,
 
 body {
   margin: 0;
-  font-family: 'Be Vietnam Pro', Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    'Be Vietnam Pro',
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   color: var(--color-text);
   background: var(--color-bg);
   line-height: 1.5;
@@ -129,12 +86,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--color-border-strong);
   border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--color-text-muted);
 }
 
 /* Accessible Keyboard Focus Ring (UI/UX 25A) */
@@ -155,28 +112,7 @@ body {
   padding: var(--space-4);
   position: relative;
   background-color: var(--color-bg);
-  background-image:
-    radial-gradient(at 0% 0%, rgba(29, 78, 216, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(14, 116, 144, 0.06) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(248, 250, 252, 1) 0px, transparent 100%);
-  background-attachment: fixed;
   overflow: hidden;
-}
-
-/* Decorative ambient background blur lights */
-.dms-auth-page::before {
-  content: '';
-  position: absolute;
-  top: -100px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
-  height: 300px;
-  background: linear-gradient(135deg, rgba(29, 78, 216, 0.15), rgba(14, 116, 144, 0.1));
-  filter: blur(80px);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
 }
 
 .dms-auth-card {
@@ -185,9 +121,9 @@ body {
   position: relative;
   z-index: 1;
   background: var(--color-surface);
-  border: 1px solid rgba(229, 231, 235, 0.85);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  box-shadow: 0 20px 35px -10px rgba(15, 23, 42, 0.08), 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-md);
   padding: var(--space-6);
   transition: box-shadow var(--transition-normal);
 }
@@ -209,21 +145,21 @@ body {
   justify-content: center;
   width: 52px;
   height: 52px;
-  background: linear-gradient(135deg, #1d4ed8, #2563eb);
-  color: #ffffff;
+  background: var(--color-primary);
+  color: var(--color-surface);
   border-radius: var(--radius-lg);
   font-size: 24px;
   font-weight: 700;
-  box-shadow: 0 8px 16px -4px rgba(29, 78, 216, 0.35);
+  box-shadow: none;
   margin-bottom: var(--space-3);
 }
 
 .dms-auth-title {
   margin: 0;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 650;
   color: var(--color-heading);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .dms-auth-subtitle {
@@ -254,11 +190,11 @@ body {
   gap: var(--space-3);
   height: var(--header-height);
   padding: 0 var(--space-4);
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 @media (min-width: 640px) {
@@ -288,12 +224,12 @@ body {
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-  color: #ffffff;
+  background: var(--color-primary);
+  color: var(--color-surface);
   border-radius: var(--radius-md);
   font-size: 16px;
   font-weight: 800;
-  box-shadow: 0 2px 6px -1px rgba(29, 78, 216, 0.3);
+  box-shadow: none;
 }
 
 .dms-portal-tag {
@@ -318,9 +254,10 @@ body {
 
 .dms-topbar-search .ant-input-affix-wrapper:hover,
 .dms-topbar-search .ant-input-affix-wrapper:focus-within {
-  background: #ffffff;
+  background: var(--color-surface);
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 /* ==========================================================================
@@ -329,7 +266,9 @@ body {
 
 .dms-page {
   padding: var(--space-4);
-  max-width: 1440px;
+  width: 100%;
+  min-width: 0;
+  max-width: 1600px;
   margin: 0 auto;
 }
 
@@ -346,9 +285,9 @@ body {
 .dms-page-title {
   margin: 0;
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 650;
   color: var(--color-heading);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 @media (min-width: 640px) {
@@ -374,7 +313,9 @@ body {
    ========================================================================== */
 
 .dms-with-bottom-nav {
-  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 12px);
+  padding-bottom: calc(
+    var(--bottom-nav-height) + env(safe-area-inset-bottom) + 12px
+  );
 }
 
 .dms-bottom-nav {
@@ -404,13 +345,15 @@ body {
   min-height: 44px;
   font-size: 11px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--color-text-secondary);
   text-decoration: none;
   background: none;
   border: 0;
   cursor: pointer;
   position: relative;
-  transition: color var(--transition-fast), transform var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .dms-bottom-nav a:active,
@@ -475,19 +418,18 @@ body {
 }
 
 .dms-bed-card--clickable:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
   border-color: var(--color-primary);
 }
 
 .dms-bed-card--mine {
   border: 2px solid var(--color-primary) !important;
-  background: #eff6ff !important;
-  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.15);
+  background: var(--color-primary-light) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-border);
 }
 
 .dms-bed-card--broken {
-  background-color: #f3f4f6 !important;
+  background-color: var(--color-bg-alt) !important;
   background-image: repeating-linear-gradient(
     45deg,
     transparent,
@@ -495,8 +437,8 @@ body {
     rgba(156, 163, 175, 0.25) 8px,
     rgba(156, 163, 175, 0.25) 16px
   ) !important;
-  border-color: #9ca3af !important;
-  color: #6b7280 !important;
+  border-color: var(--color-text-muted) !important;
+  color: var(--color-text-secondary) !important;
 }
 
 .dms-bed-number {
@@ -524,12 +466,13 @@ body {
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
-  transition: box-shadow var(--transition-normal), transform var(--transition-normal);
+  transition:
+    box-shadow var(--transition-normal),
+    transform var(--transition-normal);
 }
 
 .dms-room-card:hover {
   box-shadow: var(--shadow-card-hover);
-  transform: translateY(-2px);
 }
 
 .dms-bed-dots {
@@ -550,19 +493,19 @@ body {
 }
 
 .dms-bed-dot--occupied {
-  color: #15803d;
+  color: var(--color-success);
 }
 
 .dms-bed-dot--held {
-  color: #b45309;
+  color: var(--color-warning);
 }
 
 .dms-bed-dot--free {
-  color: #9ca3af;
+  color: var(--color-text-muted);
 }
 
 .dms-bed-dot--broken {
-  color: #dc2626;
+  color: var(--color-danger);
   font-weight: bold;
 }
 
@@ -579,7 +522,6 @@ body {
 
 .dms-invoice-card:hover {
   box-shadow: var(--shadow-card-hover);
-  transform: translateY(-2px);
 }
 
 .dms-invoice-amount {
@@ -603,8 +545,8 @@ body {
 .dms-balance-callout {
   margin-top: var(--space-4);
   padding: var(--space-4);
-  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
-  border: 1px solid #bfdbfe;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
@@ -626,7 +568,7 @@ body {
 }
 
 .dms-notification-item--unread {
-  background: rgba(29, 78, 216, 0.04);
+  background: var(--color-primary-light);
 }
 
 .dms-notification-dot {
@@ -639,11 +581,11 @@ body {
 
 .dms-notification-dot--unread {
   background: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.2);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 .dms-notification-dot--read {
-  background: #cbd5e1;
+  background: var(--color-border-strong);
 }
 
 /* 6. Dashboard Navigation Cards */
@@ -658,7 +600,6 @@ body {
 .dms-nav-card:hover {
   border-color: var(--color-primary-border);
   box-shadow: var(--shadow-card-hover);
-  transform: translateY(-2px);
 }
 
 .dms-nav-icon-box {
@@ -676,92 +617,364 @@ body {
 }
 
 .dms-nav-card:hover .dms-nav-icon-box {
-  background: var(--color-primary);
-  color: #ffffff;
-  transform: scale(1.05);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 /* ==========================================================================
    Table & Ant Design Component Enhancements
    ========================================================================== */
 
-/* Ant Design Table Polish */
-.ant-table-wrapper {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  overflow: hidden;
+/* Component chung: bố cục và khoảng cách; màu/size của Ant Design nằm trong theme.ts. */
+.dms-panel {
   box-shadow: var(--shadow-xs);
 }
 
-.ant-table-wrapper .ant-table {
-  border-radius: 0 !important;
+.dms-panel + .dms-panel {
+  margin-top: var(--space-4);
 }
 
-.ant-table-thead > tr > th {
-  font-weight: 600 !important;
-  color: #475569 !important;
-  background: #f8fafc !important;
-  border-bottom: 1px solid var(--color-border) !important;
+.dms-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
 }
 
-.ant-table-tbody > tr:hover > td {
-  background: #f8fafc !important;
+.dms-filter-bar > .ant-form-item {
+  flex: 1 1 190px;
+  min-width: 0;
+  margin-bottom: 0;
 }
 
-/* Ant Design Card Polish */
-.ant-card {
-  border-radius: var(--radius-lg) !important;
-  border-color: var(--color-border) !important;
-  box-shadow: var(--shadow-xs);
+.dms-filter-bar > .dms-select {
+  flex: 1 1 200px;
+  max-width: 320px;
 }
 
-.ant-card-head {
-  border-bottom: 1px solid var(--color-border-light) !important;
-  font-weight: 600 !important;
+.dms-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-bottom: 1px;
 }
 
-/* Ant Design Button Polish */
-.ant-btn {
-  font-weight: 500 !important;
+.dms-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.dms-toolbar .dms-search {
+  width: 100%;
+  max-width: 520px;
+}
+
+.dms-input,
+.dms-input-password,
+.dms-textarea,
+.dms-number-input,
+.dms-select,
+.dms-search,
+.dms-datepicker,
+.dms-rangepicker {
+  width: 100%;
+  min-width: 0;
+  border-radius: var(--radius-md) !important;
+  font-size: 13.5px !important;
+}
+
+.dms-input:not(.ant-input-affix-wrapper),
+.dms-input-password,
+.dms-number-input,
+.dms-select .ant-select-selector,
+.dms-datepicker,
+.dms-rangepicker {
+  min-height: 38px !important;
+  border-color: #cbd5e1 !important;
+  background-color: var(--color-surface) !important;
   transition: all var(--transition-fast) !important;
 }
 
-.ant-btn:active {
-  transform: scale(0.98);
+.dms-input:hover,
+.dms-input-password:hover,
+.dms-number-input:hover,
+.dms-select:hover .ant-select-selector,
+.dms-datepicker:hover,
+.dms-rangepicker:hover {
+  border-color: #94a3b8 !important;
 }
 
-.ant-btn-primary {
-  box-shadow: 0 1px 2px 0 rgba(29, 78, 216, 0.25) !important;
+.dms-input:focus,
+.dms-input-affix-wrapper-focused,
+.dms-number-input-focused,
+.dms-select-focused .ant-select-selector,
+.dms-datepicker-focused {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12) !important;
 }
 
-.ant-btn-primary:hover {
-  box-shadow: 0 4px 8px -1px rgba(29, 78, 216, 0.35) !important;
+.dms-textarea {
+  resize: vertical;
+  min-height: 96px;
+  border-color: #cbd5e1 !important;
+  padding: 8px 12px !important;
+  font-size: 13.5px !important;
+  border-radius: var(--radius-md) !important;
 }
 
-/* Ant Design Tag & Badge Polish */
-.ant-tag {
-  border-radius: var(--radius-sm) !important;
-  font-weight: 500 !important;
-  line-height: 20px !important;
-  padding: 0 8px !important;
+.dms-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-5);
 }
 
-/* Form Item Polish */
-.ant-form-item-label > label {
-  font-weight: 500 !important;
-  color: var(--color-heading) !important;
+.dms-form-grid > * {
+  min-width: 0;
 }
 
-/* Modal & Drawer Polish */
-.ant-modal-content {
-  border-radius: var(--radius-xl) !important;
-  box-shadow: var(--shadow-xl) !important;
+.dms-form-span-full {
+  grid-column: 1 / -1;
+}
+
+.dms-form-grid-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dms-field {
+  margin-bottom: var(--space-5);
+}
+
+.dms-field-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--color-heading);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dms-field-required,
+.dms-field-error {
+  color: var(--color-danger);
+}
+
+.dms-field-hint,
+.dms-field-error {
+  margin-top: var(--space-1);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dms-field-hint {
+  color: var(--color-text-secondary);
+}
+
+.dms-table-container {
+  width: 100%;
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
-.ant-drawer-content {
-  border-radius: var(--radius-xl) 0 0 var(--radius-xl) !important;
+.dms-data-table {
+  min-width: 0;
+}
+
+.dms-data-table .ant-table {
+  background: transparent !important;
+}
+
+.dms-data-table .ant-table-thead > tr > th {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+  background: #f8fafc !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  padding: 12px 14px !important;
+  white-space: nowrap;
+}
+
+.dms-data-table .ant-table-tbody > tr > td {
+  vertical-align: middle;
+  font-size: 13px;
+  color: var(--color-text);
+  padding: 10px 14px !important;
+  border-bottom: 1px solid var(--color-border-light) !important;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  transition: background var(--transition-fast);
+}
+
+.dms-data-table .ant-table-tbody > tr:hover > td {
+  background: #f8fafc !important;
+}
+
+/* Cột STT: Luôn ở cột đầu, căn giữa, rộng 64px, dễ nhìn */
+.dms-table-col-stt,
+.dms-data-table th.dms-table-col-stt,
+.dms-data-table td.dms-table-col-stt {
+  width: 64px !important;
+  min-width: 64px !important;
+  max-width: 64px !important;
+  text-align: center !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+  background: #fafbfc !important;
+}
+
+/* Cột Thao tác: Ngay sau STT, nút bấm gọn gàng, không tràn dòng */
+.dms-table-col-actions,
+.dms-data-table th.dms-table-col-actions,
+.dms-data-table td.dms-table-col-actions {
+  white-space: nowrap !important;
+  padding: 8px 12px !important;
+  border-right: 1px solid var(--color-border-light);
+}
+
+.dms-table-col-actions .ant-space {
+  gap: 6px !important;
+}
+
+.dms-table-col-actions .ant-btn {
+  height: 28px !important;
+  font-size: 12px !important;
+  padding: 2px 10px !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.dms-data-table .ant-pagination {
+  padding: 12px 16px !important;
+  margin: 0 !important;
+  border-top: 1px solid var(--color-border-light);
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+}
+
+/* Mobile Card View (Dưới 640px) */
+.dms-mobile-card {
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--transition-fast);
+}
+
+.dms-mobile-card:hover {
+  border-color: var(--color-primary-border) !important;
+}
+
+.dms-mobile-card-stt {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  letter-spacing: -0.01em;
+}
+
+.dms-mobile-card-actions .ant-space {
+  gap: 6px;
+}
+
+.dms-mobile-card-actions .ant-btn {
+  height: 28px;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.dms-button {
+  white-space: normal;
+  flex-shrink: 0;
+}
+
+.dms-modal .ant-modal-title,
+.dms-drawer .ant-drawer-title {
+  font-weight: 600;
+}
+
+.dms-modal .ant-modal-body {
+  padding-top: var(--space-5);
+}
+
+.dms-modal .ant-modal-footer {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.dms-matrix-toolbar {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.dms-matrix-search {
+  flex: 2 1 260px;
+  max-width: 420px;
+}
+
+.dms-empty {
+  padding: var(--space-5) var(--space-3);
+}
+
+.dms-empty-title {
+  color: var(--color-heading);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dms-empty-description {
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+@media (max-width: 639px) {
+  .dms-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dms-panel > .ant-card-body {
+    padding: var(--space-4);
+  }
+
+  .dms-filter-bar > *,
+  .dms-filter-bar > .dms-select {
+    flex-basis: 100%;
+    max-width: none;
+    width: 100%;
+  }
+
+  .dms-filter-actions > * {
+    flex: 1;
+  }
+
+  .dms-page-header .ant-flex > .ant-space {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .dms-data-table .ant-pagination-total-text {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 
 /* ==========================================================================
@@ -770,10 +983,10 @@ body {
 
 /* Mobile Touch Area (>= 44px theo mục 25A) */
 @media (max-width: 639px) {
-  .dms-touch .ant-btn,
-  .dms-touch .ant-input,
-  .dms-touch .ant-input-affix-wrapper,
-  .dms-touch .ant-select-selector {
+  .ant-btn,
+  .ant-input,
+  .ant-input-affix-wrapper,
+  .ant-select-selector {
     min-height: 44px !important;
   }
 }

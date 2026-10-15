@@ -12,13 +12,25 @@ interface Props {
   extra?: ReactNode
 }
 
-export default function PageHeader({ title, status, subtitle, breadcrumb, extra }: Props) {
+export default function PageHeader({
+  title,
+  status,
+  subtitle,
+  breadcrumb,
+  extra,
+}: Props) {
   return (
     <header className="dms-page-header">
       {breadcrumb && breadcrumb.length > 0 && (
         <Breadcrumb
           style={{ marginBottom: 10, fontSize: 13 }}
-          items={breadcrumb.map((crumb) => ({ title: crumb.to ? <Link to={crumb.to}>{crumb.label}</Link> : crumb.label }))}
+          items={breadcrumb.map((crumb) => ({
+            title: crumb.to ? (
+              <Link to={crumb.to}>{crumb.label}</Link>
+            ) : (
+              crumb.label
+            ),
+          }))}
         />
       )}
       <Flex justify="space-between" align="center" wrap gap={12}>

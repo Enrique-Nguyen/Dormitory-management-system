@@ -1,5 +1,6 @@
+import { Button } from '../ui/Surface'
 import { KeyOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
-import { App, Avatar, Button, Dropdown, type MenuProps } from 'antd'
+import { App, Avatar, Dropdown, type MenuProps } from 'antd'
 import { Link } from 'react-router'
 import { useState } from 'react'
 import { Permission } from '../../constants/authorization'
@@ -102,7 +103,8 @@ export default function UserMenu({ extraItems = [] }: Props) {
         <Avatar
           size={28}
           style={{
-            background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)',
+            background: 'var(--color-primary-light)',
+            color: 'var(--color-primary)',
             fontWeight: 600,
             fontSize: 13,
           }}

@@ -77,6 +77,8 @@ Fixed constraints: React SPA + Spring Boot 3 (Java 17+) + PostgreSQL 15+; modula
 
 ### Frontend
 
+**Giao diện dùng chung (15/10/2026):** mọi màn mới dùng `components/ui/FormControls` (Input, SearchInput, TextArea, InputNumber, Select, Checkbox, Switch), `DataTable` và `Surface` (Button/Card/Modal/Drawer/FilterBar/FormGrid), hoặc import qua `components/index.ts`. Không import trực tiếp các primitive tương ứng từ Ant Design trong trang nghiệp vụ. `ResponsiveTable` dùng DataTable ở desktop. Chuyển nguyên value/onChange/ref/aria-* vào control thật; không đặt wrapper DOM giữa Form.Item và control được bind. Màu/shadow chỉ khai ở `app/theme.ts`, gọi `initializeTheme` trước khởi tạo ứng dụng; CSS bố cục tại `index.css` dùng biến chung, không đặt màu riêng cho từng màn. Form dùng hai cột trên desktop, một cột trên mobile; trường nhiều dòng chiếm cả hàng. Giữ phân trang/lọc ở API và kiểm tra quyền hiện có khi đổi giao diện.
+
 React SPA with Ant Design (themed from the design tokens), React Router, TanStack Query, React Hook Form + Zod, Axios ( Bearer JWT, 401 interceptor). Layout: `app/`, `services/api/`, `features/<module>/`, `pages/<role>/`, `components/`, `constants/statusConfig.ts`, `utils/errorMessages.ts`. Four root routes `/student`, `/staff`, `/technician`, `/admin`; the guard reads the role from `GET /api/auth/me`. After each action invalidate the related queries; on 409 refetch and show the message for the `errorCode`. Mobile-first (from 360 px) for Student and Technician; desktop for Staff and Admin. Vite dev server proxies `/api` to `localhost:8080`.
 
 The UI template (shell) is in place; module work only fills in pages:

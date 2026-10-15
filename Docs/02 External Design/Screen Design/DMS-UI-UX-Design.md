@@ -34,6 +34,8 @@ Thiết kế ưu tiên **state + action** thay vì hiển thị tất cả thao 
 
 ## 2. Định hướng visual
 
+> Cập nhật triển khai 15/10/2026: giao diện dùng nền trắng/xám, màu xanh trầm làm điểm nhấn, không dùng gradient trang trí. Bộ màu và shadow khai một lần tại `app/theme.ts`, dùng chung cho CSS và Ant Design. Các màn ở cả bốn cổng dùng component `FormControls`, `DataTable`, `Surface`, `FormField`, `PageHeader` và `ResponsiveTable`; không tự tạo biến thể input/table/button theo từng màn. Thanh tìm kiếm/bộ lọc tự xuống hàng; form hai cột ở desktop, một cột dưới 640px. Giữ nguyên tên trường, lỗi validation, quyền và luồng CRUD. Khi mở màn phân quyền, mặc định xem ma trận ADMIN đầy đủ; bộ chọn ghi rõ vai trò đang phân quyền.
+
 Phong cách tổng thể:
 
 **University Portal + Modern SaaS Dashboard + Mobile App**

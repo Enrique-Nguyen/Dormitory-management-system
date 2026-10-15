@@ -1,15 +1,13 @@
+import { Checkbox, SearchInput, Select } from '../../components/ui/FormControls'
+import { Button, FilterBar } from '../../components/ui/Surface'
+import Table from '../../components/ui/DataTable'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
   App,
-  Button,
-  Checkbox,
   Flex,
-  Input,
-  Select,
   Space,
-  Table,
   Tag,
   Tooltip,
   Typography,
@@ -19,7 +17,7 @@ import { useEffect, useState } from 'react'
 import { useBlocker, useSearchParams } from 'react-router'
 import PageHeader from '../../components/layout/PageHeader'
 import { Action, Permission, Role } from '../../constants/authorization'
-import { roleLabel } from '../../constants/navigation'
+import { roleLabel, rolePermissionLabels } from '../../constants/navigation'
 import { meQueryKey, useMe } from '../../features/account/useMe'
 import { validationFieldErrors } from '../../features/crud/api'
 import { hasPermission } from '../../services/api/auth'
@@ -111,7 +109,7 @@ export default function RolePermissionsPage() {
   const role =
     requestedRole && Object.hasOwn(Role, requestedRole)
       ? (requestedRole as Role)
-      : Role.STAFF
+      : Role.ADMIN
   const [draft, setDraft] = useState<PermissionDraft | null>(null)
   const [search, setSearch] = useState('')
   const [group, setGroup] = useState<string | undefined>()
@@ -409,26 +407,27 @@ export default function RolePermissionsPage() {
           title="ADMIN luôn có toàn quyền. Ô không phù hợp với vai trò sẽ được khóa."
           description="Quyền đã lưu áp dụng ngay cho API, kể cả phiên đang đăng nhập; menu và nút được làm mới trong tối đa 30 giây. Phạm vi đơn vị, chủ sở hữu và trạng thái nghiệp vụ vẫn được kiểm tra."
         />
-        <Flex gap={12} wrap align="center">
-          <Typography.Text strong>Vai trò:</Typography.Text>
+        <FilterBar className="dms-matrix-toolbar">
+          <Typography.Text strong>
+            {rolePermissionLabels.roleSelector}:
+          </Typography.Text>
           <Select
-            aria-label="Vai trò cần phân quyền"
+            aria-label={rolePermissionLabels.roleSelector}
             value={role}
             disabled={busy}
             onChange={selectRole}
-            style={{ minWidth: 220 }}
             options={Object.values(Role).map((value) => ({
               value,
               label: roleLabel[value],
             }))}
           />
-          <Input.Search
+          <SearchInput
             aria-label="Tìm màn hình phân quyền"
             placeholder="Tìm màn hình / nghiệp vụ"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             allowClear
-            style={{ width: 300, maxWidth: '100%' }}
+            className="dms-matrix-search"
           />
           <Select
             aria-label="Lọc nhóm nghiệp vụ"
@@ -436,10 +435,9 @@ export default function RolePermissionsPage() {
             value={group}
             onChange={setGroup}
             allowClear
-            style={{ minWidth: 200 }}
             options={groups.map((value) => ({ value, label: value }))}
           />
-        </Flex>
+        </FilterBar>
         {matrixQuery.error ? (
           <Alert
             type="error"
@@ -462,9 +460,12 @@ export default function RolePermissionsPage() {
             <Flex justify="space-between" gap={12} wrap align="center">
               <Space wrap>
                 <Typography.Text>
-                  {selection.size} quyền được chọn
+                  {rolePermissionLabels.matrixTitle} — {roleLabel[role]}:{' '}
+                  {selection.size} {rolePermissionLabels.grantedCount}
                 </Typography.Text>
-                {matrix?.readOnly && <Tag color="blue">Chỉ xem</Tag>}
+                {matrix?.readOnly && (
+                  <Tag color="blue">{rolePermissionLabels.adminFullAccess}</Tag>
+                )}
                 {dirty && <Tag color="orange">Có thay đổi chưa lưu</Tag>}
               </Space>
               <Space wrap>
