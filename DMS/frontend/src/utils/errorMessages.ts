@@ -126,8 +126,6 @@ const messages: Record<string, (d: Details) => string> = {
     'Bạn đã gửi lựa chọn cho kỳ hè này. Hãy mở lựa chọn hiện có để theo dõi.',
   STORAGE_RECORD_EXISTS: () =>
     'Đã có phiếu gửi đồ chưa nhận lại. Hãy hoàn tất phiếu đó trước khi tạo phiếu mới.',
-  STUDENT_ALREADY_ASSIGNED: () =>
-    'Sinh viên đã có chỗ ở hoặc đang giữ chỗ. Hãy tải lại danh sách để xem phân phòng hiện tại.',
   DEPOSIT_INVALID: () =>
     'Giao dịch tiền cọc không hợp lệ. Hãy kiểm tra loại giao dịch và số tiền rồi thử lại.',
   RATE_EXISTS: (d) =>
