@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ConfigKey;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.StayRequestStatus;
@@ -99,7 +100,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                 queries.one("SELECT * FROM room_application WHERE id=? FOR UPDATE", applicationId);
         guard.requireUnit(((Number) application.get("preferredUnitId")).longValue());
         if (!ApplicationStatus.APPROVED.equals(application.get("status"))) {
-            throw BusinessException.conflict("INVALID_STATE_TRANSITION");
+            throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
         validateDates(input, null);
         String code =
@@ -155,7 +156,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                                 + " AND entity_id=?)",
                         Boolean.class,
                         id))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
         deleteRecord("dormitory_contract", id);
     }
@@ -168,7 +169,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                         Boolean.class,
                         id,
                         id))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
     }
 
@@ -238,7 +239,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
         guard.requireRole(Role.STUDENT);
         var c = requireContract(number(input, "contractId"), false);
         if (!ContractStatus.ACTIVE.equals(c.get("status"))) {
-            throw BusinessException.conflict("INVALID_STATE_TRANSITION");
+            throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
         if (extension) {
             validateExtension(input, c.get("endDate"));
@@ -308,7 +309,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
 
     private static void requirePending(Map<String, Object> row, String pendingStatus) {
         if (!pendingStatus.equals(row.get("status"))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
     }
 

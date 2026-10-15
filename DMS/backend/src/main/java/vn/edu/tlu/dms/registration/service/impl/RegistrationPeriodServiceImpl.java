@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
@@ -173,7 +174,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                     || input.openAt() != null
                     || input.unitIds() != null
                     || input.quotas() != null) {
-                throw BusinessException.conflict("INVALID_STATE_TRANSITION");
+                throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
             }
             if (input.closeAt() == null || !input.closeAt().isAfter(period.getCloseAt())) {
                 throw BusinessException.invalid("closeAt", "Chỉ được gia hạn ngày đóng");
@@ -201,7 +202,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                                 "SELECT EXISTS(SELECT 1 FROM room_application WHERE period_id=?)",
                                 Boolean.class,
                                 id))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
         quotas.deleteAll(quotas.findAll((r, q, b) -> b.equal(r.get("periodId"), id)));
         quotas.flush();
@@ -275,7 +276,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
             accounts.requireUnit(unitId);
             var actor = current.get();
             if (!actor.isAdmin() && !actor.crossUnitAccess() && !unitId.equals(actor.unitId())) {
-                throw new BusinessException("FORBIDDEN", 403);
+                throw BusinessException.forbidden();
             }
         }
         String kind = periods.findById(id).orElseThrow(BusinessException::notFound).getKind();

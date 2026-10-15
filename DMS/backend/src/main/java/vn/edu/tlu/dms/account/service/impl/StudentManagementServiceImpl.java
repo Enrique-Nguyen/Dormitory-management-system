@@ -11,6 +11,7 @@ import vn.edu.tlu.dms.account.service.AuthService;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
 import vn.edu.tlu.dms.account.service.StudentManagementService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.PageResponse;
@@ -187,7 +188,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                                         + " student_id=? AND ended_at IS NULL)",
                                 Boolean.class,
                                 id))) {
-            throw BusinessException.conflict("STUDENT_HAS_ACTIVE_CONTRACT");
+            throw BusinessException.conflict(ErrorCode.STUDENT_HAS_ACTIVE_CONTRACT);
         }
         String username = in.studentCode().trim();
         // Đổi mã sinh viên cũng đổi tên đăng nhập; thu hồi phiên chứa tên cũ trong cùng
@@ -232,7 +233,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                         Boolean.class,
                         id,
                         id))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
         var deletedUser = users.findById(id).orElseThrow(BusinessException::notFound);
         // Khóa danh tính trước; nếu xóa sau commit thất bại thì tài khoản ngoài vẫn không đăng nhập

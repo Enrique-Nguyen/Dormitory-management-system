@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.exception.BusinessException;
@@ -53,7 +54,7 @@ public class MaintenanceCrudServiceImpl implements MaintenanceCrudService {
         var request = requests.getMaintenanceRequestById(id);
         if ((!current.get().isAdmin() && !current.get().id().equals(request.requesterId()))
                 || !MaintenanceStatus.OPEN.equals(request.status())) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
     }
 

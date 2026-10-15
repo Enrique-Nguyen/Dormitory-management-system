@@ -2,6 +2,7 @@ package vn.edu.tlu.dms.registration.service.impl;
 
 import jakarta.persistence.criteria.Predicate;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
@@ -179,7 +181,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         Long studentId = resolveApplicationStudent(input.studentId());
         rooms.lockStudentProfile(studentId);
         if (rooms.hasPendingOrActiveContract(studentId)) {
-            throw BusinessException.conflict("CONTRACT_EXISTS");
+            throw BusinessException.conflict(ErrorCode.CONTRACT_EXISTS);
         }
         var a = new RoomApplication();
         a.setStudentId(studentId);
@@ -241,7 +243,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         if (action.equals(BusinessAction.SUBMIT)) {
             validateApplicationPeriod(a);
             if (rooms.hasPendingOrActiveContract(a.getStudentId())) {
-                throw BusinessException.conflict("CONTRACT_EXISTS");
+                throw BusinessException.conflict(ErrorCode.CONTRACT_EXISTS);
             }
             a.setPriorityScore(
                     priorities.findAll((r, q, b) -> b.equal(r.get("applicationId"), id)).stream()
@@ -302,7 +304,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         var actor = current.get();
         if (!actor.isAdmin()) {
             if (requestedStudentId != null && !requestedStudentId.equals(actor.id())) {
-                throw new BusinessException("FORBIDDEN", 403);
+                throw BusinessException.forbidden();
             }
             return actor.id();
         }
@@ -322,11 +324,11 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         if (!p.getKind().equals(RegistrationKind.REGULAR)
                 || now.isBefore(p.getOpenAt())
                 || !now.isBefore(p.getCloseAt())) {
-            throw BusinessException.conflict("PERIOD_NOT_OPEN");
+            throw BusinessException.conflict(ErrorCode.PERIOD_NOT_OPEN);
         }
         if (!periodUnits.existsById(
                 new RegistrationPeriodUnitId(p.getId(), a.getPreferredUnitId()))) {
-            throw new BusinessException("UNIT_NOT_IN_PERIOD", 400);
+            throw new BusinessException(ErrorCode.UNIT_NOT_IN_PERIOD, HttpStatus.BAD_REQUEST);
         }
         if (a.getPreferredRoomTypeId() != null) {
             rooms.requireActiveRoomType(a.getPreferredRoomTypeId());

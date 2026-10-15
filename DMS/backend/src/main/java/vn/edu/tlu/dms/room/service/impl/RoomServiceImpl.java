@@ -4,6 +4,7 @@ import jakarta.persistence.criteria.Predicate;
 
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RoomStatus;
@@ -304,7 +306,7 @@ public class RoomServiceImpl implements RoomService {
         var bed = lockAndFindBed(id);
         findAccessibleRoom(bed.getRoomId(), true);
         if (!input.status().equals(BedOperationStatus.ACTIVE) && hasOpenBedAssignment(id)) {
-            throw BusinessException.conflict("BED_OCCUPIED");
+            throw BusinessException.conflict(ErrorCode.BED_OCCUPIED);
         }
         String before = bed.getStatus();
         bed.setStatus(input.status());
@@ -331,7 +333,7 @@ public class RoomServiceImpl implements RoomService {
                         + " WHERE b.room_id=?)",
                 Boolean.class,
                 id)) {
-            throw BusinessException.conflict("ROOM_OCCUPIED");
+            throw BusinessException.conflict(ErrorCode.ROOM_OCCUPIED);
         }
         var rows = beds.findAll((b, q, cb) -> cb.equal(b.get("roomId"), id));
         beds.deleteAll(rows);
@@ -349,7 +351,7 @@ public class RoomServiceImpl implements RoomService {
         var bed = lockAndFindBed(id);
         findAccessibleRoom(bed.getRoomId(), true);
         if (assignments.exists((r, q, b) -> b.equal(r.get("bedId"), id))) {
-            throw BusinessException.conflict("BED_OCCUPIED");
+            throw BusinessException.conflict(ErrorCode.BED_OCCUPIED);
         }
         beds.delete(bed);
         beds.flush();
@@ -371,7 +373,7 @@ public class RoomServiceImpl implements RoomService {
                         id,
                         studentId);
         if (!staying) {
-            throw BusinessException.conflict("LEADER_NOT_STAYING");
+            throw BusinessException.conflict(ErrorCode.LEADER_NOT_STAYING);
         }
         Long before = r.getLeaderStudentId();
         r.setLeaderStudentId(studentId);
@@ -445,7 +447,9 @@ public class RoomServiceImpl implements RoomService {
                         r.getId());
         if (count > 0) {
             throw new BusinessException(
-                    "ROOM_OCCUPIED", 409, Map.of("roomCode", r.getCode(), "count", count));
+                    ErrorCode.ROOM_OCCUPIED,
+                    HttpStatus.CONFLICT,
+                    Map.of("roomCode", r.getCode(), "count", count));
         }
     }
 

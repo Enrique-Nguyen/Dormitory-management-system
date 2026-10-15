@@ -8,6 +8,7 @@ import vn.edu.tlu.dms.billing.api.UtilityReadingController.Input;
 import vn.edu.tlu.dms.billing.service.UtilityReadingService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
@@ -114,7 +115,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
     private void requireEditable(Map<String, Object> row) {
         guard.requireUnit(rooms.getRoomLocation(((Number) row.get("roomId")).longValue()).unitId());
         if (Boolean.TRUE.equals(row.get("invoiced"))) {
-            throw BusinessException.conflict("READING_LOCKED");
+            throw BusinessException.conflict(ErrorCode.READING_LOCKED);
         }
         if (Boolean.TRUE.equals(
                 jdbc.queryForObject(
@@ -124,7 +125,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
                         row.get("roomId"),
                         row.get("meterType"),
                         row.get("billingMonth")))) {
-            throw BusinessException.conflict("READING_HAS_FOLLOWING_MONTH");
+            throw BusinessException.conflict(ErrorCode.READING_HAS_FOLLOWING_MONTH);
         }
     }
 
@@ -179,7 +180,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
                         || input.endReading() < input.newMeterStart()
                         || replacement == null
                         || replacement.isBlank()) {
-            throw BusinessException.conflict("READING_INVALID");
+            throw BusinessException.conflict(ErrorCode.READING_INVALID);
         }
         if (id == null) {
             id =

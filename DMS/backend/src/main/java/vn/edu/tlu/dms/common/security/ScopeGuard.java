@@ -45,7 +45,7 @@ public class ScopeGuard {
                 return;
             }
         }
-        throw new BusinessException("FORBIDDEN", 403);
+        throw BusinessException.forbidden();
     }
 
     public void requireUnit(Long unitId) {
@@ -85,7 +85,7 @@ public class ScopeGuard {
     /** Thiếu quyền thao tác trả 403; phạm vi đối tượng vẫn được kiểm tra riêng sau đó. */
     public void requirePermission(String permission) {
         if (!hasPermission(permission)) {
-            throw new BusinessException("FORBIDDEN", 403);
+            throw BusinessException.forbidden();
         }
     }
 

@@ -2,11 +2,13 @@ package vn.edu.tlu.dms.maintenance.service.impl;
 
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.maintenance.domain.MaintenancePhoto;
 import vn.edu.tlu.dms.maintenance.repository.MaintenancePhotoRepository;
@@ -46,18 +48,23 @@ public class MaintenancePhotoServiceImpl implements MaintenancePhotoService {
             return;
         }
         if (photos.size() > 3) {
-            throw new BusinessException("PHOTO_INVALID", 400, Map.of("reason", "COUNT"));
+            throw new BusinessException(
+                    ErrorCode.PHOTO_INVALID, HttpStatus.BAD_REQUEST, Map.of("reason", "COUNT"));
         }
         for (MultipartFile photo : photos) {
             if (photo.isEmpty() || photo.getSize() > 5L * 1024 * 1024) {
-                throw new BusinessException("PHOTO_INVALID", 400, Map.of("reason", "SIZE"));
+                throw new BusinessException(
+                        ErrorCode.PHOTO_INVALID, HttpStatus.BAD_REQUEST, Map.of("reason", "SIZE"));
             }
             Path target = null;
             try {
                 byte[] bytes = photo.getBytes();
                 String extension = detectImageExtension(bytes);
                 if (extension == null) {
-                    throw new BusinessException("PHOTO_INVALID", 400, Map.of("reason", "TYPE"));
+                    throw new BusinessException(
+                            ErrorCode.PHOTO_INVALID,
+                            HttpStatus.BAD_REQUEST,
+                            Map.of("reason", "TYPE"));
                 }
                 Files.createDirectories(uploadDirectory);
                 target = uploadDirectory.resolve(UUID.randomUUID() + "." + extension);
@@ -83,7 +90,8 @@ public class MaintenancePhotoServiceImpl implements MaintenancePhotoService {
                 if (target != null) {
                     deleteQuietly(target);
                 }
-                throw new BusinessException("PHOTO_UPLOAD_FAILED", 500);
+                throw new BusinessException(
+                        ErrorCode.PHOTO_UPLOAD_FAILED, HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
     }

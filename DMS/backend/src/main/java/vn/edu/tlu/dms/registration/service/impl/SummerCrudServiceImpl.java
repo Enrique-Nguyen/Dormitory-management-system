@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
@@ -107,7 +108,7 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
         guard.requireRole(Role.STUDENT);
         var c = requireContract(number(input, "contractId"));
         if (!ContractStatus.ACTIVE.equals(c.get("status"))) {
-            throw BusinessException.conflict("INVALID_STATE_TRANSITION");
+            throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
         String type =
                 jdbc.queryForObject(
@@ -151,7 +152,7 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
         var row = queries.one("SELECT * FROM summer_choice WHERE id=? FOR UPDATE", id);
         requireContract(number(row, "contractId"));
         if (!SummerStatus.PENDING.equals(row.get("status"))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
     }
 

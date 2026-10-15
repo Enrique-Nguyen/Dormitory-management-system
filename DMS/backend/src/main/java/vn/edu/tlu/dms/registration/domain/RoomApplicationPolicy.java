@@ -1,7 +1,10 @@
 package vn.edu.tlu.dms.registration.domain;
 
+import org.springframework.http.HttpStatus;
+
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
@@ -52,8 +55,8 @@ public final class RoomApplicationPolicy {
     public static void requireAction(RoomApplication application, Actor actor, String action) {
         if (!allowedActions(application, actor).contains(action)) {
             throw new BusinessException(
-                    "INVALID_STATE_TRANSITION",
-                    409,
+                    ErrorCode.INVALID_STATE_TRANSITION,
+                    HttpStatus.CONFLICT,
                     Map.of("currentStatus", application.getStatus()));
         }
     }

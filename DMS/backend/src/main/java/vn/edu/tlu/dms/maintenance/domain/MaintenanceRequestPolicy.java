@@ -1,6 +1,9 @@
 package vn.edu.tlu.dms.maintenance.domain;
 
+import org.springframework.http.HttpStatus;
+
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
@@ -63,7 +66,9 @@ public final class MaintenanceRequestPolicy {
             MaintenanceRequest request, Actor actor, boolean staffCanAccept, String action) {
         if (!allowedActions(request, actor, staffCanAccept).contains(action)) {
             throw new BusinessException(
-                    "INVALID_STATE_TRANSITION", 409, Map.of("currentStatus", request.getStatus()));
+                    ErrorCode.INVALID_STATE_TRANSITION,
+                    HttpStatus.CONFLICT,
+                    Map.of("currentStatus", request.getStatus()));
         }
     }
 }

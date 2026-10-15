@@ -1,6 +1,7 @@
 package vn.edu.tlu.dms.maintenance.service.impl;
 
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -8,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
@@ -125,18 +127,20 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         var request = new MaintenanceRequest();
         if (actor.is(Role.STUDENT)) {
             if (input.roomId() != null || input.buildingId() != null || input.floor() != null) {
-                throw new BusinessException("TICKET_LOCATION_INVALID", 400);
+                throw new BusinessException(
+                        ErrorCode.TICKET_LOCATION_INVALID, HttpStatus.BAD_REQUEST);
             }
             request.setRoomId(
                     rooms.findCurrentStayingRoomId(actor.id())
-                            .orElseThrow(() -> BusinessException.conflict("NOT_STAYING")));
+                            .orElseThrow(() -> BusinessException.conflict(ErrorCode.NOT_STAYING)));
         } else {
             boolean roomLocation =
                     input.roomId() != null && input.buildingId() == null && input.floor() == null;
             boolean commonLocation =
                     input.roomId() == null && input.buildingId() != null && input.floor() != null;
             if (!roomLocation && !commonLocation) {
-                throw new BusinessException("TICKET_LOCATION_INVALID", 400);
+                throw new BusinessException(
+                        ErrorCode.TICKET_LOCATION_INVALID, HttpStatus.BAD_REQUEST);
             }
             if (roomLocation) {
                 guard.requireUnit(rooms.getRoomLocation(input.roomId()).unitId());
@@ -176,7 +180,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         var technician = accounts.user(technicianId);
         if (!technician.role().equals(Role.TECHNICIAN)
                 || !Objects.equals(technician.unitId(), requestUnitId(request))) {
-            throw BusinessException.conflict("TECHNICIAN_OUT_OF_UNIT");
+            throw BusinessException.conflict(ErrorCode.TECHNICIAN_OUT_OF_UNIT);
         }
         request.setAssignedTo(technicianId);
         changeStatusAndRecordHistory(request, MaintenanceStatus.ASSIGNED, null);

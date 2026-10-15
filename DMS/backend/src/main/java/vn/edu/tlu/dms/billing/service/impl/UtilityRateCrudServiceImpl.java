@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.billing.api.UtilityRateDtos;
 import vn.edu.tlu.dms.billing.service.UtilityRateCrudService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
@@ -52,7 +53,7 @@ public class UtilityRateCrudServiceImpl implements UtilityRateCrudService {
             throw BusinessException.notFound();
         }
         if (!((LocalDate) row.get("effectiveFrom")).isAfter(LocalDate.now())) {
-            throw BusinessException.conflict("RATE_ALREADY_EFFECTIVE");
+            throw BusinessException.conflict(ErrorCode.RATE_ALREADY_EFFECTIVE);
         }
         return row;
     }
@@ -62,7 +63,7 @@ public class UtilityRateCrudServiceImpl implements UtilityRateCrudService {
         guard.requirePermission(Permission.UTILITY_RATE_UPDATE);
         var before = requireUnusedRate(id);
         if (!input.effectiveFrom().isAfter(LocalDate.now())) {
-            throw BusinessException.conflict("RATE_ALREADY_EFFECTIVE");
+            throw BusinessException.conflict(ErrorCode.RATE_ALREADY_EFFECTIVE);
         }
         jdbc.update(
                 "UPDATE utility_rate SET meter_type=?,unit_price=?,effective_from=? WHERE id=?",

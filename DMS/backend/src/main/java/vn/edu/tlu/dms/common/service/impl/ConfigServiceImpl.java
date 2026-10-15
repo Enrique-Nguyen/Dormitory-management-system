@@ -1,9 +1,11 @@
 package vn.edu.tlu.dms.common.service.impl;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.repository.SystemConfigRepository;
@@ -62,7 +64,7 @@ public class ConfigServiceImpl implements ConfigService {
                 throw new NumberFormatException();
             }
         } catch (NumberFormatException e) {
-            throw new BusinessException("CONFIG_VALUE_INVALID", 400);
+            throw new BusinessException(ErrorCode.CONFIG_VALUE_INVALID, HttpStatus.BAD_REQUEST);
         }
         String before = row.getValue();
         row.setValue(value);

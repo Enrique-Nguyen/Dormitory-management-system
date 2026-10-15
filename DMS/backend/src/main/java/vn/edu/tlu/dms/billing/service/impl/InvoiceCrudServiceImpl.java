@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.billing.service.InvoiceCrudService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
@@ -125,7 +126,7 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
                                 Boolean.class,
                                 id,
                                 id))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
         return row;
     }

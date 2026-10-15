@@ -14,6 +14,73 @@ public final class DmsConstants {
 
     private DmsConstants() {}
 
+    public static final class ErrorCode {
+        public static final String ACCOUNT_LOCKED = "ACCOUNT_LOCKED";
+        public static final String ADMIN_PERMISSIONS_IMMUTABLE = "ADMIN_PERMISSIONS_IMMUTABLE";
+        public static final String APPLICATION_EXISTS = "APPLICATION_EXISTS";
+        public static final String BED_OCCUPIED = "BED_OCCUPIED";
+        public static final String BED_TAKEN = "BED_TAKEN";
+        public static final String BOOTSTRAP_USERNAME_IN_USE = "BOOTSTRAP_USERNAME_IN_USE";
+        public static final String CONCURRENT_UPDATE = "CONCURRENT_UPDATE";
+        public static final String CONFIG_VALUE_INVALID = "CONFIG_VALUE_INVALID";
+        public static final String CONTRACT_EXISTS = "CONTRACT_EXISTS";
+        public static final String CROSS_UNIT_ONLY_STAFF = "CROSS_UNIT_ONLY_STAFF";
+        public static final String DEPOSIT_INVALID = "DEPOSIT_INVALID";
+        public static final String DUPLICATE_INVOICE = "DUPLICATE_INVOICE";
+        public static final String DUPLICATE_USERNAME = "DUPLICATE_USERNAME";
+        public static final String FILE_TOO_LARGE = "FILE_TOO_LARGE";
+        public static final String FORBIDDEN = "FORBIDDEN";
+        public static final String IDENTITY_ALREADY_LINKED = "IDENTITY_ALREADY_LINKED";
+        public static final String IDENTITY_NOT_CONFIGURED = "IDENTITY_NOT_CONFIGURED";
+        public static final String IDENTITY_NOT_LINKED = "IDENTITY_NOT_LINKED";
+        public static final String IDENTITY_UNAVAILABLE = "IDENTITY_UNAVAILABLE";
+        public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
+        public static final String INVALID_STATE_TRANSITION = "INVALID_STATE_TRANSITION";
+        public static final String INVOICE_ALREADY_PAID = "INVOICE_ALREADY_PAID";
+        public static final String LEADER_NOT_STAYING = "LEADER_NOT_STAYING";
+        public static final String NOT_FOUND = "NOT_FOUND";
+        public static final String NOT_STAYING = "NOT_STAYING";
+        public static final String PERIOD_NOT_OPEN = "PERIOD_NOT_OPEN";
+        public static final String PERMISSION_MATRIX_STALE = "PERMISSION_MATRIX_STALE";
+        public static final String PERMISSION_MATRIX_UNAVAILABLE = "PERMISSION_MATRIX_UNAVAILABLE";
+        public static final String PHOTO_INVALID = "PHOTO_INVALID";
+        public static final String PHOTO_UPLOAD_FAILED = "PHOTO_UPLOAD_FAILED";
+        public static final String RATE_ALREADY_EFFECTIVE = "RATE_ALREADY_EFFECTIVE";
+        public static final String RATE_EXISTS = "RATE_EXISTS";
+        public static final String READING_HAS_FOLLOWING_MONTH = "READING_HAS_FOLLOWING_MONTH";
+        public static final String READING_INVALID = "READING_INVALID";
+        public static final String READING_LOCKED = "READING_LOCKED";
+        public static final String REQUEST_PENDING_EXISTS = "REQUEST_PENDING_EXISTS";
+        public static final String RESOURCE_IN_USE = "RESOURCE_IN_USE";
+        public static final String ROOM_CODE_EXISTS = "ROOM_CODE_EXISTS";
+        public static final String ROOM_OCCUPIED = "ROOM_OCCUPIED";
+        public static final String SEMESTER_OVERLAP = "SEMESTER_OVERLAP";
+        public static final String SESSION_REVOKED = "SESSION_REVOKED";
+        public static final String STORAGE_RECORD_EXISTS = "STORAGE_RECORD_EXISTS";
+        public static final String STUDENT_ALREADY_ASSIGNED = "STUDENT_ALREADY_ASSIGNED";
+        public static final String STUDENT_HAS_ACTIVE_CONTRACT = "STUDENT_HAS_ACTIVE_CONTRACT";
+        public static final String SUMMER_CHOICE_EXISTS = "SUMMER_CHOICE_EXISTS";
+        public static final String TECHNICIAN_OUT_OF_UNIT = "TECHNICIAN_OUT_OF_UNIT";
+        public static final String TICKET_LOCATION_INVALID = "TICKET_LOCATION_INVALID";
+        public static final String UNAUTHENTICATED = "UNAUTHENTICATED";
+        public static final String UNIT_NOT_IN_PERIOD = "UNIT_NOT_IN_PERIOD";
+        public static final String USERNAME_EXISTS = "USERNAME_EXISTS";
+        public static final String VALIDATION_FAILED = "VALIDATION_FAILED";
+
+        private ErrorCode() {}
+    }
+
+    public static final class ApiField {
+        public static final String FIELD_ERRORS = "fieldErrors";
+        public static final String FIELD = "field";
+        public static final String MESSAGE = "message";
+        public static final String ROLE = "role";
+        public static final String VERSION = "version";
+        public static final String PERMISSIONS = "permissions";
+
+        private ApiField() {}
+    }
+
     /** Vai trò nghiệp vụ; ma trận quyền cụ thể được quản lý tại ScopeGuard. */
     public static final class Role {
         public static final String ADMIN = "ADMIN";

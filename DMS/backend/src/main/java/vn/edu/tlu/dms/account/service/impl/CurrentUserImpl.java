@@ -1,10 +1,12 @@
 package vn.edu.tlu.dms.account.service.impl;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.KeycloakClaim;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
@@ -26,7 +28,7 @@ public class CurrentUserImpl implements CurrentUser {
     public Actor get() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
-            throw new BusinessException("UNAUTHENTICATED", 401);
+            throw new BusinessException(ErrorCode.UNAUTHENTICATED, HttpStatus.UNAUTHORIZED);
         }
         return getKeycloakActor(jwt);
     }
@@ -38,10 +40,11 @@ public class CurrentUserImpl implements CurrentUser {
                         + " app_user WHERE keycloak_user_id=?",
                 rows -> {
                     if (!rows.next()) {
-                        throw new BusinessException("IDENTITY_NOT_LINKED", 403);
+                        throw new BusinessException(
+                                ErrorCode.IDENTITY_NOT_LINKED, HttpStatus.FORBIDDEN);
                     }
                     if (rows.getBoolean("locked")) {
-                        throw new BusinessException("ACCOUNT_LOCKED", 403);
+                        throw new BusinessException(ErrorCode.ACCOUNT_LOCKED, HttpStatus.FORBIDDEN);
                     }
                     Map<String, Object> access = jwt.getClaimAsMap(KeycloakClaim.REALM_ACCESS);
                     Object roles = access == null ? null : access.get(KeycloakClaim.ROLES);
@@ -51,7 +54,8 @@ public class CurrentUserImpl implements CurrentUser {
                             || version == null
                             || !Long.toString(rows.getLong("security_version"))
                                     .equals(version.toString())) {
-                        throw new BusinessException("SESSION_REVOKED", 401);
+                        throw new BusinessException(
+                                ErrorCode.SESSION_REVOKED, HttpStatus.UNAUTHORIZED);
                     }
                     // Keycloak hoàn tất required action UPDATE_PASSWORD trước khi cấp token đăng
                     // nhập.

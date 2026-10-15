@@ -11,6 +11,7 @@ import vn.edu.tlu.dms.billing.domain.Invoice;
 import vn.edu.tlu.dms.billing.repository.InvoiceItemRepository;
 import vn.edu.tlu.dms.billing.repository.InvoiceRepository;
 import vn.edu.tlu.dms.billing.service.InvoiceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
@@ -134,7 +135,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             }
         }
         if (!invoice.getStatus().equals(InvoiceStatus.UNPAID)) {
-            throw BusinessException.conflict("INVOICE_ALREADY_PAID");
+            throw BusinessException.conflict(ErrorCode.INVOICE_ALREADY_PAID);
         }
         if (input.payerUserId() != null) {
             accounts.user(input.payerUserId());

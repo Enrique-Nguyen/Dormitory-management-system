@@ -22,6 +22,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -295,7 +296,7 @@ public class UserServiceImpl implements UserService {
         guard.requirePermission(Permission.USER_CROSS_UNIT_ACCESS);
         var u = authService.lockAccount(id);
         if (!u.getRole().equals(Role.STAFF)) {
-            throw BusinessException.conflict("CROSS_UNIT_ONLY_STAFF");
+            throw BusinessException.conflict(ErrorCode.CROSS_UNIT_ONLY_STAFF);
         }
         boolean before = u.getCrossUnitAccess();
         u.setCrossUnitAccess(enabled);

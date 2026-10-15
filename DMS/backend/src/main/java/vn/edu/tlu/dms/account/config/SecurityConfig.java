@@ -12,6 +12,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Role;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -21,6 +23,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
@@ -33,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.account.security.AccountAccessFilter;
 import vn.edu.tlu.dms.common.constants.DmsConstants;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.KeycloakClaim;
 import vn.edu.tlu.dms.common.dto.ApiError;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -92,7 +96,7 @@ public class SecurityConfig {
                                         ? OAuth2TokenValidatorResult.success()
                                         : OAuth2TokenValidatorResult.failure(
                                                 new OAuth2Error(
-                                                        "invalid_token",
+                                                        OAuth2ErrorCodes.INVALID_TOKEN,
                                                         "Invalid audience",
                                                         null))));
         return decoder;
@@ -139,13 +143,15 @@ public class SecurityConfig {
                                 oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter))
                                         .authenticationEntryPoint(
                                                 (request, response, failure) -> {
-                                                    response.setStatus(401);
-                                                    response.setContentType("application/json");
+                                                    response.setStatus(
+                                                            HttpStatus.UNAUTHORIZED.value());
+                                                    response.setContentType(
+                                                            MediaType.APPLICATION_JSON_VALUE);
                                                     mapper.writeValue(
                                                             response.getWriter(),
                                                             new ApiError(
-                                                                    "UNAUTHENTICATED",
-                                                                    "UNAUTHENTICATED",
+                                                                    ErrorCode.UNAUTHENTICATED,
+                                                                    ErrorCode.UNAUTHENTICATED,
                                                                     Map.of(),
                                                                     null));
                                                 }))
@@ -153,13 +159,14 @@ public class SecurityConfig {
                         errors ->
                                 errors.accessDeniedHandler(
                                         (request, response, failure) -> {
-                                            response.setStatus(403);
-                                            response.setContentType("application/json");
+                                            response.setStatus(HttpStatus.FORBIDDEN.value());
+                                            response.setContentType(
+                                                    MediaType.APPLICATION_JSON_VALUE);
                                             mapper.writeValue(
                                                     response.getWriter(),
                                                     new ApiError(
-                                                            "FORBIDDEN",
-                                                            "FORBIDDEN",
+                                                            ErrorCode.FORBIDDEN,
+                                                            ErrorCode.FORBIDDEN,
                                                             Map.of(),
                                                             null));
                                         }))

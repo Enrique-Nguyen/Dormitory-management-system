@@ -217,7 +217,7 @@ public class NotificationServiceImpl implements NotificationService {
         switch (input.scope()) {
             case NotificationScope.ALL -> {
                 if (!currentUser.get().canReadAllUnits()) {
-                    throw new BusinessException("FORBIDDEN", 403);
+                    throw BusinessException.forbidden();
                 }
             }
             case NotificationScope.UNIT -> {
