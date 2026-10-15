@@ -14,6 +14,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.PlacementSource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RoomStatus;
 import vn.edu.tlu.dms.common.dto.PageResponse;
@@ -21,14 +22,20 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.service.PlacementContextLookup;
+import vn.edu.tlu.dms.common.service.PlacementContextLookup.PlacementContext;
 import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
+import vn.edu.tlu.dms.room.api.RoomDtos.AvailableRoom;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedInput;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedResponse;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedStatus;
+import vn.edu.tlu.dms.room.api.RoomDtos.FreeBed;
 import vn.edu.tlu.dms.room.api.RoomDtos.Input;
 import vn.edu.tlu.dms.room.api.RoomDtos.Occupant;
 import vn.edu.tlu.dms.room.api.RoomDtos.Response;
+import vn.edu.tlu.dms.room.api.RoomDtos.RoomRef;
+import vn.edu.tlu.dms.room.api.RoomDtos.RoomTypeRef;
 import vn.edu.tlu.dms.room.api.RoomDtos.Status;
 import vn.edu.tlu.dms.room.domain.Bed;
 import vn.edu.tlu.dms.room.domain.Building;
@@ -38,13 +45,16 @@ import vn.edu.tlu.dms.room.repository.BedRepository;
 import vn.edu.tlu.dms.room.repository.RoomAssignmentHistoryRepository;
 import vn.edu.tlu.dms.room.repository.RoomRepository;
 import vn.edu.tlu.dms.room.repository.RoomTypeRepository;
+import vn.edu.tlu.dms.room.service.OccupancyQuery;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
 import vn.edu.tlu.dms.room.service.RoomService;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -71,6 +81,10 @@ public class RoomServiceImpl implements RoomService {
 
     private final AuditService audit;
 
+    private final OccupancyQuery occupancy;
+
+    private final List<PlacementContextLookup> placementLookups;
+
     public RoomServiceImpl(
             RoomRepository rooms,
             BedRepository beds,
@@ -81,7 +95,9 @@ public class RoomServiceImpl implements RoomService {
             CurrentUser current,
             RoomReferenceService references,
             AccountReferenceService accounts,
-            AuditService audit) {
+            AuditService audit,
+            OccupancyQuery occupancy,
+            List<PlacementContextLookup> placementLookups) {
         this.rooms = rooms;
         this.beds = beds;
         this.types = types;
@@ -92,6 +108,8 @@ public class RoomServiceImpl implements RoomService {
         this.references = references;
         this.accounts = accounts;
         this.audit = audit;
+        this.occupancy = occupancy;
+        this.placementLookups = placementLookups;
     }
 
     @Override
@@ -414,6 +432,105 @@ public class RoomServiceImpl implements RoomService {
                 before,
                 null,
                 trimRequiredText(reason, "reason"));
+    }
+
+    @Override
+    public List<AvailableRoom> findAvailableBeds(
+            Long applicationId, Long transferRequestId, Long buildingId, Long roomTypeId) {
+        guard.requirePermission(Permission.BED_READ);
+        if ((applicationId == null) == (transferRequestId == null)) {
+            throw BusinessException.invalid(
+                    PlacementSource.APPLICATION,
+                    "Truyền đúng một trong applicationId hoặc transferRequestId");
+        }
+        String source =
+                applicationId != null
+                        ? PlacementSource.APPLICATION
+                        : PlacementSource.TRANSFER_REQUEST;
+        Long sourceId = applicationId != null ? applicationId : transferRequestId;
+        PlacementContext context =
+                placementLookups.stream()
+                        .filter(lookup -> lookup.source().equals(source))
+                        .findFirst()
+                        .flatMap(lookup -> lookup.find(sourceId))
+                        .orElseThrow(BusinessException::notFound);
+        Long unitId = context.preferredUnitId();
+        if (unitId == null) {
+            // BR-05: chỉ giường cùng đơn vị với giường hiện tại của hợp đồng.
+            unitId =
+                    occupancy
+                            .findOpenAssignmentByContract(context.contractId())
+                            .orElseThrow(() -> BusinessException.conflict(ErrorCode.NOT_STAYING))
+                            .managementUnitId();
+        }
+        guard.requireUnit(unitId);
+        if (!context.ready()) {
+            throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
+        }
+        String gender =
+                jdbc.queryForObject(
+                        "SELECT gender FROM student_profile WHERE user_id=?",
+                        String.class,
+                        context.studentId());
+        Long preferredType = context.preferredRoomTypeId();
+        Map<Long, AvailableRoom> grouped = new LinkedHashMap<>();
+        jdbc.query(
+                """
+                SELECT r.id AS room_id, r.code AS room_code, r.floor, r.gender,
+                       bd.id AS building_id, bd.code AS building_code,
+                       rt.id AS room_type_id, rt.name AS room_type_name, rt.price_main,
+                       o.active_beds, o.occupied_beds, o.held_beds,
+                       b.id AS bed_id, b.code AS bed_code
+                FROM bed b
+                JOIN room r ON r.id = b.room_id
+                JOIN building bd ON bd.id = r.building_id
+                JOIN room_type rt ON rt.id = r.room_type_id
+                JOIN v_room_occupancy o ON o.room_id = r.id
+                WHERE bd.management_unit_id = ? AND r.gender = ?
+                  AND r.status = ? AND b.status = ?
+                  AND NOT EXISTS (SELECT 1 FROM room_assignment_history a
+                                  WHERE a.bed_id = b.id AND a.ended_at IS NULL)
+                  AND (CAST(? AS BIGINT) IS NULL OR bd.id = ?)
+                  AND (CAST(? AS BIGINT) IS NULL OR rt.id = ?)
+                ORDER BY (rt.id = CAST(? AS BIGINT)) DESC NULLS LAST, bd.code, r.code, b.code
+                """,
+                rs -> {
+                    Long roomId = rs.getLong("room_id");
+                    var room = grouped.get(roomId);
+                    if (room == null) {
+                        Long typeId = rs.getLong("room_type_id");
+                        room =
+                                new AvailableRoom(
+                                        new RoomRef(
+                                                roomId,
+                                                rs.getString("room_code"),
+                                                rs.getLong("building_id"),
+                                                rs.getString("building_code"),
+                                                rs.getShort("floor"),
+                                                new RoomTypeRef(
+                                                        typeId, rs.getString("room_type_name")),
+                                                rs.getString("gender"),
+                                                rs.getLong("price_main")),
+                                        Objects.equals(typeId, preferredType),
+                                        new ArrayList<>(),
+                                        rs.getLong("active_beds"),
+                                        rs.getLong("occupied_beds"),
+                                        rs.getLong("held_beds"));
+                        grouped.put(roomId, room);
+                    }
+                    room.freeBeds()
+                            .add(new FreeBed(rs.getLong("bed_id"), rs.getString("bed_code")));
+                },
+                unitId,
+                gender,
+                RoomStatus.ACTIVE,
+                BedOperationStatus.ACTIVE,
+                buildingId,
+                buildingId,
+                roomTypeId,
+                roomTypeId,
+                preferredType);
+        return List.copyOf(grouped.values());
     }
 
     /**

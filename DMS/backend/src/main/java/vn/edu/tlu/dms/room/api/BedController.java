@@ -4,18 +4,23 @@ import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
+import vn.edu.tlu.dms.room.api.RoomDtos.AvailableRoom;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedResponse;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedStatus;
 import vn.edu.tlu.dms.room.service.RoomService;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/beds")
@@ -25,6 +30,16 @@ public class BedController {
 
     public BedController(RoomService service) {
         this.service = service;
+    }
+
+    @RequirePrivilege(Permission.BED_READ)
+    @GetMapping("/available")
+    public List<AvailableRoom> findAvailableBeds(
+            @RequestParam(required = false) Long applicationId,
+            @RequestParam(required = false) Long transferRequestId,
+            @RequestParam(required = false) Long buildingId,
+            @RequestParam(required = false) Long roomTypeId) {
+        return service.findAvailableBeds(applicationId, transferRequestId, buildingId, roomTypeId);
     }
 
     @RequirePrivilege(Permission.BED_UPDATE)

@@ -1,6 +1,7 @@
 package vn.edu.tlu.dms.room.service;
 
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.room.api.RoomDtos.AvailableRoom;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedInput;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedResponse;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedStatus;
@@ -71,4 +72,14 @@ public interface RoomService {
 
     /** Gỡ trưởng phòng với lý do; giữ bản ghi cũ trong nhật ký. */
     void removeRoomLeader(Long id, String reason);
+
+    /**
+     * Liệt kê giường trống gom theo phòng cho split view (API 4.4, UC-16, UC-18). Truyền đúng một
+     * nguồn: applicationId (đơn APPROVED, lọc theo đơn vị nguyện vọng, phòng đúng loại mong muốn
+     * xếp trước) hoặc transferRequestId (yêu cầu PENDING, chỉ giường cùng đơn vị với giường hiện
+     * tại, BR-05). Chỉ gồm phòng/giường ACTIVE, đúng giới tính sinh viên, không có phân phòng mở;
+     * buildingId, roomTypeId là bộ lọc tùy chọn. Nguồn ngoài đơn vị của Staff trả 404.
+     */
+    List<AvailableRoom> findAvailableBeds(
+            Long applicationId, Long transferRequestId, Long buildingId, Long roomTypeId);
 }

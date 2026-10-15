@@ -661,6 +661,14 @@ public final class DmsConstants {
         private AssignmentEndReason() {}
     }
 
+    /** Nguồn yêu cầu chọn giường cho split view (API 4.4); tên khớp tham số truy vấn. */
+    public static final class PlacementSource {
+        public static final String APPLICATION = "applicationId";
+        public static final String TRANSFER_REQUEST = "transferRequestId";
+
+        private PlacementSource() {}
+    }
+
     /** Loại đối tượng ghi vào audit_log của module phòng; không phải tên bảng SQL. */
     public static final class AuditEntityType {
         public static final String ROOM = "ROOM";

@@ -33,7 +33,9 @@ import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.room.service.BedOccupancyService;
+import vn.edu.tlu.dms.room.api.RoomDtos.AvailableRoom;
 import vn.edu.tlu.dms.room.service.OccupancyQuery;
+import vn.edu.tlu.dms.room.service.RoomService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,6 +60,8 @@ class BedOccupancyIntegrationTest {
     @Autowired BedOccupancyService occupancy;
 
     @Autowired OccupancyQuery occupancyQuery;
+
+    @Autowired RoomService roomService;
 
     @Autowired JdbcTemplate jdbc;
 
@@ -351,6 +355,81 @@ class BedOccupancyIntegrationTest {
     }
 
     @Test
+    void availableBedsForApplicationAreGroupedAndPreferredTypeFirst() {
+        Long preferredType =
+                jdbc.queryForObject(
+                        "INSERT INTO room_type(name,bed_count,price_main,price_summer)"
+                                + " VALUES (?,2,2000000,900000) RETURNING id",
+                        Long.class,
+                        "Ưu tiên " + suffix);
+        jdbc.update("UPDATE room SET room_type_id=? WHERE id=?", preferredType, roomB);
+        jdbc.update("UPDATE bed SET status='BROKEN' WHERE id=?", beds.get(3));
+        Long holder = createStudent("M");
+        occupancy.occupyHold(beds.get(0), holder, createContract(holder, "PENDING"), null);
+        Long applicant = createStudent("M");
+        Long application = createApplication(applicant, "APPROVED", preferredType);
+
+        List<AvailableRoom> rooms = roomService.findAvailableBeds(application, null, null, null);
+
+        assertThat(rooms).extracting(r -> r.room().id()).containsExactly(roomB, roomA);
+        assertThat(rooms.get(0).matchesPreferredType()).isTrue();
+        assertThat(rooms.get(0).room().priceMain()).isEqualTo(2000000L);
+        assertThat(rooms.get(0).freeBeds()).extracting(b -> b.id()).containsExactly(beds.get(2));
+        assertThat(rooms.get(1).matchesPreferredType()).isFalse();
+        assertThat(rooms.get(1).freeBeds()).extracting(b -> b.id()).containsExactly(beds.get(1));
+        assertThat(rooms.get(1).heldCount()).isEqualTo(1L);
+        assertThat(roomService.findAvailableBeds(application, null, null, roomTypeId))
+                .extracting(r -> r.room().id())
+                .containsExactly(roomA);
+    }
+
+    @Test
+    void availableBedsForTransferStayInSourceUnitAndExcludeCurrentBed() {
+        Long student = createStudent("M");
+        Long contract = createContract(student, "ACTIVE");
+        occupancy.occupyStay(beds.get(0), student, contract, null);
+        Long request =
+                jdbc.queryForObject(
+                        "INSERT INTO room_transfer_request(contract_id,reason) VALUES(?,?)"
+                                + " RETURNING id",
+                        Long.class,
+                        contract,
+                        "Muốn đổi phòng");
+
+        List<AvailableRoom> rooms = roomService.findAvailableBeds(null, request, null, null);
+
+        assertThat(rooms)
+                .flatExtracting(AvailableRoom::freeBeds)
+                .extracting(b -> b.id())
+                .containsExactly(beds.get(1), beds.get(2), beds.get(3));
+
+        jdbc.update("UPDATE room_transfer_request SET status='CANCELLED' WHERE id=?", request);
+        assertConflict(
+                () -> roomService.findAvailableBeds(null, request, null, null),
+                ErrorCode.INVALID_STATE_TRANSITION);
+    }
+
+    @Test
+    void availableBedsValidateSourceStateAndScope() {
+        Long applicant = createStudent("M");
+        Long submitted = createApplication(applicant, "SUBMITTED", null);
+
+        assertConflict(
+                () -> roomService.findAvailableBeds(submitted, null, null, null),
+                ErrorCode.INVALID_STATE_TRANSITION);
+        assertThatThrownBy(() -> roomService.findAvailableBeds(submitted, 1L, null, null))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.VALIDATION_FAILED));
+        Long otherStaff = createUser(Role.STAFF, otherUnitId);
+        actAs(otherStaff, Role.STAFF, otherUnitId);
+        assertThatThrownBy(() -> roomService.findAvailableBeds(submitted, null, null, null))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+    }
+
+    @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void concurrentRequestsForLastBedHaveExactlyOneWinner() throws Exception {
         // AT-02: hai request đồng thời tranh một giường.
@@ -472,15 +551,20 @@ class BedOccupancyIntegrationTest {
         return id;
     }
 
+    private Long createApplication(Long student, String status, Long preferredTypeId) {
+        return jdbc.queryForObject(
+                "INSERT INTO room_application(student_id,period_id,preferred_unit_id,"
+                        + "preferred_room_type_id,status) VALUES(?,?,?,?,?) RETURNING id",
+                Long.class,
+                student,
+                periodId,
+                firstUnitId,
+                preferredTypeId,
+                status);
+    }
+
     private Long createContract(Long student, String status) {
-        Long application =
-                jdbc.queryForObject(
-                        "INSERT INTO room_application(student_id,period_id,preferred_unit_id,"
-                                + "status) VALUES(?,?,?,'ASSIGNED') RETURNING id",
-                        Long.class,
-                        student,
-                        periodId,
-                        firstUnitId);
+        Long application = createApplication(student, "ASSIGNED", null);
         boolean active = "ACTIVE".equals(status);
         return jdbc.queryForObject(
                 "INSERT INTO dormitory_contract(code,student_id,application_id,start_date,"

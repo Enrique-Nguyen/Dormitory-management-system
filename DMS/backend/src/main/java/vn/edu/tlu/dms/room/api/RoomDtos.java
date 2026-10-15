@@ -68,4 +68,27 @@ public final class RoomDtos {
             long occupiedBeds,
             long freeBeds,
             List<BedResponse> beds) {}
+
+    /** Phòng còn giường trống cho split view chọn giường (API 4.4); số liệu tính từ view. */
+    public record AvailableRoom(
+            RoomRef room,
+            boolean matchesPreferredType,
+            List<FreeBed> freeBeds,
+            long activeBeds,
+            long occupiedCount,
+            long heldCount) {}
+
+    public record RoomRef(
+            Long id,
+            String code,
+            Long buildingId,
+            String buildingCode,
+            Short floor,
+            RoomTypeRef roomType,
+            String gender,
+            Long priceMain) {}
+
+    public record RoomTypeRef(Long id, String name) {}
+
+    public record FreeBed(Long id, String code) {}
 }
