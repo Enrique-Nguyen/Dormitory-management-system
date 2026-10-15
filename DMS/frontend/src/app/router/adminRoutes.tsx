@@ -2,6 +2,7 @@ import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
 import { Navigate } from 'react-router'
 import CrudPage from '../../pages/CrudPage'
+import RolePermissionsPage from '../../pages/admin/RolePermissionsPage'
 import RequireRole from '../guards/RequireRole'
 import AdminLayout from '../layouts/AdminLayout'
 import { staffRoutes } from './staffRoutes'
@@ -23,6 +24,7 @@ export const adminRoutes: RouteObject = {
           path: 'aggregate-permissions',
           element: <CrudPage resource="users" />,
         },
+        { path: 'role-permissions', element: <RolePermissionsPage /> },
         {
           path: 'priority-categories',
           element: <CrudPage resource="priorities" />,

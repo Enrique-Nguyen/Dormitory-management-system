@@ -1,10 +1,10 @@
 import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
-import { Navigate } from 'react-router'
 import CrudPage from '../../pages/CrudPage'
 import CrudTabsPage from '../../pages/CrudTabsPage'
 import StaffHomePage from '../../pages/staff/StaffHomePage'
 import RequireRole from '../guards/RequireRole'
+import HomeRedirect from '../guards/HomeRedirect'
 import StaffLayout from '../layouts/StaffLayout'
 
 // UI mục 26. Thay `element` bằng trang thật của bạn (pages/staff/...). Phụ trách theo UI 27.3.
@@ -15,7 +15,7 @@ export const staffRoutes: RouteObject = {
     {
       element: <StaffLayout />,
       children: [
-        { index: true, element: <Navigate to="dashboard" replace /> },
+        { index: true, element: <HomeRedirect /> },
         { path: 'dashboard', element: <StaffHomePage /> },
         // Hồ sơ cá nhân dùng chung; backend chỉ đọc/sửa thông tin của người đang đăng nhập.
         { path: 'profile', element: <CrudPage resource="profile" /> },

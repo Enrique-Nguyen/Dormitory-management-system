@@ -7,6 +7,7 @@ import {
   permissionsForPath,
   roleHome,
   rolePortal,
+  roleProfile,
 } from '../../constants/navigation'
 import type { Me } from '../../types/auth'
 import { api } from './client'
@@ -71,6 +72,15 @@ export function hasAnyPermission(
   permissions: string[],
 ): boolean {
   return permissions.some((permission) => hasPermission(me, permission))
+}
+
+/** Khi quyền trang chủ bị thu hồi, hồ sơ cá nhân vẫn là điểm quay về hợp lệ. */
+export function accessibleHomePath(me: Me): string {
+  if (!Object.hasOwn(Role, me.role)) return '/login'
+  const home = roleHome[me.role]
+  return hasAnyPermission(me, permissionsForPath(home))
+    ? home
+    : roleProfile[me.role]
 }
 
 /** Thu hồi token tại DMS, dọn cache các tab rồi kết thúc phiên SSO Keycloak. */
@@ -141,7 +151,7 @@ export function loginLandingPath(me: Me, requested: string | null): string {
     ) &&
     hasAnyPermission(me, permissionsForPath(pathname))
     ? target!
-    : roleHome[me.role]
+    : accessibleHomePath(me)
 }
 
 export function loginPath(reason?: string, redirect?: string): string {

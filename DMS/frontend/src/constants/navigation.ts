@@ -60,9 +60,9 @@ export function permissionsForPath(path: string): Permission[] {
   if (!screen) {
     const homePermissions: Record<string, Permission[]> = {
       admin: [Permission.USER_READ],
-      staff: [Permission.DASHBOARD_READ],
+      staff: [Permission.PROFILE_READ],
       student: [Permission.PROFILE_READ],
-      technician: [Permission.MAINTENANCE_READ],
+      technician: [Permission.PROFILE_READ],
     }
     return homePermissions[portal]
   }
@@ -73,6 +73,7 @@ export function permissionsForPath(path: string): Permission[] {
     buildings: [Permission.BUILDING_READ],
     import: [Permission.STUDENT_READ],
     'aggregate-permissions': [Permission.USER_READ],
+    'role-permissions': [Permission.ROLE_PERMISSION_READ],
     'priority-categories': [Permission.PRIORITY_CATEGORY_READ],
     configs: [Permission.CONFIG_READ],
     'audit-logs': [Permission.AUDIT_READ],
@@ -139,6 +140,16 @@ export const roleLabel: Record<Role, string> = {
 /** Mục "Yêu cầu chờ xử lý" mang badge số lượng (UI 4.2). */
 export const STAFF_REQUESTS_PATH = '/staff/requests'
 
+/** Danh mục phục vụ nghiệp vụ, dùng chung giữa cổng quản lý và cổng quản trị. */
+const catalogNav: NavGroup = {
+  title: 'Danh mục',
+  items: [
+    item('Loại phòng', '/staff/room-types', DatabaseOutlined),
+    item('Kỳ học', '/staff/semesters', CalendarOutlined),
+    item('Đợt đăng ký', '/staff/registration-periods', ProfileOutlined),
+  ],
+}
+
 export const staffNav: NavGroup[] = [
   {
     items: [
@@ -173,38 +184,48 @@ export const staffNav: NavGroup[] = [
       item('Thông báo', '/staff/notifications', BellOutlined),
     ],
   },
-  {
-    title: 'Hệ thống',
-    items: [
-      item('Loại phòng', '/staff/room-types', DatabaseOutlined),
-      item('Kỳ học', '/staff/semesters', CalendarOutlined),
-      item('Đợt đăng ký', '/staff/registration-periods', ProfileOutlined),
-    ],
-  },
+  catalogNav,
 ]
 
 export const adminNav: NavGroup[] = [
+  ...staffNav.map((group) => ({
+    ...group,
+    items: [
+      // Các danh mục riêng của Admin cùng nằm sau nhóm nghiệp vụ.
+      ...(group === catalogNav
+        ? [
+            item('Đơn vị', '/admin/units', BankOutlined),
+            item('Tòa nhà & mức cọc', '/admin/buildings', HomeOutlined),
+            item(
+              'Diện ưu tiên',
+              '/admin/priority-categories',
+              DatabaseOutlined,
+            ),
+          ]
+        : []),
+      ...group.items.map((nav) => {
+        if (nav.path === '/staff/students')
+          return item('Sinh viên', '/admin/import', UploadOutlined)
+        const path = nav.path.replace('/staff/', '/admin/')
+        return { ...nav, key: path, path }
+      }),
+    ],
+  })),
   {
+    // Nhóm quản trị hệ thống luôn ở cuối; quyền của từng mục vẫn do backend cấp.
+    title: 'Quản trị hệ thống',
     items: [
       item('Tài khoản', '/admin/users', UserOutlined),
-      item('Sinh viên', '/admin/import', UploadOutlined),
-      item('Đơn vị', '/admin/units', BankOutlined),
-      item('Tòa nhà & mức cọc', '/admin/buildings', HomeOutlined),
       item('Quyền tổng hợp', '/admin/aggregate-permissions', SafetyOutlined),
-      item('Diện ưu tiên', '/admin/priority-categories', DatabaseOutlined),
+      item(
+        'Phân quyền theo vai trò',
+        '/admin/role-permissions',
+        SafetyOutlined,
+      ),
       item('Cấu hình', '/admin/configs', DatabaseOutlined),
       item('Nhật ký hệ thống', '/admin/audit-logs', AuditOutlined),
     ],
   },
-  ...staffNav.map((group) => ({
-    ...group,
-    items: group.items
-      .filter((nav) => nav.path !== '/staff/students')
-      .map((nav) => {
-        const path = nav.path.replace('/staff/', '/admin/')
-        return { ...nav, key: path, path }
-      }),
-  })),
 ]
 
 /** Bottom nav sinh viên trên mobile (UI 4.1). Tab "Báo hỏng" chỉ bật khi đang ở. */

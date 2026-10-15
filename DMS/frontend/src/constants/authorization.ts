@@ -51,12 +51,13 @@ export const Resource = {
   CONFIG: 'CONFIG',
   AUDIT: 'AUDIT',
   DASHBOARD: 'DASHBOARD',
+  ROLE_PERMISSION: 'ROLE_PERMISSION',
 } as const
 
 export type Resource = (typeof Resource)[keyof typeof Resource]
 
 /**
- * Danh mục 103 mã quyền khớp DmsConstants.Permission; không phải mọi nghiệp vụ đều có đủ CRUD.
+ * Danh mục 105 mã quyền khớp DmsConstants.Permission; không phải mọi nghiệp vụ đều có đủ CRUD.
  * Đây chỉ là tên quyền để gọi/hiển thị, không tự cấp quyền cho bất kỳ vai trò nào.
  * Nguồn quyền được cấp vẫn là Me.permissions do /api/auth/me trả về.
  */
@@ -164,12 +165,17 @@ export const Permission = {
   USER_UNLOCK: `${Resource.USER}_${Action.UNLOCK}`,
   USER_RESET_PASSWORD: `${Resource.USER}_${Action.RESET_PASSWORD}`,
   USER_CROSS_UNIT_ACCESS: `${Resource.USER}_${Action.CROSS_UNIT_ACCESS}`,
+  ROLE_PERMISSION_READ: `${Resource.ROLE_PERMISSION}_${Action.READ}`,
+  ROLE_PERMISSION_UPDATE: `${Resource.ROLE_PERMISSION}_${Action.UPDATE}`,
 } as const
 
 export type Permission = (typeof Permission)[keyof typeof Permission]
 
 /** Lấy đúng mã đã đăng ký; tổ hợp không tồn tại (ví dụ PROFILE_CREATE) không có quyền. */
-export function permissionFor(resource: Resource, action: Action): Permission | undefined {
+export function permissionFor(
+  resource: Resource,
+  action: Action,
+): Permission | undefined {
   const code = `${resource}_${action}`
   return Object.hasOwn(Permission, code)
     ? Permission[code as keyof typeof Permission]

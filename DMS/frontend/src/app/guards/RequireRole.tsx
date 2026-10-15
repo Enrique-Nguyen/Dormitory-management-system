@@ -6,9 +6,12 @@ import { useMe } from '../../features/account/useMe'
 import {
   CHANGE_PASSWORD_PATH,
   permissionsForPath,
-  roleHome,
 } from '../../constants/navigation'
-import { hasAnyPermission, loginPath } from '../../services/api/auth'
+import {
+  accessibleHomePath,
+  hasAnyPermission,
+  loginPath,
+} from '../../services/api/auth'
 import { errorCodeOf } from '../../utils/errorMessages'
 
 interface Props {
@@ -97,7 +100,7 @@ export default function RequireRole({
       (role === Role.STAFF || role === Role.TECHNICIAN)
     )
   )
-    return <Navigate to={roleHome[me.role]} replace />
+    return <Navigate to={accessibleHomePath(me)} replace />
 
   if (role && !hasAnyPermission(me, permissionsForPath(location.pathname)))
     return (
@@ -106,7 +109,9 @@ export default function RequireRole({
         title="Không có quyền truy cập"
         subTitle="Tài khoản chưa được cấp quyền xem màn hình này."
         extra={
-          <Button onClick={() => window.location.assign(roleHome[me.role])}>
+          <Button
+            onClick={() => window.location.assign(accessibleHomePath(me))}
+          >
             Về trang chủ
           </Button>
         }
