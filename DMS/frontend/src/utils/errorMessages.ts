@@ -97,6 +97,13 @@ const messages: Record<string, (d: Details) => string> = {
     `Giường ${d.bedCode ?? ''} vừa được phân cho sinh viên khác. Vui lòng chọn giường khác.`,
   BED_NOT_AVAILABLE: (d) =>
     `Giường ${d.bedCode ?? ''} hoặc phòng đang không hoạt động. Vui lòng chọn giường khác.`,
+  GENDER_MISMATCH: (d) =>
+    `Phòng${d.roomCode ? ` ${String(d.roomCode)}` : ''} dành cho giới tính khác, không phù hợp với sinh viên. Chọn phòng khác.`,
+  STUDENT_ALREADY_ASSIGNED: () =>
+    'Sinh viên đã có chỗ ở hoặc đang giữ chỗ. Tải lại trang để xem phân phòng hiện tại.',
+  TRANSFER_CROSS_UNIT: () =>
+    'Chỉ chuyển sang giường cùng đơn vị quản lý. Chọn giường khác.',
+  SAME_BED: () => 'Giường đích trùng giường hiện tại. Chọn giường khác.',
 
   // 5.4+ Đăng ký, kỳ hè, bảo trì, hóa đơn
   PERIOD_NOT_OPEN: () =>
