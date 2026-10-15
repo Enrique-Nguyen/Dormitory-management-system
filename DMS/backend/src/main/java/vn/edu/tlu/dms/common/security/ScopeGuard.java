@@ -12,6 +12,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
+import vn.edu.tlu.dms.common.service.RolePermissionService;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -24,15 +25,19 @@ public class ScopeGuard {
     /**
      * Ma trận Role → quyền thao tác, tham khảo RolePrivilege của V5. READ gồm tìm kiếm/xem chi
      * tiết; CREATE/UPDATE/DELETE tách riêng. Quyền thao tác không thay thế phạm vi và trạng thái ở
-     * Service Impl. Khung dùng ma trận cố định để không phải thêm bảng, màn quản trị hoặc nhiều
-     * file mới.
+     * Service Impl. Ma trận này chỉ là cấu hình mặc định và giới hạn quyền phù hợp của từng vai
+     * trò; quyền đang có hiệu lực được RolePermissionService đọc từ CSDL.
      */
-    private static final Map<String, Set<String>> ROLE_PERMISSIONS = createRolePermissions();
+    private static final Map<String, Set<String>> DEFAULT_ROLE_PERMISSIONS =
+            createDefaultRolePermissions();
 
     private final CurrentUser currentUser;
 
-    public ScopeGuard(CurrentUser currentUser) {
+    private final RolePermissionService rolePermissions;
+
+    public ScopeGuard(CurrentUser currentUser, RolePermissionService rolePermissions) {
         this.currentUser = currentUser;
+        this.rolePermissions = rolePermissions;
     }
 
     public void requireRole(String... roles) {
@@ -70,16 +75,14 @@ public class ScopeGuard {
         requireUnit(unitId);
     }
 
-    /** Danh sách quyền do backend cấp cho /me; role không biết không có quyền. */
+    /** Quyền mặc định/giới hạn của vai trò; không dùng tập này để cấp quyền đang có hiệu lực. */
     public static List<String> permissionsForRole(String role) {
-        return ROLE_PERMISSIONS.getOrDefault(role, Set.of()).stream().sorted().toList();
+        return DEFAULT_ROLE_PERMISSIONS.getOrDefault(role, Set.of()).stream().sorted().toList();
     }
 
     /** Kiểm tra đúng mã quyền đã đăng ký; Admin cũng không được dùng mã quyền sai/chưa tồn tại. */
     public boolean hasPermission(String permission) {
-        return ROLE_PERMISSIONS
-                .getOrDefault(currentUser.get().role(), Set.of())
-                .contains(permission);
+        return rolePermissions.getGrantedPermissions(currentUser.get().role()).contains(permission);
     }
 
     /** Thiếu quyền thao tác trả 403; phạm vi đối tượng vẫn được kiểm tra riêng sau đó. */
@@ -104,7 +107,7 @@ public class ScopeGuard {
         if (required == null || required.value().length == 0) {
             return false;
         }
-        var granted = ROLE_PERMISSIONS.getOrDefault(currentUser.get().role(), Set.of());
+        var granted = rolePermissions.getGrantedPermissions(currentUser.get().role());
         for (String permission : required.value()) {
             if (granted.contains(permission)) {
                 return true;
@@ -113,7 +116,7 @@ public class ScopeGuard {
         return false;
     }
 
-    private static Map<String, Set<String>> createRolePermissions() {
+    private static Map<String, Set<String>> createDefaultRolePermissions() {
         Set<String> shared =
                 Set.of(
                         Permission.PROFILE_READ,
@@ -186,39 +189,10 @@ public class ScopeGuard {
                         Permission.STORAGE_READ));
         var technician = new LinkedHashSet<>(shared);
         technician.addAll(Set.of(Permission.MAINTENANCE_READ, Permission.MAINTENANCE_UPDATE));
-        var admin = new LinkedHashSet<>(staff);
-        admin.addAll(student);
-        admin.addAll(technician);
-        for (String resource :
-                List.of(
-                        Resource.USER,
-                        Resource.STUDENT,
-                        Resource.MANAGEMENT_UNIT,
-                        Resource.BUILDING,
-                        Resource.PRIORITY_CATEGORY)) {
-            grantCrud(admin, resource);
-        }
-        admin.addAll(
-                Set.of(
-                        Permission.CONFIG_READ,
-                        Permission.CONFIG_UPDATE,
-                        Permission.AUDIT_READ,
-                        Permission.USER_LOCK,
-                        Permission.USER_UNLOCK,
-                        Permission.USER_RESET_PASSWORD,
-                        Permission.USER_CROSS_UNIT_ACCESS));
-        // Admin nhận mọi thao tác CRUD nghiệp vụ; READ/UPDATE hệ thống vẫn theo endpoint có thật.
-        for (String resource :
-                List.of(
-                        Resource.ROOM_APPLICATION,
-                        Resource.CONTRACT_EXTENSION,
-                        Resource.ROOM_TRANSFER,
-                        Resource.SUMMER_REGISTRATION)) {
-            grantCrud(admin, resource);
-        }
+        // ADMIN lấy toàn bộ danh mục, kể cả quyền mới; ma trận động không thể thu hồi quyền ADMIN.
         return Map.of(
                 Role.ADMIN,
-                Set.copyOf(admin),
+                Permission.ALL,
                 Role.STAFF,
                 Set.copyOf(staff),
                 Role.STUDENT,

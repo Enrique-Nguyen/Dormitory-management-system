@@ -7,8 +7,14 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,14 +31,20 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
+import vn.edu.tlu.dms.common.security.ScopeGuard;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -51,6 +63,10 @@ class KeycloakAccountIntegrationTest {
     @Autowired private MockMvc mvc;
 
     @Autowired private JdbcTemplate jdbc;
+
+    @Autowired private ObjectMapper mapper;
+
+    @Autowired private EntityManager entityManager;
 
     @Autowired private PrivilegeProbeController privilegeProbe;
 
@@ -402,6 +418,404 @@ class KeycloakAccountIntegrationTest {
         mvc.perform(get("/api/privilege-test/method-override").with(useRole("TECHNICIAN")))
                 .andExpect(status().isForbidden());
         assertThat(classPrivilegeProbe.invocationCount()).isEqualTo(1);
+    }
+
+    /** Migration mới giữ nguyên quyền mặc định đã kiểm thử; ADMIN nhận thêm màn phân quyền. */
+    @Test
+    void rolePermissionMigrationPreservesExistingNonAdminPrivileges() throws Exception {
+        assertThat(jdbc.queryForList("SELECT role FROM role_permission_matrix", String.class))
+                .containsExactlyInAnyOrder(Role.STAFF, Role.STUDENT, Role.TECHNICIAN);
+        for (String role : List.of(Role.STAFF, Role.STUDENT, Role.TECHNICIAN)) {
+            JsonNode stored =
+                    mapper.readTree(
+                            jdbc.queryForObject(
+                                    "SELECT permissions::text FROM role_permission_matrix WHERE"
+                                            + " role=?",
+                                    String.class,
+                                    role));
+            var codes = new ArrayList<String>();
+            stored.forEach(value -> codes.add(value.asText()));
+            assertThat(codes)
+                    .doesNotHaveDuplicates()
+                    .containsExactlyInAnyOrderElementsOf(ScopeGuard.permissionsForRole(role));
+            assertThat(matrixVersion(role)).isZero();
+        }
+        mvc.perform(get("/api/auth/me").with(token(subject, Role.ADMIN, 0)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions.length()").value(105))
+                .andExpect(
+                        jsonPath("$.permissions").value(hasItem(Permission.ROLE_PERMISSION_READ)))
+                .andExpect(
+                        jsonPath("$.permissions")
+                                .value(hasItem(Permission.ROLE_PERMISSION_UPDATE)));
+    }
+
+    /** Ô không phù hợp với vai trò bị khóa; không biến quyền màn hình thành thay đổi vai trò. */
+    @Test
+    void adminReadsCompleteMatrixWithEligibilityAndRequiredProfileMetadata() throws Exception {
+        JsonNode adminMatrix = readMatrix(Role.ADMIN);
+        assertThat(adminMatrix.path("readOnly").asBoolean()).isTrue();
+        assertThat(matrixPrivileges(adminMatrix)).hasSize(105);
+        for (JsonNode privilege : matrixPrivileges(adminMatrix)) {
+            assertThat(privilege.path("granted").asBoolean()).isTrue();
+            assertThat(privilege.path("assignable").asBoolean()).isFalse();
+        }
+        JsonNode staffMatrix = readMatrix(Role.STAFF);
+        assertThat(staffMatrix.path("readOnly").asBoolean()).isFalse();
+        JsonNode roomUpdate = matrixPrivilege(staffMatrix, Permission.ROOM_UPDATE);
+        assertThat(roomUpdate.path("granted").asBoolean()).isTrue();
+        assertThat(roomUpdate.path("defaultGranted").asBoolean()).isTrue();
+        assertThat(roomUpdate.path("assignable").asBoolean()).isTrue();
+        JsonNode userCreate = matrixPrivilege(staffMatrix, Permission.USER_CREATE);
+        assertThat(userCreate.path("granted").asBoolean()).isFalse();
+        assertThat(userCreate.path("assignable").asBoolean()).isFalse();
+        assertThat(
+                        matrixPrivilege(staffMatrix, Permission.PROFILE_READ)
+                                .path("required")
+                                .asBoolean())
+                .isTrue();
+    }
+
+    @Test
+    void nonAdminAndAnonymousCannotReadOrModifyRolePermissionMatrix() throws Exception {
+        for (String role : List.of(Role.STAFF, Role.STUDENT, Role.TECHNICIAN)) {
+            RequestPostProcessor actor = useRole(role);
+            mvc.perform(get("/api/admin/role-permissions/STAFF").with(actor))
+                    .andExpect(status().isForbidden());
+            mvc.perform(
+                            put("/api/admin/role-permissions/STAFF")
+                                    .with(actor)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(
+                                            matrixBody(
+                                                    0, ScopeGuard.permissionsForRole(Role.STAFF))))
+                    .andExpect(status().isForbidden());
+        }
+        mvc.perform(get("/api/admin/role-permissions/STAFF")).andExpect(status().isUnauthorized());
+        assertThat(matrixVersion(Role.STAFF)).isZero();
+    }
+
+    /** Token vẫn hợp lệ: quyền mới được đọc từ CSDL ở request kế tiếp, không cần đăng nhập lại. */
+    @Test
+    void revokingAndRestoringScreenPermissionsImmediatelyAffectsPreviouslyIssuedToken()
+            throws Exception {
+        Long unitId =
+                jdbc.queryForObject("SELECT id FROM management_unit WHERE code='K1'", Long.class);
+        Long staffId = createLinkedUser(Role.STAFF, unitId, false);
+        String staffSubject =
+                jdbc.queryForObject(
+                        "SELECT keycloak_user_id FROM app_user WHERE id=?", String.class, staffId);
+        RequestPostProcessor oldToken = token(staffSubject, Role.STAFF, 0);
+        mvc.perform(get("/api/rooms").with(oldToken)).andExpect(status().isOk());
+
+        var restricted = new ArrayList<>(ScopeGuard.permissionsForRole(Role.STAFF));
+        // Thu hồi đúng màn ROOM, giữ ROOM_TYPE/ROOM_APPLICATION/ROOM_TRANSFER độc lập.
+        restricted.removeAll(
+                List.of(
+                        Permission.ROOM_READ,
+                        Permission.ROOM_CREATE,
+                        Permission.ROOM_UPDATE,
+                        Permission.ROOM_DELETE));
+        updateMatrix(Role.STAFF, 0, restricted)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value(1));
+        mvc.perform(get("/api/rooms").with(oldToken)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/auth/me").with(oldToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions").value(not(hasItem(Permission.ROOM_READ))))
+                .andExpect(jsonPath("$.permissions").value(hasItem(Permission.PROFILE_READ)));
+
+        updateMatrix(Role.STAFF, 1, ScopeGuard.permissionsForRole(Role.STAFF))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value(2));
+        mvc.perform(get("/api/rooms").with(oldToken)).andExpect(status().isOk());
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT security_version FROM app_user WHERE id=?",
+                                Long.class,
+                                staffId))
+                .isZero();
+        // ADMIN không bị ảnh hưởng bởi thao tác thu hồi quyền của STAFF.
+        mvc.perform(get("/api/rooms").with(token(subject, Role.ADMIN, 0)))
+                .andExpect(status().isOk());
+    }
+
+    /** Kiểm tra trực tiếp advisor trước thân hàm, tránh chỉ thử giao diện hoặc danh sách /me. */
+    @Test
+    void removingTechnicianUpdatePermissionBlocksAnnotationBeforeControllerBody() throws Exception {
+        Long unitId =
+                jdbc.queryForObject("SELECT id FROM management_unit WHERE code='K1'", Long.class);
+        Long technicianId = createLinkedUser(Role.TECHNICIAN, unitId, false);
+        String technicianSubject =
+                jdbc.queryForObject(
+                        "SELECT keycloak_user_id FROM app_user WHERE id=?",
+                        String.class,
+                        technicianId);
+        RequestPostProcessor oldToken = token(technicianSubject, Role.TECHNICIAN, 0);
+        mvc.perform(get("/api/privilege-test/any-permission").with(oldToken))
+                .andExpect(status().isOk());
+        var restricted = new ArrayList<>(ScopeGuard.permissionsForRole(Role.TECHNICIAN));
+        restricted.remove(Permission.MAINTENANCE_UPDATE);
+        updateMatrix(Role.TECHNICIAN, 0, restricted).andExpect(status().isOk());
+        mvc.perform(get("/api/privilege-test/any-permission").with(oldToken))
+                .andExpect(status().isForbidden());
+        assertThat(privilegeProbe.invocationCount()).isEqualTo(1);
+        mvc.perform(get("/api/auth/me").with(oldToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions").value(hasItem(Permission.MAINTENANCE_READ)))
+                .andExpect(
+                        jsonPath("$.permissions")
+                                .value(not(hasItem(Permission.MAINTENANCE_UPDATE))));
+    }
+
+    /** Giữ quyền đọc hồ sơ để tài khoản bị thu hồi nghiệp vụ vẫn lấy /me và đăng xuất được. */
+    @Test
+    void profileOnlyPermissionsKeepLoginProfileAndLogoutAccessible() throws Exception {
+        Long unitId =
+                jdbc.queryForObject("SELECT id FROM management_unit WHERE code='K1'", Long.class);
+        Long staffId = createLinkedUser(Role.STAFF, unitId, false);
+        String staffSubject =
+                jdbc.queryForObject(
+                        "SELECT keycloak_user_id FROM app_user WHERE id=?", String.class, staffId);
+        RequestPostProcessor oldToken = token(staffSubject, Role.STAFF, 0);
+        updateMatrix(Role.STAFF, 0, List.of(Permission.PROFILE_READ)).andExpect(status().isOk());
+        mvc.perform(get("/api/auth/me").with(oldToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions.length()").value(1));
+        mvc.perform(get("/api/rooms").with(oldToken)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/auth/logout").with(oldToken)).andExpect(status().isNoContent());
+    }
+
+    /** Backend xác thực toàn bộ danh sách trước khi lưu; không tin ô disabled ở frontend. */
+    @Test
+    void invalidPermissionListsAreRejectedWithoutChangingPersistedMatrix() throws Exception {
+        List<String> baseline = ScopeGuard.permissionsForRole(Role.STAFF);
+        var duplicate = new ArrayList<>(baseline);
+        duplicate.add(Permission.ROOM_READ);
+        var unknown = new ArrayList<>(baseline);
+        unknown.add("UNREGISTERED_READ");
+        var ineligible = new ArrayList<>(baseline);
+        ineligible.add(Permission.USER_CREATE);
+        var missingRequired = new ArrayList<>(baseline);
+        missingRequired.remove(Permission.PROFILE_READ);
+        var missingRead = new ArrayList<>(baseline);
+        missingRead.remove(Permission.ROOM_READ);
+        var blank = new ArrayList<>(baseline);
+        blank.add(" ");
+        for (List<String> invalid :
+                List.of(
+                        duplicate,
+                        unknown,
+                        ineligible,
+                        missingRequired,
+                        missingRead,
+                        blank,
+                        List.<String>of())) {
+            updateMatrix(Role.STAFF, 0, invalid)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+        }
+        updateMatrix(Role.STAFF, -1, baseline).andExpect(status().isBadRequest());
+        assertThat(matrixVersion(Role.STAFF)).isZero();
+        assertThat(
+                        mapper.readTree(
+                                        jdbc.queryForObject(
+                                                "SELECT permissions::text FROM"
+                                                    + " role_permission_matrix WHERE role='STAFF'",
+                                                String.class))
+                                .size())
+                .isEqualTo(72);
+        assertThat(matrixAuditCount()).isZero();
+    }
+
+    /** Hai quản trị viên sửa cùng phiên bản: người lưu sau nhận 409, không ghi đè dữ liệu mới. */
+    @Test
+    void staleMatrixVersionCannotOverwriteNewerPermissionsOrProduceExtraAudit() throws Exception {
+        var restricted = new ArrayList<>(ScopeGuard.permissionsForRole(Role.STAFF));
+        restricted.remove(Permission.ROOM_DELETE);
+        updateMatrix(Role.STAFF, 0, restricted)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value(1));
+        updateMatrix(Role.STAFF, 0, ScopeGuard.permissionsForRole(Role.STAFF))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("PERMISSION_MATRIX_STALE"));
+        assertThat(matrixVersion(Role.STAFF)).isEqualTo(1);
+        assertThat(
+                        matrixPrivilege(readMatrix(Role.STAFF), Permission.ROOM_DELETE)
+                                .path("granted")
+                                .asBoolean())
+                .isFalse();
+        entityManager.flush();
+        assertThat(matrixAuditCount()).isEqualTo(1);
+    }
+
+    @Test
+    void savingSamePermissionSetInAnotherOrderDoesNotIncrementVersionOrAudit() throws Exception {
+        var same = new ArrayList<>(ScopeGuard.permissionsForRole(Role.STAFF));
+        Collections.reverse(same);
+        updateMatrix(Role.STAFF, 0, same)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value(0));
+        entityManager.flush();
+        assertThat(matrixAuditCount()).isZero();
+        assertThat(matrixVersion(Role.STAFF)).isZero();
+    }
+
+    /**
+     * Nhật ký chứa phiên bản và quyền trước/sau, cùng người thao tác; không chỉ ghi tên sự kiện.
+     */
+    @Test
+    void changedMatrixRecordsExactBeforeAfterAndUpdater() throws Exception {
+        var restricted = new ArrayList<>(ScopeGuard.permissionsForRole(Role.STAFF));
+        restricted.remove(Permission.ROOM_DELETE);
+        updateMatrix(Role.STAFF, 0, restricted).andExpect(status().isOk());
+        entityManager.flush();
+        Map<String, Object> audit =
+                jdbc.queryForMap(
+                        "SELECT actor_id,entity_type,entity_id,old_value::text AS old_value,"
+                                + " new_value::text AS new_value FROM audit_log"
+                                + " WHERE actor_id=? AND action='ROLE_PERMISSION_UPDATE'",
+                        id);
+        assertThat(audit.get("actor_id")).isEqualTo(id);
+        assertThat(audit.get("entity_type")).isEqualTo("ROLE_PERMISSION");
+        assertThat(audit.get("entity_id")).isNull();
+        JsonNode before = mapper.readTree((String) audit.get("old_value"));
+        JsonNode after = mapper.readTree((String) audit.get("new_value"));
+        assertThat(before.path("role").asText()).isEqualTo(Role.STAFF);
+        assertThat(before.path("version").asLong()).isZero();
+        assertThat(before.path("permissions").size()).isEqualTo(72);
+        assertThat(after.path("role").asText()).isEqualTo(Role.STAFF);
+        assertThat(after.path("version").asLong()).isEqualTo(1);
+        assertThat(after.path("permissions").size()).isEqualTo(71);
+        var afterCodes = new ArrayList<String>();
+        after.path("permissions").forEach(value -> afterCodes.add(value.asText()));
+        assertThat(afterCodes).doesNotContain(Permission.ROOM_DELETE);
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT updated_by FROM role_permission_matrix WHERE role='STAFF'",
+                                Long.class))
+                .isEqualTo(id);
+    }
+
+    @Test
+    void adminPermissionsAreImmutableAndUnknownRoleDoesNotUseAnyFallback() throws Exception {
+        updateMatrix(Role.ADMIN, 0, List.of(Permission.PROFILE_READ))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("ADMIN_PERMISSIONS_IMMUTABLE"));
+        for (String role : List.of("UNKNOWN_ROLE", "staff")) {
+            mvc.perform(
+                            get("/api/admin/role-permissions/" + role)
+                                    .with(token(subject, Role.ADMIN, 0)))
+                    .andExpect(status().isBadRequest());
+            updateMatrix(role, 0, List.of(Permission.PROFILE_READ))
+                    .andExpect(status().isBadRequest());
+        }
+        assertThat(matrixAuditCount()).isZero();
+        mvc.perform(get("/api/auth/me").with(token(subject, Role.ADMIN, 0)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions.length()").value(105));
+    }
+
+    /** Mất cấu hình không tự hồi sinh quyền mặc định; ADMIN vẫn truy cập để chẩn đoán. */
+    @Test
+    void missingRolePermissionRowFailsClosedWithoutAffectingAdmin() throws Exception {
+        Long unitId =
+                jdbc.queryForObject("SELECT id FROM management_unit WHERE code='K1'", Long.class);
+        Long staffId = createLinkedUser(Role.STAFF, unitId, false);
+        String staffSubject =
+                jdbc.queryForObject(
+                        "SELECT keycloak_user_id FROM app_user WHERE id=?", String.class, staffId);
+        RequestPostProcessor oldToken = token(staffSubject, Role.STAFF, 0);
+        jdbc.update("DELETE FROM role_permission_matrix WHERE role='STAFF'");
+        mvc.perform(get("/api/auth/me").with(oldToken)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/rooms").with(oldToken)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/role-permissions/STAFF").with(token(subject, Role.ADMIN, 0)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("PERMISSION_MATRIX_UNAVAILABLE"));
+        updateMatrix(Role.STAFF, 0, ScopeGuard.permissionsForRole(Role.STAFF))
+                .andExpect(status().isConflict());
+        mvc.perform(get("/api/auth/me").with(token(subject, Role.ADMIN, 0)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions.length()").value(105));
+    }
+
+    /** Dữ liệu quyền hỏng hoặc tự chèn quyền ngoài vai trò phải khóa cả bộ quyền của vai trò đó. */
+    @Test
+    void corruptRolePermissionArraysFailClosedInsteadOfPartiallyGrantingPermissions()
+            throws Exception {
+        Long unitId =
+                jdbc.queryForObject("SELECT id FROM management_unit WHERE code='K1'", Long.class);
+        Long staffId = createLinkedUser(Role.STAFF, unitId, false);
+        String staffSubject =
+                jdbc.queryForObject(
+                        "SELECT keycloak_user_id FROM app_user WHERE id=?", String.class, staffId);
+        RequestPostProcessor oldToken = token(staffSubject, Role.STAFF, 0);
+        for (String invalidJson :
+                List.of(
+                        "[\"PROFILE_READ\",37]",
+                        "[\"PROFILE_READ\",\"PROFILE_READ\"]",
+                        "[\"PROFILE_READ\",\"UNREGISTERED_READ\"]",
+                        "[\"PROFILE_READ\",\"USER_CREATE\"]",
+                        "[\"ROOM_READ\"]",
+                        "[\"PROFILE_READ\",\"ROOM_UPDATE\"]")) {
+            jdbc.update(
+                    "UPDATE role_permission_matrix SET permissions=CAST(? AS jsonb) WHERE"
+                            + " role='STAFF'",
+                    invalidJson);
+            mvc.perform(get("/api/auth/me").with(oldToken)).andExpect(status().isForbidden());
+            mvc.perform(get("/api/rooms").with(oldToken)).andExpect(status().isForbidden());
+        }
+    }
+
+    private JsonNode readMatrix(String role) throws Exception {
+        return mapper.readTree(
+                mvc.perform(
+                                get("/api/admin/role-permissions/" + role)
+                                        .with(token(subject, Role.ADMIN, 0)))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString());
+    }
+
+    private List<JsonNode> matrixPrivileges(JsonNode matrix) {
+        var privileges = new ArrayList<JsonNode>();
+        matrix.path("screens")
+                .forEach(screen -> screen.path("privileges").forEach(privileges::add));
+        return privileges;
+    }
+
+    private JsonNode matrixPrivilege(JsonNode matrix, String code) {
+        return matrixPrivileges(matrix).stream()
+                .filter(privilege -> code.equals(privilege.path("code").asText()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Thiếu ô quyền " + code));
+    }
+
+    private ResultActions updateMatrix(String role, long version, List<String> permissions)
+            throws Exception {
+        return mvc.perform(
+                put("/api/admin/role-permissions/" + role)
+                        .with(token(subject, Role.ADMIN, 0))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(matrixBody(version, permissions)));
+    }
+
+    private String matrixBody(long version, List<String> permissions) throws Exception {
+        return mapper.writeValueAsString(Map.of("version", version, "permissions", permissions));
+    }
+
+    private long matrixVersion(String role) {
+        return jdbc.queryForObject(
+                "SELECT version FROM role_permission_matrix WHERE role=?", Long.class, role);
+    }
+
+    private long matrixAuditCount() {
+        return jdbc.queryForObject(
+                "SELECT count(*) FROM audit_log WHERE actor_id=? AND"
+                        + " action='ROLE_PERMISSION_UPDATE'",
+                Long.class,
+                id);
     }
 
     private RequestPostProcessor useRole(String role) {

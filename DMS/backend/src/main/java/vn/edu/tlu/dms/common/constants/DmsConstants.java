@@ -1,6 +1,7 @@
 package vn.edu.tlu.dms.common.constants;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -14,6 +15,7 @@ public final class DmsConstants {
 
     private DmsConstants() {}
 
+    /** Mã lỗi công khai của API; gom mã không thay đổi giá trị đã dùng ở frontend/CSDL. */
     public static final class ErrorCode {
         public static final String ACCOUNT_LOCKED = "ACCOUNT_LOCKED";
         public static final String ADMIN_PERMISSIONS_IMMUTABLE = "ADMIN_PERMISSIONS_IMMUTABLE";
@@ -70,6 +72,7 @@ public final class DmsConstants {
         private ErrorCode() {}
     }
 
+    /** Tên field của hợp đồng validation, audit và ma trận quyền; không dùng làm tên cột SQL. */
     public static final class ApiField {
         public static final String FIELD_ERRORS = "fieldErrors";
         public static final String FIELD = "field";
@@ -81,7 +84,128 @@ public final class DmsConstants {
         private ApiField() {}
     }
 
-    /** Vai trò nghiệp vụ; ma trận quyền cụ thể được quản lý tại ScopeGuard. */
+    /** Thông báo kiểm tra đầu vào của ma trận quyền; template giữ nguyên hợp đồng lỗi hiện tại. */
+    public static final class PermissionMessage {
+        public static final String INVALID_VERSION = "Phiên bản quyền phải là số nguyên không âm";
+        public static final String UNKNOWN_ROLE = "Vai trò không tồn tại trong hệ thống";
+        public static final String REQUIRED_LIST = "Danh sách quyền không được để trống";
+        public static final String UNKNOWN_PERMISSION = "Danh sách chứa mã quyền không hợp lệ";
+        public static final String DUPLICATE_PERMISSION = "Danh sách chứa mã quyền trùng: %s";
+        public static final String INELIGIBLE_PERMISSION = "Quyền không phù hợp với vai trò: %s";
+        public static final String REQUIRED_PROFILE =
+                "Phải giữ quyền xem hồ sơ cá nhân để truy cập và đăng xuất";
+        public static final String REQUIRED_READ = "Phải cấp quyền %s trước khi cấp %s";
+        public static final String UNKNOWN_SCREEN = "Mã quyền chưa đăng ký màn hình: %s";
+        public static final String SERIALIZATION_FAILED =
+                "Không thể chuyển danh sách quyền thành JSON";
+
+        private PermissionMessage() {}
+    }
+
+    /**
+     * Registry màn hình và nhãn phân quyền. Đây là danh mục cố định, không phải quyền đang cấp;
+     * quyền động vẫn phải đọc từ role_permission_matrix, không lấy mặc định khi thiếu dữ liệu.
+     */
+    public static final class PermissionCatalog {
+
+        public static final class Group {
+            public static final String ACCOUNT_SYSTEM = "Tài khoản và hệ thống";
+            public static final String PERSONAL = "Cá nhân";
+            public static final String CATALOG = "Danh mục";
+            public static final String RESIDENCY = "Phòng và lưu trú";
+            public static final String REGISTRATION = "Đăng ký";
+            public static final String FINANCE = "Tài chính";
+            public static final String MAINTENANCE_NOTIFICATION = "Bảo trì và thông báo";
+
+            private Group() {}
+        }
+
+        public static final Map<String, String> ROLE_LABELS =
+                Map.of(
+                        Role.ADMIN, "Quản trị viên",
+                        Role.STAFF, "Cán bộ quản lý",
+                        Role.STUDENT, "Sinh viên",
+                        Role.TECHNICIAN, "Kỹ thuật viên");
+
+        public static final List<String> ACTIONS =
+                List.of(
+                        Action.READ,
+                        Action.CREATE,
+                        Action.UPDATE,
+                        Action.DELETE,
+                        Action.LOCK,
+                        Action.UNLOCK,
+                        Action.RESET_PASSWORD,
+                        Action.CROSS_UNIT_ACCESS);
+
+        public static final Map<String, String> ACTION_LABELS =
+                Map.of(
+                        Action.READ, "Tìm kiếm / xem",
+                        Action.CREATE, "Thêm",
+                        Action.UPDATE, "Sửa / xử lý",
+                        Action.DELETE, "Xóa",
+                        Action.LOCK, "Khóa tài khoản",
+                        Action.UNLOCK, "Mở khóa tài khoản",
+                        Action.RESET_PASSWORD, "Đặt lại mật khẩu",
+                        Action.CROSS_UNIT_ACCESS, "Cấp quyền tổng hợp");
+
+        /** Chỉ tạo ô cho mã có trong Permission.ALL; không tạo quyền theo dữ liệu client gửi. */
+        public static final List<ScreenDefinition> SCREENS =
+                List.of(
+                        new ScreenDefinition(
+                                Resource.USER, "Tài khoản nhân sự", Group.ACCOUNT_SYSTEM),
+                        new ScreenDefinition(Resource.STUDENT, "Sinh viên", Group.ACCOUNT_SYSTEM),
+                        new ScreenDefinition(
+                                Resource.ROLE_PERMISSION,
+                                "Phân quyền theo vai trò",
+                                Group.ACCOUNT_SYSTEM),
+                        new ScreenDefinition(
+                                Resource.CONFIG, "Cấu hình hệ thống", Group.ACCOUNT_SYSTEM),
+                        new ScreenDefinition(
+                                Resource.AUDIT, "Nhật ký thao tác", Group.ACCOUNT_SYSTEM),
+                        new ScreenDefinition(Resource.DASHBOARD, "Tổng quan", Group.ACCOUNT_SYSTEM),
+                        new ScreenDefinition(Resource.PROFILE, "Hồ sơ cá nhân", Group.PERSONAL),
+                        new ScreenDefinition(
+                                Resource.MANAGEMENT_UNIT, "Đơn vị quản lý", Group.CATALOG),
+                        new ScreenDefinition(Resource.BUILDING, "Tòa nhà", Group.CATALOG),
+                        new ScreenDefinition(
+                                Resource.PRIORITY_CATEGORY, "Diện ưu tiên", Group.CATALOG),
+                        new ScreenDefinition(Resource.ROOM_TYPE, "Loại phòng", Group.CATALOG),
+                        new ScreenDefinition(Resource.SEMESTER, "Học kỳ", Group.CATALOG),
+                        new ScreenDefinition(Resource.ROOM, "Phòng", Group.RESIDENCY),
+                        new ScreenDefinition(Resource.BED, "Giường", Group.RESIDENCY),
+                        new ScreenDefinition(Resource.CONTRACT, "Hợp đồng", Group.RESIDENCY),
+                        new ScreenDefinition(
+                                Resource.CONTRACT_EXTENSION, "Gia hạn hợp đồng", Group.RESIDENCY),
+                        new ScreenDefinition(
+                                Resource.ROOM_TRANSFER, "Chuyển phòng", Group.RESIDENCY),
+                        new ScreenDefinition(Resource.MOVE_OUT, "Trả phòng", Group.RESIDENCY),
+                        new ScreenDefinition(Resource.STORAGE, "Gửi đồ", Group.RESIDENCY),
+                        new ScreenDefinition(
+                                Resource.REGISTRATION_PERIOD, "Đợt đăng ký", Group.REGISTRATION),
+                        new ScreenDefinition(
+                                Resource.ROOM_APPLICATION, "Đơn đăng ký phòng", Group.REGISTRATION),
+                        new ScreenDefinition(
+                                Resource.SUMMER_REGISTRATION, "Đăng ký hè", Group.REGISTRATION),
+                        new ScreenDefinition(
+                                Resource.UTILITY_RATE, "Đơn giá điện nước", Group.FINANCE),
+                        new ScreenDefinition(
+                                Resource.UTILITY_READING, "Chỉ số điện nước", Group.FINANCE),
+                        new ScreenDefinition(Resource.INVOICE, "Hóa đơn", Group.FINANCE),
+                        new ScreenDefinition(Resource.DEPOSIT, "Tiền cọc", Group.FINANCE),
+                        new ScreenDefinition(
+                                Resource.MAINTENANCE, "Bảo trì", Group.MAINTENANCE_NOTIFICATION),
+                        new ScreenDefinition(
+                                Resource.NOTIFICATION,
+                                "Thông báo",
+                                Group.MAINTENANCE_NOTIFICATION));
+
+        public record ScreenDefinition(String code, String label, String group) {}
+
+        private PermissionCatalog() {}
+    }
+
+    /** Vai trò nghiệp vụ; quyền động lưu trong CSDL, giới hạn mặc định khai báo tại ScopeGuard. */
     public static final class Role {
         public static final String ADMIN = "ADMIN";
         public static final String STAFF = "STAFF";
@@ -140,6 +264,7 @@ public final class DmsConstants {
         public static final String CONFIG = "CONFIG";
         public static final String AUDIT = "AUDIT";
         public static final String DASHBOARD = "DASHBOARD";
+        public static final String ROLE_PERMISSION = "ROLE_PERMISSION";
 
         private Resource() {}
     }
@@ -344,6 +469,10 @@ public final class DmsConstants {
                 Resource.USER + PERMISSION_SEPARATOR + Action.RESET_PASSWORD;
         public static final String USER_CROSS_UNIT_ACCESS =
                 Resource.USER + PERMISSION_SEPARATOR + Action.CROSS_UNIT_ACCESS;
+        public static final String ROLE_PERMISSION_READ =
+                Resource.ROLE_PERMISSION + PERMISSION_SEPARATOR + Action.READ;
+        public static final String ROLE_PERMISSION_UPDATE =
+                Resource.ROLE_PERMISSION + PERMISSION_SEPARATOR + Action.UPDATE;
 
         // Danh mục đóng: ADMIN có mọi mã trong danh mục, mã lạ vẫn bị từ chối.
         public static final Set<String> ALL =
@@ -450,7 +579,9 @@ public final class DmsConstants {
                         USER_LOCK,
                         USER_UNLOCK,
                         USER_RESET_PASSWORD,
-                        USER_CROSS_UNIT_ACCESS);
+                        USER_CROSS_UNIT_ACCESS,
+                        ROLE_PERMISSION_READ,
+                        ROLE_PERMISSION_UPDATE);
 
         private Permission() {}
     }
@@ -713,6 +844,7 @@ public final class DmsConstants {
         public static final String USER_RESET_PASSWORD = "USER_RESET_PASSWORD";
         public static final String USER_UNLOCK = "USER_UNLOCK";
         public static final String USER_UPDATE = "USER_UPDATE";
+        public static final String ROLE_PERMISSION_UPDATE = "ROLE_PERMISSION_UPDATE";
 
         private AuditAction() {}
     }

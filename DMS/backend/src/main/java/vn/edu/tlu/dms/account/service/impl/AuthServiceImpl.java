@@ -20,9 +20,9 @@ import vn.edu.tlu.dms.account.service.IdentityAccountService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
-import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.ResidencyLookup;
+import vn.edu.tlu.dms.common.service.RolePermissionService;
 
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -47,6 +47,8 @@ public class AuthServiceImpl implements AuthService {
 
     private final EntityManager entityManager;
 
+    private final RolePermissionService rolePermissions;
+
     private final SecureRandom random = new SecureRandom();
 
     public AuthServiceImpl(
@@ -57,7 +59,8 @@ public class AuthServiceImpl implements AuthService {
             ResidencyLookup residency,
             IdentityAccountService identities,
             AuditService audit,
-            EntityManager entityManager) {
+            EntityManager entityManager,
+            RolePermissionService rolePermissions) {
         this.users = users;
         this.units = units;
         this.students = students;
@@ -66,6 +69,7 @@ public class AuthServiceImpl implements AuthService {
         this.identities = identities;
         this.audit = audit;
         this.entityManager = entityManager;
+        this.rolePermissions = rolePermissions;
     }
 
     @Transactional
@@ -104,7 +108,7 @@ public class AuthServiceImpl implements AuthService {
                 u.getCrossUnitAccess(),
                 u.getMustChangePassword(),
                 student,
-                ScopeGuard.permissionsForRole(u.getRole()));
+                rolePermissions.getGrantedPermissions(u.getRole()));
     }
 
     @Override

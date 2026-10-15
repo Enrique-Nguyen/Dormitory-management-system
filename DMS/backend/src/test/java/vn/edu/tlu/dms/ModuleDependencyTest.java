@@ -150,16 +150,16 @@ class ModuleDependencyTest {
 
     /**
      * Baseline được chụp từ bản đã kiểm thử trước khi gom Constants. Giữ mã wire và ma trận quyền
-     * cũ: một lần refactor không được vô tình cấp thêm hoặc thu hồi quyền của bất kỳ role nào. Chỉ
-     * cập nhật baseline khi có yêu cầu thay đổi chính sách phân quyền được duyệt.
+     * cũ của role nghiệp vụ không thay đổi. Màn ma trận động được yêu cầu riêng bổ sung hai quyền
+     * đọc/sửa dành cho ADMIN; quyền thực tế của các role còn lại được lưu tại CSDL.
      */
     @ArchTest
     void constantsRefactorKeepsExistingRolePrivileges(JavaClasses classes) throws Exception {
         Map<String, Integer> expectedCounts =
-                Map.of("ADMIN", 103, "STAFF", 72, "STUDENT", 35, "TECHNICIAN", 11);
+                Map.of("ADMIN", 105, "STAFF", 72, "STUDENT", 35, "TECHNICIAN", 11);
         Map<String, String> expectedDigests =
                 Map.of(
-                        "ADMIN", "483bf515ba32c79a31bfcf5a5b867bf98b31a8836153cdfa3b54e8d3034749ce",
+                        "ADMIN", "37ad53d9c061d1102e7e7b356a9f7eaa00317f0ae2d953931400146a599eb877",
                         "STAFF", "e2bbba0bfe43fc61920463cd513da6bf7ae2626509d12d805b10459fdebe1b4d",
                         "STUDENT",
                                 "8f6ded25810fce60f71926b83efe9b1b3cb8b52a492dd9c836672fc794d97ca3",
@@ -211,7 +211,7 @@ class ModuleDependencyTest {
             declaredCodes.add(code);
         }
         assertThat(declaredCodes)
-                .hasSize(103)
+                .hasSize(105)
                 .doesNotHaveDuplicates()
                 .containsExactlyInAnyOrderElementsOf(DmsConstants.Permission.ALL);
         assertThat(ScopeGuard.permissionsForRole(DmsConstants.Role.ADMIN))
@@ -221,6 +221,33 @@ class ModuleDependencyTest {
                     .as("%s chỉ được dùng mã đã đăng ký trong Constants", role)
                     .allMatch(DmsConstants.Permission.ALL::contains);
         }
+    }
+
+    /** Danh mục màn hình phải biểu diễn đủ quyền API, không bỏ sót hoặc sinh ô trùng mã. */
+    @ArchTest
+    void permissionScreenRegistryCoversEveryRegisteredPrivilege(JavaClasses classes) {
+        var catalog = DmsConstants.PermissionCatalog.SCREENS;
+        assertThat(catalog)
+                .extracting(DmsConstants.PermissionCatalog.ScreenDefinition::code)
+                .doesNotHaveDuplicates();
+        assertThat(DmsConstants.PermissionCatalog.ROLE_LABELS.keySet())
+                .containsExactlyInAnyOrderElementsOf(DmsConstants.Role.ALL);
+        assertThat(DmsConstants.PermissionCatalog.ACTION_LABELS.keySet())
+                .containsExactlyInAnyOrderElementsOf(DmsConstants.PermissionCatalog.ACTIONS);
+        var represented = new ArrayList<String>();
+        for (var screen : catalog) {
+            assertThat(screen.label()).isNotBlank();
+            assertThat(screen.group()).isNotBlank();
+            for (var action : DmsConstants.PermissionCatalog.ACTIONS) {
+                String code = screen.code() + DmsConstants.PERMISSION_SEPARATOR + action;
+                if (DmsConstants.Permission.ALL.contains(code)) {
+                    represented.add(code);
+                }
+            }
+        }
+        assertThat(represented)
+                .doesNotHaveDuplicates()
+                .containsExactlyInAnyOrderElementsOf(DmsConstants.Permission.ALL);
     }
 
     private static List<ArchRule> callsUpward() {
