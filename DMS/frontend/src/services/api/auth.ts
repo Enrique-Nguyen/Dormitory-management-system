@@ -2,7 +2,12 @@ import { Permission, Role } from '../../constants/authorization'
 import axios from 'axios'
 import Keycloak from 'keycloak-js'
 import { queryClient } from '../../app/queryClient'
-import { CHANGE_PASSWORD_PATH, roleHome } from '../../constants/navigation'
+import {
+  CHANGE_PASSWORD_PATH,
+  permissionsForPath,
+  roleHome,
+  rolePortal,
+} from '../../constants/navigation'
 import type { Me } from '../../types/auth'
 import { api } from './client'
 
@@ -108,22 +113,33 @@ export function safeInternalRedirect(value: string | null): string | null {
   const base = 'https://dms.invalid'
   const url = new URL(value, base)
   if (url.origin !== base) return null
-  if (['/login', '/forgot-password', CHANGE_PASSWORD_PATH].includes(url.pathname))
+  if (
+    ['/login', '/forgot-password', CHANGE_PASSWORD_PATH].includes(url.pathname)
+  )
     return null
   return url.pathname + url.search + url.hash
 }
 
 /** Bắt đổi mật khẩu trước; Admin có thể quay lại cổng quản trị, quản lý hoặc kỹ thuật. */
 export function loginLandingPath(me: Me, requested: string | null): string {
+  // Role lạ không được dùng để tạo URL động; guard sẽ giải thích lỗi sau khi tải /me.
+  if (!Object.hasOwn(Role, me.role)) return '/login'
   if (me.mustChangePassword) return CHANGE_PASSWORD_PATH
   const target = safeInternalRedirect(requested)
   const portals =
     me.role === Role.ADMIN
-      ? ['/admin', '/staff', '/technician']
-      : [`/${me.role.toLowerCase()}`]
+      ? [
+          rolePortal[Role.ADMIN],
+          rolePortal[Role.STAFF],
+          rolePortal[Role.TECHNICIAN],
+        ]
+      : [rolePortal[me.role]]
   const pathname = target?.split(/[?#]/)[0]
   return pathname &&
-    portals.some((portal) => pathname === portal || pathname.startsWith(`${portal}/`))
+    portals.some(
+      (portal) => pathname === portal || pathname.startsWith(`${portal}/`),
+    ) &&
+    hasAnyPermission(me, permissionsForPath(pathname))
     ? target!
     : roleHome[me.role]
 }
@@ -142,7 +158,10 @@ type AuthEvent = 'logout' | 'password-changed' | 'account-changed'
 /** Đồng bộ các tab cùng trình duyệt; chỉ lưu tín hiệu, không lưu mật khẩu hay token. */
 export function notifyAuthenticationChanged(reason: AuthEvent) {
   try {
-    localStorage.setItem(eventKey, JSON.stringify({ reason, nonce: crypto.randomUUID() }))
+    localStorage.setItem(
+      eventKey,
+      JSON.stringify({ reason, nonce: crypto.randomUUID() }),
+    )
   } catch {
     // Chặn storage không làm hỏng đăng nhập; máy chủ vẫn kiểm tra phiên ở mọi request.
   }
@@ -153,7 +172,10 @@ export function watchAuthenticationChanges() {
     if (event.key !== eventKey || !event.newValue) return
     try {
       const { reason } = JSON.parse(event.newValue) as { reason?: AuthEvent }
-      if (!reason || !['logout', 'password-changed', 'account-changed'].includes(reason))
+      if (
+        !reason ||
+        !['logout', 'password-changed', 'account-changed'].includes(reason)
+      )
         return
       void queryClient.cancelQueries().then(() => {
         queryClient.clear()

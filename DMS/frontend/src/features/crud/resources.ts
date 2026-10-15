@@ -27,7 +27,14 @@ const ref = (
   lookup: string,
   lookupLabel = 'name',
   required = true,
-): CrudField => ({ name, label, kind: 'select', required, lookup, lookupLabel })
+): CrudField => ({
+  name,
+  label,
+  kind: 'select',
+  required,
+  lookup,
+  lookupLabel,
+})
 const date = (name: string, label: string): CrudField => ({
   name,
   label,
@@ -170,6 +177,27 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.USER,
     title: 'Tài khoản',
     endpoint: '/admin/users',
+    filters: [
+      {
+        ...select('role', 'Vai trò', [
+          Role.STUDENT,
+          Role.STAFF,
+          Role.TECHNICIAN,
+          Role.ADMIN,
+        ]),
+        required: false,
+      },
+      ref('managementUnitId', 'Đơn vị', '/management-units', 'name', false),
+      {
+        name: 'locked',
+        label: 'Trạng thái tài khoản',
+        kind: 'select',
+        options: [
+          { value: 'false', label: 'Đang mở' },
+          { value: 'true', label: 'Đã khóa' },
+        ],
+      },
+    ],
     fields: [
       { ...text('username', 'Tên đăng nhập', true, 50), createOnly: true },
       text('fullName', 'Họ tên'),
@@ -192,6 +220,8 @@ export const resources: Record<string, CrudResource> = {
       ['fullName', 'Họ tên'],
       ['role', 'Vai trò'],
       ['locked', 'Đã khóa'],
+      ['managementUnitId', 'Đơn vị'],
+      ['crossUnitAccess', 'Đọc liên đơn vị'],
     ),
     deleteLabel: 'Khóa',
     deleteAction: 'lock',
@@ -229,6 +259,16 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.ROOM,
     title: 'Phòng & giường',
     endpoint: '/rooms',
+    filters: [
+      ref('buildingId', 'Tòa nhà', '/buildings', 'name', false),
+      ref('roomTypeId', 'Loại phòng', '/room-types', 'name', false),
+      { ...number('floor', 'Tầng'), required: false },
+      { ...select('gender', 'Giới tính', ['M', 'F']), required: false },
+      {
+        ...select('status', 'Trạng thái', ['ACTIVE', 'MAINTENANCE', 'CLOSED']),
+        required: false,
+      },
+    ],
     fields: [
       { ...ref('buildingId', 'Tòa nhà', '/buildings'), createOnly: true },
       number('floor', 'Tầng'),
@@ -651,12 +691,25 @@ export const resources: Record<string, CrudResource> = {
       ['phone', 'Điện thoại'],
     ),
     singleton: true,
+    note: 'Chỉ cập nhật hồ sơ của chính mình. Sinh viên có thể sửa điện thoại, quê quán và liên hệ khẩn cấp; cán bộ cập nhật điện thoại.',
   },
   audit: {
     permission: Resource.AUDIT,
     title: 'Nhật ký hệ thống',
     endpoint: '/admin/audit-logs',
+    filters: [
+      { ...number('actorId', 'ID người thao tác', 1), required: false },
+      text('action', 'Mã thao tác', false, 100),
+      text('entityType', 'Loại đối tượng', false, 100),
+      { name: 'from', label: 'Từ thời điểm', kind: 'datetime' },
+      { name: 'to', label: 'Đến thời điểm', kind: 'datetime' },
+    ],
     fields: [],
+    detailColumns: columns(
+      ['actorId', 'ID người thao tác'],
+      ['entityId', 'ID đối tượng'],
+      ['requestId', 'Mã yêu cầu'],
+    ),
     columns: columns(
       ['fullName', 'Người thực hiện'],
       ['action', 'Thao tác'],
@@ -672,7 +725,11 @@ export const resources: Record<string, CrudResource> = {
     title: 'Cấu hình hệ thống',
     endpoint: '/admin/configs',
     fields: [text('value', 'Giá trị', true, 100)],
-    columns: columns(['key', 'Khóa'], ['description', 'Mô tả'], ['value', 'Giá trị']),
+    columns: columns(
+      ['key', 'Khóa'],
+      ['description', 'Mô tả'],
+      ['value', 'Giá trị'],
+    ),
     idKey: 'key',
     singleton: false,
     localSearch: true,

@@ -22,13 +22,18 @@ interface Props {
  * Guard của mỗi cổng (UI 27.1). Thứ tự: chưa đăng nhập → /login; bắt buộc đổi mật khẩu → /change-password
  * (FR-ACC-03); sai vai trò → trang chủ của vai trò đó (không hiện 403).
  */
-export default function RequireRole({ role, allowMustChangePassword = false }: Props) {
+export default function RequireRole({
+  role,
+  allowMustChangePassword = false,
+}: Props) {
   const { data: me, isPending, error, refetch } = useMe()
   const location = useLocation()
 
   if (isPending) {
     return (
-      <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
+      <div
+        style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}
+      >
         <Spin size="large" aria-label="Đang tải" />
       </div>
     )
@@ -52,7 +57,10 @@ export default function RequireRole({ role, allowMustChangePassword = false }: P
               ? 'expired'
               : undefined
       return (
-        <Navigate to={loginPath(reason, location.pathname + location.search)} replace />
+        <Navigate
+          to={loginPath(reason, location.pathname + location.search)}
+          replace
+        />
       )
     }
     return (
@@ -69,12 +77,25 @@ export default function RequireRole({ role, allowMustChangePassword = false }: P
     )
   }
 
+  // /me là dữ liệu từ API: từ chối role lạ trước khi dùng làm khóa chuyển hướng hoặc mở cổng.
+  if (!Object.hasOwn(Role, me.role))
+    return (
+      <Result
+        status="403"
+        title="Vai trò tài khoản chưa được hỗ trợ"
+        subTitle="Liên hệ quản trị viên để kiểm tra quyền của tài khoản."
+      />
+    )
+
   if (me.mustChangePassword && !allowMustChangePassword)
     return <Navigate to={CHANGE_PASSWORD_PATH} replace />
   if (
     role &&
     me.role !== role &&
-    !(me.role === Role.ADMIN && (role === Role.STAFF || role === Role.TECHNICIAN))
+    !(
+      me.role === Role.ADMIN &&
+      (role === Role.STAFF || role === Role.TECHNICIAN)
+    )
   )
     return <Navigate to={roleHome[me.role]} replace />
 

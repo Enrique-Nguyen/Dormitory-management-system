@@ -16,6 +16,7 @@ export const technicianRoutes: RouteObject = {
         { index: true, element: <Navigate to="tasks" replace /> },
         { path: 'tasks', element: <CrudPage resource="maintenance" /> },
         { path: 'tasks/:id', element: <CrudPage resource="maintenance" /> },
+        { path: 'profile', element: <CrudPage resource="profile" /> },
         { path: 'notifications', element: <CrudPage resource="inbox" /> },
       ],
     },

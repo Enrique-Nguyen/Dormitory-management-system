@@ -17,6 +17,8 @@ export const staffRoutes: RouteObject = {
       children: [
         { index: true, element: <Navigate to="dashboard" replace /> },
         { path: 'dashboard', element: <StaffHomePage /> },
+        // Hồ sơ cá nhân dùng chung; backend chỉ đọc/sửa thông tin của người đang đăng nhập.
+        { path: 'profile', element: <CrudPage resource="profile" /> },
         {
           path: 'requests',
           element: (

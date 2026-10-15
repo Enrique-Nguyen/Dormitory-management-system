@@ -1,10 +1,20 @@
-import { KeyOutlined, LogoutOutlined } from '@ant-design/icons'
+import { KeyOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
 import { App, Avatar, Button, Dropdown, type MenuProps } from 'antd'
 import { Link } from 'react-router'
 import { useState } from 'react'
-import { CHANGE_PASSWORD_PATH, roleLabel, type NavItem } from '../../constants/navigation'
+import { Permission } from '../../constants/authorization'
+import {
+  CHANGE_PASSWORD_PATH,
+  roleLabel,
+  roleProfile,
+  type NavItem,
+} from '../../constants/navigation'
 import { useMe } from '../../features/account/useMe'
-import { hasAnyPermission, logout } from '../../services/api/auth'
+import {
+  hasAnyPermission,
+  hasPermission,
+  logout,
+} from '../../services/api/auth'
 import { useViewport } from '../../hooks/useViewport'
 import { errorMessage } from '../../utils/errorMessages'
 
@@ -13,7 +23,7 @@ interface Props {
   extraItems?: NavItem[]
 }
 
-/** Avatar + menu người dùng: mục riêng của cổng, Đổi mật khẩu, Đăng xuất. */
+/** Avatar + menu chung cho mọi vai trò: Hồ sơ, mục riêng của cổng, Đổi mật khẩu, Đăng xuất. */
 export default function UserMenu({ extraItems = [] }: Props) {
   const { data: me } = useMe()
   const { message } = App.useApp()
@@ -21,6 +31,12 @@ export default function UserMenu({ extraItems = [] }: Props) {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   if (!me) return null
+  const profilePath = roleProfile[me.role]
+  // Hồ sơ đã nằm trong menu sinh viên trên mobile; lọc mục đó để chỉ hiện một lần ở avatar.
+  const visibleExtraItems = extraItems.filter(
+    (item) =>
+      item.path !== profilePath && hasAnyPermission(me, item.permissions),
+  )
 
   const onLogout = async () => {
     if (isLoggingOut) return
@@ -40,14 +56,21 @@ export default function UserMenu({ extraItems = [] }: Props) {
       type: 'group',
       label: `${me.fullName} · ${roleLabel[me.role]}`,
     },
-    ...extraItems
-      .filter((item) => hasAnyPermission(me, item.permissions))
-      .map((item) => ({
-        key: item.path,
-        icon: item.icon && <item.icon />,
-        label: <Link to={item.path}>{item.label}</Link>,
-      })),
-    ...(extraItems.length > 0 ? [{ type: 'divider' as const }] : []),
+    ...(hasPermission(me, Permission.PROFILE_READ)
+      ? [
+          {
+            key: profilePath,
+            icon: <UserOutlined />,
+            label: <Link to={profilePath}>Hồ sơ của tôi</Link>,
+          },
+        ]
+      : []),
+    ...visibleExtraItems.map((item) => ({
+      key: item.path,
+      icon: item.icon && <item.icon />,
+      label: <Link to={item.path}>{item.label}</Link>,
+    })),
+    ...(visibleExtraItems.length > 0 ? [{ type: 'divider' as const }] : []),
     {
       key: 'password',
       icon: <KeyOutlined />,
@@ -87,7 +110,13 @@ export default function UserMenu({ extraItems = [] }: Props) {
           {me.fullName.trim().split(/\s+/).pop()?.[0]?.toUpperCase()}
         </Avatar>
         {showName && (
-          <span style={{ fontWeight: 500, fontSize: 13, color: 'var(--color-heading)' }}>
+          <span
+            style={{
+              fontWeight: 500,
+              fontSize: 13,
+              color: 'var(--color-heading)',
+            }}
+          >
             {me.fullName}
           </span>
         )}

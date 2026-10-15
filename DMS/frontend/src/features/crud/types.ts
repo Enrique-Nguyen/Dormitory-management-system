@@ -4,7 +4,14 @@ export type CrudRecord = Record<string, unknown> & { id?: number | string }
 export interface CrudField {
   name: string
   label: string
-  kind?: 'text' | 'number' | 'date' | 'datetime' | 'textarea' | 'select' | 'boolean'
+  kind?:
+    | 'text'
+    | 'number'
+    | 'date'
+    | 'datetime'
+    | 'textarea'
+    | 'select'
+    | 'boolean'
   required?: boolean
   maxLength?: number
   min?: number
@@ -26,7 +33,11 @@ export interface CrudResource {
   writeEndpoint?: string
   detailEndpoint?: string
   fields: CrudField[]
+  /** Bộ lọc GET được màn khai báo; chỉ gửi các tên này, không nhận tên cột tùy ý từ URL. */
+  filters?: CrudField[]
   columns: { key: string; label: string }[]
+  /** Trường chỉ hiện ở chi tiết, không được đưa vào payload thêm/sửa. */
+  detailColumns?: { key: string; label: string }[]
   localSearch?: boolean
   note?: string
   editStates?: string[]

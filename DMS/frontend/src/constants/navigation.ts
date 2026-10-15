@@ -46,11 +46,27 @@ const item = (label: string, path: string, icon?: ComponentType): NavItem => ({
   permissions: permissionsForPath(path),
 })
 
-/** Dùng chung cho menu và route; URL có ID vẫn lấy quyền của màn danh sách. */
+/**
+ * Dùng chung cho menu và route; URL chi tiết vẫn lấy quyền đọc của màn danh sách.
+ * Mỗi cổng có quyền trang chủ riêng. Cổng/màn chưa khai báo luôn trả danh sách rỗng để bị chặn.
+ */
 export function permissionsForPath(path: string): Permission[] {
-  const screen = path.replace(/^\/(admin|staff|student|technician)\/?/, '')
+  const pathname = path.split(/[?#]/)[0].replace(/\/+$/, '')
+  const portal = pathname.match(
+    /^\/(admin|staff|student|technician)(?:\/|$)/,
+  )?.[1]
+  if (!portal) return []
+  const screen = pathname.slice(portal.length + 1).replace(/^\//, '')
+  if (!screen) {
+    const homePermissions: Record<string, Permission[]> = {
+      admin: [Permission.USER_READ],
+      staff: [Permission.DASHBOARD_READ],
+      student: [Permission.PROFILE_READ],
+      technician: [Permission.MAINTENANCE_READ],
+    }
+    return homePermissions[portal]
+  }
   const screens: Record<string, Permission[]> = {
-    '': [Permission.DASHBOARD_READ],
     dashboard: [Permission.DASHBOARD_READ],
     users: [Permission.USER_READ],
     units: [Permission.MANAGEMENT_UNIT_READ],
@@ -65,7 +81,10 @@ export function permissionsForPath(path: string): Permission[] {
     rooms: [Permission.ROOM_READ],
     room: [Permission.ROOM_READ],
     contracts: [Permission.CONTRACT_READ],
-    requests: [Permission.CONTRACT_EXTENSION_READ, Permission.ROOM_TRANSFER_READ],
+    requests: [
+      Permission.CONTRACT_EXTENSION_READ,
+      Permission.ROOM_TRANSFER_READ,
+    ],
     summer: [Permission.SUMMER_REGISTRATION_READ],
     storage: [Permission.STORAGE_READ],
     'utilities/prices': [Permission.UTILITY_RATE_READ],
@@ -85,6 +104,21 @@ export function permissionsForPath(path: string): Permission[] {
     .sort((left, right) => right.length - left.length)
     .find((key) => screen === key || (key && screen.startsWith(`${key}/`)))
   return match === undefined ? [] : screens[match]
+}
+
+/** Gốc cổng và màn hồ sơ dùng chung cho menu tài khoản, guard và chuyển hướng sau đăng nhập. */
+export const rolePortal: Record<Role, string> = {
+  [Role.STUDENT]: '/student',
+  [Role.STAFF]: '/staff',
+  [Role.TECHNICIAN]: '/technician',
+  [Role.ADMIN]: '/admin',
+}
+
+export const roleProfile: Record<Role, string> = {
+  [Role.STUDENT]: `${rolePortal[Role.STUDENT]}/profile`,
+  [Role.STAFF]: `${rolePortal[Role.STAFF]}/profile`,
+  [Role.TECHNICIAN]: `${rolePortal[Role.TECHNICIAN]}/profile`,
+  [Role.ADMIN]: `${rolePortal[Role.ADMIN]}/profile`,
 }
 
 /** Trang chủ của từng vai trò; route ngoài quyền chuyển về đây. */
@@ -187,7 +221,11 @@ export const studentBottomNav: NavItem[] = [
 export const studentMoreNav: NavItem[] = [
   item('Đơn đăng ký', '/student/applications', FileTextOutlined),
   item('Hợp đồng', '/student/contracts', SolutionOutlined),
-  item('Yêu cầu gia hạn / chuyển phòng', '/student/requests', ClockCircleOutlined),
+  item(
+    'Yêu cầu gia hạn / chuyển phòng',
+    '/student/requests',
+    ClockCircleOutlined,
+  ),
   item('Tiền cọc', '/student/deposit', WalletOutlined),
   item('Kỳ hè', '/student/summer', CalendarOutlined),
   item('Thông báo', '/student/notifications', BellOutlined),
@@ -201,7 +239,10 @@ export const technicianNav: NavItem[] = [
 export const CHANGE_PASSWORD_PATH = '/change-password'
 
 /** Chọn mục menu có path dài nhất khớp với đường dẫn hiện tại. */
-export function findActivePath(items: NavItem[], pathname: string): string | undefined {
+export function findActivePath(
+  items: NavItem[],
+  pathname: string,
+): string | undefined {
   return items
     .filter(({ path }) => pathname === path || pathname.startsWith(`${path}/`))
     .sort((a, b) => b.path.length - a.path.length)[0]?.path
