@@ -596,6 +596,11 @@ export default function CrudPage({ resource }: { resource: string }) {
       const payload: Record<string, unknown> = {}
       for (const field of fields.filter(visible)) {
         const value = values[field.name]
+        // Trường clearable: giá trị rỗng khi sửa gửi null để backend xóa dữ liệu.
+        if (editing && field.clearable && (value == null || value === '')) {
+          payload[field.name] = null
+          continue
+        }
         // Chuỗi rỗng xóa nội dung tùy chọn; không gửi null để đổi nghĩa PATCH của backend.
         if (
           value == null ||

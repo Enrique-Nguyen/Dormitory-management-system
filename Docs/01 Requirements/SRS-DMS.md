@@ -326,7 +326,7 @@ Có hai loại hóa đơn và một sổ cọc:
 
 ### 5.1. Thực thể
 
-Mục này mô tả ở mức nghiệp vụ. Tên bảng, kiểu dữ liệu và ràng buộc chi tiết: `DB-Design-DMS.md` v0.5 và `DB-DMS-schema.sql`.
+Mục này mô tả ở mức nghiệp vụ. Tên bảng, kiểu dữ liệu và ràng buộc chi tiết: `DB-Design-DMS.md` v0.7 và `DB-DMS-schema.sql`.
 
 | Thực thể | Thuộc tính chính | Ghi chú |
 |---|---|---|

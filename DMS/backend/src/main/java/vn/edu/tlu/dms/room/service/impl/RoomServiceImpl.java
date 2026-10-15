@@ -42,6 +42,9 @@ import vn.edu.tlu.dms.room.service.RoomReferenceService;
 import vn.edu.tlu.dms.room.service.RoomService;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -417,37 +420,51 @@ public class RoomServiceImpl implements RoomService {
     }
 
     /**
-     * Đưa số giường của phòng về đúng sức chứa của loại phòng. Thêm giường mang mã hai chữ số còn
-     * thiếu; bớt giường từ mã lớn nhất và chỉ bớt giường chưa từng có phân phòng (lịch sử không
-     * bị xóa). Gọi sau khi đã khóa các giường của phòng.
+     * Đưa số giường ACTIVE của phòng về đúng sức chứa của loại phòng. Thêm: kích hoạt lại giường
+     * RETIRED trước, rồi mới tạo giường mang mã hai chữ số còn thiếu. Bớt: từ mã lớn nhất, giường
+     * chưa từng có phân phòng thì xóa, giường đã có lịch sử chuyển RETIRED để giữ lịch sử. Giường
+     * BROKEN không bị đụng tới. Gọi sau khi đã khóa các giường và xác nhận phòng không có phân phòng
+     * mở.
      */
     private void syncBeds(Room r, int target) {
-        var existing = new ArrayList<>(beds.findAll((b, q, cb) -> cb.equal(b.get("roomId"), r.getId())));
-        existing.sort(java.util.Comparator.comparing(Bed::getCode));
-        Set<String> used = new java.util.HashSet<>();
-        existing.forEach(b -> used.add(b.getCode()));
-        for (int number = 1; existing.size() < target; number++) {
+        var all = new ArrayList<>(beds.findAll((b, q, cb) -> cb.equal(b.get("roomId"), r.getId())));
+        all.sort(Comparator.comparing(Bed::getCode));
+        Set<String> used = new HashSet<>();
+        all.forEach(b -> used.add(b.getCode()));
+        var active = new ArrayList<Bed>();
+        all.stream().filter(b -> BedOperationStatus.ACTIVE.equals(b.getStatus())).forEach(active::add);
+        for (Bed bed : all) {
+            if (active.size() >= target) {
+                break;
+            }
+            if (BedOperationStatus.RETIRED.equals(bed.getStatus())) {
+                bed.setStatus(BedOperationStatus.ACTIVE);
+                active.add(beds.save(bed));
+            }
+        }
+        for (int number = 1; active.size() < target; number++) {
             String code = String.format("%02d", number);
             if (used.add(code)) {
                 var bed = new Bed();
                 bed.setRoomId(r.getId());
                 bed.setCode(code);
-                bed.setStatus("ACTIVE");
-                existing.add(beds.save(bed));
+                bed.setStatus(BedOperationStatus.ACTIVE);
+                active.add(beds.save(bed));
             }
         }
-        for (int i = existing.size() - 1; i >= 0 && existing.size() > target; i--) {
-            var bed = existing.get(i);
+        active.sort(Comparator.comparing(Bed::getCode));
+        for (int i = active.size() - 1; active.size() > target; i--) {
+            var bed = active.get(i);
             Long bedId = bed.getId();
-            if (!assignments.exists((a, q, cb) -> cb.equal(a.get("bedId"), bedId))) {
+            if (assignments.exists((a, q, cb) -> cb.equal(a.get("bedId"), bedId))) {
+                bed.setStatus(BedOperationStatus.RETIRED);
+                beds.save(bed);
+            } else {
                 beds.delete(bed);
-                existing.remove(i);
             }
+            active.remove(i);
         }
         beds.flush();
-        if (existing.size() > target) {
-            throw BusinessException.conflict(ErrorCode.BED_OCCUPIED);
-        }
     }
 
     private Room findAccessibleRoom(Long id, boolean writing) {
@@ -496,7 +513,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     private Map<Long, Map<String, Object>> loadOccupancy(List<Long> roomIds) {
-        Map<Long, Map<String, Object>> result = new java.util.HashMap<>();
+        Map<Long, Map<String, Object>> result = new HashMap<>();
         if (roomIds.isEmpty()) {
             return result;
         }
@@ -546,7 +563,7 @@ public class RoomServiceImpl implements RoomService {
             return List.of();
         }
         var bedIds = roomBeds.stream().map(Bed::getId).toList();
-        Map<Long, RoomAssignmentHistory> openByBed = new java.util.HashMap<>();
+        Map<Long, RoomAssignmentHistory> openByBed = new HashMap<>();
         assignments
                 .findAll(
                         (r, q, cb) ->

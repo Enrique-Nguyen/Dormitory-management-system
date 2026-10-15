@@ -28,7 +28,7 @@ Khắc phục các lỗi chức năng, ánh xạ mã lỗi và hiệu năng mà 
 | Lỗi framework thành 500 | `GlobalExceptionHandler` | 405, 415, 404, 400 cho lỗi MVC |
 | Ràng buộc CSDL luôn là `CONCURRENT_UPDATE` | `GlobalExceptionHandler` | Ánh xạ theo tên ràng buộc rồi theo SQLState; thêm `LEADER_ALREADY_ASSIGNED`, `STUDENT_CODE_EXISTS`, `BED_CODE_EXISTS`, `DUPLICATE_VALUE` |
 | Thiếu mã lỗi ở UI và tài liệu | `errorMessages.ts`, `API-Spec-DMS.md` v0.5, `DB-Design-DMS.md` v0.4 | Thêm câu tiếng Việt và bảng mã; mã lạ không hiện chuỗi mã thô |
-| Truy vấn lặp | `CurrentUserImpl`, `RoomServiceImpl`, `NotificationServiceImpl` | Cache Actor theo request (`invalidate()` sau đổi mật khẩu), nạp công suất phòng và giường theo lô |
+| Truy vấn lặp | `CurrentUserImpl`, `RoomServiceImpl`, `NotificationServiceImpl` | Cache Actor theo request (không có `invalidate()`; ảnh chụp xác thực dùng đến hết request), nạp công suất phòng và giường theo lô |
 | CSRF và CrudPage | `services/api/client.ts`, `features/crud/api.ts`, `CrudPage.tsx`, `resources.ts`, `types.ts` | Làm mới CSRF trong interceptor (thử lại một lần); ghi dùng `useApiErrorHandler`; cờ cấu hình thay nhánh theo tên resource; lookup có `staleTime` |
 | Mục nhỏ | `LikePattern`, `AuthServiceImpl`, `AccountAccessFilter` | Escape `%`, `_`, `\` trong tìm kiếm; băm giả khi username không tồn tại; tài khoản bị khóa vẫn đăng xuất được |
 

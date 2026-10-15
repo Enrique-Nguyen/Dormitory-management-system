@@ -47,7 +47,7 @@ const studentFields: CrudField[] = [
   text('studentCode', 'Mã sinh viên', true, 20),
   text('fullName', 'Họ tên'),
   select('gender', 'Giới tính', ['M', 'F']),
-  { ...date('dateOfBirth', 'Ngày sinh'), required: false },
+  { ...date('dateOfBirth', 'Ngày sinh'), required: false, clearable: true },
   text('faculty', 'Khoa', false),
   text('cohort', 'Khóa', false, 10),
   text('phone', 'Điện thoại', false, 20),

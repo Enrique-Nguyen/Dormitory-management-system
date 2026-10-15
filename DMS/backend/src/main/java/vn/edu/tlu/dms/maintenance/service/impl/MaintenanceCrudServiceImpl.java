@@ -56,12 +56,13 @@ public class MaintenanceCrudServiceImpl implements MaintenanceCrudService {
                         "SELECT requester_id,status FROM maintenance_request WHERE id=? FOR UPDATE",
                         (r, i) -> new Object[] {r.getLong(1), r.getString(2)},
                         id);
-        if (rows.isEmpty()) {
+        // Ticket không tồn tại hoặc không thuộc người gọi đều trả 404 để không lộ sự tồn tại của id.
+        if (rows.isEmpty()
+                || (!current.get().isAdmin() && !current.get().id().equals(rows.get(0)[0]))) {
             throw BusinessException.notFound();
         }
-        if ((!current.get().isAdmin() && !current.get().id().equals(rows.get(0)[0]))
-                || !MaintenanceStatus.OPEN.equals(rows.get(0)[1])) {
-            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
+        if (!MaintenanceStatus.OPEN.equals(rows.get(0)[1])) {
+            throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
     }
 
@@ -91,12 +92,15 @@ public class MaintenanceCrudServiceImpl implements MaintenanceCrudService {
     public void cancelOpenRequest(Long id) {
         guard.requirePermission(Permission.MAINTENANCE_DELETE);
         requireOpenRequestOfCreator(id);
-        jdbc.update("UPDATE maintenance_request SET status='CANCELLED' WHERE id=?", id);
+        jdbc.update(
+                "UPDATE maintenance_request SET status=? WHERE id=?",
+                MaintenanceStatus.CANCELLED,
+                id);
         history.record(
                 "MAINTENANCE",
                 id,
                 MaintenanceStatus.OPEN,
-                "CANCELLED",
+                MaintenanceStatus.CANCELLED,
                 current.get().id(),
                 current.get().isAdmin() ? "Quản trị viên hủy yêu cầu" : "Người tạo hủy yêu cầu");
     }

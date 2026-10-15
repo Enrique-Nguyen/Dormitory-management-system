@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type { ApiError } from '../services/api/client'
-import { formatDateTime } from './format'
+import { formatDate, formatDateTime } from './format'
 
 // errorCode → câu tiếng Việt (UI 27.2, danh mục mã ở API Spec mục 5). Không parse chuỗi message.
 // Mỗi câu nói rõ nguyên nhân → cách xử lý (Rule 06). Thêm mã vào đây cùng lúc với danh mục API Spec.
@@ -113,6 +113,26 @@ const messages: Record<string, (d: Details) => string> = {
   TECHNICIAN_OUT_OF_UNIT: () =>
     'Kỹ thuật viên không thuộc đơn vị của ticket. Chọn kỹ thuật viên khác.',
   INVOICE_ALREADY_PAID: () => 'Hóa đơn đã được xác nhận thanh toán trước đó.',
+  APPLICATION_EXISTS: () =>
+    'Bạn đã có đơn trong đợt này. Hãy mở đơn hiện có thay vì tạo đơn mới.',
+  SUMMER_CHOICE_EXISTS: () =>
+    'Bạn đã gửi lựa chọn cho kỳ hè này. Hãy mở lựa chọn hiện có để theo dõi.',
+  STORAGE_RECORD_EXISTS: () =>
+    'Đã có phiếu gửi đồ chưa nhận lại. Hãy hoàn tất phiếu đó trước khi tạo phiếu mới.',
+  STUDENT_ALREADY_ASSIGNED: () =>
+    'Sinh viên đã có chỗ ở hoặc đang giữ chỗ. Hãy tải lại danh sách để xem phân phòng hiện tại.',
+  DEPOSIT_INVALID: () =>
+    'Giao dịch tiền cọc không hợp lệ. Hãy kiểm tra loại giao dịch và số tiền rồi thử lại.',
+  RATE_EXISTS: (d) =>
+    typeof d.effectiveFrom === 'string'
+      ? `Đã có đơn giá áp dụng từ ngày ${formatDate(d.effectiveFrom)}. Hãy chọn ngày hiệu lực khác.`
+      : 'Đã có đơn giá áp dụng từ ngày này. Hãy chọn ngày hiệu lực khác.',
+  REQUEST_PENDING_EXISTS: () =>
+    'Hợp đồng này đã có một yêu cầu đang chờ xử lý. Hãy chờ kết quả hoặc hủy yêu cầu cũ.',
+  IDENTITY_ALREADY_LINKED: () =>
+    'Tài khoản này đã được liên kết với một danh tính đăng nhập khác. Hãy kiểm tra lại với quản trị viên.',
+  BOOTSTRAP_USERNAME_IN_USE: () =>
+    'Tên đăng nhập khởi tạo đã tồn tại trên hệ thống định danh. Hãy dùng tên khác hoặc liên hệ quản trị viên.',
 }
 
 export function errorMessage(error: unknown): string {

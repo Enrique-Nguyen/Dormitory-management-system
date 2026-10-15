@@ -194,7 +194,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                     + " WHERE user_id=?",
                 studentCode,
                 gender,
-                keep(in.dateOfBirth(), before.get("dateOfBirth")),
+                in.dateOfBirthPresent() ? in.dateOfBirth() : before.get("dateOfBirth"),
                 keep(in.faculty(), before.get("faculty")),
                 keep(in.cohort(), before.get("cohort")),
                 keep(in.hometown(), before.get("hometown")),

@@ -117,7 +117,7 @@ public class ContractServiceImpl implements ContractService {
                 (root, query, builder) ->
                         builder.and(
                                 builder.equal(root.get("applicationId"), applicationId),
-                                root.get("status").in("PENDING", "ACTIVE")));
+                                root.get("status").in(ContractStatus.PENDING, ContractStatus.ACTIVE)));
     }
 
     private ContractDtos.Response toContractResponse(DormitoryContract contract, boolean detail) {

@@ -794,6 +794,166 @@ class CrudApiIntegrationTest {
     }
 
     @Test
+    void maintenanceEditHidesForeignTicketsAndRejectsNonOpenOnes() throws Exception {
+        Long otherStudentId =
+                jdbc.queryForObject(
+                        "INSERT INTO app_user(username,role,full_name,must_change_password,"
+                                + "keycloak_user_id) VALUES(?,'STUDENT','Sinh viên khác',false,?)"
+                                + " RETURNING id",
+                        Long.class,
+                        "other" + suffix,
+                        UUID.randomUUID().toString());
+        Long ticketId =
+                jdbc.queryForObject(
+                        """
+                        INSERT INTO maintenance_request(code,requester_id,building_id,floor,category,severity,description)
+                        VALUES (?,?,?,1,'ELECTRIC','LOW','Đèn hỏng') RETURNING id
+                        """,
+                        Long.class,
+                        "TK-" + suffix,
+                        studentId,
+                        firstBuildingId);
+        String body =
+                """
+                {"category":"WATER","severity":"HIGH","description":"Vòi nước hỏng"}
+                """;
+        mvc.perform(
+                        patch("/api/maintenance-requests/" + ticketId)
+                                .with(asUser(otherStudentId, "STUDENT"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        patch("/api/maintenance-requests/" + (ticketId + 100000))
+                                .with(asUser(studentId, "STUDENT"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body))
+                .andExpect(status().isNotFound());
+        jdbc.update(
+                "UPDATE maintenance_request SET status='ASSIGNED', assigned_to=? WHERE id=?",
+                technicianId,
+                ticketId);
+        mvc.perform(
+                        patch("/api/maintenance-requests/" + ticketId)
+                                .with(asUser(studentId, "STUDENT"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_STATE_TRANSITION"));
+    }
+
+    @Test
+    void foreignKeyViolationIsValidationOnWriteAndInUseOnDelete() throws Exception {
+        mvc.perform(
+                        post("/api/rooms")
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {"buildingId":%d,"roomTypeId":%d,"floor":1,"code":"Z999","gender":"M"}
+                                        """
+                                                .formatted(firstBuildingId, roomTypeId + 100000)))
+                .andExpect(status().is4xxClientError())
+                .andExpect(jsonPath("$.errorCode").value(org.hamcrest.Matchers.not("RESOURCE_IN_USE")));
+    }
+
+    @Test
+    void shrinkingRoomTypeRetiresBedsWithHistoryAndGrowingReactivatesThem() throws Exception {
+        Long fourBeds =
+                jdbc.queryForObject(
+                        "INSERT INTO room_type(name,bed_count,price_main,price_summer) VALUES"
+                                + " (?,4,1000000,500000) RETURNING id",
+                        Long.class,
+                        "Bốn " + suffix);
+        String response =
+                mvc.perform(
+                                post("/api/rooms")
+                                        .with(asUser(staffId, "STAFF"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                """
+                                                {"buildingId":%d,"roomTypeId":%d,"floor":2,"code":"A104","gender":"M"}
+                                                """
+                                                        .formatted(firstBuildingId, fourBeds)))
+                        .andExpect(status().isCreated())
+                        .andExpect(jsonPath("$.beds.length()").value(4))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long roomId = mapper.readTree(response).get("id").asLong();
+        Long bed04 =
+                jdbc.queryForObject(
+                        "SELECT id FROM bed WHERE room_id=? AND code='04'", Long.class, roomId);
+        Long applicationId = createDraftApplication(createOpenPeriod());
+        Long contractId =
+                jdbc.queryForObject(
+                        """
+                        INSERT INTO dormitory_contract(code,student_id,application_id,start_date,end_date,activation_deadline,status)
+                        VALUES (?,?,?,current_date,current_date+30,now()+interval '7 days','CANCELLED') RETURNING id
+                        """,
+                        Long.class,
+                        "HD-" + suffix,
+                        studentId,
+                        applicationId);
+        jdbc.update(
+                """
+                INSERT INTO room_assignment_history(student_id,contract_id,bed_id,kind,started_at,ended_at,end_reason,price_main,price_summer,created_by)
+                VALUES(?,?,?,'HOLD',now()-interval '2 days',now()-interval '1 day','HOLD_CANCELLED',1000000,500000,?)
+                """,
+                studentId,
+                contractId,
+                bed04,
+                staffId);
+        mvc.perform(
+                        patch("/api/rooms/" + roomId)
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"roomTypeId\":" + roomTypeId + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activeBeds").value(2));
+        assertThat(jdbc.queryForObject("SELECT status FROM bed WHERE id=?", String.class, bed04))
+                .isEqualTo("RETIRED");
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM bed WHERE room_id=?", Long.class, roomId))
+                .isEqualTo(3L);
+        mvc.perform(
+                        patch("/api/rooms/" + roomId)
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"roomTypeId\":" + fourBeds + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activeBeds").value(4));
+        assertThat(jdbc.queryForObject("SELECT status FROM bed WHERE id=?", String.class, bed04))
+                .isEqualTo("ACTIVE");
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM bed WHERE room_id=?", Long.class, roomId))
+                .isEqualTo(4L);
+    }
+
+    @Test
+    void studentPatchClearsDateOfBirthOnlyWhenNullIsSentExplicitly() throws Exception {
+        jdbc.update(
+                "UPDATE student_profile SET date_of_birth='2005-01-02' WHERE user_id=?",
+                studentId);
+        mvc.perform(
+                        patch("/api/admin/students/" + studentId)
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"faculty\":\"CNTT\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dateOfBirth").value("2005-01-02"));
+        mvc.perform(
+                        patch("/api/admin/students/" + studentId)
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"dateOfBirth\":null}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dateOfBirth").doesNotExist());
+    }
+
+    @Test
     void approvedApplicationWithLiveContractCannotBeCancelled() throws Exception {
         Long periodId = createOpenPeriod();
         Long id = createDraftApplication(periodId);

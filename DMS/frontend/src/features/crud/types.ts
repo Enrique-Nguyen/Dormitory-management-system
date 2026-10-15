@@ -13,6 +13,8 @@ export interface CrudField {
     | 'select'
     | 'boolean'
   required?: boolean
+  /** Khi sửa, giá trị rỗng gửi null để xóa dữ liệu (chỉ dùng khi backend phân biệt null và vắng mặt). */
+  clearable?: boolean
   maxLength?: number
   min?: number
   max?: number

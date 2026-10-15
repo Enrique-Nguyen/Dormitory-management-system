@@ -7,6 +7,7 @@ import org.postgresql.util.PSQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -178,7 +179,16 @@ public class GlobalExceptionHandler {
             if (sqlState != null) {
                 switch (sqlState) {
                     case "23505", "23P01" -> code = ErrorCode.DUPLICATE_VALUE;
-                    case "23503" -> code = ErrorCode.RESOURCE_IN_USE;
+                    case "23503" -> {
+                        // DELETE vướng bản ghi con = đang được dùng; ghi mà cha không tồn tại = tham
+                        // chiếu sai, người dùng cần sửa dữ liệu nhập chứ không phải giải phóng.
+                        if (HttpMethod.DELETE.matches(request.getMethod())) {
+                            code = ErrorCode.RESOURCE_IN_USE;
+                        } else {
+                            code = ErrorCode.VALIDATION_FAILED;
+                            status = HttpStatus.BAD_REQUEST;
+                        }
+                    }
                     case "23502", "23514" -> {
                         code = ErrorCode.VALIDATION_FAILED;
                         status = HttpStatus.BAD_REQUEST;

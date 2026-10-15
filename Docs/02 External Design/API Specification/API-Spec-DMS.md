@@ -1,6 +1,6 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.11**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.12**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.11 (mục 3, 6.2, 10), `SAD-DMS.md` v1.4, `DB-Design-DMS.md` v0.7, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
@@ -19,6 +19,7 @@
 | 0.9 | 15/10/2026 | GET/PUT ma trận quyền theo role; catalog có 105 quyền, kiểm giới hạn vai trò/quyền hồ sơ/READ, version và audit |
 | 0.10 | 15/10/2026 | Theo code review: bổ sung mã `RESOURCE_IN_USE`, `DUPLICATE_VALUE`, `METHOD_NOT_ALLOWED`, `UNSUPPORTED_MEDIA_TYPE`, `STUDENT_HAS_ACTIVE_CONTRACT`, `STUDENT_CODE_EXISTS`, `BED_CODE_EXISTS`, `LEADER_ALREADY_ASSIGNED`, `APPLICATION_HAS_CONTRACT`; ràng buộc CSDL ngoài danh sách ánh xạ theo SQLState thay vì luôn là `CONCURRENT_UPDATE`; hủy đơn APPROVED đã có hợp đồng bị chặn; PATCH sinh viên giữ trường không gửi |
 | 0.11 | 15/10/2026 | Đồng bộ toàn diện theo SRS v0.11, SAD v1.4 và DB-Design v0.7: cập nhật bảng endpoint mục 3.3 và bảng `allowedActions` mục 6 ghi rõ điều kiện `cancel` của đơn APPROVED (khi chưa sinh hợp đồng PENDING/ACTIVE, có hợp đồng trả 409 `APPLICATION_HAS_CONTRACT`); ghi chú chặn đổi `bedCount` của loại phòng đang gán cho phòng tồn tại tại PATCH `/api/room-types/{id}` (409 `RESOURCE_IN_USE`); làm rõ phạm vi hóa đơn của Staff theo học kỳ và ràng buộc xác nhận thanh toán qua `isInStaffUnit` (404 khi ngoài scope). |
+| 0.12 | 15/10/2026 | Theo code review: khóa ngoại (SQLState 23503) phân biệt theo phương thức — `DELETE` trả 409 `RESOURCE_IN_USE`, ghi tham chiếu không tồn tại trả 400 `VALIDATION_FAILED`; ticket của người khác khi sửa/hủy trả 404, ticket không còn `OPEN` trả 409 `INVALID_STATE_TRANSITION`; PATCH sinh viên: `dateOfBirth: null` tường minh xóa ngày sinh, không gửi thì giữ; đổi loại phòng chuyển giường dư đã có lịch sử sang `RETIRED` thay vì báo `BED_OCCUPIED`; bổ sung mã `IDENTITY_ALREADY_LINKED`, `BOOTSTRAP_USERNAME_IN_USE` |
 
 ---
 
@@ -870,6 +871,8 @@ Mã bổ sung cho Keycloak:
 - `IDENTITY_UNAVAILABLE` (503): Keycloak/Admin REST chưa sẵn sàng; không tự lặp thao tác ghi.
 - `IDENTITY_NOT_CONFIGURED` (503): thiếu secret service account backend.
 - `DUPLICATE_USERNAME` (409): username đã tồn tại trên Keycloak.
+- `IDENTITY_ALREADY_LINKED` (409): tài khoản DMS đã liên kết với một danh tính Keycloak khác.
+- `BOOTSTRAP_USERNAME_IN_USE` (409): tên đăng nhập khởi tạo Admin đã tồn tại trên Keycloak.
 
 
 | Mã | HTTP | Gợi ý thông báo |
@@ -979,7 +982,7 @@ Theo `DB-Design-DMS.md` mục 4; `GlobalExceptionHandler` đọc tên ràng bu�
 | `EXCLUDE` của `semester` | `SEMESTER_OVERLAP` |
 | `ux_room_leader` | `LEADER_ALREADY_ASSIGNED` |
 | UNIQUE `student_code`, UNIQUE `(room_id, code)` của giường | `STUDENT_CODE_EXISTS`, `BED_CODE_EXISTS` |
-| Ràng buộc khác, theo SQLState | UNIQUE / EXCLUDE (23505, 23P01) → 409 `DUPLICATE_VALUE`; khóa ngoại (23503) → 409 `RESOURCE_IN_USE`; NOT NULL / CHECK (23502, 23514) → 400 `VALIDATION_FAILED`; còn lại → 409 `CONCURRENT_UPDATE` (ghi log mức WARN kèm tên ràng buộc) |
+| Ràng buộc khác, theo SQLState | UNIQUE / EXCLUDE (23505, 23P01) → 409 `DUPLICATE_VALUE`; khóa ngoại (23503) → `DELETE`: 409 `RESOURCE_IN_USE`, ghi khác: 400 `VALIDATION_FAILED`; NOT NULL / CHECK (23502, 23514) → 400 `VALIDATION_FAILED`; còn lại → 409 `CONCURRENT_UPDATE` (ghi log mức WARN kèm tên ràng buộc) |
 
 ---
 
