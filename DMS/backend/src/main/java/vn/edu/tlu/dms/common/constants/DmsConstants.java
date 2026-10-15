@@ -13,6 +13,9 @@ public final class DmsConstants {
 
     public static final String PERMISSION_SEPARATOR = "_";
 
+    /** Múi giờ nghiệp vụ dùng thống nhất khi JVM kết nối CSDL và xử lý ngày giờ. */
+    public static final String APPLICATION_TIME_ZONE = "Asia/Ho_Chi_Minh";
+
     private DmsConstants() {}
 
     /** Mã lỗi công khai của API; gom mã không thay đổi giá trị đã dùng ở frontend/CSDL. */
