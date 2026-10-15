@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Phiên bản | **0.9** |
-| Ngày | 14/10/2026 |
+| Phiên bản | **0.10** |
+| Ngày | 15/10/2026 |
 | Học phần | Chuyên đề CNTT, lớp 65CNTT, Nhóm 3 |
 | Giảng viên | Hoàng Quốc Dũng |
 | Thành viên | Nguyễn Văn Séc, Nguyễn Phú Nguyên, Lê Đức Nguyên, Nguyễn Văn Quyền, Nguyễn Tiến Lộc |
@@ -24,6 +24,7 @@
 | 0.7 | 13/10/2026 | Nhóm 3 | Đồng bộ luồng đăng nhập Spring Security thật: xác thực JSON, CSRF, thu hồi phiên khi thay đổi bảo mật, giới hạn BCrypt và quyền reset theo đợt/phân phòng hiệu lực; bỏ cơ chế demo/mock |
 | 0.8 | 14/10/2026 | Nhóm 3 | Theo yêu cầu chuyển đăng nhập sang Keycloak: OIDC/PKCE, JWT Bearer, tài khoản tập trung, liên kết subject và giữ RBAC/phạm vi DMS; không tự tạo tài khoản demo |
 | 0.9 | 14/10/2026 | Nhóm 3 | Cập nhật ADMIN làm mọi nghiệp vụ ở mọi đơn vị; ma trận role/quyền CRUD, /me trả permissions, đổi role thu hồi token cũ |
+| 0.10 | 15/10/2026 | Nhóm 3 | ADMIN tick quyền động theo role/màn/thao tác, lưu CSDL và áp dụng ngay; giữ giới hạn nghiệp vụ của vai trò, quyền hồ sơ bắt buộc và chống ghi đè khi nhiều Admin cùng sửa |
 
 ---
 
@@ -185,6 +186,7 @@ Quy ước chung cho mọi yêu cầu:
 | FR-ACC-07 | Đặt lại mật khẩu: Admin cho mọi tài khoản; Staff chỉ cho sinh viên có đơn trong đợt đang mở hoặc phân phòng còn hiệu lực tại đơn vị mình (BR-07). Trả mật khẩu tạm một lần, bắt đổi khi đăng nhập, xóa bộ đếm sai/khóa tạm và thu hồi mọi phiên cũ | Admin, Staff | Must |
 | FR-ACC-08 | Admin cấp quyền tổng hợp liên đơn vị cho một Staff cụ thể | Admin | Must |
 | FR-ACC-09 | Admin xem `AuditLog`, lọc theo người, loại thao tác, thời gian | Admin | Must |
+| FR-ACC-10 | Admin chọn STAFF/STUDENT/TECHNICIAN và tick quyền theo màn/thao tác; tìm màn, chọn tất cả quyền phù hợp, khôi phục mặc định vào bản nháp, lưu/hủy. Quyền ADMIN bất biến; PROFILE_READ bắt buộc. Lưu có version chống ghi đè và audit trước/sau; thu hồi quyền áp dụng cho mọi tài khoản cùng role từ lần gọi API tiếp theo | Admin | Must |
 
 **Quy tắc phiên tài khoản Keycloak (v0.8):** khóa tài khoản, đổi tên đăng nhập/vai trò/đơn vị quản lý hoặc thay đổi quyền đọc liên đơn vị làm thu hồi các phiên cũ. Mở khóa chỉ cho phép đăng nhập mới, không phục hồi phiên đã thu hồi. Khởi tạo Admin phải bật cấu hình riêng và cung cấp mật khẩu; ứng dụng không tự tạo tài khoản demo và không dùng vai trò mock để vượt qua đăng nhập. Quên mật khẩu được xử lý bằng reset của người quản lý có quyền; chưa có đăng ký tự do hoặc gửi liên kết reset qua email.
 
@@ -482,7 +484,7 @@ Không có tích hợp phần cứng. Không tích hợp hệ thống bên ngoà
 | UC-24 View Dashboard | FR-NOT-05, 06 |
 | UC-25..27 (Technician) | FR-MNT-04 |
 | UC-28 Manage Accounts | FR-ACC-05, 06, 07 |
-| UC-29 Manage Roles & Scopes | FR-ACC-06, 08, FR-ROOM-01 |
+| UC-29 Manage Roles & Scopes | FR-ACC-06, 08, 10, FR-ROOM-01 |
 | UC-30 View Audit Log | FR-ACC-09 |
 | UC-31 Manage Registration Period | FR-REG-01 |
 | UC-32 Activate Contract | FR-CON-01, 02 |
@@ -680,7 +682,7 @@ Ghi chú dọn cấu trúc 14/10/2026: chỉ giữ Keycloak; dùng lại AuthCon
 
 Theo quyết định mới của người phụ trách, ADMIN có mọi quyền nghiệp vụ trên toàn hệ thống. ADMIN không cần gắn management_unit_id; bỏ giới hạn đơn vị/chủ sở hữu/người được giao khi xác định quyền, nhưng vẫn phải qua trạng thái, ràng buộc dữ liệu, đối tượng sinh viên thật và lịch sử/audit. Không đổi hoặc giả vai trò/người thao tác để vượt phạm vi.
 
-Khung tham khảo RolePrivilege của HR-V5: `ScopeGuard` khai ma trận cố định cho bốn role, mỗi mã là `<RESOURCE>_<READ|CREATE|UPDATE|DELETE>`. READ dùng cho tìm kiếm và xem chi tiết; khóa/mở khóa/reset/gán phạm vi tài khoản có mã riêng. `/api/auth/me` trả thêm `permissions: string[]`; React dùng danh sách này cho menu, route và từng nút. API khai quyền bằng @RequirePrivilege giống V5; Spring Security Method Security kiểm tra trước thân Controller. Service Impl tiếp tục kiểm quyền nội bộ, phạm vi và trạng thái. Không chỉ dựa vào việc ẩn nút.
+Khung tham khảo RolePrivilege của HR-V5: `ScopeGuard` kiểm tra quyền hiện hành qua `RolePermissionService`; ma trận trong code chỉ xác định quyền mặc định và giới hạn nghiệp vụ của từng role, mỗi mã là `<RESOURCE>_<READ|CREATE|UPDATE|DELETE>`. READ dùng cho tìm kiếm và xem chi tiết; khóa/mở khóa/reset/gán phạm vi tài khoản có mã riêng. `/api/auth/me` trả thêm `permissions: string[]`; React dùng danh sách này cho menu, route và từng nút. API khai quyền bằng @RequirePrivilege giống V5; Spring Security Method Security kiểm tra trước thân Controller. Service Impl tiếp tục kiểm quyền nội bộ, phạm vi và trạng thái. Không chỉ dựa vào việc ẩn nút.
 
 - ADMIN: mọi quyền quản trị và nghiệp vụ ở mọi đơn vị; tài khoản và người thao tác trong audit vẫn là ADMIN thực.
 - STAFF: nghiệp vụ trong đơn vị được giao; crossUnitAccess chỉ mở rộng đọc. Đơn/yêu cầu do sinh viên tạo không mặc nhiên cho Staff tạo hoặc hủy thay sinh viên; quyền sửa/xét duyệt phụ thuộc endpoint và trạng thái.
@@ -689,7 +691,7 @@ Khung tham khảo RolePrivilege của HR-V5: `ScopeGuard` khai ma trận cố đ
 
 Đổi role của tài khoản Staff/KTV/Admin qua PATCH `/api/admin/users/{id}` hỗ trợ trường `role`, đồng bộ Keycloak và thu hồi token cũ. Staff/KTV phải có đơn vị; chuyển sang ADMIN xóa đơn vị và cờ tổng hợp; không chuyển hồ sơ STUDENT thành tài khoản cán bộ, không tự đổi role tài khoản đang sử dụng. ADMIN tạo đơn đăng ký hộ sinh viên bằng `studentId` rõ ràng; STUDENT không được gửi ID của người khác.
 
-Ma trận hiện cố định trong code, chưa có bảng/màn quản trị tick quyền động như HR-V5. Không thêm migration hoặc file Service riêng cho cùng trách nhiệm. Sổ cọc/audit vẫn giữ chỉ đọc, hồ sơ có lịch sử và trạng thái vẫn chịu ràng buộc xóa/hủy như trước.
+Cập nhật 15/10/2026: ADMIN quản lý ma trận động tại `/admin/role-permissions`, lưu quyền của STAFF/STUDENT/TECHNICIAN trong `role_permission_matrix` qua Flyway V5. ADMIN giữ mọi quyền đã đăng ký và không có bản ghi để thu hồi quyền ADMIN. Mã quyền vẫn cố định trong Constants; quyền đang được cấp đọc từ CSDL. Sổ cọc/audit vẫn giữ chỉ đọc, hồ sơ có lịch sử và trạng thái vẫn chịu ràng buộc xóa/hủy như trước.
 
 ### Khai quyền API bằng @RequirePrivilege — 14/10/2026
 

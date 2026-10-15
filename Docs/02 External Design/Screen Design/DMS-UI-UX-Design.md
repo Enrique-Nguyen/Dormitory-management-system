@@ -2016,3 +2016,18 @@ Trả phòng
 ## Cập nhật cổng Admin và quyền CRUD — 14/10/2026
 
 Admin được làm mọi nghiệp vụ, truy cập các màn quản trị và nghiệp vụ trong cổng `/admin`; dùng lại trang CRUD của Staff và danh sách quyền `permissions` từ `/api/auth/me`. Menu/route kiểm READ, nút thêm/sửa/xóa kiểm đúng mã thao tác, riêng nút khóa/mở khóa/reset có quyền riêng. Admin được sửa/hủy bản ghi của người khác khi trạng thái cho phép. Technician chỉ có nút tiến độ của ticket được giao; Student giữ phạm vi cá nhân. Không tạo trang mới cho từng vai trò nếu dùng chung form CRUD.
+
+## Cập nhật luồng chung — 15/10/2026
+
+Menu Admin ưu tiên nghiệp vụ: Tổng quan/Yêu cầu chờ xử lý → Quản lý (gồm Sinh viên) → Tài chính → Vận hành → Danh mục → **Quản trị hệ thống** ở cuối. Nhóm cuối gồm Tài khoản, Quyền tổng hợp, Phân quyền theo vai trò, Cấu hình và Nhật ký hệ thống. Danh mục gồm Đơn vị, Tòa nhà & mức cọc, Diện ưu tiên, Loại phòng, Kỳ học và Đợt đăng ký; cổng Staff chỉ hiển thị các danh mục được cấp quyền. Khai báo nhóm tập trung tại `constants/navigation.ts` và dùng chung trên sidebar/Drawer.
+
+Menu tài khoản của cả bốn cổng có Hồ sơ của tôi và Đổi mật khẩu/Đăng xuất. Trang chủ Student dùng PROFILE_READ, Technician dùng MAINTENANCE_READ để không bị chặn bởi quyền dashboard quản lý. Hồ sơ Student cho sửa điện thoại, quê quán và liên hệ khẩn cấp; cán bộ chỉ sửa điện thoại.
+
+Trang CRUD dùng Form.Item bọc control trực tiếp để truyền value/onChange. Tìm kiếm, bộ lọc và phân trang được giữ trên URL theo resource; bộ lọc tùy khai báo màn, lỗi 400 hiện tại trường, 409 cập nhật lại dữ liệu. Tài khoản có lọc role/đơn vị/khóa và xác nhận các thay đổi làm thu hồi phiên; quyền đọc tổng hợp chỉ áp dụng Staff. Nhật ký có lọc người thực hiện/mã thao tác/loại đối tượng/từ–đến và chỉ cho đọc, không có nút sửa/xóa. Không mở các luồng nghiệp vụ chi tiết khi mới hoàn thiện khung.
+
+
+## Màn phân quyền theo vai trò — 15/10/2026
+
+Cổng ADMIN có menu **Phân quyền theo vai trò**, đường dẫn `/admin/role-permissions`; tách với Quyền tổng hợp liên đơn vị của từng cán bộ. Chọn role, tìm màn và tick các cột Xem/Tìm kiếm, Thêm, Sửa, Xóa và thao tác riêng. Catalog/nhóm/nhãn/trạng thái ô do backend trả. ADMIN chỉ xem toàn quyền; ô không phù hợp vai trò và PROFILE_READ bắt buộc bị khóa.
+
+Tick ghi tự tick READ của màn; bỏ READ bỏ các thao tác cùng màn. Chọn tất cả chỉ chọn quyền phù hợp; khôi phục mặc định chỉ đổi bản nháp. Lưu mới ghi CSDL; Hủy trả về dữ liệu đã tải. Đổi role khi có thay đổi cần xác nhận bỏ bản nháp. Trong lúc lưu khóa các nút; gặp version 409 yêu cầu tải lại, không ghi đè âm thầm. /me được làm mới định kỳ/khi focus, sau lưu và sau API bị từ chối; hồ sơ là điểm điều hướng dự phòng khi mất quyền trang chủ.

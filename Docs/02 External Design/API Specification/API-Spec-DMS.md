@@ -1,7 +1,7 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.7**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.9 (mục 3, 6.2, 10), `SAD-DMS.md` v1.2, `DB-Design-DMS.md` v0.5, `DMS-UI-UX-Design.md` (mục 27.2)
+> **Phiên bản 0.9**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.10 (mục 3, 6.2, 10), `SAD-DMS.md` v1.3, `DB-Design-DMS.md` v0.6, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
 ### Lịch sử thay đổi
@@ -15,6 +15,8 @@
 | 0.5 | 13/10/2026 | Đồng bộ login/logout Spring Security, CSRF và thu hồi phiên; đổi/reset mật khẩu yêu cầu đăng nhập lại, reset Staff theo BR-07, giới hạn BCrypt và bỏ demo/mock |
 | 0.6 | 14/10/2026 | Keycloak OIDC/PKCE, Bearer JWT, /me và logout thu hồi version; tạo/reset/khóa tài khoản qua Admin REST |
 | 0.7 | 14/10/2026 | ADMIN toàn quyền nghiệp vụ; permissions trong /me, quyền CRUD theo role, PATCH role tài khoản và tạo đơn hộ sinh viên |
+| 0.8 | 15/10/2026 | Hoàn thiện luồng chung: hồ sơ bốn cổng, lọc tài khoản managementUnitId/locked, lọc audit actorId/action/entityType/from/to và kiểm tra khoảng thời gian; giữ phạm vi khung CRUD |
+| 0.9 | 15/10/2026 | GET/PUT ma trận quyền theo role; catalog có 105 quyền, kiểm giới hạn vai trò/quyền hồ sơ/READ, version và audit |
 
 ---
 
@@ -211,12 +213,12 @@ Mỗi bảng tương ứng một module của SAD. "Phạm vi" nhắc lại các
 | GET | `/api/auth/me` | \* | Người dùng hiện tại (mục 4.1) | FR-ACC-01 |
 | POST | `/api/auth/change-password` | legacy-session | Không dùng với Keycloak; React gọi action UPDATE_PASSWORD tại Keycloak | FR-ACC-03 |
 | GET | `/api/me/profile` | \* | Hồ sơ của tôi (kèm `studentProfile` nếu là sinh viên) | FR-ACC-04 |
-| PATCH | `/api/me/profile` | \* | Sửa `phone`, `hometown`, `emergencyContact`; trường khác bị bỏ qua → 400 nếu gửi | FR-ACC-04 |
+| PATCH | `/api/me/profile` | \* | Sinh viên sửa `phone`, `hometown`, `emergencyContact`; cán bộ chỉ sửa `phone`; trường ngoài DTO trả 400 | FR-ACC-04 |
 | GET | `/api/students` | St | Sinh viên trong phạm vi đơn vị (BR-07). Lọc `q`, `cohort`, `faculty`, `hasActiveContract` | UC-14 |
 | GET | `/api/students/{id}` | St | Hồ sơ + chỗ ở hiện tại + danh sách hợp đồng | UC-14 |
 | POST | `/api/students/{id}/reset-password` | St | Sinh viên có đơn trong đợt đang mở hoặc phân phòng hiệu lực đúng đơn vị; trả mật khẩu tạm và thu hồi phiên (mục 4.1) | FR-ACC-07 |
 | GET | `/api/technicians` | St | KTV cùng đơn vị, kèm số ticket đang xử lý (để giao việc) | FR-MNT-03 |
-| GET | `/api/admin/users` | A | Lọc `role`, `unitId`, `locked`, `q` | FR-ACC-06 |
+| GET | `/api/admin/users` | A | Lọc `role`, `managementUnitId`, `locked`, `q`; kết hợp bằng AND, phân trang sau lọc | FR-ACC-06 |
 | POST | `/api/admin/users` | A | Tạo Staff / Technician / Admin: `{ username, fullName, phone, role, managementUnitId }`; trả mật khẩu tạm một lần (mục 4.1) | FR-ACC-06 |
 | GET | `/api/admin/users/{id}` | A | Chi tiết | FR-ACC-06 |
 | PATCH | `/api/admin/users/{id}` | A | Sửa `fullName`, `phone`, `role` (Staff/KTV/Admin), `managementUnitId`; với sinh viên thêm `studentCode`, `gender`, `dateOfBirth`, `faculty`, `cohort`. Đổi username/role/đơn vị thu hồi token cũ | FR-ACC-04, 06 |
@@ -226,7 +228,7 @@ Mỗi bảng tương ứng một module của SAD. "Phạm vi" nhắc lại các
 | PUT | `/api/admin/users/{id}/cross-unit-access` | A | `{ enabled: true }`; chỉ cho Staff; giá trị thay đổi thu hồi phiên để đăng nhập lại nhận quyền mới | FR-ACC-08 |
 | POST | `/api/admin/student-imports` | A | Import Excel, hai bước (mục 4.10) | FR-ACC-05 |
 | GET | `/api/admin/student-imports/template` | A | Tải file mẫu `.xlsx` | FR-ACC-05 |
-| GET | `/api/admin/audit-logs` | A | Lọc `userId`, `action`, `entityType`, `from`, `to`; sắp `createdAt,desc` | FR-ACC-09 |
+| GET | `/api/admin/audit-logs` | A | Lọc `actorId`, `action`, `entityType`, `from`, `to`, `q`; thời gian ISO có múi giờ, hai biên inclusive, từ > đến trả 400. Khung phân trang theo `id,desc` | FR-ACC-09 |
 | GET | `/api/admin/configs` | A | Tham số cấu hình (`system_config`) | SRS 2.6 |
 | PUT | `/api/admin/configs/{key}` | A | `{ value }`; kiểm tra kiểu theo khóa | SRS 2.6 |
 
@@ -1080,7 +1082,7 @@ Ghi chú dọn cấu trúc 14/10/2026: chỉ giữ Keycloak; dùng lại AuthCon
 
 Theo quyết định mới của người phụ trách, ADMIN có mọi quyền nghiệp vụ trên toàn hệ thống. ADMIN không cần gắn management_unit_id; bỏ giới hạn đơn vị/chủ sở hữu/người được giao khi xác định quyền, nhưng vẫn phải qua trạng thái, ràng buộc dữ liệu, đối tượng sinh viên thật và lịch sử/audit. Không đổi hoặc giả vai trò/người thao tác để vượt phạm vi.
 
-Khung tham khảo RolePrivilege của HR-V5: `ScopeGuard` khai ma trận cố định cho bốn role, mỗi mã là `<RESOURCE>_<READ|CREATE|UPDATE|DELETE>`. READ dùng cho tìm kiếm và xem chi tiết; khóa/mở khóa/reset/gán phạm vi tài khoản có mã riêng. `/api/auth/me` trả thêm `permissions: string[]`; React dùng danh sách này cho menu, route và từng nút. API khai quyền bằng @RequirePrivilege giống V5; Spring Security Method Security kiểm tra trước thân Controller. Service Impl tiếp tục kiểm quyền nội bộ, phạm vi và trạng thái. Không chỉ dựa vào việc ẩn nút.
+Khung tham khảo RolePrivilege của HR-V5: `ScopeGuard` kiểm tra quyền hiện hành qua `RolePermissionService`; ma trận trong code chỉ xác định quyền mặc định và giới hạn nghiệp vụ của từng role, mỗi mã là `<RESOURCE>_<READ|CREATE|UPDATE|DELETE>`. READ dùng cho tìm kiếm và xem chi tiết; khóa/mở khóa/reset/gán phạm vi tài khoản có mã riêng. `/api/auth/me` trả thêm `permissions: string[]`; React dùng danh sách này cho menu, route và từng nút. API khai quyền bằng @RequirePrivilege giống V5; Spring Security Method Security kiểm tra trước thân Controller. Service Impl tiếp tục kiểm quyền nội bộ, phạm vi và trạng thái. Không chỉ dựa vào việc ẩn nút.
 
 - ADMIN: mọi quyền quản trị và nghiệp vụ ở mọi đơn vị; tài khoản và người thao tác trong audit vẫn là ADMIN thực.
 - STAFF: nghiệp vụ trong đơn vị được giao; crossUnitAccess chỉ mở rộng đọc. Đơn/yêu cầu do sinh viên tạo không mặc nhiên cho Staff tạo hoặc hủy thay sinh viên; quyền sửa/xét duyệt phụ thuộc endpoint và trạng thái.
@@ -1089,7 +1091,7 @@ Khung tham khảo RolePrivilege của HR-V5: `ScopeGuard` khai ma trận cố đ
 
 Đổi role của tài khoản Staff/KTV/Admin qua PATCH `/api/admin/users/{id}` hỗ trợ trường `role`, đồng bộ Keycloak và thu hồi token cũ. Staff/KTV phải có đơn vị; chuyển sang ADMIN xóa đơn vị và cờ tổng hợp; không chuyển hồ sơ STUDENT thành tài khoản cán bộ, không tự đổi role tài khoản đang sử dụng. ADMIN tạo đơn đăng ký hộ sinh viên bằng `studentId` rõ ràng; STUDENT không được gửi ID của người khác.
 
-Ma trận hiện cố định trong code, chưa có bảng/màn quản trị tick quyền động như HR-V5. Không thêm migration hoặc file Service riêng cho cùng trách nhiệm. Sổ cọc/audit vẫn giữ chỉ đọc, hồ sơ có lịch sử và trạng thái vẫn chịu ràng buộc xóa/hủy như trước.
+Cập nhật 15/10/2026: ADMIN quản lý ma trận động tại `/admin/role-permissions`, lưu quyền của STAFF/STUDENT/TECHNICIAN trong `role_permission_matrix` qua Flyway V5. ADMIN giữ mọi quyền đã đăng ký và không có bản ghi để thu hồi quyền ADMIN. Mã quyền vẫn cố định trong Constants; quyền đang được cấp đọc từ CSDL. Sổ cọc/audit vẫn giữ chỉ đọc, hồ sơ có lịch sử và trạng thái vẫn chịu ràng buộc xóa/hủy như trước.
 
 
 Trong bảng endpoint, vai trò ghi ở cột là quyền của người dùng thông thường; ADMIN được dùng thêm mọi endpoint nghiệp vụ theo quy tắc mới. Endpoint cá nhân vẫn là dữ liệu của tài khoản hiện tại; thao tác hộ sinh viên dùng endpoint nghiệp vụ và ID sinh viên/hợp đồng đích rõ ràng. Các mẫu auth/session lịch sử ở mục 4.1 không được dùng cho luồng Keycloak hiện hành.
@@ -1103,3 +1105,12 @@ Mọi hàm REST mapped trong ứng dụng khai `@RequirePrivilege(Permission.ROO
 Service Impl vẫn giữ kiểm tra quyền cho lời gọi nội bộ, phạm vi đơn vị/chủ sở hữu, trạng thái và ràng buộc dữ liệu; việc thêm annotation không biến dữ liệu đang dùng thành dữ liệu được phép xóa. ADMIN tiếp tục có mọi quyền nghiệp vụ đã đăng ký trên toàn hệ thống. Frontend và `/api/auth/me.permissions` giữ nguyên mã quyền hiện có.
 
 Ở bước bổ sung annotation chỉ thêm một file source là `RequirePrivilege.java`; không thêm migration, Aspect/Service mới hoặc dependency V5. Bộ test kiểm OR, chặn trước thân Controller, lớp/hàm, thiếu/rỗng/sai annotation và quét mọi API để không bỏ sót quyền. Backend clean verify đạt **53/53 test**.
+
+### API ma trận quyền theo vai trò (FR-ACC-10)
+
+- `GET /api/admin/role-permissions/{role}`: chỉ ADMIN, `ROLE_PERMISSION_READ`. Role là ADMIN/STAFF/STUDENT/TECHNICIAN. Trả `{role, roleLabel, version, readOnly, screens}`. Mỗi screen gồm `{code, label, group, privileges}`; mỗi privilege gồm `{code, action, label, granted, defaultGranted, assignable, required}`. ADMIN có readOnly=true và mọi mã quyền; quyền không phù hợp/không tồn tại không thể tick.
+- `PUT /api/admin/role-permissions/{role}`: chỉ ADMIN, `ROLE_PERMISSION_UPDATE`. Body `{version: 0, permissions: ["PROFILE_READ", ...]}` là toàn bộ danh sách mới, không phải phần thay đổi. Thành công trả ma trận đã lưu và version mới. Cả việc ghi quyền và audit là một transaction; không gọi Keycloak hoặc thu hồi phiên để cập nhật quyền theo role.
+
+`VALIDATION_FAILED` (400) kèm `details.fieldErrors` khi role/danh sách/version sai, trùng mã, mã không đăng ký, mã không phù hợp vai trò, thiếu PROFILE_READ hoặc chọn ghi mà thiếu READ của tài nguyên. `ADMIN_PERMISSIONS_IMMUTABLE` (403) khi cố sửa quyền ADMIN. `PERMISSION_MATRIX_STALE` (409) khi version cũ; tải lại rồi chọn lại trước khi lưu, không tự gửi lại bản cũ. `PERMISSION_MATRIX_UNAVAILABLE` (409) khi dòng cấu hình của role không tồn tại. Dòng thiếu/hỏng không cấp quyền mặc định khi kiểm quyền runtime.
+
+`/api/auth/me.permissions` đọc quyền CSDL hiện hành, ADMIN luôn có toàn bộ danh mục 105 mã. Thay đổi ảnh hưởng mọi tài khoản cùng role trên cùng database DMS. Các máy dùng database riêng vẫn có ma trận riêng dù cùng dùng Keycloak; muốn đồng bộ quyền phải dùng chung backend/database.

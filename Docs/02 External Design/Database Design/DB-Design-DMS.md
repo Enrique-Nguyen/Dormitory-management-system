@@ -1,8 +1,8 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.5**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.7 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
-> DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm bổ sung `security_version`; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
+> **Phiên bản 0.6**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.10 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
+> DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak và ma trận quyền động; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
 
 ---
@@ -21,7 +21,7 @@ DB và Keycloak không có transaction phân tán; rollback dùng thao tác bù,
 | Hạng mục | Lựa chọn | Ghi chú |
 |---|---|---|
 | DBMS | **PostgreSQL 16** | Theo SRS mục 2.5. Cần partial unique index, `EXCLUDE`, `JSONB`, generated column |
-| Migration | Flyway: V1 tạo nghiệp vụ, V2 tạo Spring Session, V3 thêm `security_version` | V1/V2 giữ nguyên; file DDL này là snapshot bảng nghiệp vụ hiện tại, Hibernate dùng `ddl-auto: validate` |
+| Migration | Flyway V1 tạo nghiệp vụ, V2 Spring Session, V3 `security_version`, V4 Keycloak, V5 ma trận quyền | Giữ nguyên V1–V4; snapshot SQL hiện tại không dùng để nâng cấp CSDL đã chạy. Hibernate `ddl-auto: validate` |
 | Đặt tên | `snake_case`, số ít (`room`, `bed`) | `app_user` thay cho `user` vì `user` là từ khóa |
 | Khóa chính | `BIGINT GENERATED ALWAYS AS IDENTITY` | Mã hiển thị (HD-2026-0012, TK-1024) là cột `code` riêng, `UNIQUE` |
 | Mã hiển thị | Sequence riêng mỗi loại + hàm `fn_next_code` | Xem Q-DB-10 |
@@ -417,3 +417,12 @@ Lịch sử v0.5: 14/10/2026 — thêm liên kết Keycloak, mật khẩu local 
 
 
 Ghi chú dọn cấu trúc 14/10/2026: chỉ giữ Keycloak; dùng lại AuthController, SecurityConfig, BootstrapAdmin và AuthService/Impl. Không tạo lớp legacy hay Service chuyển đổi riêng. Migration đã áp dụng và các kiểm thử JWT/CRUD cần thiết được giữ. Hướng dẫn chạy gom vào README gốc.
+
+
+### Bổ sung ma trận quyền động v0.6 — 15/10/2026
+
+Flyway `V5__role_permission_matrix.sql` tạo một bảng `role_permission_matrix` và khởi tạo quyền STAFF=72, STUDENT=35, TECHNICIAN=11 đúng trước khi nâng cấp. Role là khóa chính VARCHAR(30), CHECK chỉ chấp nhận ba role trên. `permissions` JSONB NOT NULL, CHECK dạng mảng; Service kiểm từng mã, tính duy nhất, giới hạn vai trò, PROFILE_READ bắt buộc và phụ thuộc READ. Không có dòng ADMIN vì ADMIN nhận toàn bộ danh mục 105 quyền từ Constants.
+
+`version BIGINT NOT NULL DEFAULT 0 CHECK(version >= 0)` là phiên bản ma trận, độc lập với `app_user.security_version`. `updated_by` tham chiếu app_user, ON DELETE SET NULL; `updated_at TIMESTAMPTZ` lưu thời điểm thay đổi. Khi lưu, khóa dòng SELECT FOR UPDATE, so version đã đọc, cập nhật toàn bộ tập quyền, tăng version và ghi audit trước/sau cùng transaction. Lưu không thay đổi không tăng version hoặc ghi audit.
+
+Đọc quyền runtime không dùng mặc định nếu dòng thiếu/hỏng và không cần sửa JWT hay realm role Keycloak. ADMIN vẫn quản trị được để sửa lại dòng hỏng; dòng bị xóa cần quản trị CSDL khôi phục từ dữ liệu hợp lệ. Quyền của các tài khoản dùng chung role/database thay đổi cùng nhau; database khác không tự đồng bộ. V1–V4 giữ nguyên checksum.
