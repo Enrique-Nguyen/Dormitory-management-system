@@ -1,10 +1,19 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.4**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Thay đổi 0.4 (14/10/2026): mục 4 bổ sung ánh xạ `ux_room_leader`, `student_code`, `(room_id, code)` của giường và quy tắc theo SQLState cho ràng buộc chưa có tên trong danh sách
-> Căn cứ: `SRS-DMS.md` v0.5 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
+> **Phiên bản 0.5**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.7 (mục 3.2, 3.3, 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
 > DDL đầy đủ: [`DB-DMS-schema.sql`](DB-DMS-schema.sql) (đã chạy thử trên PostgreSQL 16.15, xem mục 9)
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
+
+### Lịch sử thay đổi
+
+| Phiên bản | Ngày | Nội dung |
+|---|---|---|
+| 0.1 | 10/10/2026 | Bản đầu tiên: lược đồ CSDL 33 bảng, 6 view, ERD, quy tắc ánh xạ và ràng buộc |
+| 0.2 | 10/10/2026 | Chốt Q-DB-01..10: định dạng tiền, CHECK thay ENUM, tách student_profile, bảng status_history chung, view v_user_notification theo thời gian ở thực tế, cơ chế sinh mã qua sequence |
+| 0.3 | 12/10/2026 | Theo thẩm định API: thêm CHECK (total_amount >= 0) trên bảng invoice |
+| 0.4 | 14/10/2026 | Mục 4 bổ sung ánh xạ `ux_room_leader`, `student_code`, `(room_id, code)` của giường và quy tắc theo SQLState cho ràng buộc chưa có tên trong danh sách |
+| 0.5 | 14/10/2026 | Mục 3.2, 3.3 và mục 4 ghi chú ràng buộc nghiệp vụ: không cho phép cập nhật `bed_count` khi loại phòng đã được gán cho các phòng đang tồn tại (trả 409 `RESOURCE_IN_USE`) nhằm bảo toàn số giường vật lý và công suất phòng; đơn `APPROVED` chỉ được phép hủy khi chưa sinh hợp đồng `PENDING`/`ACTIVE` liên kết (trả 409 `APPLICATION_HAS_CONTRACT`) để tránh hợp đồng mồ côi; cập nhật căn cứ `SRS-DMS.md` v0.7 |
 
 ---
 
@@ -148,7 +157,7 @@ erDiagram
 | Bảng | Mục đích | Ràng buộc chính | Truy vết |
 |---|---|---|---|
 | `building` | Tòa, thuộc một đơn vị, có **mức cọc** | `deposit_amount > 0` | FR-ROOM-01 |
-| `room_type` | Số giường, **giá gốc HK chính và hè** | Nơi duy nhất lưu giá gốc | FR-ROOM-02 |
+| `room_type` | Số giường, **giá gốc HK chính và hè** | Nơi duy nhất lưu giá gốc. Ràng buộc nghiệp vụ: không cho phép cập nhật `bed_count` khi loại phòng đã được gán cho ít nhất một phòng đang tồn tại (trả 409 `RESOURCE_IN_USE`) nhằm bảo toàn số giường vật lý và công suất | FR-ROOM-02 |
 | `room` | Phòng; trạng thái vận hành; **trưởng phòng** | `UNIQUE(building_id, code)`; một sinh viên làm trưởng tối đa một phòng | FR-ROOM-03, 05, 09 |
 | `bed` | Giường; `ACTIVE` / `BROKEN` / `RETIRED` | `RETIRED` thay cho xóa khi bớt giường (FR-ROOM-04, 06) | FR-ROOM-04..06 |
 | `semester` | HK1, HK2, Hè | `UNIQUE(academic_year, type)`; **không chồng thời gian** (`EXCLUDE`) | FR-ROOM-11 |
@@ -161,7 +170,7 @@ erDiagram
 | `registration_period_unit` | Đợt áp dụng cho đơn vị nào | PK kép | FR-REG-01 |
 | `registration_quota` | Chỉ tiêu theo tòa | PK kép | FR-REG-01 |
 | `priority_category` | Diện ưu tiên + trọng số cấu hình được | | Q-07, FR-REG-05 |
-| `room_application` | Đơn đăng ký | `UNIQUE(student_id, period_id)`; REJECTED bắt buộc lý do | FR-REG-02..12 |
+| `room_application` | Đơn đăng ký | `UNIQUE(student_id, period_id)`; REJECTED bắt buộc lý do. Đơn APPROVED chỉ được phép hủy khi chưa sinh hợp đồng PENDING hoặc ACTIVE liên kết (trả 409 `APPLICATION_HAS_CONTRACT`) | FR-REG-02..12 |
 | `application_priority` | Diện sinh viên khai và kết quả Staff xác nhận | `verified` NULL / TRUE / FALSE | FR-REG-06 |
 
 ### 3.4. Hợp đồng, phân phòng, kỳ hè
@@ -233,6 +242,8 @@ erDiagram
 - `summer_choice.semester_id` là học kỳ hè; ≤ 3 ảnh mỗi ticket.
 - `invoice.total_amount` = tổng `invoice_item.amount`: aggregate `Invoice` tạo hóa đơn và các dòng, tính tổng trong **cùng một transaction** (mục 10).
 - Hợp đồng ACTIVE luôn có phân phòng `STAY` trừ khi có phiếu gửi đồ mở (BR-02).
+- **Bảo toàn số giường loại phòng (`room_type`)**: Khi cập nhật `room_type`, nếu `bed_count` thay đổi so với giá trị hiện tại, Service phải kiểm tra xem loại phòng đã được gán cho phòng nào trong bảng `room` chưa (`rooms.exists(roomTypeId == entity.id)`). Nếu loại phòng đang được sử dụng bởi ít nhất một phòng đang tồn tại, từ chối cập nhật và trả 409 `RESOURCE_IN_USE` nhằm bảo toàn số giường vật lý và công suất phòng.
+- **Hủy đơn APPROVED tránh hợp đồng mồ côi**: Khi sinh viên hủy đơn `APPROVED`, Service phải kiểm tra xem đơn đã sinh hợp đồng `PENDING` hoặc `ACTIVE` liên kết chưa (`ContractService.hasLiveContractForApplication(applicationId)`). Nếu có, chặn 409 `APPLICATION_HAS_CONTRACT` và ẩn thao tác `cancel` trong `allowedActions` nhằm bảo toàn tính toàn vẹn và tránh hợp đồng mồ côi; người dùng phải thực hiện thủ tục hủy giữ chỗ / hợp đồng trước.
 
 ---
 

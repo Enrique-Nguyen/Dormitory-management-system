@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Phiên bản | **0.6** |
-| Ngày | 10/10/2026 |
+| Phiên bản | **0.7** |
+| Ngày | 14/10/2026 |
 | Học phần | Chuyên đề CNTT, lớp 65CNTT, Nhóm 3 |
 | Giảng viên | Hoàng Quốc Dũng |
 | Thành viên | Nguyễn Văn Séc, Nguyễn Phú Nguyên, Lê Đức Nguyên, Nguyễn Văn Quyền, Nguyễn Tiến Lộc |
@@ -21,6 +21,7 @@
 | 0.4 | 08/10/2026 | Nhóm 3 | Bù cọc chưa nộp được tất toán bằng số dư khi trả phòng, không ghi thành công nợ (tránh thu hai lần); công nợ sau trả phòng chỉ gồm phí phòng chưa đóng và số dư cọc âm. Mục 6.2 thêm quy ước `errorCode` và `allowedActions` |
 | 0.5 | 10/10/2026 | Nhóm 3 | Mục 5 đồng bộ với thiết kế CSDL v0.2 (`DB-Design-DMS.md`): tách hồ sơ sinh viên; thêm diện ưu tiên, đơn vị áp dụng của đợt, cấu hình, ảnh sự cố; lịch sử trạng thái dùng chung; mã hiển thị HD / TK / HP / DN; thông báo xem theo khoảng thời gian ở thực tế |
 | 0.6 | 10/10/2026 | Nhóm 3 | Đồng bộ với Đặc tả API v0.2: Staff tạo được ticket **của phòng** (ví dụ hư hỏng phát hiện khi trả phòng) và tự nghiệm thu ticket do mình tạo; phát hành điện nước **bỏ qua** phòng thiếu chỉ số thay vì khóa cả đợt (UC-21, 1a); trừ cọc chia đều cho **người Staff chọn** trong số người ở lúc tạo ticket (mặc định chọn cả phòng, FR-MNT-10, Q-15) |
+| 0.7 | 14/10/2026 | Nhóm 3 | Cập nhật đồng bộ theo kết quả code review và quyết định kỹ thuật: (1) Mục 10.1, FR-REG-04 & AT-27: Đơn ở trạng thái APPROVED chỉ được hủy (`cancel`) khi chưa sinh hợp đồng PENDING hoặc ACTIVE liên kết (nếu đã có hợp đồng, chặn 409 `APPLICATION_HAS_CONTRACT` để tránh hợp đồng mồ côi, phải hủy giữ chỗ/hợp đồng trước); (2) Mục 3.1, 3.6 và BR-07: Quy định rõ phạm vi phân quyền (scope) của Staff đối với hóa đơn tiền phòng được xác định theo `semester_id` của hóa đơn (sinh viên có lịch sử ở tại đơn vị trong kỳ hoặc nộp đơn vào đơn vị cho đợt thuộc kỳ), tránh lộ dữ liệu khi sinh viên chuyển đơn vị giữa các kỳ; (3) Mục 3.2 (FR-ROOM-02), mục 5.1 & AT-28: Bổ sung ràng buộc không cho phép đổi số giường (`bed_count`) khi loại phòng đã được gán cho phòng đang tồn tại (trả 409 `RESOURCE_IN_USE`); đồng bộ tham chiếu `DB-Design-DMS.md` v0.5. |
 
 ---
 
@@ -183,12 +184,16 @@ Quy ước chung cho mọi yêu cầu:
 | FR-ACC-08 | Admin cấp quyền tổng hợp liên đơn vị cho một Staff cụ thể | Admin | Must |
 | FR-ACC-09 | Admin xem `AuditLog`, lọc theo người, loại thao tác, thời gian | Admin | Must |
 
+**Quy tắc phân quyền phạm vi (Scope) của Staff:**
+- Staff chỉ có quyền xem và thao tác dữ liệu thuộc đơn vị quản lý của mình (K1 hoặc N2 + N3), trừ khi được Admin cấp quyền tổng hợp liên đơn vị (FR-ACC-08). Truy cập ngoài phạm vi trả về lỗi **404** (không làm lộ sự tồn tại của tài nguyên ngoài phạm vi).
+- Đối với hóa đơn tiền phòng (`ROOM_FEE`): phạm vi phân quyền của Staff được xác định theo **học kỳ (`semester_id`) của hóa đơn**. Staff chỉ có quyền xem hoặc ghi nhận/xác nhận hóa đơn nếu sinh viên có lịch sử lưu trú trong tòa thuộc đơn vị của Staff trong kỳ đó (khoảng thời gian ở giao với khoảng thời gian học kỳ), hoặc đã nộp đơn đăng ký vào đơn vị đó cho đợt thuộc kỳ đó. Quy tắc này đảm bảo khi sinh viên chuyển đơn vị quản lý giữa các học kỳ, Staff đơn vị này không xem hoặc can thiệp vào hóa đơn của học kỳ thuộc đơn vị khác.
+
 ### 3.2. Phòng, Giường & Tòa (ROOM)
 
 | Mã | Yêu cầu | Vai trò | Ưu tiên |
 |---|---|---|---|
 | FR-ROOM-01 | Admin quản lý danh mục đơn vị quản lý và tòa (mỗi tòa thuộc một đơn vị, có **mức cọc** riêng: K1 1.000.000 đ, N2 / N3 2.000.000 đ). Đổi mức cọc chỉ áp dụng cho hợp đồng kích hoạt sau đó | Admin | Must |
-| FR-ROOM-02 | Staff quản lý loại phòng: số giường, **giá gốc theo học kỳ** (có thể khác nhau giữa học kỳ chính và học kỳ hè), diện tích, tiện ích. Đổi giá không ảnh hưởng phân phòng đang hiệu lực | Staff | Must |
+| FR-ROOM-02 | Staff quản lý loại phòng: số giường, **giá gốc theo học kỳ** (có thể khác nhau giữa học kỳ chính và học kỳ hè), diện tích, tiện ích. Đổi giá không ảnh hưởng phân phòng đang hiệu lực; không cho phép cập nhật số giường (`bed_count`) khi loại phòng đã được gán cho ít nhất một phòng đang tồn tại (trả 409 `RESOURCE_IN_USE`) nhằm bảo toàn số giường vật lý và công suất phòng | Staff | Must |
 | FR-ROOM-03 | Staff thêm, sửa phòng thuộc đơn vị mình: tòa, tầng, mã phòng, loại phòng, giới tính | Staff | Must |
 | FR-ROOM-04 | Hệ thống tự tạo giường theo số giường của loại phòng; Staff có thể thêm, bớt giường | Staff | Must |
 | FR-ROOM-05 | Staff đổi trạng thái vận hành phòng (Hoạt động / Bảo trì / Ngừng sử dụng) và giường (Hoạt động / Hỏng), có lý do. Không cho đặt Bảo trì, Ngừng, Hỏng khi phòng / giường còn phân phòng hiệu lực (BR-01) | Staff | Must |
@@ -206,7 +211,7 @@ Quy ước chung cho mọi yêu cầu:
 | FR-REG-01 | Staff tạo đợt đăng ký: học kỳ, ngày mở, ngày đóng, chỉ tiêu theo tòa; đợt có thể áp dụng cho một hoặc cả hai đơn vị | Staff | Must |
 | FR-REG-02 | Sinh viên soạn đơn khi đợt đang mở: **đơn vị nguyện vọng**, loại phòng mong muốn, diện ưu tiên tự khai, ghi chú. Mỗi sinh viên tối đa **một đơn mỗi đợt** | Student | Must |
 | FR-REG-03 | Không cho nộp đơn khi sinh viên đang có hợp đồng PENDING hoặc ACTIVE (sinh viên đang ở dùng gia hạn, FR-CON-06) | Student | Must |
-| FR-REG-04 | Sinh viên nộp đơn (DRAFT → SUBMITTED) hoặc hủy đơn chưa được phân phòng | Student | Must |
+| FR-REG-04 | Sinh viên nộp đơn (DRAFT → SUBMITTED) hoặc hủy đơn (DRAFT, SUBMITTED, và APPROVED khi chưa sinh hợp đồng PENDING / ACTIVE; đơn APPROVED đã có hợp đồng bị chặn 409 `APPLICATION_HAS_CONTRACT`, xem mục 10.1) | Student | Must |
 | FR-REG-05 | Hệ thống tính **điểm ưu tiên** khi nộp theo trọng số cấu hình; Staff xem danh sách đơn của đơn vị mình sắp theo điểm | Hệ thống, Staff | Must ✂ |
 | FR-REG-06 | Staff xác nhận diện ưu tiên sinh viên khai (đúng / không đúng); điểm được tính lại theo kết quả xác nhận | Staff | Should |
 | FR-REG-07 | Staff duyệt (→ APPROVED) hoặc từ chối (→ REJECTED, bắt buộc lý do) đơn thuộc đơn vị mình | Staff | Must |
@@ -261,6 +266,7 @@ Có hai loại hóa đơn và một sổ cọc:
 | Đối tượng | Từng sinh viên | Từng phòng (trưởng phòng nộp) | Từng hợp đồng |
 | Chu kỳ | Học kỳ (HK1, HK2, Hè) | Tháng | Thu khi ký, trừ khi sửa chữa, bù, hoàn khi rời KTX |
 | Hạn đóng | 7 ngày sau ngày thông báo | 7 ngày sau ngày thông báo | Bù cọc: 7 ngày sau khi bị trừ; quá hạn thì BQL nhắc nhở |
+| Phạm vi Staff (Scope) | Theo **học kỳ (`semester_id`) của hóa đơn**: sinh viên có lịch sử lưu trú tại đơn vị trong kỳ hoặc nộp đơn vào đơn vị cho đợt thuộc kỳ | Theo **đơn vị quản lý của phòng** | Theo **hợp đồng** (tòa / đơn vị của hợp đồng) |
 
 | Mã | Yêu cầu | Vai trò | Ưu tiên |
 |---|---|---|---|
@@ -268,10 +274,10 @@ Có hai loại hóa đơn và một sổ cọc:
 | FR-BIL-02 | Staff nhập chỉ số cuối kỳ theo phòng và loại đồng hồ; chỉ số đầu kỳ tự lấy từ chỉ số cuối kỳ trước. Từ chối nếu cuối < đầu | Staff | Must |
 | FR-BIL-03 | Staff ghi nhận thay / reset đồng hồ (chỉ số cũ chốt, chỉ số mới bắt đầu, lý do) | Staff | Should |
 | FR-BIL-04 | Staff phát hành **hóa đơn điện nước theo phòng** cho kỳ điện nước: tiền điện = tiêu thụ × đơn giá điện, tiền nước = tiêu thụ × đơn giá nước; đơn giá chụp vào dòng hóa đơn. Hóa đơn gửi đến **trưởng phòng**; mọi thành viên đang ở trong phòng xem được. Hệ thống **không** chia cho từng sinh viên | Staff | Must |
-| FR-BIL-05 | Staff phát hành **hóa đơn phí phòng theo học kỳ** cho từng sinh viên đang ở trong học kỳ đó (với học kỳ hè: chỉ sinh viên đã đăng ký ở hè): số tiền = đơn giá học kỳ trên phân phòng hiệu lực tại ngày phát hành, **đủ cả học kỳ** kể cả khi vào ở hoặc rời đi giữa kỳ; chuyển phòng giữa kỳ không thu thêm hay hoàn chênh lệch. Đơn giá chụp vào dòng hóa đơn | Staff | Must |
+| FR-BIL-05 | Staff phát hành **hóa đơn phí phòng theo học kỳ** cho từng sinh viên đang ở trong học kỳ đó (với học kỳ hè: chỉ sinh viên đã đăng ký ở hè): số tiền = đơn giá học kỳ trên phân phòng hiệu lực tại ngày phát hành, **đủ cả học kỳ** kể cả khi vào ở hoặc rời đi giữa kỳ; chuyển phòng giữa kỳ không thu thêm hay hoàn chênh lệch. Đơn giá chụp vào dòng hóa đơn. Phạm vi Staff xem và phát hành xác định theo `semester_id` của hóa đơn (sinh viên có lịch sử ở tại đơn vị trong kỳ hoặc nộp đơn vào đơn vị cho đợt thuộc kỳ) | Staff | Must |
 | FR-BIL-06 | Không phát hành trùng: tối đa một hóa đơn phí phòng cho mỗi (sinh viên, học kỳ) và một hóa đơn điện nước cho mỗi (phòng, kỳ điện nước) | Hệ thống | Must |
 | FR-BIL-07 | Mọi hóa đơn có hạn đóng = ngày thông báo (phát hành) + **7 ngày** (cấu hình được); khi phát hành, hệ thống tạo thông báo cho người phải nộp. Quá hạn chưa thanh toán hiển thị nhãn **"Quá hạn"** | Hệ thống | Must |
-| FR-BIL-08 | Staff xác nhận thanh toán (Chưa thanh toán → Đã thanh toán), lưu người nộp (với hóa đơn điện nước thường là trưởng phòng), người xác nhận, thời gian, hình thức. Hóa đơn đã thanh toán bị khóa chỉnh sửa | Staff | Must |
+| FR-BIL-08 | Staff xác nhận thanh toán (Chưa thanh toán → Đã thanh toán), lưu người nộp (với hóa đơn điện nước thường là trưởng phòng), người xác nhận, thời gian, hình thức. Hóa đơn đã thanh toán bị khóa chỉnh sửa. Với hóa đơn phí phòng, Staff chỉ được xác nhận nếu hóa đơn thuộc phạm vi đơn vị mình theo học kỳ (`semester_id`) | Staff | Must |
 | FR-BIL-09 | **Sổ cọc** cho mỗi hợp đồng gồm các giao dịch: thu cọc (FR-CON-01), trừ cọc (FR-MNT-10), bù cọc, hoàn cọc (FR-CON-09). Staff xác nhận khi sinh viên nộp bù cọc. Số dư cọc tính từ sổ, không lưu | Staff, Hệ thống | Must |
 | FR-BIL-10 | Sinh viên xem hóa đơn phí phòng của mình, hóa đơn điện nước của phòng mình, sổ cọc và số tiền cần bù của mình | Student | Must |
 | FR-BIL-11 | Staff xem công nợ theo sinh viên (phí phòng, bù cọc khi hợp đồng còn ACTIVE, số dư cọc âm sau trả phòng) và theo phòng (điện nước); xuất báo cáo theo kỳ | Staff | Should |
@@ -301,7 +307,7 @@ Có hai loại hóa đơn và một sổ cọc:
 | **BR-04 Hóa đơn** | Một hóa đơn phí phòng cho mỗi (sinh viên, học kỳ); một hóa đơn điện nước cho mỗi (phòng, kỳ điện nước). Hóa đơn đã thanh toán không sửa | CSDL: hai partial unique index theo loại hóa đơn. Service: chặn sửa khi đã thanh toán |
 | **BR-05 Chuyển phòng** | Giường đích trống và **cùng đơn vị** với giường nguồn; đóng phân phòng cũ và mở mới trong một transaction; hợp đồng không thay đổi | Service: khóa hai giường theo thứ tự `bed_id` tăng dần |
 | **BR-06 Sửa chữa** | Sinh viên chỉ tạo ticket cho phòng đang ở; chỉ KTV được giao cập nhật xử lý; chỉ đóng sau RESOLVED; KTV không tự đóng | Service: kiểm tra chuyển trạng thái theo bảng ở mục 10 |
-| **BR-07 Phạm vi** | Staff chỉ thấy và thao tác dữ liệu thuộc đơn vị mình. Đơn đăng ký thuộc đơn vị nguyện vọng. Sinh viên thuộc phạm vi đơn vị khi có đơn trong đợt hiện hành hoặc phân phòng hiệu lực tại đơn vị đó. Admin không mặc nhiên có quyền nghiệp vụ | Service: mọi truy vấn của Staff lọc theo `management_unit_id`; kiểm tra trên từng đối tượng |
+| **BR-07 Phạm vi** | Staff chỉ thấy và thao tác dữ liệu thuộc đơn vị mình. Đơn đăng ký thuộc đơn vị nguyện vọng. Sinh viên thuộc phạm vi đơn vị khi có đơn trong đợt hiện hành hoặc phân phòng hiệu lực tại đơn vị đó. Hóa đơn phí phòng thuộc phạm vi đơn vị theo học kỳ (`semester_id`) của hóa đơn (sinh viên có lịch sử ở tại đơn vị trong học kỳ hoặc nộp đơn vào đơn vị cho đợt thuộc học kỳ, tránh lộ hóa đơn khi chuyển đơn vị giữa các kỳ). Admin không mặc nhiên có quyền nghiệp vụ | Service: mọi truy vấn của Staff lọc theo `management_unit_id` và điều kiện thời gian/học kỳ; kiểm tra trên từng đối tượng (trả 404 nếu ngoài phạm vi) |
 | **BR-08 Dữ liệu suy ra** | Số chỗ trống, "Đầy", "Sắp hết hạn", "Quá hạn", "Quá hạn trả phòng" không lưu, luôn tính từ dữ liệu gốc | Thiết kế CSDL / view |
 | **BR-09 Lịch sử** | Không ghi đè dữ liệu lịch sử; mọi chuyển trạng thái lưu người, thời gian, lý do | Bảng lịch sử cho từng đối tượng + `AuditLog` |
 | **BR-10 Tiền cọc** | Hợp đồng chỉ ACTIVE khi đã thu đủ mức cọc của tòa. Số dư cọc = tổng giao dịch sổ cọc. Trừ cọc chỉ phát sinh từ ticket của phòng đã CLOSED, nguyên nhân hư hỏng do sử dụng, có chi phí > 0; hao mòn tự nhiên không trừ cọc; tổng trừ của các sinh viên = chi phí ticket. Hoàn cọc ≤ số dư; mỗi hợp đồng tối đa một giao dịch hoàn cọc. Khi trả phòng, khoản bù cọc chưa nộp được tất toán bằng số dư (hoàn = số dư nếu dương, số dư âm thành công nợ), không ghi thêm nợ bù cọc | Service trong transaction; CSDL: `CHECK` dấu số tiền theo loại giao dịch, `UNIQUE(contract_id) WHERE type = 'REFUND'` |
@@ -313,7 +319,7 @@ Có hai loại hóa đơn và một sổ cọc:
 
 ### 5.1. Thực thể
 
-Mục này mô tả ở mức nghiệp vụ. Tên bảng, kiểu dữ liệu và ràng buộc chi tiết: `DB-Design-DMS.md` v0.2 và `DB-DMS-schema.sql`.
+Mục này mô tả ở mức nghiệp vụ. Tên bảng, kiểu dữ liệu và ràng buộc chi tiết: `DB-Design-DMS.md` v0.5 và `DB-DMS-schema.sql`.
 
 | Thực thể | Thuộc tính chính | Ghi chú |
 |---|---|---|
@@ -321,13 +327,13 @@ Mục này mô tả ở mức nghiệp vụ. Tên bảng, kiểu dữ liệu và
 | `User` | id, username, password_hash, role, management_unit_id (Staff, Technician), họ tên, SĐT, cờ đổi mật khẩu, trạng thái khóa, quyền tổng hợp liên đơn vị (Staff) | Sinh viên dùng mã SV làm username |
 | `StudentProfile` | user_id, mã SV, giới tính, ngày sinh, khoa, khóa, quê quán, liên hệ khẩn cấp | 1–1 với `User` có role Student; mọi thực thể nghiệp vụ tham chiếu sinh viên qua đây |
 | `Building` | id, tên, management_unit_id, **mức cọc** | K1: 1.000.000 đ; N2, N3: 2.000.000 đ |
-| `RoomType` | id, tên, số giường, **giá gốc / học kỳ chính**, **giá gốc / học kỳ hè**, diện tích, tiện ích | Nơi duy nhất lưu giá gốc |
+| `RoomType` | id, tên, số giường, **giá gốc / học kỳ chính**, **giá gốc / học kỳ hè**, diện tích, tiện ích | Nơi duy nhất lưu giá gốc. Không sửa số giường khi loại phòng đã được gán cho phòng đang tồn tại (409 `RESOURCE_IN_USE`) |
 | `Semester` | id, tên, năm học, loại (HK1 / HK2 / Hè), ngày bắt đầu, ngày kết thúc | Kỳ thu phí phòng |
 | `Room` | id, building_id, room_type_id, tầng, mã phòng, giới tính, trạng thái vận hành, **room_leader_id** | Không lưu giá, số người. Đổi trưởng phòng ghi `AuditLog` |
 | `Bed` | id, room_id, mã giường, trạng thái (Hoạt động / Hỏng / Ngừng dùng) | Bớt giường bằng trạng thái Ngừng dùng, không xóa |
 | `RegistrationPeriod` | id, học kỳ, loại (thường / hè), ngày mở, ngày đóng, các đơn vị áp dụng | Chỉ tiêu lưu ở bảng phụ (period, building, quota) |
 | `PriorityCategory` | id, mã, tên diện, trọng số, đang dùng | Khởi tạo: chính sách 50, năm nhất 30, ở xa 20 |
-| `RoomApplication` | id, student_id, period_id, **preferred_unit_id**, room_type_id mong muốn, điểm ưu tiên, trạng thái, lý do | Duy nhất (student_id, period_id). Diện ưu tiên kê khai và Staff xác nhận từng diện ở bảng phụ (application, category) |
+| `RoomApplication` | id, student_id, period_id, **preferred_unit_id**, room_type_id mong muốn, điểm ưu tiên, trạng thái, lý do | Duy nhất (student_id, period_id). Diện ưu tiên kê khai và Staff xác nhận từng diện ở bảng phụ (application, category). Đơn APPROVED chỉ hủy khi chưa có hợp đồng liên kết (409 `APPLICATION_HAS_CONTRACT`) |
 | `DormitoryContract` | id, **mã** (HD-2026-0012), student_id, application_id, ngày bắt đầu, ngày kết thúc, **hạn kích hoạt** (chụp khi phân giường), **mức cọc yêu cầu** (chụp từ tòa khi kích hoạt), activated_at, trạng thái | **Không** lưu phòng, giá, số dư cọc. Hủy giữ chỗ để phân lại tạo hợp đồng mới |
 | `DepositTransaction` | id, contract_id, loại (thu cọc / trừ cọc / bù cọc / hoàn cọc), số tiền (có dấu), maintenance_request_id (khi trừ cọc), hạn nộp (khi trừ cọc), người xác nhận, thời gian, ghi chú | Sổ cọc; số dư = tổng |
 | `RoomAssignmentHistory` | id, student_id, contract_id, bed_id, started_at, thời điểm bắt đầu ở (HOLD → STAY trên cùng bản ghi), ended_at, lý do kết thúc, loại (HOLD / STAY), **đơn giá / học kỳ** (chính và hè), người duyệt | Nguồn duy nhất cho "ở đâu, giá bao nhiêu" |
@@ -440,6 +446,8 @@ Không có tích hợp phần cứng. Không tích hợp hệ thống bên ngoà
 | AT-24 | Sinh viên chọn tạm rời hè | Có phiếu gửi đồ; giường trống trong hè; hợp đồng vẫn ACTIVE, nhãn "Tạm rời hè"; không có hóa đơn hè; cọc giữ nguyên | FR-CON-11, BR-02 |
 | AT-25 | Đầu HK1, phân lại giường cho sinh viên tạm rời hè khi giường cũ đã có người | Phân được giường khác, không cần đơn mới; phiếu gửi đồ ghi ngày nhận lại | FR-CON-12, BR-01 |
 | AT-26 | Sinh viên đăng ký ở hè được duyệt | Ngày kết thúc hợp đồng gia hạn qua hè; có hóa đơn phí phòng học kỳ hè | FR-REG-15, FR-BIL-05 |
+| AT-27 | Sinh viên hủy đơn APPROVED khi đã sinh hợp đồng PENDING / ACTIVE | Bị từ chối (409 `APPLICATION_HAS_CONTRACT`), ẩn thao tác `cancel` trong `allowedActions` | FR-REG-04, mục 10.1 |
+| AT-28 | Sửa số giường (`bed_count`) của loại phòng đã được gán cho ít nhất một phòng đang tồn tại | Bị từ chối (409 `RESOURCE_IN_USE`) | FR-ROOM-02 |
 
 ### 8.2. Ma trận Use Case ↔ Yêu cầu
 
@@ -598,7 +606,8 @@ Không có tích hợp phần cứng. Không tích hợp hệ thống bên ngoà
 | Từ | Sang | Ai | Điều kiện |
 |---|---|---|---|
 | DRAFT | SUBMITTED | Student | Đợt đang mở; chưa có đơn khác trong đợt; không có hợp đồng PENDING / ACTIVE |
-| DRAFT, SUBMITTED, APPROVED | CANCELLED | Student | |
+| DRAFT, SUBMITTED | CANCELLED | Student | |
+| APPROVED | CANCELLED | Student | Chỉ được phép hủy khi **chưa sinh hợp đồng** PENDING hoặc ACTIVE liên kết. Nếu đã có hợp đồng, sinh viên không được tự ý hủy đơn trực tiếp (trả 409 `APPLICATION_HAS_CONTRACT`, ẩn thao tác `cancel` trong `allowedActions`) mà phải thực hiện thủ tục hủy giữ chỗ / hợp đồng trước nhằm tránh hợp đồng mồ côi |
 | SUBMITTED | APPROVED | Staff | Cùng đơn vị |
 | SUBMITTED | REJECTED | Staff | Bắt buộc lý do |
 | APPROVED | ASSIGNED | Staff + hệ thống | Phân giường thành công (UC-16) |

@@ -1,7 +1,7 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.5**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.6 (mục 3, 6.2, 10), `SAD-DMS.md` v1.0, `DB-Design-DMS.md` v0.3, `DMS-UI-UX-Design.md` (mục 27.2)
+> **Phiên bản 0.6**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.7 (mục 3, 6.2, 10), `SAD-DMS.md` v1.1, `DB-Design-DMS.md` v0.5, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
 ### Lịch sử thay đổi
@@ -13,6 +13,7 @@
 | 0.3 | 13/10/2026 | Bổ sung GET chi tiết/DELETE danh mục và DELETE phòng/giường chưa có lịch sử cho khung CRUD; ghi rõ giới hạn triển khai và dẫn README backend |
 | 0.4 | 13/10/2026 | Chốt phạm vi khung CRUD BE + React; bổ sung hồ sơ sinh viên, hợp đồng/hóa đơn chờ, yêu cầu/lựa chọn chờ, chỉ số, sửa/xóa thông báo và các ngoại lệ chỉ đọc |
 | 0.5 | 14/10/2026 | Theo code review: bổ sung mã `RESOURCE_IN_USE`, `DUPLICATE_VALUE`, `METHOD_NOT_ALLOWED`, `UNSUPPORTED_MEDIA_TYPE`, `STUDENT_HAS_ACTIVE_CONTRACT`, `STUDENT_CODE_EXISTS`, `BED_CODE_EXISTS`, `LEADER_ALREADY_ASSIGNED`, `APPLICATION_HAS_CONTRACT`; ràng buộc CSDL ngoài danh sách ánh xạ theo SQLState thay vì luôn là `CONCURRENT_UPDATE`; hủy đơn APPROVED đã có hợp đồng bị chặn; PATCH sinh viên giữ trường không gửi |
+| 0.6 | 14/10/2026 | Đồng bộ toàn diện theo SRS v0.7, SAD v1.1 và DB-Design v0.5: cập nhật bảng endpoint mục 3.3 và bảng `allowedActions` mục 6 ghi rõ điều kiện `cancel` của đơn APPROVED (khi chưa sinh hợp đồng PENDING/ACTIVE, có hợp đồng trả 409 `APPLICATION_HAS_CONTRACT`); ghi chú chặn đổi `bedCount` của loại phòng đang gán cho phòng tồn tại tại PATCH `/api/room-types/{id}` (409 `RESOURCE_IN_USE`); làm rõ phạm vi hóa đơn của Staff theo học kỳ và ràng buộc xác nhận thanh toán qua `isInStaffUnit` (404 khi ngoài scope). |
 
 ---
 
@@ -235,7 +236,7 @@ Mỗi bảng tương ứng một module của SAD. "Phạm vi" nhắc lại các
 | GET | `/api/buildings` | \* | Tòa (mảng); Staff chỉ thấy tòa đơn vị mình, trừ khi có quyền tổng hợp | FR-ROOM-01 |
 | POST, PATCH | `/api/admin/buildings[/{id}]` | A | `{ code, name, managementUnitId, depositAmount }`. Đổi mức cọc chỉ áp dụng cho hợp đồng kích hoạt sau đó | FR-ROOM-01 |
 | GET | `/api/room-types` | St | Loại phòng (mảng) | FR-ROOM-02 |
-| POST, PATCH | `/api/room-types[/{id}]` | St | `{ name, bedCount, priceMain, priceSummer, areaM2, amenities, active }`. Đổi giá không ảnh hưởng phân phòng đang hiệu lực | FR-ROOM-02 |
+| POST, PATCH | `/api/room-types[/{id}]` | St | `{ name, bedCount, priceMain, priceSummer, areaM2, amenities, active }`. Đổi giá không ảnh hưởng phân phòng đang hiệu lực; đổi `bedCount` của loại phòng đã được gán cho ít nhất một phòng đang tồn tại bị từ chối 409 `RESOURCE_IN_USE` nhằm bảo toàn số giường vật lý và công suất | FR-ROOM-02 |
 | GET | `/api/semesters` | \* | Học kỳ (mảng), sắp theo `startDate` | FR-ROOM-11 |
 | POST, PATCH | `/api/semesters[/{id}]` | St | `{ name, academicYear, type, startDate, endDate }`; chồng thời gian → `409 SEMESTER_OVERLAP` | FR-ROOM-11 |
 | GET | `/api/rooms` | St | Lọc `buildingId`, `floor`, `roomTypeId`, `gender`, `status`, `hasFreeBed`, `noLeader`; mỗi phòng kèm số giường trống / đang giữ / đang ở (từ `v_room_occupancy`) | FR-ROOM-07, 10 |
@@ -266,7 +267,7 @@ Không có `DELETE /api/rooms/{id}` hay `DELETE /api/beds/{id}`: phòng, giườ
 | POST | `/api/applications` | S | Tạo đơn DRAFT (mục 4.3) | FR-REG-02, 03 |
 | PATCH | `/api/applications/{id}` | S | Sửa đơn DRAFT | FR-REG-02 |
 | POST | `/api/applications/{id}/submit` | S | DRAFT → SUBMITTED; tính điểm ưu tiên | FR-REG-04, 05 |
-| POST | `/api/applications/{id}/cancel` | S | DRAFT / SUBMITTED / APPROVED / ASSIGNED → CANCELLED. Đang ASSIGNED thì đóng giữ chỗ và hủy hợp đồng PENDING cùng lúc | FR-REG-04, 11 |
+| POST | `/api/applications/{id}/cancel` | S | DRAFT / SUBMITTED / APPROVED (chỉ khi chưa sinh hợp đồng PENDING/ACTIVE; nếu đã có hợp đồng trả 409 `APPLICATION_HAS_CONTRACT`) / ASSIGNED → CANCELLED. Đang ASSIGNED thì đóng giữ chỗ và hủy hợp đồng PENDING cùng lúc | FR-REG-04, 11 |
 | GET | `/api/me/applications` | S | Đơn của tôi, mới nhất trước | FR-REG-12 |
 | GET | `/api/applications` | St | Đơn thuộc đơn vị nguyện vọng = đơn vị mình. Lọc `periodId`, `status`, `preferredRoomTypeId`, `gender`, `q`; sắp `priorityScore`, `submittedAt` | FR-REG-05 |
 | GET | `/api/applications/{id}` | S, St | Chi tiết (mục 4.3); sinh viên thấy lý do từ chối, giường đang giữ, hạn kích hoạt | FR-REG-12 |
@@ -343,9 +344,9 @@ Không có `DELETE /api/rooms/{id}` hay `DELETE /api/beds/{id}`: phòng, giườ
 | GET | `/api/invoices/utility/preview` | St | `billingMonth`, `buildingId?`: số phòng sẽ phát hành, đã phát hành, tổng tiền; `roomsMissingReading` và `roomsWithoutLeader` dạng `[{ id, code }]` để hiện cảnh báo trước khi phát hành (mục 4.14) | FR-BIL-04, 06 |
 | POST | `/api/invoices/utility/issue` | St | Phát hành điện nước theo phòng (mục 4.14) | FR-BIL-04, 06, 07 |
 | GET | `/api/invoices` | St | Lọc `type`, `status`, `overdue`, `semesterId`, `billingMonth`, `buildingId`, `roomId`, `studentId`, `q` | FR-BIL-08, 11 |
-| GET | `/api/invoices/{id}` | S, St | Chi tiết, các dòng, `allowedActions`. Sinh viên: hóa đơn phí phòng của mình, hóa đơn điện nước của phòng mình đang ở hoặc đã ở trong tháng đó | FR-BIL-04, 10 |
+| GET | `/api/invoices/{id}` | S, St | Chi tiết, các dòng, `allowedActions`. Sinh viên: hóa đơn phí phòng của mình, hóa đơn điện nước của phòng mình đang ở hoặc đã ở trong tháng đó. Staff: điện nước theo đơn vị của phòng; phí phòng theo học kỳ của hóa đơn (`STAFF_UNIT_SCOPE`, sinh viên có lịch sử ở hoặc đơn nộp vào đơn vị trong kỳ), ngoài scope trả 404 | FR-BIL-04, 10 |
 | GET | `/api/me/invoices` | S | Hóa đơn của tôi và của phòng tôi; lọc `type`, `status` | FR-BIL-10 |
-| POST | `/api/invoices/{id}/confirm-payment` | St | UNPAID → PAID (mục 4.15) | FR-BIL-08 |
+| POST | `/api/invoices/{id}/confirm-payment` | St | UNPAID → PAID (mục 4.15). Bắt buộc hóa đơn thuộc đơn vị của Staff (`isInStaffUnit`, không áp dụng quyền tổng hợp cho ghi tài chính; ngoài scope trả 404) | FR-BIL-08 |
 | POST | `/api/invoices/{id}/adjustments` | St | Thêm dòng điều chỉnh vào hóa đơn **UNPAID** này cho một hóa đơn đã PAID trước đó của cùng sinh viên / phòng: `{ adjustsInvoiceId, amount (âm / dương, ≠ 0), reason }`. Tổng hóa đơn sau điều chỉnh phải ≥ 0 → nếu âm: `409 ADJUSTMENT_INVALID`, `details: { totalAfter }` (CSDL cũng chặn bằng `CHECK (total_amount >= 0)`) | FR-BIL-12 |
 | GET | `/api/contracts/{id}/deposit` | S, St | Sổ cọc: mức cọc, số dư, số cần bù, hạn bù, quá hạn, các giao dịch (mục 4.16) | FR-BIL-09, 10 |
 | GET | `/api/me/deposit` | S | Sổ cọc của hợp đồng hiện tại | FR-BIL-10 |
@@ -748,6 +749,7 @@ Một transaction: chiếm giường qua `BedOccupancyService` (mở phân phòn
 
 - Phí phòng: `payerUserId` mặc định là sinh viên của hóa đơn. Điện nước: mặc định trưởng phòng; có thể là thành viên khác trong phòng. Người ngoài: `payerUserId = null`, `payerName` bắt buộc.
 - `paidAt` mặc định bây giờ, không được ở tương lai. Đã PAID → `409 INVOICE_ALREADY_PAID`.
+- Kiểm tra phạm vi (Scope): Staff chỉ có quyền xác nhận thanh toán nếu hóa đơn thuộc đơn vị mình phụ trách (`isInStaffUnit`, phí phòng theo học kỳ `semester_id`, điện nước theo đơn vị tòa nhà của phòng); cờ tổng hợp liên đơn vị (`crossUnit`) không áp dụng cho thao tác ghi tài chính này. Ngoài phạm vi trả `404 NOT_FOUND`.
 
 ### 4.16. Sổ cọc
 
@@ -955,7 +957,7 @@ Tên hành động = đoạn cuối URL. Policy ở backend (SAD 4.3) cài đún
 |---|---|---|---|---|
 | Đơn | DRAFT | `submit`, `cancel` | | |
 | | SUBMITTED | `cancel` | `approve`, `reject`, `verify-priority` | |
-| | APPROVED | `cancel` | `assign` | |
+| | APPROVED | `cancel` (khi chưa sinh hợp đồng PENDING/ACTIVE) | `assign` | |
 | | ASSIGNED | `cancel` | `release-hold` | |
 | Hợp đồng | PENDING | | `activate` | |
 | | ACTIVE | `create-extension-request`, `create-transfer-request` (khi đang ở, không có yêu cầu chờ) | `move-out`, `create-storage-record` (khi lựa chọn hè TEMP_LEAVE đã duyệt), `top-up` (khi cần bù) | |
