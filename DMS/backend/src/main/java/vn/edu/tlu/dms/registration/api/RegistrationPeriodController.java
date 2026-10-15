@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.registration.api.RegistrationPeriodDtos.Input;
 import vn.edu.tlu.dms.registration.api.RegistrationPeriodDtos.Response;
 import vn.edu.tlu.dms.registration.service.RegistrationPeriodService;
@@ -30,6 +32,7 @@ public class RegistrationPeriodController {
         this.service = service;
     }
 
+    @RequirePrivilege(Permission.REGISTRATION_PERIOD_READ)
     @GetMapping
     public List<Response> getRegistrationPeriods(
             @RequestParam(required = false) Long semesterId,
@@ -38,17 +41,20 @@ public class RegistrationPeriodController {
         return service.getRegistrationPeriods(semesterId, kind, open);
     }
 
+    @RequirePrivilege(Permission.REGISTRATION_PERIOD_READ)
     @GetMapping("/{id}")
     public Response getRegistrationPeriodById(@PathVariable Long id) {
         return service.getRegistrationPeriodById(id);
     }
 
+    @RequirePrivilege(Permission.REGISTRATION_PERIOD_DELETE)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUnusedPeriod(@PathVariable Long id) {
         service.deleteUnusedPeriod(id);
         return ResponseEntity.noContent().build();
     }
 
+    @RequirePrivilege(Permission.REGISTRATION_PERIOD_CREATE)
     @PostMapping
     public ResponseEntity<Response> createRegistrationPeriod(@Valid @RequestBody Input input) {
         var response = service.createRegistrationPeriod(input);
@@ -56,6 +62,7 @@ public class RegistrationPeriodController {
                 .body(response);
     }
 
+    @RequirePrivilege(Permission.REGISTRATION_PERIOD_UPDATE)
     @PatchMapping("/{id}")
     public Response updateRegistrationPeriod(
             @PathVariable Long id, @Valid @RequestBody Input input) {

@@ -1,3 +1,9 @@
+import {
+  Action,
+  Permission,
+  Role,
+  permissionFor,
+} from '../constants/authorization'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   App,
@@ -11,6 +17,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Result,
   Select,
   Space,
   Switch,
@@ -18,21 +25,34 @@ import {
   Tag,
   Typography,
 } from 'antd'
-import axios from 'axios'
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import {
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router'
 import PageHeader from '../components/layout/PageHeader'
 import { useMe } from '../features/account/useMe'
 import {
   getLookupRecords,
+  crudRequestParams,
+  CRUD_PAGE_SIZES,
   normalizePage,
+  readCrudQuery,
   readValue,
+  toLocalDateTime,
+  updateCrudQuery,
+  validationFieldErrors,
   writeCrudRecord,
 } from '../features/crud/api'
 import { resources } from '../features/crud/resources'
 import type { CrudField, CrudRecord } from '../features/crud/types'
 import { api } from '../services/api/client'
+import { hasPermission } from '../services/api/auth'
 import { errorMessage } from '../utils/errorMessages'
+import { formatDate, formatDateTime } from '../utils/format'
+import { useApiErrorHandler } from '../hooks/useApiErrorHandler'
 
 const labels: Record<string, string> = {
   ACTIVE: 'Hoạt động',
@@ -50,10 +70,10 @@ const labels: Record<string, string> = {
   PAID: 'Đã thanh toán',
   M: 'Nam',
   F: 'Nữ',
-  STAFF: 'Quản lý',
-  ADMIN: 'Quản trị',
-  STUDENT: 'Sinh viên',
-  TECHNICIAN: 'Kỹ thuật viên',
+  [Role.STAFF]: 'Quản lý',
+  [Role.ADMIN]: 'Quản trị',
+  [Role.STUDENT]: 'Sinh viên',
+  [Role.TECHNICIAN]: 'Kỹ thuật viên',
   ROOM_FEE: 'Phí phòng',
   UTILITY: 'Điện nước',
   ELECTRIC: 'Điện',
@@ -80,6 +100,10 @@ function display(value: unknown): string {
       .filter((v) => v != null && typeof v !== 'object')
       .map(display)
       .join(' · ')
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value))
+    return formatDateTime(value)
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value))
+    return formatDate(value)
   return labels[String(value)] ?? String(value)
 }
 
@@ -121,6 +145,7 @@ function LookupInput({
       ]}
     >
       <Select
+        aria-label={field.label}
         showSearch
         optionFilterProp="label"
         mode={field.multiple ? 'multiple' : undefined}
@@ -134,7 +159,8 @@ function LookupInput({
   )
 }
 
-function CrudInput({ field }: { field: CrudField }) {
+/** Form.Item phải bọc control trực tiếp để value/onChange được nối vào Form. */
+function renderCrudInput(field: CrudField) {
   switch (field.kind) {
     case 'number':
       return (
@@ -163,39 +189,85 @@ export default function CrudPage({ resource }: { resource: string }) {
   const { message, modal } = App.useApp()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { id: routeId } = useParams()
-  const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1)
+  const query = readCrudQuery(searchParams, resource, config)
+  const { search, page, size, filters: activeFilters } = query
+  const handleApiError = useApiErrorHandler()
   const [editing, setEditing] = useState<CrudRecord | null | undefined>(
     undefined,
   )
   const [detail, setDetail] = useState<CrudRecord | undefined>()
   const [busy, setBusy] = useState(false)
   const [form] = Form.useForm()
+  const [filterForm] = Form.useForm()
   const scopeValue = Form.useWatch('scope', form)
   const typeValue = Form.useWatch('type', form)
+  const userRoleValue = Form.useWatch('role', form)
   const role = me?.role
-  const canWrite =
-    !config.readOnly && !!role && !!config.writeRoles?.includes(role)
+  const canRead = hasPermission(
+    me,
+    permissionFor(config.permission, Action.READ),
+  )
+  const canUpdate =
+    !config.readOnly &&
+    hasPermission(me, permissionFor(config.permission, Action.UPDATE))
+  const canDelete =
+    !config.readOnly &&
+    hasPermission(
+      me,
+      resource === 'users'
+        ? Permission.USER_LOCK
+        : permissionFor(config.permission, Action.DELETE),
+    )
   const canCreate =
-    canWrite &&
+    !config.readOnly &&
+    hasPermission(me, permissionFor(config.permission, Action.CREATE)) &&
     !config.singleton &&
-    !['configs'].includes(resource) &&
-    (config.createRoles ?? config.writeRoles)?.includes(role!)
+    resource !== 'configs'
+  const canWrite = canCreate || canUpdate || canDelete
   const idKey = config.idKey ?? 'id'
-  const writeEndpoint = config.writeEndpoint ?? config.endpoint
+  const writeEndpoint =
+    resource === 'students' && role === Role.ADMIN
+      ? '/admin/students'
+      : (config.writeEndpoint ?? config.endpoint)
   const detailEndpoint = config.detailEndpoint ?? config.endpoint
+  function changeQuery(patch: Partial<typeof query>) {
+    setSearchParams((previous) =>
+      updateCrudQuery(previous, resource, { ...query, ...patch }),
+    )
+  }
+  const filterSignature = JSON.stringify(activeFilters)
+  useEffect(() => {
+    filterForm.resetFields()
+    const initial: Record<string, string | number> = {
+      ...JSON.parse(filterSignature),
+    }
+    for (const field of config.filters ?? []) {
+      if (initial[field.name] && (field.kind === 'number' || field.lookup))
+        initial[field.name] = Number(initial[field.name])
+      else if (initial[field.name] && field.kind === 'datetime')
+        initial[field.name] = toLocalDateTime(initial[field.name])
+    }
+    filterForm.setFieldsValue(initial)
+  }, [filterSignature, filterForm, config, resource])
   const { data, error, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['crud', resource, page, config.localSearch ? '' : search],
+    queryKey: [
+      'crud',
+      me?.id,
+      resource,
+      page,
+      size,
+      config.localSearch ? '' : search,
+      activeFilters,
+    ],
+    enabled: canRead,
     queryFn: async () =>
       normalizePage(
         (
           await api.get(config.endpoint, {
-            params: {
-              page: page - 1,
-              size: 20,
-              q: config.localSearch ? undefined : search,
-            },
+            params: crudRequestParams(query, config),
           })
         ).data,
       ),
@@ -208,16 +280,80 @@ export default function CrudPage({ resource }: { resource: string }) {
             .includes(search.toLocaleLowerCase()),
         )
       : data?.content
-  const fields = editing
+  useEffect(() => {
+    if (error) {
+      filterForm.setFields(
+        validationFieldErrors(error).map((item) => ({
+          name: item.field,
+          errors: [item.message],
+        })),
+      )
+    }
+  }, [error, filterForm])
+  // Xóa bản ghi cuối trang hoặc mở link quá trang hiện có thì quay về trang cuối hợp lệ.
+  const total = config.localSearch ? rows?.length : data?.totalElements
+  useEffect(() => {
+    if (total === undefined || isFetching || error || config.singleton) return
+    const lastPage = Math.max(1, Math.ceil(total / size))
+    if (page > lastPage)
+      setSearchParams(
+        (previous) =>
+          updateCrudQuery(previous, resource, {
+            ...readCrudQuery(previous, resource, config),
+            page: lastPage,
+          }),
+        { replace: true },
+      )
+  }, [total, size, page, resource, config, isFetching, error, setSearchParams])
+  const baseFields = editing
     ? (config.editFields ?? config.fields).filter((field) => !field.createOnly)
     : (config.createFields ?? config.fields).filter((field) => !field.editOnly)
+  const fields = baseFields
+    .filter(
+      (field) =>
+        !(
+          resource === 'profile' &&
+          role !== Role.STUDENT &&
+          ['hometown', 'emergencyContact'].includes(field.name)
+        ),
+    )
+    .filter(
+      (field) =>
+        !(
+          resource === 'users' &&
+          editing?.role === Role.STUDENT &&
+          field.name === 'role'
+        ),
+    )
+    .filter(
+      (field) =>
+        !(
+          resource === 'users' &&
+          field.name === 'managementUnitId' &&
+          (userRoleValue === Role.ADMIN || editing?.role === Role.STUDENT)
+        ),
+    )
+    .map((field) =>
+      field.name === 'contractId' && role === Role.ADMIN
+        ? { ...field, lookup: '/contracts' }
+        : field,
+    )
+    .map((field) =>
+      resource === 'users' && field.name === 'managementUnitId'
+        ? {
+            ...field,
+            required:
+              userRoleValue === Role.STAFF || userRoleValue === Role.TECHNICIAN,
+          }
+        : field,
+    )
   const visible = (field: CrudField) =>
     !field.visibleWhen ||
     (field.visibleWhen.field === 'scope' ? scopeValue : typeValue) ===
       field.visibleWhen.value
 
   useEffect(() => {
-    if (!routeId) return
+    if (!routeId || !canRead) return
     let cancelled = false
     api
       .get(`${detailEndpoint}/${routeId}`)
@@ -225,29 +361,56 @@ export default function CrudPage({ resource }: { resource: string }) {
         if (!cancelled) setDetail(response.data as CrudRecord)
       })
       .catch((e) => {
-        if (!cancelled) void message.error(errorMessage(e))
+        if (!cancelled) handleApiError(e)
       })
     return () => {
       cancelled = true
     }
-  }, [routeId, detailEndpoint, message])
+  }, [routeId, detailEndpoint, handleApiError, canRead])
 
+  /** Quyền thao tác không thay thế điều kiện trạng thái hoặc người sở hữu bản ghi. */
+  function canChangeRow(row: CrudRecord) {
+    return (
+      (!config.editStates || config.editStates.includes(String(row.status))) &&
+      (!config.rowOwned ||
+        role === Role.ADMIN ||
+        row[config.rowOwned] === me?.id) &&
+      !(role === Role.STAFF && ['applications', 'summer'].includes(resource))
+    )
+  }
   function canEditRow(row: CrudRecord) {
     return (
-      canWrite &&
-      (!config.editStates || config.editStates.includes(String(row.status))) &&
-      (!config.rowOwned || row[config.rowOwned] === me?.id)
+      canUpdate &&
+      canChangeRow(row) &&
+      !(resource === 'maintenance' && role === Role.TECHNICIAN)
+    )
+  }
+  function canDeleteRow(row: CrudRecord) {
+    return (
+      canDelete &&
+      canChangeRow(row) &&
+      !config.singleton &&
+      resource !== 'configs' &&
+      !(resource === 'users' && (row.locked === true || row.id === me?.id))
     )
   }
   async function refresh() {
-    await queryClient.invalidateQueries({ queryKey: ['crud'] })
-    await queryClient.invalidateQueries({ queryKey: ['crud-lookup'] })
-    await queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['crud'] }),
+      queryClient.invalidateQueries({ queryKey: ['crud-lookup'] }),
+      queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+      queryClient.invalidateQueries({ queryKey: ['me'] }),
+    ])
   }
   function canResetPassword(row: CrudRecord) {
     return (
       ['users', 'students', 'adminStudents'].includes(resource) &&
-      (role === 'ADMIN' || (role === 'STAFF' && resource === 'students')) &&
+      hasPermission(
+        me,
+        resource === 'users'
+          ? Permission.USER_RESET_PASSWORD
+          : Permission.STUDENT_RESET_PASSWORD,
+      ) &&
       row.id !== me?.id
     )
   }
@@ -290,8 +453,8 @@ export default function CrudPage({ resource }: { resource: string }) {
       cancelText: 'Hủy',
       onOk: async () => {
         try {
-          // Admin dùng API quản trị chung; Staff dùng API sinh viên kiểm tra đúng đơn vị tại BE.
-          const endpoint = role === 'ADMIN' ? '/admin/users' : '/students'
+          // Màn tài khoản dùng API User; màn sinh viên kiểm tra quyền/phạm vi tại API Student.
+          const endpoint = resource === 'users' ? '/admin/users' : '/students'
           const result = await writeCrudRecord(
             `${endpoint}/${row.id}/reset-password`,
             'post',
@@ -300,19 +463,20 @@ export default function CrudPage({ resource }: { resource: string }) {
             throw new Error('Thiếu mật khẩu tạm')
           await refresh()
         } catch (e) {
-          void message.error(errorMessage(e))
+          handleApiError(e)
           throw e
         }
       },
     })
   }
   async function openEditor(row?: CrudRecord) {
+    if (row ? !canEditRow(row) : !canCreate) return
     form.resetFields()
     if (!row) {
       setEditing(null)
       form.setFieldsValue({
         active: true,
-        role: 'STAFF',
+        role: Role.STAFF,
         type: 'ROOM_FEE',
         scope: 'UNIT',
         unitId: me?.managementUnit?.id,
@@ -329,26 +493,34 @@ export default function CrudPage({ resource }: { resource: string }) {
       const initial = { ...selected }
       for (const field of config.fields)
         if (field.kind === 'datetime' && initial[field.name])
-          initial[field.name] = new Date(String(initial[field.name]))
-            .toLocaleString('sv-SE')
-            .slice(0, 16)
-            .replace(' ', 'T')
-      if (resource === 'myApplications' && Array.isArray(selected.priorities))
+          initial[field.name] = toLocalDateTime(initial[field.name])
+      if (
+        ['myApplications', 'applications'].includes(resource) &&
+        Array.isArray(selected.priorities)
+      )
         initial.priorityCategoryIds = selected.priorities.map(
           (p) => (p as CrudRecord).categoryId,
         )
       form.setFieldsValue(initial)
     } catch (e) {
-      void message.error(errorMessage(e))
+      handleApiError(e)
     }
   }
   async function saveRecord(values: Record<string, unknown>) {
+    if (editing ? !canEditRow(editing) : !canCreate) return
     setBusy(true)
     try {
       const payload: Record<string, unknown> = {}
       for (const field of fields.filter(visible)) {
         const value = values[field.name]
-        if (value == null || value === '') continue
+        // Chuỗi rỗng xóa nội dung tùy chọn; không gửi null để đổi nghĩa PATCH của backend.
+        if (
+          value == null ||
+          (value === '' &&
+            (field.required ||
+              !['text', 'textarea'].includes(field.kind ?? 'text')))
+        )
+          continue
         payload[field.name] =
           field.kind === 'datetime'
             ? new Date(String(value)).toISOString()
@@ -393,24 +565,19 @@ export default function CrudPage({ resource }: { resource: string }) {
       setEditing(undefined)
       await refresh()
     } catch (e) {
-      if (axios.isAxiosError(e)) {
-        const errors = e.response?.data?.details?.fieldErrors as
-          | { field: string; message: string }[]
-          | undefined
-        if (errors)
-          form.setFields(
-            errors.map((item) => ({
-              name: item.field,
-              errors: [item.message],
-            })),
-          )
-      }
-      void message.error(errorMessage(e))
+      form.setFields(
+        validationFieldErrors(e).map((item) => ({
+          name: item.field,
+          errors: [item.message],
+        })),
+      )
+      handleApiError(e)
     } finally {
       setBusy(false)
     }
   }
   function deleteRecord(row: CrudRecord) {
+    if (!canDeleteRow(row)) return
     let reason = ''
     modal.confirm({
       title: `${config.deleteLabel ?? 'Xóa'} bản ghi này?`,
@@ -442,8 +609,82 @@ export default function CrudPage({ resource }: { resource: string }) {
           void message.success('Đã cập nhật')
           await refresh()
         } catch (e) {
-          void message.error(errorMessage(e))
+          handleApiError(e)
           throw e
+        }
+      },
+    })
+  }
+  function submitRecord(values: Record<string, unknown>) {
+    const identityChanged =
+      resource === 'users' &&
+      editing &&
+      (values.role !== editing.role ||
+        (values.managementUnitId != null &&
+          values.managementUnitId !== editing.managementUnitId))
+    if (!identityChanged) {
+      void saveRecord(values)
+      return
+    }
+    modal.confirm({
+      title: 'Thay đổi vai trò hoặc đơn vị tài khoản?',
+      content:
+        'Phiên đăng nhập cũ của tài khoản này sẽ mất hiệu lực. Người dùng cần đăng nhập lại để nhận quyền và phạm vi mới.',
+      okText: 'Lưu thay đổi',
+      cancelText: 'Hủy',
+      onOk: () => saveRecord(values),
+    })
+  }
+
+  /** Thay đổi quyền đọc tổng hợp vẫn giữ quyền ghi trong đơn vị và thu hồi phiên cũ. */
+  function changeCrossUnitAccess(row: CrudRecord) {
+    if (
+      resource !== 'users' ||
+      row.role !== Role.STAFF ||
+      !hasPermission(me, Permission.USER_CROSS_UNIT_ACCESS)
+    )
+      return
+    const enabled = row.crossUnitAccess !== true
+    modal.confirm({
+      title: enabled
+        ? 'Cấp quyền đọc liên đơn vị?'
+        : 'Thu hồi quyền đọc liên đơn vị?',
+      content:
+        'Chỉ thay đổi phạm vi đọc; tài khoản vẫn ghi trong đơn vị được giao. Người dùng cần đăng nhập lại sau khi thay đổi.',
+      okText: enabled ? 'Cấp quyền' : 'Thu hồi',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          await writeCrudRecord(
+            `/admin/users/${row.id}/cross-unit-access`,
+            'put',
+            { enabled },
+          )
+          void message.success('Đã cập nhật quyền đọc tổng hợp')
+          await refresh()
+        } catch (failure) {
+          handleApiError(failure)
+          throw failure
+        }
+      },
+    })
+  }
+
+  function unlockAccount(row: CrudRecord) {
+    modal.confirm({
+      title: `Mở khóa tài khoản ${String(row.username)}?`,
+      content:
+        'Tài khoản có thể đăng nhập lại. Các token đã bị thu hồi vẫn không dùng lại được.',
+      okText: 'Mở khóa',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          await writeCrudRecord(`/admin/users/${row.id}/unlock`, 'post')
+          void message.success('Đã mở khóa tài khoản')
+          await refresh()
+        } catch (failure) {
+          handleApiError(failure)
+          throw failure
         }
       },
     })
@@ -456,7 +697,8 @@ export default function CrudPage({ resource }: { resource: string }) {
           resource === 'configs' ||
           resource === 'inbox' ||
           resource === 'storage' ||
-          resource === 'myRoom'
+          resource === 'myRoom' ||
+          resource === 'audit'
           ? row
           : resource === 'deposits'
             ? ((await api.get(`/contracts/${row.id}/deposit`))
@@ -465,16 +707,78 @@ export default function CrudPage({ resource }: { resource: string }) {
                 .data as CrudRecord),
       )
     } catch (e) {
-      void message.error(errorMessage(e))
+      handleApiError(e)
     }
+  }
+  /** KTV cập nhật tiến độ ticket được giao; không sửa nội dung báo hỏng của người tạo. */
+  function updateMaintenanceProgress(action: string) {
+    if (
+      !detail ||
+      !hasPermission(me, Permission.MAINTENANCE_UPDATE) ||
+      !Array.isArray(detail.allowedActions) ||
+      !detail.allowedActions.includes(action)
+    )
+      return
+    const target = detail.id
+    let note = ''
+    modal.confirm({
+      title: {
+        start: 'Bắt đầu sửa chữa?',
+        'add-note': 'Thêm ghi chú tiến độ',
+        resolve: 'Hoàn thành sửa chữa',
+      }[action],
+      content:
+        action === 'start' ? (
+          'Cập nhật trạng thái ticket được giao.'
+        ) : (
+          <Input.TextArea
+            placeholder="Ghi chú (từ 5 đến 500 ký tự)"
+            maxLength={500}
+            onChange={(event) => {
+              note = event.target.value
+            }}
+          />
+        ),
+      okText: 'Cập nhật',
+      cancelText: 'Đóng',
+      onOk: async () => {
+        if (action !== 'start' && note.trim().length < 5) {
+          void message.error('Nhập ghi chú ít nhất 5 ký tự')
+          throw new Error('Thiếu ghi chú')
+        }
+        try {
+          setDetail(
+            (await writeCrudRecord(
+              `/maintenance-requests/${target}/${action === 'add-note' ? 'notes' : action}`,
+              'post',
+              action === 'start' ? undefined : { note: note.trim() },
+            )) as CrudRecord,
+          )
+          await refresh()
+        } catch (failure) {
+          handleApiError(failure)
+          throw failure
+        }
+      },
+    })
   }
   const detailFields = [
     ...config.columns,
+    ...(config.detailColumns ?? []),
     ...config.fields.map((field) => ({ key: field.name, label: field.label })),
   ].filter(
     (item, index, list) =>
       list.findIndex((other) => other.key === item.key) === index,
   )
+
+  if (!canRead)
+    return (
+      <Result
+        status="403"
+        title="Không có quyền xem màn hình này"
+        subTitle="Quyền thao tác được quản lý theo vai trò tại máy chủ."
+      />
+    )
 
   return (
     <>
@@ -513,17 +817,63 @@ export default function CrudPage({ resource }: { resource: string }) {
         />
       )}
       <Card>
-        <Input.Search
-          aria-label={`Tìm kiếm ${config.title.toLowerCase()}`}
-          placeholder="Nhập từ khóa tìm kiếm"
-          allowClear
-          enterButton="Tìm kiếm"
-          onSearch={(value) => {
-            setSearch(value.trim())
-            setPage(1)
-          }}
-          style={{ maxWidth: 480, marginBottom: 16 }}
-        />
+        {!config.singleton && (
+          <Input.Search
+            aria-label={`Tìm kiếm ${config.title.toLowerCase()}`}
+            placeholder="Nhập từ khóa tìm kiếm"
+            allowClear
+            enterButton="Tìm kiếm"
+            key={`${resource}:${search}`}
+            defaultValue={search}
+            onSearch={(value) => {
+              changeQuery({ search: value.trim(), page: 1 })
+            }}
+            style={{ maxWidth: 480, marginBottom: 16 }}
+          />
+        )}
+        {!!config.filters?.length && (
+          <Form
+            form={filterForm}
+            layout="vertical"
+            onFinish={(values) => {
+              const filters: Record<string, string> = {}
+              for (const field of config.filters ?? [])
+                if (values[field.name] != null && values[field.name] !== '')
+                  filters[field.name] = String(values[field.name]).trim()
+              changeQuery({ filters, page: 1 })
+            }}
+          >
+            <Space wrap align="start" style={{ marginBottom: 16 }}>
+              {config.filters.map((field) => (
+                <Form.Item
+                  key={field.name}
+                  label={field.label}
+                  name={field.kind === 'select' ? undefined : field.name}
+                  style={{ minWidth: 180, marginBottom: 0 }}
+                >
+                  {field.kind === 'select' ? (
+                    <LookupInput field={{ ...field, required: false }} />
+                  ) : (
+                    renderCrudInput(field)
+                  )}
+                </Form.Item>
+              ))}
+              <Space style={{ marginTop: 30 }}>
+                <Button type="primary" htmlType="submit" loading={isFetching}>
+                  Áp dụng bộ lọc
+                </Button>
+                <Button
+                  onClick={() => {
+                    filterForm.resetFields()
+                    changeQuery({ filters: {}, search: '', page: 1 })
+                  }}
+                >
+                  Xóa bộ lọc
+                </Button>
+              </Space>
+            </Space>
+          </Form>
+        )}
         {error ? (
           <Alert
             type="error"
@@ -550,12 +900,18 @@ export default function CrudPage({ resource }: { resource: string }) {
                 ? false
                 : {
                     current: page,
-                    pageSize: 20,
+                    pageSize: size,
                     total: config.localSearch
                       ? rows?.length
                       : data?.totalElements,
-                    showSizeChanger: false,
-                    onChange: setPage,
+                    showSizeChanger: true,
+                    pageSizeOptions: CRUD_PAGE_SIZES,
+                    showTotal: (count) => `Tổng ${count} bản ghi`,
+                    onChange: (nextPage, nextSize) =>
+                      changeQuery({
+                        page: nextSize === size ? nextPage : 1,
+                        size: nextSize,
+                      }),
                   }
             }
             columns={[
@@ -591,42 +947,37 @@ export default function CrudPage({ resource }: { resource: string }) {
                         Sửa
                       </Button>
                     )}
-                    {canEditRow(row) &&
-                      !config.singleton &&
-                      resource !== 'configs' &&
-                      !(
-                        resource === 'users' &&
-                        (row.locked === true || row.id === me?.id)
-                      ) &&
-                      !(resource === 'students' && role !== 'ADMIN') && (
-                        <Button
-                          size="small"
-                          danger
-                          onClick={() => deleteRecord(row)}
-                        >
-                          {config.deleteLabel ?? 'Xóa'}
-                        </Button>
-                      )}
+                    {canDeleteRow(row) && (
+                      <Button
+                        size="small"
+                        danger
+                        onClick={() => deleteRecord(row)}
+                      >
+                        {config.deleteLabel ?? 'Xóa'}
+                      </Button>
+                    )}
                     {canResetPassword(row) && (
                       <Button size="small" onClick={() => resetPassword(row)}>
                         Reset mật khẩu
                       </Button>
                     )}
                     {resource === 'users' &&
-                      role === 'ADMIN' &&
+                      hasPermission(me, Permission.USER_UNLOCK) &&
                       row.locked === true && (
+                        <Button size="small" onClick={() => unlockAccount(row)}>
+                          Mở khóa
+                        </Button>
+                      )}
+                    {resource === 'users' &&
+                      row.role === Role.STAFF &&
+                      hasPermission(me, Permission.USER_CROSS_UNIT_ACCESS) && (
                         <Button
                           size="small"
-                          onClick={() => {
-                            void writeCrudRecord(
-                              `/admin/users/${row.id}/unlock`,
-                              'post',
-                            )
-                              .then(refresh)
-                              .catch((e) => message.error(errorMessage(e)))
-                          }}
+                          onClick={() => changeCrossUnitAccess(row)}
                         >
-                          Mở khóa
+                          {row.crossUnitAccess
+                            ? 'Thu hồi đọc tổng hợp'
+                            : 'Cấp đọc tổng hợp'}
                         </Button>
                       )}
                   </Space>
@@ -643,6 +994,9 @@ export default function CrudPage({ resource }: { resource: string }) {
         onCancel={() => setEditing(undefined)}
         onOk={() => form.submit()}
         confirmLoading={busy}
+        closable={!busy}
+        mask={{ closable: !busy }}
+        cancelButtonProps={{ disabled: busy }}
         okText="Lưu"
         cancelText="Đóng"
         width={600}
@@ -651,7 +1005,7 @@ export default function CrudPage({ resource }: { resource: string }) {
           form={form}
           layout="vertical"
           onFinish={(values) => {
-            void saveRecord(values)
+            submitRecord(values)
           }}
           preserve={false}
         >
@@ -661,7 +1015,7 @@ export default function CrudPage({ resource }: { resource: string }) {
               (field) =>
                 !(
                   resource === 'maintenance' &&
-                  role === 'STUDENT' &&
+                  role === Role.STUDENT &&
                   field.name === 'roomId'
                 ),
             )
@@ -672,7 +1026,14 @@ export default function CrudPage({ resource }: { resource: string }) {
                   label={field.label}
                   required={field.required}
                 >
-                  <LookupInput field={field} />
+                  <LookupInput
+                    field={field}
+                    disabled={
+                      resource === 'users' &&
+                      field.name === 'role' &&
+                      editing?.id === me?.id
+                    }
+                  />
                 </Form.Item>
               ) : (
                 <Form.Item
@@ -683,6 +1044,11 @@ export default function CrudPage({ resource }: { resource: string }) {
                   rules={[
                     {
                       required: field.required,
+                      whitespace:
+                        field.required &&
+                        !['number', 'boolean', 'date', 'datetime'].includes(
+                          field.kind ?? '',
+                        ),
                       message: `Nhập ${field.label.toLowerCase()}`,
                     },
                     ...(field.maxLength
@@ -695,7 +1061,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                       : []),
                   ]}
                 >
-                  <CrudInput field={field} />
+                  {renderCrudInput(field)}
                 </Form.Item>
               ),
             )}
@@ -704,10 +1070,14 @@ export default function CrudPage({ resource }: { resource: string }) {
       <Drawer
         title={`Chi tiết ${config.title.toLowerCase()}`}
         open={!!detail}
-        width={640}
+        size={640}
         onClose={() => {
           setDetail(undefined)
-          if (routeId) navigate('..')
+          if (routeId)
+            navigate(
+              { pathname: '..', search: location.search },
+              { relative: 'path' },
+            )
         }}
       >
         {detail && (
@@ -721,6 +1091,30 @@ export default function CrudPage({ resource }: { resource: string }) {
                 children: display(readValue(detail, item.key)),
               }))}
             />
+            {resource === 'maintenance' &&
+              hasPermission(me, Permission.MAINTENANCE_UPDATE) &&
+              Array.isArray(detail.allowedActions) && (
+                <Space wrap style={{ marginTop: 16 }}>
+                  {['start', 'add-note', 'resolve']
+                    .filter((action) =>
+                      (detail.allowedActions as string[]).includes(action),
+                    )
+                    .map((action) => (
+                      <Button
+                        key={action}
+                        onClick={() => updateMaintenanceProgress(action)}
+                      >
+                        {
+                          {
+                            start: 'Bắt đầu',
+                            'add-note': 'Ghi chú tiến độ',
+                            resolve: 'Hoàn thành',
+                          }[action]
+                        }
+                      </Button>
+                    ))}
+                </Space>
+              )}
             {resource === 'rooms' && Array.isArray(detail.beds) && (
               <BedCrudPanel
                 roomId={Number(detail.id)}
@@ -772,11 +1166,18 @@ function BedCrudPanel({
   beds: CrudRecord[]
   reload: () => Promise<void>
 }) {
-  const { message, modal } = App.useApp()
+  const { modal } = App.useApp()
+  const handleApiError = useApiErrorHandler()
+  const { data: me } = useMe()
+  const canRead = hasPermission(me, Permission.BED_READ)
+  const canCreate = hasPermission(me, Permission.BED_CREATE)
+  const canUpdate = hasPermission(me, Permission.BED_UPDATE)
+  const canDelete = hasPermission(me, Permission.BED_DELETE)
   const [form] = Form.useForm()
   const [editing, setEditing] = useState<CrudRecord | null | undefined>()
   const [busy, setBusy] = useState(false)
   async function save(values: Record<string, unknown>) {
+    if (editing ? !canUpdate : !canCreate) return
     setBusy(true)
     try {
       await writeCrudRecord(
@@ -787,24 +1188,33 @@ function BedCrudPanel({
       setEditing(undefined)
       await reload()
     } catch (e) {
-      void message.error(errorMessage(e))
+      form.setFields(
+        validationFieldErrors(e).map((item) => ({
+          name: item.field,
+          errors: [item.message],
+        })),
+      )
+      handleApiError(e)
     } finally {
       setBusy(false)
     }
   }
+  if (!canRead) return null
   return (
     <Card
       title="Giường trong phòng"
       style={{ marginTop: 16 }}
       extra={
-        <Button
-          onClick={() => {
-            form.resetFields()
-            setEditing(null)
-          }}
-        >
-          Thêm giường
-        </Button>
+        canCreate && (
+          <Button
+            onClick={() => {
+              form.resetFields()
+              setEditing(null)
+            }}
+          >
+            Thêm giường
+          </Button>
+        )
       }
     >
       <Table<CrudRecord>
@@ -823,35 +1233,39 @@ function BedCrudPanel({
             title: 'Thao tác',
             render: (_, bed) => (
               <Space>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    form.setFieldsValue({ code: bed.code })
-                    setEditing(bed)
-                  }}
-                >
-                  Sửa
-                </Button>
-                <Button
-                  size="small"
-                  danger
-                  onClick={() =>
-                    modal.confirm({
-                      title: 'Xóa giường chưa có lịch sử?',
-                      onOk: async () => {
-                        try {
-                          await writeCrudRecord(`/beds/${bed.id}`, 'delete')
-                          await reload()
-                        } catch (e) {
-                          void message.error(errorMessage(e))
-                          throw e
-                        }
-                      },
-                    })
-                  }
-                >
-                  Xóa
-                </Button>
+                {canUpdate && (
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      form.setFieldsValue({ code: bed.code })
+                      setEditing(bed)
+                    }}
+                  >
+                    Sửa
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    size="small"
+                    danger
+                    onClick={() =>
+                      modal.confirm({
+                        title: 'Xóa giường chưa có lịch sử?',
+                        onOk: async () => {
+                          try {
+                            await writeCrudRecord(`/beds/${bed.id}`, 'delete')
+                            await reload()
+                          } catch (e) {
+                            handleApiError(e)
+                            throw e
+                          }
+                        },
+                      })
+                    }
+                  >
+                    Xóa
+                  </Button>
+                )}
               </Space>
             ),
           },

@@ -1,10 +1,16 @@
+import { Permission, Role } from '../../constants/authorization'
 import axios from 'axios'
 import Keycloak from 'keycloak-js'
 import { queryClient } from '../../app/queryClient'
-import { CHANGE_PASSWORD_PATH, roleHome } from '../../constants/navigation'
+import {
+  CHANGE_PASSWORD_PATH,
+  permissionsForPath,
+  roleHome,
+  rolePortal,
+  roleProfile,
+} from '../../constants/navigation'
 import type { Me } from '../../types/auth'
 import { api } from './client'
-
 
 /** Public client: tuyệt đối không đưa secret quản trị vào biến VITE_* hoặc trình duyệt. */
 export const keycloak = new Keycloak({
@@ -24,8 +30,10 @@ export async function initializeAuthentication(): Promise<void> {
 
 /** Chỉ nhận đường dẫn nội bộ để không biến redirect thành liên kết tới website khác. */
 export function authenticationRedirect(path = '/login'): string {
-  const safe = path.startsWith('/') && !path.startsWith('//') && !path.includes('\\')
-    ? path : '/login'
+  const safe =
+    path.startsWith('/') && !path.startsWith('//') && !path.includes('\\')
+      ? path
+      : '/login'
   return new URL(safe, window.location.origin).href
 }
 
@@ -35,12 +43,44 @@ export async function loginWithKeycloak(path = '/login'): Promise<void> {
 
 export async function changeKeycloakPassword(): Promise<void> {
   // Application initiated action: Keycloak tự xác minh và đổi mật khẩu.
-  await keycloak.login({ action: 'UPDATE_PASSWORD', redirectUri: authenticationRedirect('/login') })
+  await keycloak.login({
+    action: 'UPDATE_PASSWORD',
+    redirectUri: authenticationRedirect('/login'),
+  })
 }
 
 /** Đọc hồ sơ và phạm vi DMS từ danh tính đã được Spring Security xác thực. */
 export async function getMe(): Promise<Me> {
   return (await api.get<Me>('/auth/me')).data
+}
+
+/** Kiểm tra quyền do máy chủ cấp, dùng chung cho menu, màn hình và từng nút CRUD. */
+export function hasPermission(
+  me: Me | null | undefined,
+  permission: string | undefined,
+): boolean {
+  return (
+    typeof permission === 'string' &&
+    Object.hasOwn(Permission, permission) &&
+    (me?.permissions?.includes(permission) ?? false)
+  )
+}
+
+/** Một mục ghép nhiều màn được mở khi tài khoản có quyền đọc ít nhất một màn con. */
+export function hasAnyPermission(
+  me: Me | null | undefined,
+  permissions: string[],
+): boolean {
+  return permissions.some((permission) => hasPermission(me, permission))
+}
+
+/** Khi quyền trang chủ bị thu hồi, hồ sơ cá nhân vẫn là điểm quay về hợp lệ. */
+export function accessibleHomePath(me: Me): string {
+  if (!Object.hasOwn(Role, me.role)) return '/login'
+  const home = roleHome[me.role]
+  return hasAnyPermission(me, permissionsForPath(home))
+    ? home
+    : roleProfile[me.role]
 }
 
 /** Thu hồi token tại DMS, dọn cache các tab rồi kết thúc phiên SSO Keycloak. */
@@ -49,7 +89,11 @@ export async function logout(): Promise<void> {
     try {
       await api.post('/auth/logout')
     } catch (failure) {
-      if (!axios.isAxiosError(failure) || ![401, 403].includes(failure.response?.status ?? 0)) throw failure
+      if (
+        !axios.isAxiosError(failure) ||
+        ![401, 403].includes(failure.response?.status ?? 0)
+      )
+        throw failure
     }
   }
   await queryClient.cancelQueries()
@@ -57,7 +101,6 @@ export async function logout(): Promise<void> {
   notifyAuthenticationChanged('logout')
   await keycloak.logout({ redirectUri: authenticationRedirect('/login') })
 }
-
 
 function hasUnsafeCharacter(value: string): boolean {
   return Array.from(value).some((character) => {
@@ -87,15 +130,28 @@ export function safeInternalRedirect(value: string | null): string | null {
   return url.pathname + url.search + url.hash
 }
 
-/** Bắt đổi mật khẩu trước; chỉ quay lại một trang thuộc cổng của chính vai trò đã đăng nhập. */
+/** Bắt đổi mật khẩu trước; Admin có thể quay lại cổng quản trị, quản lý hoặc kỹ thuật. */
 export function loginLandingPath(me: Me, requested: string | null): string {
+  // Role lạ không được dùng để tạo URL động; guard sẽ giải thích lỗi sau khi tải /me.
+  if (!Object.hasOwn(Role, me.role)) return '/login'
   if (me.mustChangePassword) return CHANGE_PASSWORD_PATH
   const target = safeInternalRedirect(requested)
-  const portal = `/${me.role.toLowerCase()}`
+  const portals =
+    me.role === Role.ADMIN
+      ? [
+          rolePortal[Role.ADMIN],
+          rolePortal[Role.STAFF],
+          rolePortal[Role.TECHNICIAN],
+        ]
+      : [rolePortal[me.role]]
   const pathname = target?.split(/[?#]/)[0]
-  return pathname && (pathname === portal || pathname.startsWith(`${portal}/`))
+  return pathname &&
+    portals.some(
+      (portal) => pathname === portal || pathname.startsWith(`${portal}/`),
+    ) &&
+    hasAnyPermission(me, permissionsForPath(pathname))
     ? target!
-    : roleHome[me.role]
+    : accessibleHomePath(me)
 }
 
 export function loginPath(reason?: string, redirect?: string): string {
@@ -105,7 +161,6 @@ export function loginPath(reason?: string, redirect?: string): string {
   if (safe) params.set('redirect', safe)
   return `/login${params.size ? `?${params}` : ''}`
 }
-
 
 const eventKey = 'dms.auth-event'
 type AuthEvent = 'logout' | 'password-changed' | 'account-changed'

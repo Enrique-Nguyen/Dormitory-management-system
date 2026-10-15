@@ -1,3 +1,4 @@
+import { Permission, Role } from './authorization'
 import {
   AuditOutlined,
   BankOutlined,
@@ -21,7 +22,6 @@ import {
   WalletOutlined,
 } from '@ant-design/icons'
 import type { ComponentType } from 'react'
-import type { Role } from '../types/auth'
 
 // Nguồn duy nhất cho menu và trang chủ từng vai trò (UI/UX mục 3, 4, 26).
 export interface NavItem {
@@ -29,6 +29,8 @@ export interface NavItem {
   label: string
   path: string
   icon?: ComponentType
+  /** Mục ghép dùng nhiều quyền READ; có ít nhất một quyền mới hiện trong menu. */
+  permissions: Permission[]
 }
 
 export interface NavGroup {
@@ -41,25 +43,112 @@ const item = (label: string, path: string, icon?: ComponentType): NavItem => ({
   label,
   path,
   icon,
+  permissions: permissionsForPath(path),
 })
+
+/**
+ * Dùng chung cho menu và route; URL chi tiết vẫn lấy quyền đọc của màn danh sách.
+ * Mỗi cổng có quyền trang chủ riêng. Cổng/màn chưa khai báo luôn trả danh sách rỗng để bị chặn.
+ */
+export function permissionsForPath(path: string): Permission[] {
+  const pathname = path.split(/[?#]/)[0].replace(/\/+$/, '')
+  const portal = pathname.match(
+    /^\/(admin|staff|student|technician)(?:\/|$)/,
+  )?.[1]
+  if (!portal) return []
+  const screen = pathname.slice(portal.length + 1).replace(/^\//, '')
+  if (!screen) {
+    const homePermissions: Record<string, Permission[]> = {
+      admin: [Permission.USER_READ],
+      staff: [Permission.PROFILE_READ],
+      student: [Permission.PROFILE_READ],
+      technician: [Permission.PROFILE_READ],
+    }
+    return homePermissions[portal]
+  }
+  const screens: Record<string, Permission[]> = {
+    dashboard: [Permission.DASHBOARD_READ],
+    users: [Permission.USER_READ],
+    units: [Permission.MANAGEMENT_UNIT_READ],
+    buildings: [Permission.BUILDING_READ],
+    import: [Permission.STUDENT_READ],
+    'aggregate-permissions': [Permission.USER_READ],
+    'role-permissions': [Permission.ROLE_PERMISSION_READ],
+    'priority-categories': [Permission.PRIORITY_CATEGORY_READ],
+    configs: [Permission.CONFIG_READ],
+    'audit-logs': [Permission.AUDIT_READ],
+    students: [Permission.STUDENT_READ],
+    applications: [Permission.ROOM_APPLICATION_READ],
+    rooms: [Permission.ROOM_READ],
+    room: [Permission.ROOM_READ],
+    contracts: [Permission.CONTRACT_READ],
+    requests: [
+      Permission.CONTRACT_EXTENSION_READ,
+      Permission.ROOM_TRANSFER_READ,
+    ],
+    summer: [Permission.SUMMER_REGISTRATION_READ],
+    storage: [Permission.STORAGE_READ],
+    'utilities/prices': [Permission.UTILITY_RATE_READ],
+    utilities: [Permission.UTILITY_READING_READ],
+    invoices: [Permission.INVOICE_READ],
+    deposits: [Permission.DEPOSIT_READ],
+    deposit: [Permission.DEPOSIT_READ],
+    maintenance: [Permission.MAINTENANCE_READ],
+    tasks: [Permission.MAINTENANCE_READ],
+    notifications: [Permission.NOTIFICATION_READ],
+    'room-types': [Permission.ROOM_TYPE_READ],
+    semesters: [Permission.SEMESTER_READ],
+    'registration-periods': [Permission.REGISTRATION_PERIOD_READ],
+    profile: [Permission.PROFILE_READ],
+  }
+  const match = Object.keys(screens)
+    .sort((left, right) => right.length - left.length)
+    .find((key) => screen === key || (key && screen.startsWith(`${key}/`)))
+  return match === undefined ? [] : screens[match]
+}
+
+/** Gốc cổng và màn hồ sơ dùng chung cho menu tài khoản, guard và chuyển hướng sau đăng nhập. */
+export const rolePortal: Record<Role, string> = {
+  [Role.STUDENT]: '/student',
+  [Role.STAFF]: '/staff',
+  [Role.TECHNICIAN]: '/technician',
+  [Role.ADMIN]: '/admin',
+}
+
+export const roleProfile: Record<Role, string> = {
+  [Role.STUDENT]: `${rolePortal[Role.STUDENT]}/profile`,
+  [Role.STAFF]: `${rolePortal[Role.STAFF]}/profile`,
+  [Role.TECHNICIAN]: `${rolePortal[Role.TECHNICIAN]}/profile`,
+  [Role.ADMIN]: `${rolePortal[Role.ADMIN]}/profile`,
+}
 
 /** Trang chủ của từng vai trò; route ngoài quyền chuyển về đây. */
 export const roleHome: Record<Role, string> = {
-  STUDENT: '/student',
-  STAFF: '/staff/dashboard',
-  TECHNICIAN: '/technician/tasks',
-  ADMIN: '/admin/users',
+  [Role.STUDENT]: '/student',
+  [Role.STAFF]: '/staff/dashboard',
+  [Role.TECHNICIAN]: '/technician/tasks',
+  [Role.ADMIN]: '/admin/users',
 }
 
 export const roleLabel: Record<Role, string> = {
-  STUDENT: 'Sinh viên',
-  STAFF: 'Quản lý',
-  TECHNICIAN: 'Kỹ thuật viên',
-  ADMIN: 'Quản trị viên',
+  [Role.STUDENT]: 'Sinh viên',
+  [Role.STAFF]: 'Quản lý',
+  [Role.TECHNICIAN]: 'Kỹ thuật viên',
+  [Role.ADMIN]: 'Quản trị viên',
 }
 
 /** Mục "Yêu cầu chờ xử lý" mang badge số lượng (UI 4.2). */
 export const STAFF_REQUESTS_PATH = '/staff/requests'
+
+/** Danh mục phục vụ nghiệp vụ, dùng chung giữa cổng quản lý và cổng quản trị. */
+const catalogNav: NavGroup = {
+  title: 'Danh mục',
+  items: [
+    item('Loại phòng', '/staff/room-types', DatabaseOutlined),
+    item('Kỳ học', '/staff/semesters', CalendarOutlined),
+    item('Đợt đăng ký', '/staff/registration-periods', ProfileOutlined),
+  ],
+}
 
 export const staffNav: NavGroup[] = [
   {
@@ -95,25 +184,44 @@ export const staffNav: NavGroup[] = [
       item('Thông báo', '/staff/notifications', BellOutlined),
     ],
   },
-  {
-    title: 'Hệ thống',
-    items: [
-      item('Loại phòng', '/staff/room-types', DatabaseOutlined),
-      item('Kỳ học', '/staff/semesters', CalendarOutlined),
-      item('Đợt đăng ký', '/staff/registration-periods', ProfileOutlined),
-    ],
-  },
+  catalogNav,
 ]
 
 export const adminNav: NavGroup[] = [
+  ...staffNav.map((group) => ({
+    ...group,
+    items: [
+      // Các danh mục riêng của Admin cùng nằm sau nhóm nghiệp vụ.
+      ...(group === catalogNav
+        ? [
+            item('Đơn vị', '/admin/units', BankOutlined),
+            item('Tòa nhà & mức cọc', '/admin/buildings', HomeOutlined),
+            item(
+              'Diện ưu tiên',
+              '/admin/priority-categories',
+              DatabaseOutlined,
+            ),
+          ]
+        : []),
+      ...group.items.map((nav) => {
+        if (nav.path === '/staff/students')
+          return item('Sinh viên', '/admin/import', UploadOutlined)
+        const path = nav.path.replace('/staff/', '/admin/')
+        return { ...nav, key: path, path }
+      }),
+    ],
+  })),
   {
+    // Nhóm quản trị hệ thống luôn ở cuối; quyền của từng mục vẫn do backend cấp.
+    title: 'Quản trị hệ thống',
     items: [
       item('Tài khoản', '/admin/users', UserOutlined),
-      item('Sinh viên', '/admin/import', UploadOutlined),
-      item('Đơn vị', '/admin/units', BankOutlined),
-      item('Tòa nhà & mức cọc', '/admin/buildings', HomeOutlined),
       item('Quyền tổng hợp', '/admin/aggregate-permissions', SafetyOutlined),
-      item('Diện ưu tiên', '/admin/priority-categories', DatabaseOutlined),
+      item(
+        'Phân quyền theo vai trò',
+        '/admin/role-permissions',
+        SafetyOutlined,
+      ),
       item('Cấu hình', '/admin/configs', DatabaseOutlined),
       item('Nhật ký hệ thống', '/admin/audit-logs', AuditOutlined),
     ],

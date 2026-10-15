@@ -10,6 +10,10 @@ import vn.edu.tlu.dms.account.repository.AppUserRepository;
 import vn.edu.tlu.dms.account.service.AuthService;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
 import vn.edu.tlu.dms.account.service.StudentManagementService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -71,7 +75,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                 + " FROM app_user u JOIN student_profile p ON p.user_id=u.id";
 
     private String scope() {
-        if (current.get().is("ADMIN") || current.get().crossUnitAccess()) {
+        if (current.get().is(Role.ADMIN) || current.get().crossUnitAccess()) {
             return "TRUE";
         }
         return "(EXISTS (SELECT 1 FROM room_assignment_history a JOIN bed b ON b.id=a.bed_id JOIN"
@@ -81,14 +85,14 @@ public class StudentManagementServiceImpl implements StudentManagementService {
     }
 
     private List<Object> scopeParameters() {
-        return current.get().is("ADMIN") || current.get().crossUnitAccess()
+        return current.get().is(Role.ADMIN) || current.get().crossUnitAccess()
                 ? new ArrayList<>()
                 : new ArrayList<>(List.of(current.get().unitId(), current.get().unitId()));
     }
 
     @Override()
     public PageResponse<Map<String, Object>> searchStudents(int page, int size, String q) {
-        guard.requireRole("ADMIN", "STAFF");
+        guard.requirePermission(Permission.STUDENT_READ);
         var args = scopeParameters();
         args.add("%" + q.trim() + "%");
         args.add("%" + q.trim() + "%");
@@ -104,7 +108,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
 
     @Override()
     public Map<String, Object> getStudentById(Long id) {
-        guard.requireRole("ADMIN", "STAFF");
+        guard.requirePermission(Permission.STUDENT_READ);
         var args = scopeParameters();
         args.add(id);
         return queries.one(SELECT + " WHERE " + scope() + " AND u.id=?", args.toArray());
@@ -113,7 +117,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
     @Transactional
     @Override()
     public TemporaryPassword createStudent(StudentInput in) {
-        guard.requireRole("ADMIN");
+        guard.requirePermission(Permission.STUDENT_CREATE);
         String temporary = "Kt7" + UUID.randomUUID().toString().replace("-", "").substring(0, 13);
         Long id =
                 jdbc.queryForObject(
@@ -141,7 +145,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
         users.saveAndFlush(newUser);
         audit.record(
                 current.get().id(),
-                "STUDENT_CREATE",
+                AuditAction.STUDENT_CREATE,
                 "USER",
                 id,
                 null,
@@ -153,10 +157,11 @@ public class StudentManagementServiceImpl implements StudentManagementService {
     @Transactional
     @Override()
     public Map<String, Object> updateStudent(Long id, StudentInput in) {
+        guard.requirePermission(Permission.STUDENT_UPDATE);
         var user = authService.lockAccount(id);
         var before = getStudentById(id);
         // Quyền tổng hợp không cấp quyền ghi. Phải có ít nhất một bản ghi thuộc đúng đơn vị.
-        if (current.get().is("STAFF")) {
+        if (current.get().is(Role.STAFF)) {
             Long unit = current.get().unitId();
             boolean own =
                     Boolean.TRUE.equals(
@@ -183,7 +188,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                                         + " student_id=? AND ended_at IS NULL)",
                                 Boolean.class,
                                 id))) {
-            throw BusinessException.conflict("STUDENT_HAS_ACTIVE_CONTRACT");
+            throw BusinessException.conflict(ErrorCode.STUDENT_HAS_ACTIVE_CONTRACT);
         }
         String username = in.studentCode().trim();
         // Đổi mã sinh viên cũng đổi tên đăng nhập; thu hồi phiên chứa tên cũ trong cùng
@@ -209,14 +214,15 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                 in.emergencyContact(),
                 id);
         var after = getStudentById(id);
-        audit.record(current.get().id(), "STUDENT_UPDATE", "USER", id, before, after, null);
+        audit.record(
+                current.get().id(), AuditAction.STUDENT_UPDATE, "USER", id, before, after, null);
         return after;
     }
 
     @Transactional
     @Override()
     public void deleteUnusedStudent(Long id) {
-        guard.requireRole("ADMIN");
+        guard.requirePermission(Permission.STUDENT_DELETE);
         var before = getStudentById(id);
         // Khóa và kiểm tra lịch sử trước khi xóa; FK tiếp tục chặn mọi tham chiếu còn sót.
         jdbc.queryForObject("SELECT id FROM app_user WHERE id=? FOR UPDATE", Long.class, id);
@@ -227,7 +233,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                         Boolean.class,
                         id,
                         id))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
         var deletedUser = users.findById(id).orElseThrow(BusinessException::notFound);
         // Khóa danh tính trước; nếu xóa sau commit thất bại thì tài khoản ngoài vẫn không đăng nhập
@@ -244,15 +250,16 @@ public class StudentManagementServiceImpl implements StudentManagementService {
         identities.deleteIdentityAfterCommit(deletedUser);
         jdbc.update("DELETE FROM student_profile WHERE user_id=?", id);
         jdbc.update("DELETE FROM app_user WHERE id=?", id);
-        audit.record(current.get().id(), "STUDENT_DELETE", "USER", id, before, null, null);
+        audit.record(
+                current.get().id(), AuditAction.STUDENT_DELETE, "USER", id, before, null, null);
     }
 
     @Transactional
     @Override()
     public TemporaryPassword resetStudentPassword(Long id) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.STUDENT_RESET_PASSWORD);
         var user = authService.lockAccount(id);
-        if (!"STUDENT".equals(user.getRole())
+        if (!Role.STUDENT.equals(user.getRole())
                 || !Boolean.TRUE.equals(
                         jdbc.queryForObject(
                                 "SELECT EXISTS(SELECT 1 FROM student_profile WHERE user_id=?)",
@@ -279,7 +286,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                                 current.get().unitId(),
                                 id,
                                 current.get().unitId()));
-        if (!own) {
+        if (!current.get().isAdmin() && !own) {
             throw BusinessException.notFound();
         }
         return authService.resetPassword(user, current.get().id());
@@ -287,12 +294,15 @@ public class StudentManagementServiceImpl implements StudentManagementService {
 
     @Override()
     public List<Map<String, Object>> getTechnicians() {
-        guard.requireRole("STAFF");
-        return queries.list(
+        guard.requirePermission(Permission.MAINTENANCE_UPDATE);
+        String sql =
                 "SELECT u.id,u.full_name,u.username, (SELECT count(*) FROM maintenance_request m"
                     + " WHERE m.assigned_to=u.id AND m.status IN ('ASSIGNED','IN_PROGRESS')) AS"
                     + " task_count FROM app_user u WHERE u.role='TECHNICIAN' AND NOT u.locked AND"
-                    + " u.management_unit_id=? ORDER BY u.full_name",
-                current.get().unitId());
+                        + (current.get().isAdmin() ? " TRUE" : " u.management_unit_id=?")
+                        + " ORDER BY u.full_name";
+        return current.get().isAdmin()
+                ? queries.list(sql)
+                : queries.list(sql, current.get().unitId());
     }
 }

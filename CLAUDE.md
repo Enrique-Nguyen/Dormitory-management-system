@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Quy tắc bắt buộc: không hardcode (15/10/2026)
+
+Áp dụng cho toàn bộ backend và frontend, đặc biệt khi thêm hoặc sửa Service Impl:
+
+- Mã role, quyền, trạng thái, hành động audit và **mã lỗi** phải dùng nhóm Constants/enum đã đăng ký. Backend dùng `common/constants/DmsConstants.java`; frontend dùng registry tương ứng trong `src/constants/`. Không viết lại `"FORBIDDEN"`, `"STAFF"`, `"ROOM_UPDATE"` trong logic.
+- HTTP status dùng `org.springframework.http.HttpStatus` hoặc factory của `BusinessException`; không truyền số `400`, `403`, `409`, `503` trực tiếp. Ví dụ dùng `BusinessException.forbidden()` hoặc `new BusinessException(ErrorCode.ADMIN_PERMISSIONS_IMMUTABLE, HttpStatus.FORBIDDEN)`.
+- Danh mục màn hình, nhóm, nhãn và thứ tự thao tác phân quyền khai một lần trong registry Constants; Service Impl chỉ đọc registry và xử lý nghiệp vụ. Thông báo validation dùng nguồn message tập trung; tên field/JSON key được dùng chung phải dùng hằng số tương ứng.
+- Quyền đang cấp theo role phải đọc từ `role_permission_matrix`; không thêm danh sách quyền runtime trong Controller, Service, React hoặc token. Quyền mặc định/giới hạn nghiệp vụ là registry riêng, không phải dữ liệu dự phòng khi thiếu cấu hình CSDL.
+- URL, cổng, realm, client ID, timeout và cấu hình kỹ thuật lấy từ properties/biến môi trường; mật khẩu và secret chỉ ở cấu hình local được Git bỏ qua. Tham số nghiệp vụ thay đổi khi vận hành lấy từ `system_config` qua ConfigService.
+- Menu/đường dẫn/nhãn tĩnh của giao diện chỉ khai tại registry hiện có (`navigation.ts`, `resources.ts`, `statusConfig.ts`, `errorMessages.ts`); component không tự tạo bản sao. Thông tin động lấy từ API/CSDL.
+- SQL tĩnh, tên bảng/cột, annotation mapping và dữ liệu seed bất biến được khai tại nơi sở hữu; mọi giá trị đầu vào phải bind tham số. Không chuyển tùy tiện mọi chuỗi SQL hoặc số điều khiển vòng lặp thành Constants. Không sửa migration đã chạy để gom hằng số.
+- Trước khi hoàn tất, rà các chuỗi/số mới trong diff, kiểm tra trùng định nghĩa và chạy kiểm chứng phù hợp. Không được đổi mã đã lưu/công bố qua API trong lúc refactor. Nếu còn ngoại lệ, phải nêu rõ vị trí và lý do.
+- Dùng file Constants/config/Markdown đang có; chỉ thêm file khi có trách nhiệm riêng. Hàm Service phải có JavaDoc tiếng Việt, logic nằm trong Impl, import ở đầu file và trình bày đầy đủ xuống dòng.
+
 ## Repository layout
 
 **DMS** is a web-based Dormitory Management System for Thuy Loi University dormitories (course project "Chuyên đề CNTT", class 65CNTT, group 3, 12 weeks, 5 members). The git repository root is this folder.
@@ -87,7 +101,7 @@ Docker Compose with three services: `nginx` (TLS, serves the built React app, pr
 
 These are easy to violate if you only read one file:
 
-- **Scope-based RBAC, not just roles.** Staff belong to a `ManagementUnit` (K1, or N2+N3) and see only that unit's data. Cross-scope reads return 404, not 403. Admin has no business permissions by default. Applications belong to the unit chosen as "đơn vị nguyện vọng".
+- **Scope-based RBAC, not just roles.** Staff belong to a `ManagementUnit` (K1, or N2+N3) and see only that unit's data. Cross-scope reads return 404, not 403. ADMIN has every registered business permission across all units; keep state, history and data constraints. Applications belong to the unit chosen as "đơn vị nguyện vọng".
 - **Invariants are enforced in the DB as well as in the Service.** Capacity is guarded by partial unique indexes on open assignments (`ux_assignment_open_bed`, `ux_assignment_open_student`); other examples are `CHECK(end_reading >= start_reading)`, one invoice per (student, semester) or (room, month), one `REFUND` per contract.
 - **Never store derived values:** free beds, "full", "expiring", "overdue". Compute them from `bed` and open assignments, using the views in the DB design (e.g. `v_current_stay`, `v_room_occupancy`, `v_deposit_balance`).
 - **Never overwrite history.** Room, bed, and applied price live only on `room_assignment_history`. A move closes the old row and opens a new one in one transaction. The contract represents one stay and holds no room or price. Base price lives only on `room_type` and is snapshotted onto the assignment. No hard delete once business data exists.
@@ -110,3 +124,17 @@ These are easy to violate if you only read one file:
 - Out of MVP scope: payment gateway, QR access, visitors, IoT meters, chatbot, roommate matching, auto-assignment, email and realtime notifications.
 
 Current Keycloak integration: IdentityAccountService/Impl and IdentityAccountService/Impl keep Vietnamese contracts. Secret is backend-only, realm template has no demo users. Compose includes separate Keycloak DB. All detailed business permissions remain in ScopeGuard. Do not edit V1–V4. Keycloak external changes may leave issued JWTs valid until five-minute TTL; DMS changes revoke via security_version.
+
+## Role authorization update (14/10/2026)
+
+The user overrides the old "Admin has no business rights" rule: ADMIN may perform every business operation across all units. Keep status/data/history constraints and the actual Admin audit identity. RolePermissionService owns the database role-to-action matrix; ScopeGuard retains the default eligibility envelope; GET /api/auth/me returns permissions. Service Impl methods enforce action permission and data scope; React gates menu/routes and separate CRUD buttons with those same codes. Reuse existing files, retain Service interface/Impl and Vietnamese comments; the user explicitly requested the dynamic role matrix on 15/10/2026. Changing a Staff/Technician/Admin account role must revoke old tokens and synchronize Keycloak; login itself remains unchanged.
+
+
+RequirePrivilege update (14/10/2026): every mapped REST method declares common.security.RequirePrivilege. Multiple codes mean OR; method annotation overrides class fallback. SecurityConfig uses Spring Security Method Security / AuthorizationManagerBeforeMethodInterceptor before Controller execution; missing/empty/ungranted annotations deny. ScopeGuard retains the role matrix, fresh account lookup and internal Service defense. New Controllers and endpoints must be proxyable and declare valid codes; ArchTest enforces annotation coverage. Reuse existing files; RequirePrivilege remains the annotation source, and DmsConstants centralizes fixed codes.
+
+Constants update (15/10/2026): common.constants.DmsConstants owns fixed Role/Action/Resource/Permission codes and domain-specific status groups. AuditAction holds audit event names independently of permission codes, even when current string values match. Use compile-time Permission constants in @RequirePrivilege and the same constants in Service Impl. ScopeGuard retains the unchanged default eligibility matrix, while runtime grants come from RolePermissionService; introducing a constant never grants a permission implicitly. frontend/src/constants/authorization.ts mirrors the wire codes with const-derived types; invalid permissionFor combinations deny. Environment/Keycloak secrets and system_config parameters stay configurable, not in constants. Do not change persisted values or applied Flyway migrations when refactoring codes.
+
+Common flows update (15/10/2026): all four portals expose the existing profile CRUD; only STUDENT receives hometown/emergencyContact inputs, others edit phone. Portal root permissions are role specific, and login redirects must pass the current permissions. CrudResource.filters declares safe GET filters; per-resource URL keys retain search/page/size without leaking state across tabs. Form.Item must wrap the actual control to preserve value/onChange. User list supports managementUnitId/locked; audit queries live in AuditServiceImpl with bound actor/action/type/inclusive ISO time filters. Keep Service interface/Impl and business state constraints; dynamic role matrices are now explicitly requested, while core workflows remain separate.
+
+
+Dynamic role permissions update (15/10/2026): ADMIN manages /admin/role-permissions through GET/PUT /api/admin/role-permissions/{role}. Flyway V5 role_permission_matrix seeds existing STAFF/STUDENT/TECHNICIAN grants. ADMIN always has all registered Permission codes (105) and is immutable. ScopeGuard default matrix is an eligibility/default envelope only; effective grants are fresh DB reads, with missing/corrupt rows failing closed. PROFILE_READ is required; any non-READ action needs the resource READ. Updating a role matrix keeps Keycloak roles/authentication unchanged and affects all matching DMS users immediately at the next permission check. Save uses a row lock, version conflict 409 and audit in the same transaction; no-op does neither. Inject AuditService lazily through ObjectProvider to avoid a bean dependency cycle. Frontend must use backend catalog, preserve dirty drafts and handle stale versions explicitly; no automatic retry of writes. Do not edit V1–V4; use new migrations for schema changes.

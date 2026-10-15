@@ -18,7 +18,7 @@ public interface InvoiceRepository
             value =
                     """
                     SELECT i.* FROM invoice i
-                    WHERE ((:role = 'STUDENT' AND (
+                    WHERE (:role = 'ADMIN' OR (:role = 'STUDENT' AND (
                         (i.type = 'ROOM_FEE' AND i.student_id = :userId)
                         OR (i.type = 'UTILITY' AND EXISTS (
                             SELECT 1 FROM room_assignment_history a JOIN bed b ON b.id = a.bed_id
@@ -31,6 +31,12 @@ public interface InvoiceRepository
                             OR EXISTS (SELECT 1 FROM room_assignment_history a JOIN bed b ON b.id = a.bed_id
                                 JOIN room r ON r.id = b.room_id JOIN building bd ON bd.id = r.building_id
                                 WHERE a.student_id = i.student_id AND bd.management_unit_id = :unitId) OR EXISTS(SELECT 1 FROM room_application ap WHERE ap.student_id=i.student_id AND ap.preferred_unit_id=:unitId))))
+                    AND (:mine = false OR (i.type = 'ROOM_FEE' AND i.student_id = :userId)
+                        OR (i.type = 'UTILITY' AND EXISTS (
+                            SELECT 1 FROM room_assignment_history own_stay JOIN bed own_bed ON own_bed.id = own_stay.bed_id
+                            WHERE own_stay.student_id = :userId AND own_bed.room_id = i.room_id AND own_stay.kind = 'STAY'
+                                AND own_stay.stay_started_at < i.billing_month + INTERVAL '1 month'
+                                AND (own_stay.ended_at IS NULL OR own_stay.ended_at > i.billing_month))))
                     AND (:type IS NULL OR i.type = :type)
                     AND (:status IS NULL OR i.status = :status)
                     AND (i.code ILIKE :q OR EXISTS(SELECT 1 FROM app_user u WHERE u.id=i.student_id AND u.full_name ILIKE :q))
@@ -39,7 +45,7 @@ public interface InvoiceRepository
             countQuery =
                     """
                     SELECT count(*) FROM invoice i
-                    WHERE ((:role = 'STUDENT' AND (
+                    WHERE (:role = 'ADMIN' OR (:role = 'STUDENT' AND (
                         (i.type = 'ROOM_FEE' AND i.student_id = :userId)
                         OR (i.type = 'UTILITY' AND EXISTS (
                             SELECT 1 FROM room_assignment_history a JOIN bed b ON b.id = a.bed_id
@@ -52,6 +58,12 @@ public interface InvoiceRepository
                             OR EXISTS (SELECT 1 FROM room_assignment_history a JOIN bed b ON b.id = a.bed_id
                                 JOIN room r ON r.id = b.room_id JOIN building bd ON bd.id = r.building_id
                                 WHERE a.student_id = i.student_id AND bd.management_unit_id = :unitId) OR EXISTS(SELECT 1 FROM room_application ap WHERE ap.student_id=i.student_id AND ap.preferred_unit_id=:unitId))))
+                    AND (:mine = false OR (i.type = 'ROOM_FEE' AND i.student_id = :userId)
+                        OR (i.type = 'UTILITY' AND EXISTS (
+                            SELECT 1 FROM room_assignment_history own_stay JOIN bed own_bed ON own_bed.id = own_stay.bed_id
+                            WHERE own_stay.student_id = :userId AND own_bed.room_id = i.room_id AND own_stay.kind = 'STAY'
+                                AND own_stay.stay_started_at < i.billing_month + INTERVAL '1 month'
+                                AND (own_stay.ended_at IS NULL OR own_stay.ended_at > i.billing_month))))
                     AND (:type IS NULL OR i.type = :type)
                     AND (:status IS NULL OR i.status = :status)
                     AND (i.code ILIKE :q OR EXISTS(SELECT 1 FROM app_user u WHERE u.id=i.student_id AND u.full_name ILIKE :q))
@@ -62,6 +74,7 @@ public interface InvoiceRepository
             Long userId,
             Long unitId,
             boolean crossUnit,
+            boolean mine,
             String type,
             String status,
             String q,
@@ -71,7 +84,7 @@ public interface InvoiceRepository
             value =
                     """
                     SELECT i.* FROM invoice i
-                    WHERE ((:role = 'STUDENT' AND (
+                    WHERE (:role = 'ADMIN' OR (:role = 'STUDENT' AND (
                         (i.type = 'ROOM_FEE' AND i.student_id = :userId)
                         OR (i.type = 'UTILITY' AND EXISTS (
                             SELECT 1 FROM room_assignment_history a JOIN bed b ON b.id = a.bed_id

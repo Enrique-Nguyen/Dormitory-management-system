@@ -2,6 +2,7 @@ package vn.edu.tlu.dms.common.service.impl;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.service.AuditService;
@@ -70,7 +71,7 @@ public abstract class AbstractSqlCrudServiceImpl {
                         columns.values().toArray());
         audit.record(
                 current.get().id(),
-                "CRUD_CREATE",
+                AuditAction.CRUD_CREATE,
                 table.toUpperCase(Locale.ROOT),
                 id,
                 null,
@@ -93,7 +94,7 @@ public abstract class AbstractSqlCrudServiceImpl {
         jdbc.update("UPDATE " + table + " SET " + assignments + " WHERE id=?", args.toArray());
         audit.record(
                 current.get().id(),
-                "CRUD_UPDATE",
+                AuditAction.CRUD_UPDATE,
                 table.toUpperCase(Locale.ROOT),
                 id,
                 before,
@@ -107,7 +108,7 @@ public abstract class AbstractSqlCrudServiceImpl {
         jdbc.update("DELETE FROM " + table + " WHERE id=?", id);
         audit.record(
                 current.get().id(),
-                "CRUD_DELETE",
+                AuditAction.CRUD_DELETE,
                 table.toUpperCase(Locale.ROOT),
                 id,
                 before,

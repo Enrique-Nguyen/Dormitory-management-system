@@ -8,6 +8,8 @@ import vn.edu.tlu.dms.billing.api.UtilityRateDtos;
 import vn.edu.tlu.dms.billing.domain.UtilityRate;
 import vn.edu.tlu.dms.billing.repository.UtilityRateRepository;
 import vn.edu.tlu.dms.billing.service.UtilityRateService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 
@@ -33,7 +35,8 @@ public class UtilityRateServiceImpl implements UtilityRateService {
 
     @Override
     public List<UtilityRateDtos.Response> getUtilityRates(String meterType) {
-        scopeGuard.requireRole("STAFF");
+        scopeGuard.requirePermission(Permission.UTILITY_RATE_READ);
+        scopeGuard.requireRole(Role.STAFF);
         return repository
                 .findAll(
                         (root, query, builder) ->
@@ -49,7 +52,8 @@ public class UtilityRateServiceImpl implements UtilityRateService {
     @Transactional
     @Override
     public UtilityRateDtos.Response createUtilityRate(UtilityRateDtos.Create input) {
-        scopeGuard.requireRole("STAFF");
+        scopeGuard.requirePermission(Permission.UTILITY_RATE_CREATE);
+        scopeGuard.requireRole(Role.STAFF);
         UtilityRate rate = new UtilityRate();
         rate.setMeterType(input.meterType());
         rate.setUnitPrice(input.unitPrice());

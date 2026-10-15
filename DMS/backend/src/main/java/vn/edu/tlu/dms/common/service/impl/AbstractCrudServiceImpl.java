@@ -6,6 +6,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.Action;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.service.AuditService;
@@ -52,6 +54,15 @@ public abstract class AbstractCrudServiceImpl<E, I, R> implements CrudService<I,
      */
     protected abstract void checkWrite();
 
+    /** Service con gán mã quyền CRUD cụ thể; giữ hook cũ cho module chưa khai mã quyền. */
+    protected void checkPermission(String action) {
+        if (Action.READ.equals(action)) {
+            checkRead();
+        } else {
+            checkWrite();
+        }
+    }
+
     protected void beforeDelete(E entity) {}
 
     protected E findEntityById(Long id) {
@@ -60,49 +71,49 @@ public abstract class AbstractCrudServiceImpl<E, I, R> implements CrudService<I,
 
     @Override
     public List<R> getAll() {
-        checkRead();
+        checkPermission(Action.READ);
         return repository.findAll(Sort.by("id")).stream().map(this::toResponse).toList();
     }
 
     @Override
     public R getById(Long id) {
-        checkRead();
+        checkPermission(Action.READ);
         return toResponse(findEntityById(id));
     }
 
     @Override
     @Transactional
     public R create(I input) {
-        checkWrite();
+        checkPermission(Action.CREATE);
         E entity = newEntity();
         apply(entity, input, true);
         R response = toResponse(repository.saveAndFlush(entity));
-        recordCatalogAudit(entity, "CREATE", null, response);
+        recordCatalogAudit(entity, Action.CREATE, null, response);
         return response;
     }
 
     @Override
     @Transactional
     public R update(Long id, I input) {
-        checkWrite();
+        checkPermission(Action.UPDATE);
         E entity = findEntityById(id);
         R before = toResponse(entity);
         apply(entity, input, false);
         R response = toResponse(repository.saveAndFlush(entity));
-        recordCatalogAudit(entity, "UPDATE", before, response);
+        recordCatalogAudit(entity, Action.UPDATE, before, response);
         return response;
     }
 
     @Override
     @Transactional
     public void deleteById(Long id) {
-        checkWrite();
+        checkPermission(Action.DELETE);
         E entity = findEntityById(id);
         beforeDelete(entity);
         R before = toResponse(entity);
         repository.delete(entity);
         repository.flush();
-        recordCatalogAudit(entity, "DELETE", before, null);
+        recordCatalogAudit(entity, Action.DELETE, before, null);
     }
 
     /** Nhật ký và dữ liệu danh mục cùng transaction: không có dữ liệu đổi mà thiếu nhật ký. */
@@ -111,7 +122,7 @@ public abstract class AbstractCrudServiceImpl<E, I, R> implements CrudService<I,
         String entityType = table == null ? entity.getClass().getSimpleName() : table.name();
         auditService.record(
                 currentUser.get().id(),
-                "CATALOG_" + action,
+                AuditAction.CATALOG_PREFIX + action,
                 entityType.toUpperCase(Locale.ROOT),
                 getEntityId(entity),
                 before,

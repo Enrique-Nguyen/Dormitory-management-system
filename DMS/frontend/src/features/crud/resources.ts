@@ -1,3 +1,4 @@
+import { Resource, Role } from '../../constants/authorization'
 import type { CrudField, CrudResource } from './types'
 
 const text = (
@@ -26,7 +27,14 @@ const ref = (
   lookup: string,
   lookupLabel = 'name',
   required = true,
-): CrudField => ({ name, label, kind: 'select', required, lookup, lookupLabel })
+): CrudField => ({
+  name,
+  label,
+  kind: 'select',
+  required,
+  lookup,
+  lookupLabel,
+})
 const date = (name: string, label: string): CrudField => ({
   name,
   label,
@@ -35,9 +43,6 @@ const date = (name: string, label: string): CrudField => ({
 })
 const columns = (...items: [string, string][]) =>
   items.map(([key, label]) => ({ key, label }))
-const staff = ['STAFF'] as const
-const admin = ['ADMIN'] as const
-const student = ['STUDENT'] as const
 const studentFields: CrudField[] = [
   text('studentCode', 'Mã sinh viên', true, 20),
   text('fullName', 'Họ tên'),
@@ -80,15 +85,16 @@ const invoiceFields: CrudField[] = [
 
 export const resources: Record<string, CrudResource> = {
   units: {
+    permission: Resource.MANAGEMENT_UNIT,
     title: 'Đơn vị quản lý',
     endpoint: '/management-units',
     writeEndpoint: '/admin/management-units',
     fields: [text('code', 'Mã đơn vị', true, 20), text('name', 'Tên đơn vị')],
     columns: columns(['code', 'Mã'], ['name', 'Tên đơn vị']),
-    writeRoles: [...admin],
     localSearch: true,
   },
   buildings: {
+    permission: Resource.BUILDING,
     title: 'Tòa nhà',
     endpoint: '/buildings',
     writeEndpoint: '/admin/buildings',
@@ -104,10 +110,10 @@ export const resources: Record<string, CrudResource> = {
       ['managementUnitId', 'Đơn vị'],
       ['depositAmount', 'Mức cọc'],
     ),
-    writeRoles: [...admin],
     localSearch: true,
   },
   roomTypes: {
+    permission: Resource.ROOM_TYPE,
     title: 'Loại phòng',
     endpoint: '/room-types',
     fields: [
@@ -126,10 +132,10 @@ export const resources: Record<string, CrudResource> = {
       ['priceSummer', 'Giá hè'],
       ['active', 'Sử dụng'],
     ),
-    writeRoles: [...staff],
     localSearch: true,
   },
   semesters: {
+    permission: Resource.SEMESTER,
     title: 'Học kỳ',
     endpoint: '/semesters',
     fields: [
@@ -146,10 +152,10 @@ export const resources: Record<string, CrudResource> = {
       ['startDate', 'Bắt đầu'],
       ['endDate', 'Kết thúc'],
     ),
-    writeRoles: [...staff],
     localSearch: true,
   },
   priorities: {
+    permission: Resource.PRIORITY_CATEGORY,
     title: 'Diện ưu tiên',
     endpoint: '/priority-categories',
     writeEndpoint: '/admin/priority-categories',
@@ -165,19 +171,39 @@ export const resources: Record<string, CrudResource> = {
       ['weight', 'Trọng số'],
       ['active', 'Sử dụng'],
     ),
-    writeRoles: [...admin],
     localSearch: true,
   },
   users: {
+    permission: Resource.USER,
     title: 'Tài khoản',
     endpoint: '/admin/users',
+    filters: [
+      {
+        ...select('role', 'Vai trò', [
+          Role.STUDENT,
+          Role.STAFF,
+          Role.TECHNICIAN,
+          Role.ADMIN,
+        ]),
+        required: false,
+      },
+      ref('managementUnitId', 'Đơn vị', '/management-units', 'name', false),
+      {
+        name: 'locked',
+        label: 'Trạng thái tài khoản',
+        kind: 'select',
+        options: [
+          { value: 'false', label: 'Đang mở' },
+          { value: 'true', label: 'Đã khóa' },
+        ],
+      },
+    ],
     fields: [
       { ...text('username', 'Tên đăng nhập', true, 50), createOnly: true },
       text('fullName', 'Họ tên'),
       text('phone', 'Điện thoại', false, 20),
       {
-        ...select('role', 'Vai trò', ['STAFF', 'TECHNICIAN', 'ADMIN']),
-        createOnly: true,
+        ...select('role', 'Vai trò', [Role.STAFF, Role.TECHNICIAN, Role.ADMIN]),
       },
       {
         ...ref(
@@ -194,13 +220,15 @@ export const resources: Record<string, CrudResource> = {
       ['fullName', 'Họ tên'],
       ['role', 'Vai trò'],
       ['locked', 'Đã khóa'],
+      ['managementUnitId', 'Đơn vị'],
+      ['crossUnitAccess', 'Đọc liên đơn vị'],
     ),
-    writeRoles: [...admin],
     deleteLabel: 'Khóa',
     deleteAction: 'lock',
-    note: 'Tài khoản có lịch sử được khóa thay vì xóa. Mật khẩu tạm chỉ hiển thị một lần.',
+    note: 'Admin gán vai trò Admin/Quản lý/Kỹ thuật và đơn vị khi thêm hoặc sửa. Tài khoản sinh viên quản lý qua hồ sơ sinh viên. Tài khoản có lịch sử được khóa thay vì xóa; mật khẩu tạm chỉ hiển thị một lần.',
   },
   students: {
+    permission: Resource.STUDENT,
     title: 'Sinh viên',
     endpoint: '/students',
     fields: studentFields,
@@ -211,11 +239,10 @@ export const resources: Record<string, CrudResource> = {
       ['faculty', 'Khoa'],
       ['cohort', 'Khóa'],
     ),
-    writeRoles: ['ADMIN', 'STAFF'],
-    createRoles: [...admin],
     note: 'Admin thêm/xóa hồ sơ chưa có lịch sử; Staff tìm kiếm và sửa trong đơn vị.',
   },
   adminStudents: {
+    permission: Resource.STUDENT,
     title: 'Sinh viên',
     endpoint: '/admin/students',
     fields: studentFields,
@@ -226,12 +253,22 @@ export const resources: Record<string, CrudResource> = {
       ['faculty', 'Khoa'],
       ['cohort', 'Khóa'],
     ),
-    writeRoles: [...admin],
     note: 'Khung nhập từng hồ sơ. Import Excel hàng loạt sẽ được bổ sung riêng.',
   },
   rooms: {
+    permission: Resource.ROOM,
     title: 'Phòng & giường',
     endpoint: '/rooms',
+    filters: [
+      ref('buildingId', 'Tòa nhà', '/buildings', 'name', false),
+      ref('roomTypeId', 'Loại phòng', '/room-types', 'name', false),
+      { ...number('floor', 'Tầng'), required: false },
+      { ...select('gender', 'Giới tính', ['M', 'F']), required: false },
+      {
+        ...select('status', 'Trạng thái', ['ACTIVE', 'MAINTENANCE', 'CLOSED']),
+        required: false,
+      },
+    ],
     fields: [
       { ...ref('buildingId', 'Tòa nhà', '/buildings'), createOnly: true },
       number('floor', 'Tầng'),
@@ -246,10 +283,10 @@ export const resources: Record<string, CrudResource> = {
       ['status', 'Trạng thái'],
       ['freeBeds', 'Giường trống'],
     ),
-    writeRoles: [...staff],
     note: 'Phòng từng có phân phòng không được xóa. Xem chi tiết để quản lý giường.',
   },
   periods: {
+    permission: Resource.REGISTRATION_PERIOD,
     title: 'Đợt đăng ký',
     endpoint: '/registration-periods',
     fields: [
@@ -269,14 +306,33 @@ export const resources: Record<string, CrudResource> = {
       ['openAt', 'Ngày mở'],
       ['closeAt', 'Ngày đóng'],
     ),
-    writeRoles: [...staff],
     localSearch: true,
     note: 'Đợt đã mở chỉ được gia hạn ngày đóng; chỉ xóa đợt chưa mở và chưa có đơn.',
   },
   applications: {
+    permission: Resource.ROOM_APPLICATION,
     title: 'Đơn đăng ký',
     endpoint: '/applications',
-    fields: [],
+    fields: [
+      {
+        ...ref('studentId', 'Sinh viên', '/admin/students', 'fullName'),
+        createOnly: true,
+      },
+      ref('periodId', 'Đợt đăng ký', '/registration-periods'),
+      ref('preferredUnitId', 'Đơn vị nguyện vọng', '/management-units'),
+      ref('preferredRoomTypeId', 'Loại phòng', '/room-types', 'name', false),
+      {
+        ...ref(
+          'priorityCategoryIds',
+          'Diện ưu tiên',
+          '/priority-categories',
+          'name',
+          false,
+        ),
+        multiple: true,
+      },
+      { ...text('note', 'Ghi chú', false, 500), kind: 'textarea' },
+    ],
     columns: columns(
       ['id', 'Mã đơn'],
       ['student.fullName', 'Sinh viên'],
@@ -284,9 +340,13 @@ export const resources: Record<string, CrudResource> = {
       ['priorityScore', 'Điểm ưu tiên'],
       ['submittedAt', 'Ngày nộp'],
     ),
-    readOnly: true,
+    editStates: ['DRAFT'],
+    deleteLabel: 'Hủy',
+    deleteAction: 'cancel',
+    note: 'Admin tạo đơn cho sinh viên, sửa/hủy đơn nháp. Trạng thái và lịch sử vẫn được backend kiểm tra.',
   },
   myApplications: {
+    permission: Resource.ROOM_APPLICATION,
     title: 'Đơn đăng ký của tôi',
     endpoint: '/me/applications',
     writeEndpoint: '/applications',
@@ -313,13 +373,13 @@ export const resources: Record<string, CrudResource> = {
       ['preferredUnitId', 'Đơn vị'],
       ['note', 'Ghi chú'],
     ),
-    writeRoles: [...student],
     deleteLabel: 'Hủy',
     deleteAction: 'cancel',
     editStates: ['DRAFT'],
     note: 'Chỉ sửa đơn nháp. Hủy giữ lại lịch sử đơn.',
   },
   contracts: {
+    permission: Resource.CONTRACT,
     title: 'Hợp đồng',
     endpoint: '/contracts',
     fields: [
@@ -342,11 +402,11 @@ export const resources: Record<string, CrudResource> = {
       ['endDate', 'Kết thúc'],
       ['status', 'Trạng thái'],
     ),
-    writeRoles: [...staff],
     editStates: ['PENDING'],
     note: 'CRUD hồ sơ chờ, chưa phân giường/thu cọc. Các luồng kích hoạt và trả phòng sẽ làm sau.',
   },
   myContracts: {
+    permission: Resource.CONTRACT,
     title: 'Hợp đồng của tôi',
     endpoint: '/me/contracts',
     detailEndpoint: '/contracts',
@@ -360,6 +420,7 @@ export const resources: Record<string, CrudResource> = {
     readOnly: true,
   },
   extensions: {
+    permission: Resource.CONTRACT_EXTENSION,
     title: 'Yêu cầu gia hạn',
     endpoint: '/extension-requests',
     fields: [
@@ -377,11 +438,11 @@ export const resources: Record<string, CrudResource> = {
       ['reason', 'Lý do'],
       ['status', 'Trạng thái'],
     ),
-    writeRoles: [...student],
     editStates: ['PENDING'],
     note: 'Khung CRUD yêu cầu đang chờ; xét duyệt và cập nhật hợp đồng để làm sau.',
   },
   transfers: {
+    permission: Resource.ROOM_TRANSFER,
     title: 'Yêu cầu chuyển phòng',
     endpoint: '/transfer-requests',
     fields: [
@@ -397,10 +458,10 @@ export const resources: Record<string, CrudResource> = {
       ['reason', 'Lý do'],
       ['status', 'Trạng thái'],
     ),
-    writeRoles: [...student],
     editStates: ['PENDING'],
   },
   summer: {
+    permission: Resource.SUMMER_REGISTRATION,
     title: 'Lựa chọn kỳ hè',
     endpoint: '/summer-choices',
     fields: [
@@ -417,11 +478,11 @@ export const resources: Record<string, CrudResource> = {
       ['choice', 'Lựa chọn'],
       ['status', 'Trạng thái'],
     ),
-    writeRoles: [...student],
     editStates: ['PENDING'],
     note: 'CRUD lựa chọn chờ; chưa tự gia hạn hay thay đổi chỗ ở.',
   },
   storage: {
+    permission: Resource.STORAGE,
     title: 'Kho gửi đồ',
     endpoint: '/storage-records',
     fields: [],
@@ -437,6 +498,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Khung tra cứu. Gửi/nhận đồ gắn với luồng tạm rời hè nên chưa triển khai thao tác chi tiết.',
   },
   readings: {
+    permission: Resource.UTILITY_READING,
     title: 'Chỉ số điện nước',
     endpoint: '/utility-readings',
     fields: [
@@ -457,10 +519,10 @@ export const resources: Record<string, CrudResource> = {
       ['endReading', 'Chỉ số cuối'],
       ['consumption', 'Tiêu thụ'],
     ),
-    writeRoles: [...staff],
     note: 'Chỉ số đã lên hóa đơn được khóa sửa/xóa.',
   },
   rates: {
+    permission: Resource.UTILITY_RATE,
     title: 'Đơn giá điện nước',
     endpoint: '/utility-rates',
     fields: [
@@ -473,11 +535,11 @@ export const resources: Record<string, CrudResource> = {
       ['unitPrice', 'Đơn giá'],
       ['effectiveFrom', 'Hiệu lực'],
     ),
-    writeRoles: [...staff],
     localSearch: true,
     note: 'Giá đã có hiệu lực được lưu lịch sử; thêm giá mới thay cho sửa giá cũ.',
   },
   invoices: {
+    permission: Resource.INVOICE,
     title: 'Hóa đơn',
     endpoint: '/invoices',
     fields: invoiceFields,
@@ -488,11 +550,11 @@ export const resources: Record<string, CrudResource> = {
       ['dueDate', 'Hạn đóng'],
       ['status', 'Trạng thái'],
     ),
-    writeRoles: [...staff],
     editStates: ['UNPAID'],
     note: 'CRUD hồ sơ chưa có dòng chi tiết. Chưa làm phát hành tự tính tiền; hóa đơn đã thanh toán hoặc có lịch sử không được sửa/xóa.',
   },
   myInvoices: {
+    permission: Resource.INVOICE,
     title: 'Hóa đơn của tôi',
     endpoint: '/me/invoices',
     detailEndpoint: '/invoices',
@@ -507,6 +569,7 @@ export const resources: Record<string, CrudResource> = {
     readOnly: true,
   },
   deposits: {
+    permission: Resource.DEPOSIT,
     title: 'Tiền cọc',
     endpoint: '/deposits',
     detailEndpoint: '/contracts',
@@ -522,6 +585,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Sổ tiền chỉ tra cứu. Thu/trừ/bù/hoàn cọc là nghiệp vụ chi tiết, không sửa/xóa giao dịch đã ghi.',
   },
   maintenance: {
+    permission: Resource.MAINTENANCE,
     title: 'Yêu cầu sửa chữa',
     endpoint: '/maintenance-requests',
     fields: [
@@ -535,7 +599,7 @@ export const resources: Record<string, CrudResource> = {
       select('severity', 'Mức độ', ['LOW', 'MEDIUM', 'HIGH']),
       { ...text('description', 'Mô tả', true, 1000), kind: 'textarea' },
       {
-        ...ref('roomId', 'Phòng (Staff)', '/rooms', 'code', false),
+        ...ref('roomId', 'Phòng (Quản lý/Admin)', '/rooms', 'code', false),
         createOnly: true,
       },
     ],
@@ -557,7 +621,6 @@ export const resources: Record<string, CrudResource> = {
       ['description', 'Mô tả'],
       ['status', 'Trạng thái'],
     ),
-    writeRoles: ['STAFF', 'STUDENT'],
     rowOwned: 'requesterId',
     editStates: ['OPEN'],
     deleteLabel: 'Hủy',
@@ -565,6 +628,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Người tạo sửa/hủy khi ticket còn mở; các thao tác xử lý chi tiết chưa đưa vào màn CRUD.',
   },
   notifications: {
+    permission: Resource.NOTIFICATION,
     title: 'Thông báo đã đăng',
     endpoint: '/notifications/published',
     writeEndpoint: '/notifications',
@@ -596,10 +660,10 @@ export const resources: Record<string, CrudResource> = {
       ['scope', 'Phạm vi'],
       ['createdAt', 'Ngày đăng'],
     ),
-    writeRoles: [...staff],
-    note: 'Chỉ quản lý thông báo thủ công của mình. Sửa nội dung giữ phạm vi người nhận.',
+    note: 'Quản lý thông báo thủ công; Admin quản lý toàn hệ thống, Staff quản lý thông báo của mình trong đơn vị.',
   },
   inbox: {
+    permission: Resource.NOTIFICATION,
     title: 'Hộp thư thông báo',
     endpoint: '/notifications',
     fields: [],
@@ -613,6 +677,7 @@ export const resources: Record<string, CrudResource> = {
     localSearch: false,
   },
   profile: {
+    permission: Resource.PROFILE,
     title: 'Hồ sơ của tôi',
     endpoint: '/me/profile',
     fields: [
@@ -625,13 +690,26 @@ export const resources: Record<string, CrudResource> = {
       ['fullName', 'Họ tên'],
       ['phone', 'Điện thoại'],
     ),
-    writeRoles: [...student],
     singleton: true,
+    note: 'Chỉ cập nhật hồ sơ của chính mình. Sinh viên có thể sửa điện thoại, quê quán và liên hệ khẩn cấp; cán bộ cập nhật điện thoại.',
   },
   audit: {
+    permission: Resource.AUDIT,
     title: 'Nhật ký hệ thống',
     endpoint: '/admin/audit-logs',
+    filters: [
+      { ...number('actorId', 'ID người thao tác', 1), required: false },
+      text('action', 'Mã thao tác', false, 100),
+      text('entityType', 'Loại đối tượng', false, 100),
+      { name: 'from', label: 'Từ thời điểm', kind: 'datetime' },
+      { name: 'to', label: 'Đến thời điểm', kind: 'datetime' },
+    ],
     fields: [],
+    detailColumns: columns(
+      ['actorId', 'ID người thao tác'],
+      ['entityId', 'ID đối tượng'],
+      ['requestId', 'Mã yêu cầu'],
+    ),
     columns: columns(
       ['fullName', 'Người thực hiện'],
       ['action', 'Thao tác'],
@@ -643,6 +721,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Nhật ký chỉ đọc, hệ thống tự ghi khi thêm/sửa/xóa.',
   },
   configs: {
+    permission: Resource.CONFIG,
     title: 'Cấu hình hệ thống',
     endpoint: '/admin/configs',
     fields: [text('value', 'Giá trị', true, 100)],
@@ -652,13 +731,12 @@ export const resources: Record<string, CrudResource> = {
       ['value', 'Giá trị'],
     ),
     idKey: 'key',
-    writeRoles: [...admin],
     singleton: false,
-    createRoles: [],
     localSearch: true,
     note: 'Chỉ sửa các khóa cấu hình đã có.',
   },
   myRoom: {
+    permission: Resource.ROOM,
     title: 'Phòng của tôi',
     endpoint: '/me/room',
     fields: [],

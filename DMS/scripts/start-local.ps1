@@ -1,4 +1,7 @@
-param([switch] $ProvisionAccounts)
+param(
+    [switch] $ProvisionAccounts,
+    [switch] $DependenciesOnly
+)
 
 $ErrorActionPreference = 'Stop'
 $projectDirectory = Split-Path -Parent $PSScriptRoot
@@ -163,10 +166,10 @@ function Start-LocalKeycloak([string] $JavaExecutable) {
 if (-not (Test-Path -LiteralPath $pgControl) -or -not (Test-Path -LiteralPath (Join-Path $pgData 'PG_VERSION'))) {
     throw 'Local PostgreSQL is not prepared. Follow README.md to use Docker or installed PostgreSQL.'
 }
-if (-not (Test-Path -LiteralPath $backendJar)) {
+if (-not $DependenciesOnly -and -not (Test-Path -LiteralPath $backendJar)) {
     throw 'Backend JAR is missing. Build first: cd DMS/backend; .\mvnw.cmd -DskipTests clean package'
 }
-if (-not (Test-Path -LiteralPath $viteScript)) {
+if (-not $DependenciesOnly -and -not (Test-Path -LiteralPath $viteScript)) {
     throw 'Frontend dependencies are missing. Run npm.cmd ci in DMS/frontend.'
 }
 $javaCandidate = (Get-Command java.exe -ErrorAction Stop).Source
@@ -188,7 +191,9 @@ $javaExecutable = Join-Path $jdkDirectory 'bin\java.exe'
 if (-not (Test-Path -LiteralPath $javaExecutable)) {
     throw "Java executable is missing: $javaExecutable"
 }
-$nodeExecutable = (Get-Command node.exe -ErrorAction Stop).Source
+if (-not $DependenciesOnly) {
+    $nodeExecutable = (Get-Command node.exe -ErrorAction Stop).Source
+}
 
 & $pgControl -D $pgData status *> $null
 $postgresRunning = $LASTEXITCODE -eq 0
@@ -221,6 +226,16 @@ $env:DB_USERNAME = 'dms'
 $env:DB_PASSWORD = 'dms'
 $env:SPRING_PROFILES_ACTIVE = 'dev'
 $env:SERVER_PORT = '8080'
+
+# Khi chạy backend bằng IntelliJ, chỉ chuẩn bị PostgreSQL và Keycloak,
+# giữ cổng 8080 trống để tiến trình của IDE sử dụng.
+if ($DependenciesOnly) {
+    Write-Host 'PostgreSQL ready: localhost:5432 (databases: dms and keycloak)'
+    Write-Host 'Keycloak ready: http://localhost:8180'
+    Write-Host 'Dependencies are running. Start DmsApplication from IntelliJ.'
+    Write-Host 'For account administration, set DMS_KEYCLOAK_ADMIN_CLIENT_SECRET in the IDE run configuration from backend/data/local-run/keycloak.env.local.'
+    return
+}
 
 $backendProcess = Get-ManagedProcess 'backend' $backendJar
 if (-not $backendProcess) {

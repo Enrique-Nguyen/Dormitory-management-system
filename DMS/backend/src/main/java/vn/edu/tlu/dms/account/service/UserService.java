@@ -17,6 +17,20 @@ public interface UserService {
      */
     PageResponse<Profile> list(int page, int size, List<String> sort, String q, String role);
 
+    /**
+     * Admin kết hợp từ khóa, vai trò, đơn vị quản lý và trạng thái khóa để tìm tài khoản. Bộ lọc
+     * không gửi được bỏ qua; quản trị viên không gắn đơn vị sẽ không thuộc kết quả khi lọc một đơn
+     * vị cụ thể. Phân trang và tổng số bản ghi dùng cùng điều kiện lọc.
+     */
+    PageResponse<Profile> list(
+            int page,
+            int size,
+            List<String> sort,
+            String q,
+            String role,
+            Long managementUnitId,
+            Boolean locked);
+
     /** Admin đọc chi tiết tài khoản theo ID; không trả mật khẩu hoặc hash. */
     Profile get(Long id);
 
@@ -27,8 +41,8 @@ public interface UserService {
 
     /**
      * Admin cập nhật các trường tài khoản được phép, kiểm tra vai trò và ghi audit; thu hồi toàn bộ
-     * phiên nếu tên đăng nhập hoặc đơn vị quản lý thay đổi để áp dụng phạm vi mới khi đăng nhập
-     * lại.
+     * phiên nếu tên đăng nhập, vai trò hoặc đơn vị quản lý thay đổi để áp dụng quyền/phạm vi mới
+     * khi đăng nhập lại.
      */
     Profile update(Long id, Update input);
 

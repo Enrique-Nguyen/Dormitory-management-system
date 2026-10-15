@@ -1,10 +1,17 @@
+import { Role } from '../../constants/authorization'
 import { Button, Result, Spin } from 'antd'
 import axios from 'axios'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { useMe } from '../../features/account/useMe'
-import { CHANGE_PASSWORD_PATH, roleHome } from '../../constants/navigation'
-import type { Role } from '../../types/auth'
-import { loginPath } from '../../services/api/auth'
+import {
+  CHANGE_PASSWORD_PATH,
+  permissionsForPath,
+} from '../../constants/navigation'
+import {
+  accessibleHomePath,
+  hasAnyPermission,
+  loginPath,
+} from '../../services/api/auth'
 import { errorCodeOf } from '../../utils/errorMessages'
 
 interface Props {
@@ -73,10 +80,43 @@ export default function RequireRole({
     )
   }
 
+  // /me là dữ liệu từ API: từ chối role lạ trước khi dùng làm khóa chuyển hướng hoặc mở cổng.
+  if (!Object.hasOwn(Role, me.role))
+    return (
+      <Result
+        status="403"
+        title="Vai trò tài khoản chưa được hỗ trợ"
+        subTitle="Liên hệ quản trị viên để kiểm tra quyền của tài khoản."
+      />
+    )
+
   if (me.mustChangePassword && !allowMustChangePassword)
     return <Navigate to={CHANGE_PASSWORD_PATH} replace />
-  if (role && me.role !== role)
-    return <Navigate to={roleHome[me.role]} replace />
+  if (
+    role &&
+    me.role !== role &&
+    !(
+      me.role === Role.ADMIN &&
+      (role === Role.STAFF || role === Role.TECHNICIAN)
+    )
+  )
+    return <Navigate to={accessibleHomePath(me)} replace />
+
+  if (role && !hasAnyPermission(me, permissionsForPath(location.pathname)))
+    return (
+      <Result
+        status="403"
+        title="Không có quyền truy cập"
+        subTitle="Tài khoản chưa được cấp quyền xem màn hình này."
+        extra={
+          <Button
+            onClick={() => window.location.assign(accessibleHomePath(me))}
+          >
+            Về trang chủ
+          </Button>
+        }
+      />
+    )
 
   return <Outlet />
 }

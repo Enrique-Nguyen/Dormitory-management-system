@@ -96,7 +96,7 @@ Hệ thống dùng RBAC kết hợp **phạm vi dữ liệu** (đơn vị quản
 - **Đơn đăng ký** thuộc phạm vi đơn vị theo trường *đơn vị nguyện vọng* do sinh viên chọn khi nộp đơn, vì lúc này sinh viên chưa có phòng.
 - **Sinh viên** thuộc phạm vi một đơn vị khi có đơn đăng ký hoặc phân phòng hiệu lực tại đơn vị đó; Staff chỉ xem và thao tác hồ sơ sinh viên trong phạm vi này.
 - Technician chỉ cập nhật yêu cầu được giao cho mình.
-- Admin quản lý kỹ thuật hệ thống, không mặc nhiên được duyệt hợp đồng hay sửa hóa đơn. Người kiêm nhiệm sẽ được cấp thêm vai trò Staff với phạm vi đơn vị cụ thể.
+- Cập nhật 14/10/2026: Admin quản lý hệ thống và được làm mọi nghiệp vụ ở mọi đơn vị, bao gồm hợp đồng và hóa đơn; vẫn tuân thủ trạng thái và ràng buộc dữ liệu.
 - Thông báo toàn KTX và báo cáo liên tòa cần quyền riêng.
 - Vai trò là tập cố định (Student, Staff, Technician, Admin) kèm phạm vi đơn vị quản lý; MVP **không** xây bảng `Permission` chi tiết.
 

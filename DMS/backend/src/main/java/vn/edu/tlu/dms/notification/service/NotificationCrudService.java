@@ -4,12 +4,13 @@ import vn.edu.tlu.dms.notification.api.NotificationDtos;
 
 /**
  * Hợp đồng tra cứu, sửa và xóa thông báo thủ công của người đăng. Việc tạo thông báo được cung cấp
- * bởi NotificationService; thông báo hệ thống không được sửa hoặc xóa tại đây.
+ * bởi NotificationService. ADMIN được quản lý thông báo thủ công của mọi người; thông báo hệ thống
+ * không được sửa hoặc xóa tại đây.
  */
 public interface NotificationCrudService {
 
     /**
-     * Tìm kiếm thông báo thủ công do nhân viên đang đăng nhập tạo, theo tiêu đề hoặc nội dung.
+     * Tìm thông báo thủ công theo tiêu đề hoặc nội dung: STAFF tự đăng, ADMIN mọi người đăng.
      *
      * @param page chỉ số trang, bắt đầu từ 0
      * @param size số thông báo trên mỗi trang
@@ -22,7 +23,8 @@ public interface NotificationCrudService {
      * Lấy chi tiết thông báo thủ công thuộc quyền quản lý của người đang đăng nhập.
      *
      * @param id mã định danh thông báo cần xem
-     * @return dữ liệu thông báo; báo lỗi nếu không tồn tại hoặc không thuộc người đăng
+     * @return dữ liệu thông báo; STAFF chỉ truy cập bài tự đăng, ADMIN được truy cập mọi bài thủ
+     *     công
      */
     Object getPublished(Long id);
 

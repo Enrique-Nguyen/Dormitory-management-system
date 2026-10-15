@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.billing.service.InvoiceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 
 @RestController
 public class InvoiceController {
@@ -21,6 +23,7 @@ public class InvoiceController {
         this.service = service;
     }
 
+    @RequirePrivilege(Permission.INVOICE_READ)
     @GetMapping("/api/invoices")
     public PageResponse<InvoiceDtos.Response> searchInvoices(
             @RequestParam(defaultValue = "0") int page,
@@ -31,6 +34,7 @@ public class InvoiceController {
         return service.searchInvoices(page, size, type, status, false, q);
     }
 
+    @RequirePrivilege(Permission.INVOICE_READ)
     @GetMapping("/api/me/invoices")
     public PageResponse<InvoiceDtos.Response> getMyInvoices(
             @RequestParam(defaultValue = "0") int page,
@@ -41,11 +45,13 @@ public class InvoiceController {
         return service.searchInvoices(page, size, type, status, true, q);
     }
 
+    @RequirePrivilege(Permission.INVOICE_READ)
     @GetMapping("/api/invoices/{id}")
     public InvoiceDtos.Response getInvoiceById(@PathVariable Long id) {
         return service.getInvoiceById(id);
     }
 
+    @RequirePrivilege(Permission.INVOICE_UPDATE)
     @PostMapping("/api/invoices/{id}/confirm-payment")
     public InvoiceDtos.Response confirmInvoicePayment(
             @PathVariable Long id, @Valid @RequestBody InvoiceDtos.Payment input) {

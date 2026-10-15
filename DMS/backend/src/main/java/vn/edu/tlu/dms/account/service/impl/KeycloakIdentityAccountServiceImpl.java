@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,6 +22,9 @@ import vn.edu.tlu.dms.account.config.SecurityConfig.KeycloakProperties;
 import vn.edu.tlu.dms.account.domain.AppUser;
 import vn.edu.tlu.dms.account.repository.AppUserRepository;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.KeycloakClaim;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 
 import java.io.IOException;
@@ -46,7 +50,7 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
     private static final Logger LOGGER =
             LoggerFactory.getLogger(KeycloakIdentityAccountServiceImpl.class);
 
-    private static final Set<String> DMS_ROLES = Set.of("ADMIN", "STAFF", "TECHNICIAN", "STUDENT");
+    private static final Set<String> DMS_ROLES = Role.ALL;
 
     private final KeycloakProperties properties;
 
@@ -93,7 +97,8 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
             return token;
         }
         if (properties.adminClientSecret() == null || properties.adminClientSecret().isBlank()) {
-            throw new BusinessException("IDENTITY_NOT_CONFIGURED", 503);
+            throw new BusinessException(
+                    ErrorCode.IDENTITY_NOT_CONFIGURED, HttpStatus.SERVICE_UNAVAILABLE);
         }
         var form = new LinkedMultiValueMap<String, String>();
         form.add("grant_type", "client_credentials");
@@ -110,7 +115,8 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
                             .retrieve()
                             .body(Map.class);
             if (response == null || !(response.get("access_token") instanceof String value)) {
-                throw new BusinessException("IDENTITY_UNAVAILABLE", 503);
+                throw new BusinessException(
+                        ErrorCode.IDENTITY_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE);
             }
             token = value;
             expiresAt =
@@ -120,7 +126,8 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
         } catch (BusinessException error) {
             throw error;
         } catch (RuntimeException error) {
-            throw new BusinessException("IDENTITY_UNAVAILABLE", 503);
+            throw new BusinessException(
+                    ErrorCode.IDENTITY_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE);
         }
     }
 
@@ -137,7 +144,8 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
                         .retrieve()
                         .body(Map.class);
         if (account == null) {
-            throw new BusinessException("IDENTITY_UNAVAILABLE", 503);
+            throw new BusinessException(
+                    ErrorCode.IDENTITY_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE);
         }
         return new HashMap<>(account);
     }
@@ -161,7 +169,8 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
         if (account.get("attributes") instanceof Map<?, ?> existing) {
             existing.forEach((key, value) -> attributes.put(key.toString(), value));
         }
-        attributes.put("dms_security_version", List.of(user.getSecurityVersion().toString()));
+        attributes.put(
+                KeycloakClaim.SECURITY_VERSION, List.of(user.getSecurityVersion().toString()));
         account.put("attributes", attributes);
     }
 
@@ -210,7 +219,7 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
     @Override
     public void provisionAccount(AppUser user, String temporaryPassword) {
         if (user.getKeycloakUserId() != null) {
-            throw BusinessException.conflict("IDENTITY_ALREADY_LINKED");
+            throw BusinessException.conflict(ErrorCode.IDENTITY_ALREADY_LINKED);
         }
         String identityId = null;
         try {
@@ -237,7 +246,8 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
                             .toBodilessEntity();
             var location = response.getHeaders().getLocation();
             if (location == null) {
-                throw new BusinessException("IDENTITY_UNAVAILABLE", 503);
+                throw new BusinessException(
+                        ErrorCode.IDENTITY_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE);
             }
             identityId = location.getPath().substring(location.getPath().lastIndexOf('/') + 1);
             user.setKeycloakUserId(identityId);
@@ -365,7 +375,7 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
 
     private void requireLinked(AppUser user) {
         if (user.getKeycloakUserId() == null) {
-            throw new BusinessException("IDENTITY_NOT_LINKED", 409);
+            throw new BusinessException(ErrorCode.IDENTITY_NOT_LINKED, HttpStatus.CONFLICT);
         }
     }
 
@@ -401,10 +411,11 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
             return business;
         }
         if (error instanceof RestClientResponseException response
-                && response.getStatusCode().value() == 409) {
-            return BusinessException.conflict("DUPLICATE_USERNAME");
+                && response.getStatusCode().value() == HttpStatus.CONFLICT.value()) {
+            return BusinessException.conflict(ErrorCode.DUPLICATE_USERNAME);
         }
-        return new BusinessException("IDENTITY_UNAVAILABLE", 503);
+        return new BusinessException(
+                ErrorCode.IDENTITY_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @Override
@@ -419,15 +430,15 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
                 status -> {
                     var existing = users.lockByUsername(adminUsername).orElse(null);
                     if (existing != null) {
-                        if (!"ADMIN".equals(existing.getRole())) {
-                            throw BusinessException.conflict("BOOTSTRAP_USERNAME_IN_USE");
+                        if (!Role.ADMIN.equals(existing.getRole())) {
+                            throw BusinessException.conflict(ErrorCode.BOOTSTRAP_USERNAME_IN_USE);
                         }
                         return;
                     }
                     var admin = new AppUser();
                     admin.setUsername(adminUsername);
                     admin.setFullName("Quản trị viên DMS");
-                    admin.setRole("ADMIN");
+                    admin.setRole(Role.ADMIN);
                     admin.setCrossUnitAccess(false);
                     admin.setMustChangePassword(true);
                     admin.setLocked(false);

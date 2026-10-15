@@ -2,16 +2,28 @@ package vn.edu.tlu.dms.account.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.springframework.aop.Advisor;
+import org.springframework.aop.support.StaticMethodMatcherPointcut;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Role;
+import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
@@ -19,11 +31,18 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.account.security.AccountAccessFilter;
+import vn.edu.tlu.dms.common.constants.DmsConstants;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.KeycloakClaim;
 import vn.edu.tlu.dms.common.dto.ApiError;
 import vn.edu.tlu.dms.common.security.CurrentUser;
+import vn.edu.tlu.dms.common.security.ScopeGuard;
 
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -31,10 +50,37 @@ import java.util.Set;
 
 /** Xác thực Bearer JWT; phạm vi nghiệp vụ vẫn đọc trực tiếp từ CSDL DMS. */
 @Configuration
+@EnableMethodSecurity(proxyTargetClass = true, prePostEnabled = false)
 @EnableConfigurationProperties(SecurityConfig.KeycloakProperties.class)
 public class SecurityConfig {
 
-    private static final Set<String> ROLES = Set.of("ADMIN", "STAFF", "TECHNICIAN", "STUDENT");
+    private static final Set<String> ROLES = DmsConstants.Role.ALL;
+
+    /**
+     * Advisor Spring Security đọc @RequirePrivilege trước khi gọi API. Quét mọi REST method được
+     * mapped trong ứng dụng để API quên annotation cũng bị chặn. ObjectProvider đọc ScopeGuard lúc
+     * thực thi, tránh khởi tạo Service/CSDL sớm khi Spring đang tạo proxy bảo mật.
+     */
+    @Bean
+    @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
+    static Advisor requirePrivilegeAdvisor(ObjectProvider<ScopeGuard> guards) {
+        var mappedApi =
+                new StaticMethodMatcherPointcut() {
+                    @Override
+                    public boolean matches(Method method, Class<?> targetClass) {
+                        return targetClass.getPackageName().startsWith("vn.edu.tlu.dms")
+                                && AnnotatedElementUtils.hasAnnotation(
+                                        targetClass, RestController.class)
+                                && AnnotatedElementUtils.hasAnnotation(
+                                        method, RequestMapping.class);
+                    }
+                };
+        return new AuthorizationManagerBeforeMethodInterceptor(
+                mappedApi,
+                (authentication, invocation) ->
+                        new AuthorizationDecision(
+                                guards.getObject().hasDeclaredPrivilege(invocation)));
+    }
 
     @Bean
     public JwtDecoder jwtDecoder(KeycloakProperties properties) {
@@ -50,7 +96,7 @@ public class SecurityConfig {
                                         ? OAuth2TokenValidatorResult.success()
                                         : OAuth2TokenValidatorResult.failure(
                                                 new OAuth2Error(
-                                                        "invalid_token",
+                                                        OAuth2ErrorCodes.INVALID_TOKEN,
                                                         "Invalid audience",
                                                         null))));
         return decoder;
@@ -62,15 +108,18 @@ public class SecurityConfig {
         var converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(
                 jwt -> {
-                    Map<String, Object> access = jwt.getClaimAsMap("realm_access");
-                    Object values = access == null ? null : access.get("roles");
+                    Map<String, Object> access = jwt.getClaimAsMap(KeycloakClaim.REALM_ACCESS);
+                    Object values = access == null ? null : access.get(KeycloakClaim.ROLES);
                     if (!(values instanceof Collection<?> roles)) {
                         return List.of();
                     }
                     return roles.stream()
                             .map(Object::toString)
                             .filter(ROLES::contains)
-                            .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                            .map(
+                                    role ->
+                                            new SimpleGrantedAuthority(
+                                                    KeycloakClaim.AUTHORITY_PREFIX + role))
                             .map(authority -> (GrantedAuthority) authority)
                             .toList();
                 });
@@ -86,7 +135,7 @@ public class SecurityConfig {
                                 auth.requestMatchers("/actuator/health")
                                         .permitAll()
                                         .requestMatchers("/api/admin/**")
-                                        .hasRole("ADMIN")
+                                        .hasRole(DmsConstants.Role.ADMIN)
                                         .anyRequest()
                                         .authenticated())
                 .oauth2ResourceServer(
@@ -94,13 +143,15 @@ public class SecurityConfig {
                                 oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter))
                                         .authenticationEntryPoint(
                                                 (request, response, failure) -> {
-                                                    response.setStatus(401);
-                                                    response.setContentType("application/json");
+                                                    response.setStatus(
+                                                            HttpStatus.UNAUTHORIZED.value());
+                                                    response.setContentType(
+                                                            MediaType.APPLICATION_JSON_VALUE);
                                                     mapper.writeValue(
                                                             response.getWriter(),
                                                             new ApiError(
-                                                                    "UNAUTHENTICATED",
-                                                                    "UNAUTHENTICATED",
+                                                                    ErrorCode.UNAUTHENTICATED,
+                                                                    ErrorCode.UNAUTHENTICATED,
                                                                     Map.of(),
                                                                     null));
                                                 }))
@@ -108,13 +159,14 @@ public class SecurityConfig {
                         errors ->
                                 errors.accessDeniedHandler(
                                         (request, response, failure) -> {
-                                            response.setStatus(403);
-                                            response.setContentType("application/json");
+                                            response.setStatus(HttpStatus.FORBIDDEN.value());
+                                            response.setContentType(
+                                                    MediaType.APPLICATION_JSON_VALUE);
                                             mapper.writeValue(
                                                     response.getWriter(),
                                                     new ApiError(
-                                                            "FORBIDDEN",
-                                                            "FORBIDDEN",
+                                                            ErrorCode.FORBIDDEN,
+                                                            ErrorCode.FORBIDDEN,
                                                             Map.of(),
                                                             null));
                                         }))

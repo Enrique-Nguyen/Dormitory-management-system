@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedResponse;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedStatus;
 import vn.edu.tlu.dms.room.service.RoomService;
@@ -25,18 +27,21 @@ public class BedController {
         this.service = service;
     }
 
+    @RequirePrivilege(Permission.BED_UPDATE)
     @PostMapping("/{id}/status")
     public BedResponse changeRoomStatus(
             @PathVariable Long id, @Valid @RequestBody BedStatus input) {
         return service.changeBedStatus(id, input);
     }
 
+    @RequirePrivilege(Permission.BED_DELETE)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.deleteBed(id);
         return ResponseEntity.noContent().build();
     }
 
+    @RequirePrivilege(Permission.BED_UPDATE)
     @PatchMapping("/{id}")
     public BedResponse updateBedCode(
             @PathVariable Long id, @Valid @RequestBody RoomDtos.BedInput input) {

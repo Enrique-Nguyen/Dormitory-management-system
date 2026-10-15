@@ -1,10 +1,14 @@
+import { Permission } from '../../constants/authorization'
 import { Layout } from 'antd'
 import { Link, Outlet } from 'react-router'
 import NotificationBell from '../../components/layout/NotificationBell'
 import UserMenu from '../../components/layout/UserMenu'
+import { useMe } from '../../features/account/useMe'
+import { hasPermission } from '../../services/api/auth'
 
 /** Cổng KTV: tối giản, không sidebar, hành động chính lớn full-width (.dms-action-lg) (UI 4.3, 22). */
 export default function TechnicianLayout() {
+  const { data: me } = useMe()
   return (
     <Layout className="dms-touch" style={{ minHeight: '100vh' }}>
       <Layout.Header className="dms-topbar">
@@ -14,7 +18,9 @@ export default function TechnicianLayout() {
           <span className="dms-portal-tag">Kỹ thuật</span>
         </Link>
         <div style={{ flex: 1 }} />
-        <NotificationBell to="/technician/notifications" />
+        {hasPermission(me, Permission.NOTIFICATION_READ) && (
+          <NotificationBell to="/technician/notifications" />
+        )}
         <UserMenu />
       </Layout.Header>
       <Layout.Content>

@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -16,6 +17,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /** Kiểm tra liên kết, khóa, vai trò và version DMS ngay cả khi JWT vẫn còn hạn. */
 public class AccountAccessFilter extends OncePerRequestFilter {
@@ -42,8 +44,8 @@ public class AccountAccessFilter extends OncePerRequestFilter {
             } catch (BusinessException error) {
                 SecurityContextHolder.clearContext();
                 response.setStatus(error.getStatus());
-                response.setContentType("application/json");
-                response.setCharacterEncoding("UTF-8");
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                 mapper.writeValue(
                         response.getWriter(),
                         new ApiError(

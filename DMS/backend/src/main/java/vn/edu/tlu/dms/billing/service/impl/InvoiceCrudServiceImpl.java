@@ -5,6 +5,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.billing.service.InvoiceCrudService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceType;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -62,25 +67,33 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
     @Transactional
     @Override
     public Object createInvoiceRecord(Map<String, Object> input) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.INVOICE_CREATE);
+        guard.requireRole(Role.STAFF);
         validate(input);
         String code =
                 jdbc.queryForObject(
                         "SELECT fn_next_code(?,'seq_invoice_code',true)",
                         String.class,
-                        "UTILITY".equals(input.get("type")) ? "DN" : "HP");
+                        InvoiceType.UTILITY.equals(input.get("type")) ? "DN" : "HP");
         return insertRecord(
                 "invoice",
                 FIELDS,
                 Set.of("type", "totalAmount", "dueDate"),
                 input,
-                Map.of("code", code, "issued_by", current.get().id(), "status", "UNPAID"));
+                Map.of(
+                        "code",
+                        code,
+                        "issued_by",
+                        current.get().id(),
+                        "status",
+                        InvoiceStatus.UNPAID));
     }
 
     @Transactional
     @Override
     public Object updateUnpaidInvoiceRecord(Long id, Map<String, Object> input) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.INVOICE_UPDATE);
+        guard.requireRole(Role.STAFF);
         var row = loadEditable(id);
         if (input.keySet().stream().anyMatch(k -> !Set.of("totalAmount", "dueDate").contains(k))) {
             throw BusinessException.invalid(
@@ -95,7 +108,8 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
     @Transactional
     @Override
     public void deleteUnusedInvoiceRecord(Long id) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.INVOICE_DELETE);
+        guard.requireRole(Role.STAFF);
         loadEditable(id);
         deleteRecord("invoice", id);
     }
@@ -103,7 +117,7 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
     private Map<String, Object> loadEditable(Long id) {
         var row = queries.one("SELECT * FROM invoice WHERE id=? FOR UPDATE", id);
         requireScope(row);
-        if (!"UNPAID".equals(row.get("status"))
+        if (!InvoiceStatus.UNPAID.equals(row.get("status"))
                 || Boolean.TRUE.equals(
                         jdbc.queryForObject(
                                 "SELECT EXISTS(SELECT 1 FROM invoice_item WHERE invoice_id=?) OR"
@@ -112,22 +126,32 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
                                 Boolean.class,
                                 id,
                                 id))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
         return row;
     }
 
     private void requireScope(Map<String, Object> input) {
-        if ("UTILITY".equals(input.get("type"))) {
+        if (InvoiceType.UTILITY.equals(input.get("type"))) {
             guard.requireUnit(rooms.getRoomLocation(number(input, "roomId")).unitId());
-        } else if ("ROOM_FEE".equals(input.get("type"))) {
+        } else if (InvoiceType.ROOM_FEE.equals(input.get("type"))) {
+            // ADMIN không bị giới hạn đơn vị, nhưng người nhận hóa đơn phải là sinh viên thật.
+            Long studentId = number(input, "studentId");
             if (!Boolean.TRUE.equals(
                     jdbc.queryForObject(
-                            "SELECT EXISTS(SELECT 1 FROM room_application WHERE student_id=? AND"
-                                    + " preferred_unit_id=?)",
+                            "SELECT EXISTS(SELECT 1 FROM student_profile WHERE user_id=?)",
                             Boolean.class,
-                            number(input, "studentId"),
-                            current.get().unitId()))) {
+                            studentId))) {
+                throw BusinessException.notFound();
+            }
+            if (!current.get().isAdmin()
+                    && !Boolean.TRUE.equals(
+                            jdbc.queryForObject(
+                                    "SELECT EXISTS(SELECT 1 FROM room_application WHERE"
+                                            + " student_id=? AND preferred_unit_id=?)",
+                                    Boolean.class,
+                                    number(input, "studentId"),
+                                    current.get().unitId()))) {
                 throw BusinessException.notFound();
             }
         } else {
@@ -137,7 +161,7 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
 
     private void validate(Map<String, Object> input) {
         requireScope(input);
-        if ("ROOM_FEE".equals(input.get("type"))) {
+        if (InvoiceType.ROOM_FEE.equals(input.get("type"))) {
             rooms.getSemesterReference(number(input, "semesterId"));
             if (input.get("roomId") != null || input.get("billingMonth") != null) {
                 throw BusinessException.invalid("type", "Phí phòng chỉ gắn sinh viên/học kỳ");

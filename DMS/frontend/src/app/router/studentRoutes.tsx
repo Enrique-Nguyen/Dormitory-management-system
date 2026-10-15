@@ -1,3 +1,4 @@
+import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
 import CrudPage from '../../pages/CrudPage'
 import CrudTabsPage from '../../pages/CrudTabsPage'
@@ -8,7 +9,7 @@ import StudentLayout from '../layouts/StudentLayout'
 // UI mục 26. Thay `element` bằng trang thật của bạn (pages/student/...). Phụ trách theo UI 27.3.
 export const studentRoutes: RouteObject = {
   path: '/student',
-  element: <RequireRole role="STUDENT" />,
+  element: <RequireRole role={Role.STUDENT} />,
   children: [
     {
       element: <StudentLayout />,

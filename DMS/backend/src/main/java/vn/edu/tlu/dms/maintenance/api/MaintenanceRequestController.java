@@ -17,8 +17,11 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.ReasonRequest;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Assign;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Create;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Note;
@@ -40,6 +43,7 @@ public class MaintenanceRequestController {
         this.service = service;
     }
 
+    @RequirePrivilege(Permission.MAINTENANCE_READ)
     @GetMapping
     public PageResponse<Response> searchMaintenanceRequests(
             @RequestParam(defaultValue = "0") int page,
@@ -51,11 +55,13 @@ public class MaintenanceRequestController {
         return service.searchMaintenanceRequests(page, size, status, category, severity, q);
     }
 
+    @RequirePrivilege(Permission.MAINTENANCE_READ)
     @GetMapping("/{id}")
     public Response getMaintenanceRequestById(@PathVariable Long id) {
         return service.getMaintenanceRequestById(id);
     }
 
+    @RequirePrivilege(Permission.MAINTENANCE_CREATE)
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Response> createMaintenanceRequest(
             @Valid @RequestPart("data") Create input,
@@ -65,6 +71,7 @@ public class MaintenanceRequestController {
                 .body(response);
     }
 
+    @RequirePrivilege(Permission.MAINTENANCE_READ)
     @GetMapping("/{id}/photos/{photoId}")
     public ResponseEntity<Resource> getMaintenancePhoto(
             @PathVariable Long id, @PathVariable Long photoId) throws IOException {
@@ -79,50 +86,59 @@ public class MaintenanceRequestController {
                 .body(new FileSystemResource(path));
     }
 
+    @RequirePrivilege(Permission.MAINTENANCE_UPDATE)
     @PostMapping("/{id}/assign")
     public Response assignTechnician(@PathVariable Long id, @Valid @RequestBody Assign input) {
         return service.assignTechnician(id, input.technicianId());
     }
 
+    @RequirePrivilege(Permission.MAINTENANCE_UPDATE)
     @PostMapping("/{id}/reject")
     public Response rejectMaintenanceRequest(
             @PathVariable Long id, @Valid @RequestBody ReasonRequest input) {
-        return service.performMaintenanceAction(id, "reject", input.reason());
+        return service.performMaintenanceAction(id, BusinessAction.REJECT, input.reason());
     }
 
+    // Hủy yêu cầu dùng quyền xóa; Service vẫn kiểm tra trạng thái và người sở hữu.
+    @RequirePrivilege(Permission.MAINTENANCE_DELETE)
     @PostMapping("/{id}/cancel")
     public Response cancelMaintenanceRequest(@PathVariable Long id) {
-        return service.performMaintenanceAction(id, "cancel", null);
+        return service.performMaintenanceAction(id, BusinessAction.CANCEL, null);
     }
 
+    @RequirePrivilege(Permission.MAINTENANCE_UPDATE)
     @PostMapping("/{id}/start")
     public Response startMaintenanceWork(@PathVariable Long id) {
-        return service.performMaintenanceAction(id, "start", null);
+        return service.performMaintenanceAction(id, BusinessAction.START, null);
     }
 
+    @RequirePrivilege(Permission.MAINTENANCE_UPDATE)
     @PostMapping("/{id}/notes")
     public ResponseEntity<Response> addProgressNote(
             @PathVariable Long id, @Valid @RequestBody Note input) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(service.performMaintenanceAction(id, "add-note", input.note()));
+                .body(service.performMaintenanceAction(id, BusinessAction.ADD_NOTE, input.note()));
     }
 
+    @RequirePrivilege(Permission.MAINTENANCE_UPDATE)
     @PostMapping("/{id}/resolve")
     public Response resolveMaintenanceRequest(
             @PathVariable Long id, @Valid @RequestBody Note input) {
-        return service.performMaintenanceAction(id, "resolve", input.note());
+        return service.performMaintenanceAction(id, BusinessAction.RESOLVE, input.note());
     }
 
+    @RequirePrivilege(Permission.MAINTENANCE_UPDATE)
     @PostMapping("/{id}/accept")
     public Response acceptMaintenanceWork(
             @PathVariable Long id, @Valid @RequestBody(required = false) ReasonRequest input) {
         return service.performMaintenanceAction(
-                id, "accept", input == null ? null : input.reason());
+                id, BusinessAction.ACCEPT, input == null ? null : input.reason());
     }
 
+    @RequirePrivilege(Permission.MAINTENANCE_UPDATE)
     @PostMapping("/{id}/reopen")
     public Response reopenMaintenanceRequest(
             @PathVariable Long id, @Valid @RequestBody ReasonRequest input) {
-        return service.performMaintenanceAction(id, "reopen", input.reason());
+        return service.performMaintenanceAction(id, BusinessAction.REOPEN, input.reason());
     }
 }

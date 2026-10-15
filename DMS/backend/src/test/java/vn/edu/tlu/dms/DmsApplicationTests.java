@@ -21,7 +21,7 @@ class DmsApplicationTests {
                         "SELECT count(*) FROM information_schema.tables WHERE table_schema ="
                                 + " 'public' AND table_type = 'BASE TABLE'",
                         Integer.class);
-        // 33 bảng nghiệp vụ (CSDL v0.3) + 2 bảng Spring Session + flyway_schema_history
-        assertThat(tables).isEqualTo(36);
+        // 33 bảng nghiệp vụ + ma trận quyền động + 2 bảng Spring Session + Flyway history.
+        assertThat(tables).isEqualTo(37);
     }
 }

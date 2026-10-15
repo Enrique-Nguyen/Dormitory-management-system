@@ -25,10 +25,12 @@ api.interceptors.request.use(async (config) => {
     } catch {
       keycloak.clearToken()
       queryClient.clear()
-      if (window.location.pathname !== '/login') window.location.assign(loginPath('expired'))
+      if (window.location.pathname !== '/login')
+        window.location.assign(loginPath('expired'))
       throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
     }
-    if (keycloak.token) config.headers.set('Authorization', `Bearer ${keycloak.token}`)
+    if (keycloak.token)
+      config.headers.set('Authorization', `Bearer ${keycloak.token}`)
   }
   return config
 })
@@ -50,8 +52,7 @@ api.interceptors.response.use(
     const code = error.response?.data?.errorCode
     const endpoint = error.config?.url?.split('?')[0]
     // Để hàm logout xử lý phản hồi thu hồi token trước khi chuyển sang Keycloak.
-    if (endpoint === '/auth/logout')
-      return Promise.reject(error)
+    if (endpoint === '/auth/logout') return Promise.reject(error)
 
     if (code === 'PASSWORD_CHANGE_REQUIRED') {
       clearBusinessCache()
@@ -85,6 +86,13 @@ api.interceptors.response.use(
           loginPath(reason, window.location.pathname + window.location.search),
         )
       }
+    } else if (
+      status === 403 &&
+      code === 'FORBIDDEN' &&
+      endpoint !== '/auth/me'
+    ) {
+      // Quyền có thể vừa bị thu hồi; làm mới menu/nút nhưng không tự gửi lại request đã bị từ chối.
+      void queryClient.invalidateQueries({ queryKey: ['me'] })
     }
     // Không tự gửi lại thao tác ghi để tránh tạo dữ liệu trùng ngoài ý muốn.
     return Promise.reject(error)

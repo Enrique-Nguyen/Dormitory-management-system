@@ -7,6 +7,9 @@ import vn.edu.tlu.dms.account.api.ManagementUnitResponse;
 import vn.edu.tlu.dms.account.domain.ManagementUnit;
 import vn.edu.tlu.dms.account.repository.ManagementUnitRepository;
 import vn.edu.tlu.dms.account.service.ManagementUnitService;
+import vn.edu.tlu.dms.common.constants.DmsConstants;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
@@ -34,12 +37,18 @@ public class ManagementUnitServiceImpl
 
     @Override
     protected void checkRead() {
-        guard.requireRole("STUDENT", "STAFF", "TECHNICIAN", "ADMIN");
+        guard.requireRole(Role.STUDENT, Role.STAFF, Role.TECHNICIAN, Role.ADMIN);
     }
 
     @Override
     protected void checkWrite() {
-        guard.requireRole("ADMIN");
+        guard.requireRole(Role.ADMIN);
+    }
+
+    @Override
+    protected void checkPermission(String action) {
+        guard.requirePermission(
+                Resource.MANAGEMENT_UNIT + DmsConstants.PERMISSION_SEPARATOR + action);
     }
 
     @Override

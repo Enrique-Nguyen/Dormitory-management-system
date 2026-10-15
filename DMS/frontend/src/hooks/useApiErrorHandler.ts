@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { App } from 'antd'
 import axios from 'axios'
+import { useCallback } from 'react'
 import { errorMessage } from '../utils/errorMessages'
 
 /**
@@ -11,10 +12,13 @@ export function useApiErrorHandler() {
   const { message } = App.useApp()
   const queryClient = useQueryClient()
 
-  return (error: unknown) => {
-    message.error(errorMessage(error))
-    if (axios.isAxiosError(error) && error.response?.status === 409) {
-      void queryClient.invalidateQueries()
-    }
-  }
+  return useCallback(
+    (error: unknown) => {
+      message.error(errorMessage(error))
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
+        void queryClient.invalidateQueries()
+      }
+    },
+    [message, queryClient],
+  )
 }

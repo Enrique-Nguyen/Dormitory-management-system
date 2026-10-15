@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.registration.service.PriorityCategoryService;
 
 import java.net.URI;
@@ -25,16 +27,24 @@ public class PriorityCategoryController {
         this.service = service;
     }
 
+    // Danh mục dùng chung cho form; chỉ cần một quyền trong danh sách (OR).
+    @RequirePrivilege({
+        Permission.PRIORITY_CATEGORY_READ,
+        Permission.ROOM_APPLICATION_CREATE,
+        Permission.ROOM_APPLICATION_UPDATE
+    })
     @GetMapping("/api/priority-categories")
     public List<PriorityCategoryResponse> getPriorityCategoryList() {
         return service.getAll();
     }
 
+    @RequirePrivilege(Permission.PRIORITY_CATEGORY_READ)
     @GetMapping("/api/priority-categories/{id}")
     public PriorityCategoryResponse get(@PathVariable Long id) {
         return service.getById(id);
     }
 
+    @RequirePrivilege(Permission.PRIORITY_CATEGORY_CREATE)
     @PostMapping("/api/admin/priority-categories")
     public ResponseEntity<PriorityCategoryResponse> createPriorityCategory(
             @Valid @RequestBody PriorityCategoryRequest input) {
@@ -43,12 +53,14 @@ public class PriorityCategoryController {
                 .body(result);
     }
 
+    @RequirePrivilege(Permission.PRIORITY_CATEGORY_UPDATE)
     @PatchMapping("/api/admin/priority-categories/{id}")
     public PriorityCategoryResponse updatePriorityCategory(
             @PathVariable Long id, @Valid @RequestBody PriorityCategoryRequest input) {
         return service.update(id, input);
     }
 
+    @RequirePrivilege(Permission.PRIORITY_CATEGORY_DELETE)
     @DeleteMapping("/api/admin/priority-categories/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.deleteById(id);
