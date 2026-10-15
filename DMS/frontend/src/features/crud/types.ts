@@ -5,13 +5,7 @@ export interface CrudField {
   name: string
   label: string
   kind?:
-    | 'text'
-    | 'number'
-    | 'date'
-    | 'datetime'
-    | 'textarea'
-    | 'select'
-    | 'boolean'
+    'text' | 'number' | 'date' | 'datetime' | 'textarea' | 'select' | 'boolean'
   required?: boolean
   maxLength?: number
   min?: number
@@ -22,6 +16,8 @@ export interface CrudField {
   lookup?: string
   lookupLabel?: string
   multiple?: boolean
+  /** Kiểu JSON của bộ lọc khi control/URL giữ giá trị dạng chuỗi. */
+  filterValueType?: 'string' | 'number' | 'boolean'
   visibleWhen?: { field: string; value: string }
 }
 /** Mỗi màn chỉ khai báo API và trường được ghi; mẫu trang dùng chung không tự suy ra nghiệp vụ. */
@@ -33,12 +29,15 @@ export interface CrudResource {
   writeEndpoint?: string
   detailEndpoint?: string
   fields: CrudField[]
-  /** Bộ lọc GET được màn khai báo; chỉ gửi các tên này, không nhận tên cột tùy ý từ URL. */
+  /** Giá trị gợi ý của form tạo; dữ liệu nghiệp vụ chính thức vẫn do API kiểm tra. */
+  createDefaults?: Record<string, unknown>
+  /** Bộ lọc POST search-by-page; chỉ gửi các tên được màn khai báo. */
   filters?: CrudField[]
   columns: { key: string; label: string }[]
   /** Trường chỉ hiện ở chi tiết, không được đưa vào payload thêm/sửa. */
   detailColumns?: { key: string; label: string }[]
-  localSearch?: boolean
+  /** Dùng dữ liệu danh sách cho form khi tài nguyên không có API chi tiết riêng. */
+  useListRecordForEdit?: boolean
   note?: string
   editStates?: string[]
   deleteLabel?: string

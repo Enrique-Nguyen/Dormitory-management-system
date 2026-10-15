@@ -91,7 +91,7 @@ export const resources: Record<string, CrudResource> = {
     writeEndpoint: '/admin/management-units',
     fields: [text('code', 'Mã đơn vị', true, 20), text('name', 'Tên đơn vị')],
     columns: columns(['code', 'Mã'], ['name', 'Tên đơn vị']),
-    localSearch: true,
+    useListRecordForEdit: true,
   },
   buildings: {
     permission: Resource.BUILDING,
@@ -110,9 +110,10 @@ export const resources: Record<string, CrudResource> = {
       ['managementUnitId', 'Đơn vị'],
       ['depositAmount', 'Mức cọc'],
     ),
-    localSearch: true,
+    useListRecordForEdit: true,
   },
   roomTypes: {
+    createDefaults: { active: true },
     permission: Resource.ROOM_TYPE,
     title: 'Loại phòng',
     endpoint: '/room-types',
@@ -132,7 +133,7 @@ export const resources: Record<string, CrudResource> = {
       ['priceSummer', 'Giá hè'],
       ['active', 'Sử dụng'],
     ),
-    localSearch: true,
+    useListRecordForEdit: true,
   },
   semesters: {
     permission: Resource.SEMESTER,
@@ -152,11 +153,12 @@ export const resources: Record<string, CrudResource> = {
       ['startDate', 'Bắt đầu'],
       ['endDate', 'Kết thúc'],
     ),
-    localSearch: true,
+    useListRecordForEdit: true,
   },
   priorities: {
     permission: Resource.PRIORITY_CATEGORY,
     title: 'Diện ưu tiên',
+    createDefaults: { active: true },
     endpoint: '/priority-categories',
     writeEndpoint: '/admin/priority-categories',
     fields: [
@@ -171,9 +173,10 @@ export const resources: Record<string, CrudResource> = {
       ['weight', 'Trọng số'],
       ['active', 'Sử dụng'],
     ),
-    localSearch: true,
+    useListRecordForEdit: true,
   },
   users: {
+    createDefaults: { role: Role.STAFF },
     permission: Resource.USER,
     title: 'Tài khoản',
     endpoint: '/admin/users',
@@ -192,6 +195,7 @@ export const resources: Record<string, CrudResource> = {
         name: 'locked',
         label: 'Trạng thái tài khoản',
         kind: 'select',
+        filterValueType: 'boolean',
         options: [
           { value: 'false', label: 'Đang mở' },
           { value: 'true', label: 'Đã khóa' },
@@ -306,7 +310,7 @@ export const resources: Record<string, CrudResource> = {
       ['openAt', 'Ngày mở'],
       ['closeAt', 'Ngày đóng'],
     ),
-    localSearch: true,
+    useListRecordForEdit: true,
     note: 'Đợt đã mở chỉ được gia hạn ngày đóng; chỉ xóa đợt chưa mở và chưa có đơn.',
   },
   applications: {
@@ -535,10 +539,11 @@ export const resources: Record<string, CrudResource> = {
       ['unitPrice', 'Đơn giá'],
       ['effectiveFrom', 'Hiệu lực'],
     ),
-    localSearch: true,
+    useListRecordForEdit: true,
     note: 'Giá đã có hiệu lực được lưu lịch sử; thêm giá mới thay cho sửa giá cũ.',
   },
   invoices: {
+    createDefaults: { type: 'ROOM_FEE' },
     permission: Resource.INVOICE,
     title: 'Hóa đơn',
     endpoint: '/invoices',
@@ -628,6 +633,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Người tạo sửa/hủy khi ticket còn mở; các thao tác xử lý chi tiết chưa đưa vào màn CRUD.',
   },
   notifications: {
+    createDefaults: { scope: 'UNIT' },
     permission: Resource.NOTIFICATION,
     title: 'Thông báo đã đăng',
     endpoint: '/notifications/published',
@@ -674,7 +680,7 @@ export const resources: Record<string, CrudResource> = {
       ['isRead', 'Đã đọc'],
     ),
     readOnly: true,
-    localSearch: false,
+    useListRecordForEdit: false,
   },
   profile: {
     permission: Resource.PROFILE,
@@ -732,7 +738,7 @@ export const resources: Record<string, CrudResource> = {
     ),
     idKey: 'key',
     singleton: false,
-    localSearch: true,
+    useListRecordForEdit: true,
     note: 'Chỉ sửa các khóa cấu hình đã có.',
   },
   myRoom: {
@@ -747,6 +753,6 @@ export const resources: Record<string, CrudResource> = {
       ['assignmentKind', 'Loại chỗ'],
     ),
     readOnly: true,
-    localSearch: true,
+    useListRecordForEdit: true,
   },
 }
