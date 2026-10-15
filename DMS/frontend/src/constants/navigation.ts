@@ -38,6 +38,19 @@ export interface NavGroup {
   items: NavItem[]
 }
 
+/** Phân biệt vai trò cần cấu hình quyền với vai trò của người đang đăng nhập. */
+export const rolePermissionLabels = {
+  matrixTitle: 'Ma trận quyền',
+  roleSelector: 'Vai trò đang phân quyền',
+  grantedCount: 'quyền được cấp',
+  adminFullAccess: 'Tự động cấp toàn quyền',
+} as const
+
+export const commonUiLabels = {
+  search: 'Tìm kiếm',
+  emptyData: 'Chưa có dữ liệu',
+} as const
+
 const item = (label: string, path: string, icon?: ComponentType): NavItem => ({
   key: path,
   label,

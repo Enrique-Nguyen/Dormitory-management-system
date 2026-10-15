@@ -1,4 +1,5 @@
-import { Button, Flex } from 'antd'
+import { Button } from './Surface'
+import { Flex } from 'antd'
 import type { ReactNode } from 'react'
 import type { ConfirmOptions } from './ConfirmDialog'
 import { useConfirm } from './useConfirm'
@@ -29,7 +30,9 @@ interface Props {
  */
 export default function ActionBar({ allowedActions, actions }: Props) {
   const { confirm, dialog } = useConfirm()
-  const visible = Object.entries(actions).filter(([code]) => allowedActions.includes(code))
+  const visible = Object.entries(actions).filter(([code]) =>
+    allowedActions.includes(code),
+  )
   if (visible.length === 0) return null
 
   return (
@@ -41,9 +44,19 @@ export default function ActionBar({ allowedActions, actions }: Props) {
             icon={def.icon}
             danger={def.danger}
             loading={def.loading}
-            type={(def.primary ?? (index === visible.length - 1 && !def.danger)) ? 'primary' : 'default'}
+            type={
+              (def.primary ?? (index === visible.length - 1 && !def.danger))
+                ? 'primary'
+                : 'default'
+            }
             onClick={() =>
-              def.confirm ? confirm({ ...def.confirm, danger: def.confirm.danger ?? def.danger, onConfirm: def.onAction }) : def.onAction()
+              def.confirm
+                ? confirm({
+                    ...def.confirm,
+                    danger: def.confirm.danger ?? def.danger,
+                    onConfirm: def.onAction,
+                  })
+                : def.onAction()
             }
           >
             {def.label}

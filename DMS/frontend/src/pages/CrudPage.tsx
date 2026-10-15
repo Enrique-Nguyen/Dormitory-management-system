@@ -1,31 +1,46 @@
 import {
+  Input,
+  InputNumber,
+  SearchInput,
+  Select,
+  Switch,
+  TextArea,
+} from '../components/ui/FormControls'
+import {
+  Button,
+  Card,
+  FilterBar,
+  FormGrid,
+  Modal,
+} from '../components/ui/Surface'
+import Table from '../components/ui/DataTable'
+import {
   Action,
   Permission,
   Role,
   permissionFor,
 } from '../constants/authorization'
+import {
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  GlobalOutlined,
+  KeyOutlined,
+  UnlockOutlined,
+} from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   App,
   Alert,
-  Button,
-  Card,
-  Descriptions,
-  Drawer,
-  Empty,
+  Flex,
   Form,
-  Input,
-  InputNumber,
-  Modal,
   Result,
-  Select,
   Space,
-  Switch,
-  Table,
   Tag,
+  Tooltip,
   Typography,
 } from 'antd'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   useLocation,
   useNavigate,
@@ -139,7 +154,7 @@ function LookupInput({
       name={field.name}
       rules={[
         {
-          required: field.required,
+          required: !disabled && field.required,
           message: `Chọn ${field.label.toLowerCase()}`,
         },
       ]}
@@ -165,9 +180,9 @@ function renderCrudInput(field: CrudField) {
     case 'number':
       return (
         <InputNumber
-          style={{ width: '100%' }}
           min={field.min ?? 0}
           max={field.max}
+          style={{ width: '100%' }}
         />
       )
     case 'date':
@@ -175,7 +190,7 @@ function renderCrudInput(field: CrudField) {
     case 'datetime':
       return <Input type="datetime-local" />
     case 'textarea':
-      return <Input.TextArea rows={4} maxLength={field.maxLength} showCount />
+      return <TextArea rows={4} maxLength={field.maxLength} showCount />
     case 'boolean':
       return <Switch />
     default:
@@ -195,10 +210,20 @@ export default function CrudPage({ resource }: { resource: string }) {
   const query = readCrudQuery(searchParams, resource, config)
   const { search, page, size, filters: activeFilters } = query
   const handleApiError = useApiErrorHandler()
-  const [editing, setEditing] = useState<CrudRecord | null | undefined>(
-    undefined,
-  )
-  const [detail, setDetail] = useState<CrudRecord | undefined>()
+  const [modalMode, setModalMode] = useState<
+    'create' | 'edit' | 'view' | null
+  >(null)
+  const [activeRecord, setActiveRecord] = useState<CrudRecord | null>(null)
+  const isViewMode = modalMode === 'view'
+  const editing =
+    modalMode === 'edit'
+      ? activeRecord
+      : modalMode === 'create'
+        ? null
+        : modalMode === 'view'
+          ? activeRecord
+          : undefined
+  const detail = activeRecord ?? undefined
   const [busy, setBusy] = useState(false)
   const [form] = Form.useForm()
   const [filterForm] = Form.useForm()
@@ -305,9 +330,10 @@ export default function CrudPage({ resource }: { resource: string }) {
         { replace: true },
       )
   }, [total, size, page, resource, config, isFetching, error, setSearchParams])
-  const baseFields = editing
-    ? (config.editFields ?? config.fields).filter((field) => !field.createOnly)
-    : (config.createFields ?? config.fields).filter((field) => !field.editOnly)
+  const baseFields =
+    modalMode === 'create'
+      ? (config.createFields ?? config.fields).filter((field) => !field.editOnly)
+      : (config.editFields ?? config.fields).filter((field) => !field.createOnly)
   const fields = baseFields
     .filter(
       (field) =>
@@ -352,13 +378,77 @@ export default function CrudPage({ resource }: { resource: string }) {
     (field.visibleWhen.field === 'scope' ? scopeValue : typeValue) ===
       field.visibleWhen.value
 
+  const populateForm = useCallback(
+    (selected: CrudRecord) => {
+      const initial = { ...selected }
+      for (const field of config.fields) {
+        let val = initial[field.name]
+        if (val == null && field.name.endsWith('Id')) {
+          const objKey = field.name.slice(0, -2)
+          const objVal = initial[objKey]
+          if (
+            objVal &&
+            typeof objVal === 'object' &&
+            'id' in (objVal as Record<string, unknown>)
+          ) {
+            val = (objVal as Record<string, unknown>).id
+            initial[field.name] = val
+          }
+        }
+        if (val != null) {
+          if (field.kind === 'datetime') {
+            initial[field.name] = toLocalDateTime(val)
+          } else if (field.kind === 'date') {
+            if (typeof val === 'string' && val.includes('T')) {
+              initial[field.name] = val.slice(0, 10)
+            }
+          } else if (
+            field.kind === 'select' &&
+            typeof val === 'object' &&
+            !Array.isArray(val) &&
+            'id' in (val as Record<string, unknown>)
+          ) {
+            initial[field.name] = (val as Record<string, unknown>).id
+          }
+        }
+      }
+      if (
+        ['myApplications', 'applications'].includes(resource) &&
+        Array.isArray(selected.priorities)
+      ) {
+        initial.priorityCategoryIds = selected.priorities.map(
+          (p) => (p as CrudRecord).categoryId,
+        )
+      }
+      form.setFieldsValue(initial)
+    },
+    [config.fields, resource, form],
+  )
+
+  function closeModal() {
+    setModalMode(null)
+    setActiveRecord(null)
+    form.resetFields()
+    if (routeId) {
+      navigate(
+        { pathname: '..', search: location.search },
+        { relative: 'path' },
+      )
+    }
+  }
+
   useEffect(() => {
     if (!routeId || !canRead) return
     let cancelled = false
     api
       .get(`${detailEndpoint}/${routeId}`)
       .then((response) => {
-        if (!cancelled) setDetail(response.data as CrudRecord)
+        if (!cancelled) {
+          const item = response.data as CrudRecord
+          setActiveRecord(item)
+          setModalMode('view')
+          populateForm(item)
+        }
       })
       .catch((e) => {
         if (!cancelled) handleApiError(e)
@@ -366,7 +456,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     return () => {
       cancelled = true
     }
-  }, [routeId, detailEndpoint, handleApiError, canRead])
+  }, [routeId, detailEndpoint, handleApiError, canRead, populateForm])
 
   /** Quyền thao tác không thay thế điều kiện trạng thái hoặc người sở hữu bản ghi. */
   function canChangeRow(row: CrudRecord) {
@@ -473,7 +563,8 @@ export default function CrudPage({ resource }: { resource: string }) {
     if (row ? !canEditRow(row) : !canCreate) return
     form.resetFields()
     if (!row) {
-      setEditing(null)
+      setActiveRecord(null)
+      setModalMode('create')
       form.setFieldsValue({
         active: true,
         role: Role.STAFF,
@@ -489,19 +580,9 @@ export default function CrudPage({ resource }: { resource: string }) {
           ? row
           : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
               .data as CrudRecord)
-      setEditing(selected)
-      const initial = { ...selected }
-      for (const field of config.fields)
-        if (field.kind === 'datetime' && initial[field.name])
-          initial[field.name] = toLocalDateTime(initial[field.name])
-      if (
-        ['myApplications', 'applications'].includes(resource) &&
-        Array.isArray(selected.priorities)
-      )
-        initial.priorityCategoryIds = selected.priorities.map(
-          (p) => (p as CrudRecord).categoryId,
-        )
-      form.setFieldsValue(initial)
+      setActiveRecord(selected)
+      setModalMode('edit')
+      populateForm(selected)
     } catch (e) {
       handleApiError(e)
     }
@@ -562,7 +643,7 @@ export default function CrudPage({ resource }: { resource: string }) {
         !showTemporaryPassword(result, payload.username ?? payload.studentCode)
       )
         void message.success('Đã lưu')
-      setEditing(undefined)
+      closeModal()
       await refresh()
     } catch (e) {
       form.setFields(
@@ -583,7 +664,7 @@ export default function CrudPage({ resource }: { resource: string }) {
       title: `${config.deleteLabel ?? 'Xóa'} bản ghi này?`,
       content:
         config.deleteAction === 'lock' ? (
-          <Input.TextArea
+          <TextArea
             placeholder="Lý do khóa (ít nhất 5 ký tự)"
             onChange={(event) => {
               reason = event.target.value
@@ -691,21 +772,23 @@ export default function CrudPage({ resource }: { resource: string }) {
   }
   async function showDetail(row: CrudRecord) {
     try {
-      setDetail(
+      const selected =
         config.singleton ||
-          config.localSearch ||
-          resource === 'configs' ||
-          resource === 'inbox' ||
-          resource === 'storage' ||
-          resource === 'myRoom' ||
-          resource === 'audit'
+        config.localSearch ||
+        resource === 'configs' ||
+        resource === 'inbox' ||
+        resource === 'storage' ||
+        resource === 'myRoom' ||
+        resource === 'audit'
           ? row
           : resource === 'deposits'
             ? ((await api.get(`/contracts/${row.id}/deposit`))
                 .data as CrudRecord)
             : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
-                .data as CrudRecord),
-      )
+                .data as CrudRecord)
+      setActiveRecord(selected)
+      setModalMode('view')
+      populateForm(selected)
     } catch (e) {
       handleApiError(e)
     }
@@ -731,7 +814,7 @@ export default function CrudPage({ resource }: { resource: string }) {
         action === 'start' ? (
           'Cập nhật trạng thái ticket được giao.'
         ) : (
-          <Input.TextArea
+          <TextArea
             placeholder="Ghi chú (từ 5 đến 500 ký tự)"
             maxLength={500}
             onChange={(event) => {
@@ -747,13 +830,13 @@ export default function CrudPage({ resource }: { resource: string }) {
           throw new Error('Thiếu ghi chú')
         }
         try {
-          setDetail(
-            (await writeCrudRecord(
-              `/maintenance-requests/${target}/${action === 'add-note' ? 'notes' : action}`,
-              'post',
-              action === 'start' ? undefined : { note: note.trim() },
-            )) as CrudRecord,
-          )
+          const updated = (await writeCrudRecord(
+            `/maintenance-requests/${target}/${action === 'add-note' ? 'notes' : action}`,
+            'post',
+            action === 'start' ? undefined : { note: note.trim() },
+          )) as CrudRecord
+          setActiveRecord(updated)
+          populateForm(updated)
           await refresh()
         } catch (failure) {
           handleApiError(failure)
@@ -762,14 +845,6 @@ export default function CrudPage({ resource }: { resource: string }) {
       },
     })
   }
-  const detailFields = [
-    ...config.columns,
-    ...(config.detailColumns ?? []),
-    ...config.fields.map((field) => ({ key: field.name, label: field.label })),
-  ].filter(
-    (item, index, list) =>
-      list.findIndex((other) => other.key === item.key) === index,
-  )
 
   if (!canRead)
     return (
@@ -818,61 +893,67 @@ export default function CrudPage({ resource }: { resource: string }) {
       )}
       <Card>
         {!config.singleton && (
-          <Input.Search
-            aria-label={`Tìm kiếm ${config.title.toLowerCase()}`}
-            placeholder="Nhập từ khóa tìm kiếm"
-            allowClear
-            enterButton="Tìm kiếm"
-            key={`${resource}:${search}`}
-            defaultValue={search}
-            onSearch={(value) => {
-              changeQuery({ search: value.trim(), page: 1 })
-            }}
-            style={{ maxWidth: 480, marginBottom: 16 }}
-          />
-        )}
-        {!!config.filters?.length && (
-          <Form
-            form={filterForm}
-            layout="vertical"
-            onFinish={(values) => {
-              const filters: Record<string, string> = {}
-              for (const field of config.filters ?? [])
-                if (values[field.name] != null && values[field.name] !== '')
-                  filters[field.name] = String(values[field.name]).trim()
-              changeQuery({ filters, page: 1 })
-            }}
-          >
-            <Space wrap align="start" style={{ marginBottom: 16 }}>
-              {config.filters.map((field) => (
-                <Form.Item
-                  key={field.name}
-                  label={field.label}
-                  name={field.kind === 'select' ? undefined : field.name}
-                  style={{ minWidth: 180, marginBottom: 0 }}
-                >
-                  {field.kind === 'select' ? (
-                    <LookupInput field={{ ...field, required: false }} />
-                  ) : (
-                    renderCrudInput(field)
-                  )}
-                </Form.Item>
-              ))}
-              <Space style={{ marginTop: 30 }}>
-                <Button type="primary" htmlType="submit" loading={isFetching}>
-                  Áp dụng bộ lọc
-                </Button>
-                <Button
-                  onClick={() => {
-                    filterForm.resetFields()
-                    changeQuery({ filters: {}, search: '', page: 1 })
-                  }}
-                >
-                  Xóa bộ lọc
-                </Button>
-              </Space>
-            </Space>
-          </Form>
+          <div className="dms-toolbar">
+            {!config.singleton && (
+              <SearchInput
+                aria-label={`Tìm kiếm ${config.title.toLowerCase()}`}
+                placeholder="Nhập từ khóa tìm kiếm"
+                allowClear
+                enterButton="Tìm kiếm"
+                key={`${resource}:${search}`}
+                defaultValue={search}
+                onSearch={(value) => {
+                  changeQuery({ search: value.trim(), page: 1 })
+                }}
+              />
+            )}
+            {!!config.filters?.length && (
+              <Form
+                form={filterForm}
+                layout="vertical"
+                onFinish={(values) => {
+                  const filters: Record<string, string> = {}
+                  for (const field of config.filters ?? [])
+                    if (values[field.name] != null && values[field.name] !== '')
+                      filters[field.name] = String(values[field.name]).trim()
+                  changeQuery({ filters, page: 1 })
+                }}
+              >
+                <FilterBar>
+                  {config.filters.map((field) => (
+                    <Form.Item
+                      key={field.name}
+                      label={field.label}
+                      name={field.kind === 'select' ? undefined : field.name}
+                    >
+                      {field.kind === 'select' ? (
+                        <LookupInput field={{ ...field, required: false }} />
+                      ) : (
+                        renderCrudInput(field)
+                      )}
+                    </Form.Item>
+                  ))}
+                  <div className="dms-filter-actions">
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={isFetching}
+                    >
+                      Áp dụng bộ lọc
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        filterForm.resetFields()
+                        changeQuery({ filters: {}, search: '', page: 1 })
+                      }}
+                    >
+                      Xóa bộ lọc
+                    </Button>
+                  </div>
+                </FilterBar>
+              </Form>
+            )}
+          </div>
         )}
         {error ? (
           <Alert
@@ -893,8 +974,6 @@ export default function CrudPage({ resource }: { resource: string }) {
             loading={isLoading}
             rowKey={(row) => String(row[idKey] ?? JSON.stringify(row))}
             dataSource={rows}
-            scroll={{ x: 780 }}
-            locale={{ emptyText: <Empty description="Chưa có dữ liệu" /> }}
             pagination={
               config.singleton
                 ? false
@@ -918,6 +997,7 @@ export default function CrudPage({ resource }: { resource: string }) {
               ...config.columns.map((column) => ({
                 title: column.label,
                 key: column.key,
+                minWidth: 150,
                 render: (_: unknown, row: CrudRecord) => (
                   <span>{display(readValue(row, column.key))}</span>
                 ),
@@ -925,60 +1005,81 @@ export default function CrudPage({ resource }: { resource: string }) {
               {
                 title: 'Thao tác',
                 key: 'actions',
-                fixed: 'right',
-                width: canWrite ? 310 : 95,
+                width: canWrite ? 150 : 64,
                 render: (_: unknown, row: CrudRecord) => (
-                  <Space wrap>
-                    <Button
-                      size="small"
-                      onClick={() => {
-                        void showDetail(row)
-                      }}
-                    >
-                      Xem
-                    </Button>
-                    {canEditRow(row) && (
+                  <Space size={4} wrap={false}>
+                    <Tooltip title="Xem chi tiết">
                       <Button
                         size="small"
+                        icon={<EyeOutlined />}
                         onClick={() => {
-                          void openEditor(row)
+                          void showDetail(row)
                         }}
-                      >
-                        Sửa
-                      </Button>
+                        aria-label="Xem chi tiết"
+                      />
+                    </Tooltip>
+                    {canEditRow(row) && (
+                      <Tooltip title="Sửa">
+                        <Button
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={() => {
+                            void openEditor(row)
+                          }}
+                          aria-label="Sửa"
+                        />
+                      </Tooltip>
                     )}
                     {canDeleteRow(row) && (
-                      <Button
-                        size="small"
-                        danger
-                        onClick={() => deleteRecord(row)}
-                      >
-                        {config.deleteLabel ?? 'Xóa'}
-                      </Button>
+                      <Tooltip title={config.deleteLabel ?? 'Xóa'}>
+                        <Button
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => deleteRecord(row)}
+                          aria-label={config.deleteLabel ?? 'Xóa'}
+                        />
+                      </Tooltip>
                     )}
                     {canResetPassword(row) && (
-                      <Button size="small" onClick={() => resetPassword(row)}>
-                        Reset mật khẩu
-                      </Button>
+                      <Tooltip title="Đặt lại mật khẩu">
+                        <Button
+                          size="small"
+                          icon={<KeyOutlined />}
+                          onClick={() => resetPassword(row)}
+                          aria-label="Đặt lại mật khẩu"
+                        />
+                      </Tooltip>
                     )}
                     {resource === 'users' &&
                       hasPermission(me, Permission.USER_UNLOCK) &&
                       row.locked === true && (
-                        <Button size="small" onClick={() => unlockAccount(row)}>
-                          Mở khóa
-                        </Button>
+                        <Tooltip title="Mở khóa tài khoản">
+                          <Button
+                            size="small"
+                            icon={<UnlockOutlined />}
+                            onClick={() => unlockAccount(row)}
+                            aria-label="Mở khóa tài khoản"
+                          />
+                        </Tooltip>
                       )}
                     {resource === 'users' &&
                       row.role === Role.STAFF &&
                       hasPermission(me, Permission.USER_CROSS_UNIT_ACCESS) && (
-                        <Button
-                          size="small"
-                          onClick={() => changeCrossUnitAccess(row)}
+                        <Tooltip
+                          title={
+                            row.crossUnitAccess
+                              ? 'Thu hồi quyền đọc tổng hợp'
+                              : 'Cấp quyền đọc tổng hợp'
+                          }
                         >
-                          {row.crossUnitAccess
-                            ? 'Thu hồi đọc tổng hợp'
-                            : 'Cấp đọc tổng hợp'}
-                        </Button>
+                          <Button
+                            size="small"
+                            icon={<GlobalOutlined />}
+                            onClick={() => changeCrossUnitAccess(row)}
+                            aria-label="Quyền đọc tổng hợp"
+                          />
+                        </Tooltip>
                       )}
                   </Space>
                 ),
@@ -988,116 +1089,169 @@ export default function CrudPage({ resource }: { resource: string }) {
         )}
       </Card>
       <Modal
-        title={`${editing ? 'Sửa' : 'Thêm'} ${config.title.toLowerCase()}`}
-        open={editing !== undefined}
+        title={
+          modalMode === 'view'
+            ? `Chi tiết ${config.title.toLowerCase()}`
+            : `${modalMode === 'edit' ? 'Sửa' : 'Thêm'} ${config.title.toLowerCase()}`
+        }
+        open={modalMode !== null}
         destroyOnHidden
-        onCancel={() => setEditing(undefined)}
-        onOk={() => form.submit()}
+        onCancel={closeModal}
         confirmLoading={busy}
         closable={!busy}
         mask={{ closable: !busy }}
         cancelButtonProps={{ disabled: busy }}
         okText="Lưu"
         cancelText="Đóng"
-        width={600}
+        width={780}
+        footer={
+          modalMode === 'view' ? (
+            <Flex
+              justify="space-between"
+              align="center"
+              style={{ width: '100%' }}
+            >
+              <Space>
+                {activeRecord && canDeleteRow(activeRecord) && (
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => {
+                      const rowToDelete = activeRecord
+                      closeModal()
+                      deleteRecord(rowToDelete)
+                    }}
+                  >
+                    {config.deleteLabel ?? 'Xóa'}
+                  </Button>
+                )}
+              </Space>
+              <Space>
+                <Button onClick={closeModal}>Đóng</Button>
+                {activeRecord && canEditRow(activeRecord) && (
+                  <Button
+                    type="primary"
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      setModalMode('edit')
+                    }}
+                  >
+                    Chuyển sang sửa
+                  </Button>
+                )}
+              </Space>
+            </Flex>
+          ) : (
+            <Space>
+              <Button onClick={closeModal} disabled={busy}>
+                Đóng
+              </Button>
+              <Button
+                type="primary"
+                loading={busy}
+                onClick={() => form.submit()}
+              >
+                Lưu
+              </Button>
+            </Space>
+          )
+        }
       >
         <Form
           form={form}
           layout="vertical"
+          disabled={isViewMode}
           onFinish={(values) => {
             submitRecord(values)
           }}
           preserve={false}
         >
-          {fields
-            .filter(visible)
-            .filter(
-              (field) =>
-                !(
-                  resource === 'maintenance' &&
-                  role === Role.STUDENT &&
-                  field.name === 'roomId'
-                ),
-            )
-            .map((field) =>
-              field.kind === 'select' ? (
-                <Form.Item
-                  key={field.name}
-                  label={field.label}
-                  required={field.required}
-                >
-                  <LookupInput
-                    field={field}
-                    disabled={
-                      resource === 'users' &&
-                      field.name === 'role' &&
-                      editing?.id === me?.id
+          <FormGrid
+            className={
+              fields.filter(visible).length < 3
+                ? 'dms-form-grid-single'
+                : undefined
+            }
+          >
+            {fields
+              .filter(visible)
+              .filter(
+                (field) =>
+                  !(
+                    resource === 'maintenance' &&
+                    role === Role.STUDENT &&
+                    field.name === 'roomId'
+                  ),
+              )
+              .map((field) =>
+                field.kind === 'select' ? (
+                  <Form.Item
+                    key={field.name}
+                    label={field.label}
+                    required={!isViewMode && field.required}
+                  >
+                    <LookupInput
+                      field={field}
+                      disabled={
+                        isViewMode ||
+                        (resource === 'users' &&
+                          field.name === 'role' &&
+                          editing?.id === me?.id)
+                      }
+                    />
+                  </Form.Item>
+                ) : (
+                  <Form.Item
+                    key={field.name}
+                    name={field.name}
+                    label={field.label}
+                    className={
+                      field.kind === 'textarea'
+                        ? 'dms-form-span-full'
+                        : undefined
                     }
-                  />
-                </Form.Item>
-              ) : (
-                <Form.Item
-                  key={field.name}
-                  name={field.name}
-                  label={field.label}
-                  valuePropName={field.kind === 'boolean' ? 'checked' : 'value'}
-                  rules={[
-                    {
-                      required: field.required,
-                      whitespace:
-                        field.required &&
-                        !['number', 'boolean', 'date', 'datetime'].includes(
-                          field.kind ?? '',
-                        ),
-                      message: `Nhập ${field.label.toLowerCase()}`,
-                    },
-                    ...(field.maxLength
-                      ? [
-                          {
-                            max: field.maxLength,
-                            message: `Tối đa ${field.maxLength} ký tự`,
-                          },
-                        ]
-                      : []),
-                  ]}
-                >
-                  {renderCrudInput(field)}
-                </Form.Item>
-              ),
-            )}
+                    valuePropName={
+                      field.kind === 'boolean' ? 'checked' : 'value'
+                    }
+                    rules={
+                      isViewMode
+                        ? []
+                        : [
+                            {
+                              required: field.required,
+                              whitespace:
+                                field.required &&
+                                !['number', 'boolean', 'date', 'datetime'].includes(
+                                  field.kind ?? '',
+                                ),
+                              message: `Nhập ${field.label.toLowerCase()}`,
+                            },
+                            ...(field.maxLength
+                              ? [
+                                  {
+                                    max: field.maxLength,
+                                    message: `Tối đa ${field.maxLength} ký tự`,
+                                  },
+                                ]
+                              : []),
+                          ]
+                    }
+                  >
+                    {renderCrudInput(field)}
+                  </Form.Item>
+                ),
+              )}
+          </FormGrid>
         </Form>
-      </Modal>
-      <Drawer
-        title={`Chi tiết ${config.title.toLowerCase()}`}
-        open={!!detail}
-        size={640}
-        onClose={() => {
-          setDetail(undefined)
-          if (routeId)
-            navigate(
-              { pathname: '..', search: location.search },
-              { relative: 'path' },
-            )
-        }}
-      >
-        {detail && (
+        {isViewMode && activeRecord && (
           <>
-            <Descriptions
-              column={1}
-              bordered
-              items={detailFields.map((item) => ({
-                key: item.key,
-                label: item.label,
-                children: display(readValue(detail, item.key)),
-              }))}
-            />
             {resource === 'maintenance' &&
               hasPermission(me, Permission.MAINTENANCE_UPDATE) &&
-              Array.isArray(detail.allowedActions) && (
+              Array.isArray(activeRecord.allowedActions) && (
                 <Space wrap style={{ marginTop: 16 }}>
                   {['start', 'add-note', 'resolve']
                     .filter((action) =>
-                      (detail.allowedActions as string[]).includes(action),
+                      (activeRecord.allowedActions as string[]).includes(action),
                     )
                     .map((action) => (
                       <Button
@@ -1115,21 +1269,23 @@ export default function CrudPage({ resource }: { resource: string }) {
                     ))}
                 </Space>
               )}
-            {resource === 'rooms' && Array.isArray(detail.beds) && (
+            {resource === 'rooms' && Array.isArray(activeRecord.beds) && (
               <BedCrudPanel
-                roomId={Number(detail.id)}
-                beds={detail.beds as CrudRecord[]}
+                roomId={Number(activeRecord.id)}
+                beds={activeRecord.beds as CrudRecord[]}
                 reload={async () => {
-                  setDetail(
-                    (await api.get(`/rooms/${detail.id}`)).data as CrudRecord,
-                  )
+                  const updated = (
+                    await api.get(`/rooms/${activeRecord.id}`)
+                  ).data as CrudRecord
+                  setActiveRecord(updated)
+                  populateForm(updated)
                   await refresh()
                 }}
               />
             )}
             {['items', 'transactions', 'timeline'].map(
               (key) =>
-                Array.isArray(detail[key]) && (
+                Array.isArray(activeRecord[key]) && (
                   <Card
                     key={key}
                     title={
@@ -1141,7 +1297,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                     }
                     style={{ marginTop: 16 }}
                   >
-                    {(detail[key] as CrudRecord[]).map((item, index) => (
+                    {(activeRecord[key] as CrudRecord[]).map((item, index) => (
                       <Typography.Paragraph key={index}>
                         {display(item)}
                       </Typography.Paragraph>
@@ -1151,7 +1307,7 @@ export default function CrudPage({ resource }: { resource: string }) {
             )}
           </>
         )}
-      </Drawer>
+      </Modal>
     </>
   )
 }
@@ -1231,40 +1387,46 @@ function BedCrudPanel({
           { title: 'Người ở', dataIndex: 'occupant', render: display },
           {
             title: 'Thao tác',
+            key: 'actions',
+            width: 100,
             render: (_, bed) => (
-              <Space>
+              <Space size={4} wrap={false}>
                 {canUpdate && (
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      form.setFieldsValue({ code: bed.code })
-                      setEditing(bed)
-                    }}
-                  >
-                    Sửa
-                  </Button>
+                  <Tooltip title="Sửa mã giường">
+                    <Button
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => {
+                        form.setFieldsValue({ code: bed.code })
+                        setEditing(bed)
+                      }}
+                      aria-label="Sửa mã giường"
+                    />
+                  </Tooltip>
                 )}
                 {canDelete && (
-                  <Button
-                    size="small"
-                    danger
-                    onClick={() =>
-                      modal.confirm({
-                        title: 'Xóa giường chưa có lịch sử?',
-                        onOk: async () => {
-                          try {
-                            await writeCrudRecord(`/beds/${bed.id}`, 'delete')
-                            await reload()
-                          } catch (e) {
-                            handleApiError(e)
-                            throw e
-                          }
-                        },
-                      })
-                    }
-                  >
-                    Xóa
-                  </Button>
+                  <Tooltip title="Xóa giường">
+                    <Button
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() =>
+                        modal.confirm({
+                          title: 'Xóa giường chưa có lịch sử?',
+                          onOk: async () => {
+                            try {
+                              await writeCrudRecord(`/beds/${bed.id}`, 'delete')
+                              await reload()
+                            } catch (e) {
+                              handleApiError(e)
+                              throw e
+                            }
+                          },
+                        })
+                      }
+                      aria-label="Xóa giường"
+                    />
+                  </Tooltip>
                 )}
               </Space>
             ),

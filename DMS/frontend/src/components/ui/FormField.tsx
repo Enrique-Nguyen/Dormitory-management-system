@@ -22,20 +22,30 @@ interface Props {
  * Nhãn + ô nhập + lỗi theo UI 25A: mỗi input có <label>, trường bắt buộc có dấu * và chữ "bắt buộc" cho trình đọc
  * màn hình, lỗi gắn với ô bằng aria-describedby và đọc ngay bằng role="alert".
  */
-export default function FormField({ label, required, error, hint, children }: Props) {
+export default function FormField({
+  label,
+  required,
+  error,
+  hint,
+  children,
+}: Props) {
   const id = useId()
   const errorId = `${id}-error`
   const hintId = `${id}-hint`
-  const describedBy = [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
+  const describedBy =
+    [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') ||
+    undefined
 
   return (
-    <div style={{ marginBottom: 16 }}>
-      <label htmlFor={id} style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 13, color: 'var(--color-heading)' }}>
+    <div className="dms-field">
+      <label htmlFor={id} className="dms-field-label">
         {label}
         {required && (
           <>
             {' '}
-            <span aria-hidden="true" style={{ color: 'var(--color-danger)', fontWeight: 'bold' }}>*</span>
+            <span aria-hidden="true" className="dms-field-required">
+              *
+            </span>
             <span className="sr-only"> (bắt buộc)</span>
           </>
         )}
@@ -48,12 +58,12 @@ export default function FormField({ label, required, error, hint, children }: Pr
         'aria-describedby': describedBy,
       })}
       {hint && (
-        <div id={hintId} style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 4 }}>
+        <div id={hintId} className="dms-field-hint">
           {hint}
         </div>
       )}
       {error && (
-        <div id={errorId} role="alert" style={{ color: 'var(--color-danger)', fontSize: 12, fontWeight: 500, marginTop: 4 }}>
+        <div id={errorId} role="alert" className="dms-field-error">
           {error}
         </div>
       )}

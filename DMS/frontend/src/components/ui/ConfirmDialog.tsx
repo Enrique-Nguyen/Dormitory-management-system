@@ -1,5 +1,7 @@
+import { TextArea } from './FormControls'
+import { Button, Modal } from './Surface'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Button, Flex, Input, Modal, Typography } from 'antd'
+import { Flex, Typography } from 'antd'
 import { useState, type ReactNode } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -7,7 +9,11 @@ import FormField from './FormField'
 
 // Rule 04 (hành động không hoàn tác phải confirm) và Rule 05 (lý do bắt buộc). API Spec 2.7: 5–500 ký tự sau khi trim.
 const reasonSchema = z.object({
-  reason: z.string().trim().min(5, 'Lý do cần ít nhất 5 ký tự.').max(500, 'Lý do tối đa 500 ký tự.'),
+  reason: z
+    .string()
+    .trim()
+    .min(5, 'Lý do cần ít nhất 5 ký tự.')
+    .max(500, 'Lý do tối đa 500 ký tự.'),
 })
 type ReasonForm = z.infer<typeof reasonSchema>
 
@@ -32,7 +38,16 @@ interface BodyProps extends Omit<Props, 'open' | 'title'> {
   setSubmitting: (value: boolean) => void
 }
 
-function Body({ description, okText = 'Xác nhận', danger, reasonRequired, onConfirm, onClose, submitting, setSubmitting }: BodyProps) {
+function Body({
+  description,
+  okText = 'Xác nhận',
+  danger,
+  reasonRequired,
+  onConfirm,
+  onClose,
+  submitting,
+  setSubmitting,
+}: BodyProps) {
   const {
     control,
     handleSubmit,
@@ -56,14 +71,24 @@ function Body({ description, okText = 'Xác nhận', danger, reasonRequired, onC
 
   return (
     <form onSubmit={submit} noValidate>
-      {description && <Typography.Paragraph>{description}</Typography.Paragraph>}
+      {description && (
+        <Typography.Paragraph>{description}</Typography.Paragraph>
+      )}
       {reasonRequired && (
         <FormField label="Lý do" required error={errors.reason?.message}>
           {(control_) => (
             <Controller
               name="reason"
               control={control}
-              render={({ field }) => <Input.TextArea {...field} {...control_} rows={3} maxLength={500} placeholder="Nhập lý do..." />}
+              render={({ field }) => (
+                <TextArea
+                  {...field}
+                  {...control_}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Nhập lý do..."
+                />
+              )}
             />
           )}
         </FormField>
@@ -72,7 +97,12 @@ function Body({ description, okText = 'Xác nhận', danger, reasonRequired, onC
         <Button onClick={onClose} disabled={submitting}>
           Hủy
         </Button>
-        <Button type="primary" danger={danger} htmlType="submit" loading={submitting}>
+        <Button
+          type="primary"
+          danger={danger}
+          htmlType="submit"
+          loading={submitting}
+        >
           {okText}
         </Button>
       </Flex>
@@ -81,7 +111,12 @@ function Body({ description, okText = 'Xác nhận', danger, reasonRequired, onC
 }
 
 /** Dialog xác nhận, tùy chọn bắt buộc nhập lý do. Esc đóng, focus trap và trả focus do antd Modal xử lý. */
-export default function ConfirmDialog({ open, title, onClose, ...rest }: Props) {
+export default function ConfirmDialog({
+  open,
+  title,
+  onClose,
+  ...rest
+}: Props) {
   // Đang gửi thì không cho đóng (Esc, nút X): nếu đóng giữa chừng, lỗi 409 không còn dialog để giữ mở
   const [submitting, setSubmitting] = useState(false)
   return (
@@ -95,7 +130,12 @@ export default function ConfirmDialog({ open, title, onClose, ...rest }: Props) 
       destroyOnHidden
       maskClosable={false}
     >
-      <Body {...rest} onClose={onClose} submitting={submitting} setSubmitting={setSubmitting} />
+      <Body
+        {...rest}
+        onClose={onClose}
+        submitting={submitting}
+        setSubmitting={setSubmitting}
+      />
     </Modal>
   )
 }

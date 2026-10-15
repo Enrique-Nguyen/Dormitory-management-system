@@ -1,8 +1,14 @@
-import { Alert, Button, Spin, Typography } from 'antd'
+import { Button } from '../components/ui/Surface'
+import { Alert, Spin, Typography } from 'antd'
 import { useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router'
 import { useMe } from '../features/account/useMe'
-import { keycloak, loginWithKeycloak, logout, loginLandingPath } from '../services/api/auth'
+import {
+  keycloak,
+  loginWithKeycloak,
+  logout,
+  loginLandingPath,
+} from '../services/api/auth'
 import { errorMessage } from '../utils/errorMessages'
 
 /** Mật khẩu chỉ nhập tại Keycloak; DMS không nhận mật khẩu qua form/API đăng nhập. */
@@ -13,13 +19,17 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null)
   const redirect = params.get('redirect')
 
-  if (me && !error) return <Navigate to={loginLandingPath(me, redirect)} replace />
+  if (me && !error)
+    return <Navigate to={loginLandingPath(me, redirect)} replace />
 
   async function signIn() {
     setBusy(true)
     try {
-      const next = redirect && /^\/(student|staff|technician|admin)(\/|\?|$)/.test(redirect)
-        ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'
+      const next =
+        redirect &&
+        /^\/(student|staff|technician|admin)(\/|\?|$)/.test(redirect)
+          ? `/login?redirect=${encodeURIComponent(redirect)}`
+          : '/login'
       await loginWithKeycloak(next)
     } catch (failure) {
       setLoginError(errorMessage(failure))
@@ -33,19 +43,34 @@ export default function LoginPage() {
         <div className="dms-auth-header">
           <div className="dms-auth-logo-badge">DMS</div>
           <h1 className="dms-auth-title">Đăng nhập hệ thống</h1>
-          <p className="dms-auth-subtitle">Hệ thống Quản lý Ký túc xá · Đại học Thủy Lợi</p>
+          <p className="dms-auth-subtitle">
+            Hệ thống Quản lý Ký túc xá · Đại học Thủy Lợi
+          </p>
         </div>
         <p>Bấm đăng nhập để tiếp tục tới trang xác thực của hệ thống.</p>
         {isPending && <Spin style={{ display: 'block', marginBottom: 16 }} />}
         {(loginError || (error && keycloak.authenticated)) && (
-          <Alert showIcon type="error" style={{ marginBottom: 16 }}
-            title={loginError || errorMessage(error)} />
+          <Alert
+            showIcon
+            type="error"
+            style={{ marginBottom: 16 }}
+            title={loginError || errorMessage(error)}
+          />
         )}
         {params.get('reason') === 'expired' && (
-          <Alert showIcon type="warning" title="Phiên đã hết hạn. Vui lòng đăng nhập lại."
-            style={{ marginBottom: 16 }} />
+          <Alert
+            showIcon
+            type="warning"
+            title="Phiên đã hết hạn. Vui lòng đăng nhập lại."
+            style={{ marginBottom: 16 }}
+          />
         )}
-        <Button type="primary" block loading={busy} onClick={() => void signIn()}>
+        <Button
+          type="primary"
+          block
+          loading={busy}
+          onClick={() => void signIn()}
+        >
           Đăng nhập
         </Button>
         {keycloak.authenticated && error && (
@@ -56,7 +81,9 @@ export default function LoginPage() {
         <div style={{ marginTop: 16, textAlign: 'center' }}>
           <Link to="/forgot-password">Quên mật khẩu?</Link>
         </div>
-        <div className="dms-auth-footer">Ký túc xá Đại học Thủy Lợi · Hỗ trợ kỹ thuật</div>
+        <div className="dms-auth-footer">
+          Ký túc xá Đại học Thủy Lợi · Hỗ trợ kỹ thuật
+        </div>
       </div>
     </main>
   )
@@ -74,13 +101,26 @@ export function ForgotPasswordPage() {
             Hệ thống Quản lý Ký túc xá · Đại học Thủy Lợi
           </p>
         </div>
-        <Typography.Paragraph style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 12 }}>
+        <Typography.Paragraph
+          style={{
+            color: 'var(--color-text-secondary)',
+            fontSize: 13,
+            marginBottom: 12,
+          }}
+        >
           Liên hệ Ban quản lý ký túc xá hoặc quản trị viên để xác minh tài khoản
           và nhận mật khẩu tạm thời.
         </Typography.Paragraph>
-        <Typography.Paragraph style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 16 }}>
-          Sinh viên vui lòng cung cấp mã sinh viên cho cán bộ quản lý tòa nhà/đơn vị. Tài
-          khoản cán bộ, kỹ thuật viên và quản trị viên liên hệ ban quản trị.
+        <Typography.Paragraph
+          style={{
+            color: 'var(--color-text-secondary)',
+            fontSize: 13,
+            marginBottom: 16,
+          }}
+        >
+          Sinh viên vui lòng cung cấp mã sinh viên cho cán bộ quản lý tòa
+          nhà/đơn vị. Tài khoản cán bộ, kỹ thuật viên và quản trị viên liên hệ
+          ban quản trị.
         </Typography.Paragraph>
         <Alert
           type="info"
@@ -90,7 +130,9 @@ export function ForgotPasswordPage() {
           style={{ marginBottom: 20 }}
         />
         <Link to="/login">
-          <Button type="primary" block>Quay lại đăng nhập</Button>
+          <Button type="primary" block>
+            Quay lại đăng nhập
+          </Button>
         </Link>
         <div className="dms-auth-footer">
           <span>Ký túc xá Đại học Thủy Lợi · Hỗ trợ kỹ thuật</span>

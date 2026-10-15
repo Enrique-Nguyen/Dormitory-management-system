@@ -242,6 +242,33 @@ Kiểm chứng: **55/55 test backend** đạt, gồm baseline giữ nguyên toà
 Kiểm chứng: 60/60 test backend đạt trên PostgreSQL kiểm thử riêng; thêm 5 test cho bộ lọc, phạm vi quản trị, đổi đơn vị và khóa/mở khóa/reset thu hồi token. 53 kiểm tra điều hướng/hồ sơ của bốn role và 48 kiểm tra query/bộ lọc/validation đạt. Backend clean package và React lint/build đạt. Token Keycloak thật kiểm CRUD sinh viên/khóa/mở khóa/reset/logout; giao diện Admin kiểm đăng nhập, giữ bộ lọc khi reload, mở/sửa/xóa nội dung hồ sơ và lọc nhật ký. Tài khoản/mật khẩu kiểm thử được dọn, audit append-only giữ nguyên. Đây là các luồng chung của khung; chưa bổ sung nghiệp vụ phân phòng, hợp đồng, phát hành hóa đơn hay tiền cọc.
 
 
+### Component giao diện dùng chung — 15/10/2026
+
+Các cổng Admin, Quản lý, Sinh viên và Kỹ thuật dùng cùng theme trắng/xám và xanh trầm. Màu/shadow khai tại `DMS/frontend/src/app/theme.ts`; CSS bố cục dùng các biến này trong `src/index.css`.
+
+- `components/ui/FormControls.tsx`: input, tìm kiếm, số, Select, ô nhiều dòng, checkbox/switch và các control mở rộng. Chuyển nguyên `value`, `onChange`, `ref`, `aria-*` vào control để dùng được với Ant Form/React Hook Form.
+- `components/ui/DataTable.tsx`: bảng chung, trạng thái trống, cuộn ngang và tùy chọn phân trang do màn gọi truyền vào. `ResponsiveTable` dùng lại bảng này ở desktop.
+- `components/ui/Surface.tsx`: nút, khối nội dung, modal/drawer, thanh bộ lọc và lưới biểu mẫu. Form hai cột trên desktop, một cột trên mobile; trường nhiều dòng chiếm cả hàng.
+- Trang CRUD và các màn riêng dùng các component trên; API, quyền và điều kiện nghiệp vụ vẫn được kiểm tra như trước.
+
+### Dữ liệu mẫu để cả nhóm thử CRUD — 15/10/2026
+
+File dùng chung: **`DMS/scripts/sample-data.sql`**. Trước tiên khởi động backend để Flyway tạo schema đến V5. Chạy toàn bộ file trên database phát triển của mình; không đưa file này vào thư mục migration.
+
+Từ thư mục gốc repository, nếu máy có `psql` trong PATH:
+
+```powershell
+psql -h localhost -p 5432 -U dms -d dms -v ON_ERROR_STOP=1 -f "DMS/scripts/sample-data.sql"
+```
+
+Thay host/port/user/database theo môi trường và nhập mật khẩu PostgreSQL khi được hỏi. Có thể mở file UTF-8 bằng DataGrip hoặc pgAdmin và chạy toàn bộ script trên đúng database thay cho dòng lệnh.
+
+Bộ mẫu gồm 12 sinh viên, 3 tòa, 2 loại phòng, 9 phòng, 42 giường, 12 đơn đăng ký, 9 hợp đồng, 14 hóa đơn có dòng chi tiết, 12 chỉ số điện/nước, 3 yêu cầu sửa chữa, 3 yêu cầu gia hạn, 2 yêu cầu chuyển phòng, 3 lựa chọn hè, 1 phiếu gửi đồ, 1 phiếu trả phòng, sổ cọc và thông báo/lịch sử. Học kỳ dùng khóa năm học/loại; nếu đã có cùng học kỳ thì giữ nguyên lịch của nhóm. Đơn vị, danh mục ưu tiên, cấu hình và quyền đã có được giữ nguyên.
+
+Script chạy trong transaction, giữ constraint và trigger, không xóa dữ liệu. Marker `DMS-SAMPLE-V1` trong audit giúp lần chạy sau bỏ qua toàn bộ phần nạp: không tạo bản ghi trùng và không ghi đè những gì đã sửa/xóa trên màn CRUD. Nếu phát hiện mã `MAU-*`/`mau.*` trùng hoặc lịch học kỳ chồng nhau, script báo lỗi và rollback; không tự sửa dữ liệu của nhóm.
+
+**Tài khoản mẫu dùng để hiển thị và liên kết dữ liệu, đều bị khóa và chưa liên kết Keycloak; không có mật khẩu demo.** Tiếp tục đăng nhập bằng tài khoản thật đang có. Muốn thử đăng nhập và thao tác theo đúng chủ sở hữu Student/Technician, tạo tài khoản qua luồng quản lý tài khoản/Keycloak của ứng dụng và chuẩn bị dữ liệu cho tài khoản đó. SQL không thay mật khẩu, subject, phiên đăng nhập hay ma trận quyền hiện tại.
+
 ### Màn tick quyền động theo role — 15/10/2026
 
 Đăng nhập ADMIN, vào **Phân quyền theo vai trò** tại `http://localhost:5173/admin/role-permissions`. Chọn STAFF/STUDENT/TECHNICIAN, tìm màn rồi tick Xem/Tìm kiếm, Thêm, Sửa, Xóa hoặc quyền riêng; bấm **Lưu quyền** để áp dụng. Khôi phục mặc định chỉ đổi bản nháp, vẫn cần lưu. ADMIN hiển thị toàn quyền và không sửa được. Các ô không phù hợp vai trò bị khóa; PROFILE_READ bắt buộc.
