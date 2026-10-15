@@ -10,6 +10,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.NotificationSource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -18,11 +19,11 @@ import vn.edu.tlu.dms.notification.api.NotificationDtos;
 import vn.edu.tlu.dms.notification.domain.Notification;
 import vn.edu.tlu.dms.notification.repository.NotificationRepository;
 import vn.edu.tlu.dms.notification.service.NotificationService;
-import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -36,33 +37,46 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final ScopeGuard scopeGuard;
 
-    private final RoomReferenceService rooms;
-
     public NotificationServiceImpl(
             NotificationRepository repository,
             JdbcTemplate jdbc,
             CurrentUser currentUser,
-            ScopeGuard scopeGuard,
-            RoomReferenceService rooms) {
+            ScopeGuard scopeGuard) {
         this.repository = repository;
         this.jdbc = jdbc;
         this.currentUser = currentUser;
         this.scopeGuard = scopeGuard;
-        this.rooms = rooms;
     }
 
-    /** View áp dụng cả quyền đơn vị lẫn khoảng thời gian sinh viên thực sự ở trong phòng. */
-    @Override()
-    public PageResponse<NotificationDtos.Response> getMyNotifications(
-            int page, int size, Boolean unread) {
-        return getMyNotifications(page, size, unread, "");
-    }
-
-    @Override()
-    public PageResponse<NotificationDtos.Response> getMyNotifications(
-            int page, int size, Boolean unread, String keyword) {
+    /** Phạm vi hộp thư và trạng thái đọc được lọc trước phân trang; chỉ sắp xếp cột đã cho phép. */
+    @Override
+    public PageResponse<NotificationDtos.Response> searchByPage(SearchRequest request) {
         scopeGuard.requirePermission(Permission.NOTIFICATION_READ);
-        PageQuery.of(page, size, null, Set.of("id"), "id,desc");
+        int page = request.page();
+        int size = request.size();
+        Boolean unread = request.unread();
+        String keyword = request.q();
+        var pageable =
+                PageQuery.of(
+                        page,
+                        size,
+                        request.sort(),
+                        Set.of("id", "createdAt", "title", "scope", "isRead"),
+                        "createdAt,desc");
+        String ordering =
+                pageable.getSort().stream()
+                        .map(
+                                order -> {
+                                    String column =
+                                            switch (order.getProperty()) {
+                                                case "id" -> "notification_id";
+                                                case "createdAt" -> "created_at";
+                                                case "isRead" -> "is_read";
+                                                default -> order.getProperty();
+                                            };
+                                    return column + " " + order.getDirection().name();
+                                })
+                        .collect(Collectors.joining(", "));
         Long userId = currentUser.get().id();
         String filter = unread == null ? "" : unread ? " AND NOT is_read" : " AND is_read";
         filter += " AND (title ILIKE ? OR body ILIKE ?)";
@@ -79,8 +93,9 @@ public class NotificationServiceImpl implements NotificationService {
                         "SELECT * FROM "
                                 + inboxSource()
                                 + filter
-                                + " ORDER BY created_at DESC, notification_id DESC LIMIT ? OFFSET"
-                                + " ?",
+                                + " ORDER BY "
+                                + ordering
+                                + " LIMIT ? OFFSET ?",
                         (row, index) ->
                                 new NotificationDtos.Response(
                                         row.getLong("notification_id"),
@@ -164,78 +179,6 @@ public class NotificationServiceImpl implements NotificationService {
                 WHERE user_id = ? AND NOT is_read ON CONFLICT DO NOTHING
                 """,
                 userId);
-    }
-
-    @Transactional
-    @Override()
-    public NotificationDtos.Response createManualNotification(NotificationDtos.Create input) {
-        scopeGuard.requirePermission(Permission.NOTIFICATION_CREATE);
-        scopeGuard.requireRole(Role.STAFF);
-        validateNotificationScope(input);
-        Notification notification = new Notification();
-        notification.setScope(input.scope());
-        notification.setManagementUnitId(input.unitId());
-        notification.setBuildingId(input.buildingId());
-        notification.setFloor(input.floor());
-        notification.setRoomId(input.roomId());
-        notification.setTitle(input.title().trim());
-        notification.setBody(input.body().trim());
-        notification.setCreatedBy(currentUser.get().id());
-        notification.setCreatedAt(OffsetDateTime.now());
-        repository.saveAndFlush(notification);
-        return new NotificationDtos.Response(
-                notification.getId(),
-                notification.getScope(),
-                notification.getTitle(),
-                notification.getBody(),
-                NotificationSource.MANUAL,
-                null,
-                notification.getCreatedAt(),
-                false);
-    }
-
-    private void validateNotificationScope(NotificationDtos.Create input) {
-        int fields =
-                (input.unitId() == null ? 0 : 1)
-                        + (input.buildingId() == null ? 0 : 1)
-                        + (input.floor() == null ? 0 : 1)
-                        + (input.roomId() == null ? 0 : 1);
-        boolean valid =
-                switch (input.scope()) {
-                    case NotificationScope.ALL -> fields == 0;
-                    case NotificationScope.UNIT -> fields == 1 && input.unitId() != null;
-                    case NotificationScope.BUILDING -> fields == 1 && input.buildingId() != null;
-                    case NotificationScope.FLOOR ->
-                            fields == 2 && input.buildingId() != null && input.floor() != null;
-                    case NotificationScope.ROOM -> fields == 1 && input.roomId() != null;
-                    default -> false;
-                };
-        if (!valid) {
-            throw BusinessException.invalid(
-                    "scope", "Các trường vị trí không khớp phạm vi thông báo");
-        }
-        switch (input.scope()) {
-            case NotificationScope.ALL -> {
-                if (!currentUser.get().canReadAllUnits()) {
-                    throw BusinessException.forbidden();
-                }
-            }
-            case NotificationScope.UNIT -> {
-                if (!Boolean.TRUE.equals(
-                        jdbc.queryForObject(
-                                "SELECT EXISTS(SELECT 1 FROM management_unit WHERE id=?)",
-                                Boolean.class,
-                                input.unitId()))) {
-                    throw BusinessException.notFound();
-                }
-                scopeGuard.requireUnit(input.unitId());
-            }
-            case NotificationScope.BUILDING, NotificationScope.FLOOR ->
-                    scopeGuard.requireUnit(rooms.getBuildingManagementUnitId(input.buildingId()));
-            case NotificationScope.ROOM ->
-                    scopeGuard.requireUnit(rooms.getRoomLocation(input.roomId()).unitId());
-            default -> throw BusinessException.invalid("scope", "Phạm vi không hỗ trợ");
-        }
     }
 
     /**

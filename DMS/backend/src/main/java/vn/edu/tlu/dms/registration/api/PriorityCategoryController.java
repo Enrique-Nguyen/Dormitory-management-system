@@ -5,18 +5,16 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.registration.service.PriorityCategoryService;
-
-import java.net.URI;
-import java.util.List;
 
 @RestController
 public class PriorityCategoryController {
@@ -33,9 +31,10 @@ public class PriorityCategoryController {
         Permission.ROOM_APPLICATION_CREATE,
         Permission.ROOM_APPLICATION_UPDATE
     })
-    @GetMapping("/api/priority-categories")
-    public List<PriorityCategoryResponse> getPriorityCategoryList() {
-        return service.getAll();
+    @PostMapping("/api/priority-categories/search-by-page")
+    public PageResponse<PriorityCategoryResponse> searchByPage(
+            @Valid @RequestBody SearchRequest search) {
+        return service.searchByPage(search);
     }
 
     @RequirePrivilege(Permission.PRIORITY_CATEGORY_READ)
@@ -44,20 +43,11 @@ public class PriorityCategoryController {
         return service.getById(id);
     }
 
-    @RequirePrivilege(Permission.PRIORITY_CATEGORY_CREATE)
-    @PostMapping("/api/admin/priority-categories")
-    public ResponseEntity<PriorityCategoryResponse> createPriorityCategory(
+    @RequirePrivilege({Permission.PRIORITY_CATEGORY_CREATE, Permission.PRIORITY_CATEGORY_UPDATE})
+    @PostMapping("/api/admin/priority-categories/save-or-update")
+    public PriorityCategoryResponse saveOrUpdate(
             @Valid @RequestBody PriorityCategoryRequest input) {
-        var result = service.create(input);
-        return ResponseEntity.created(URI.create("/api/priority-categories/" + result.id()))
-                .body(result);
-    }
-
-    @RequirePrivilege(Permission.PRIORITY_CATEGORY_UPDATE)
-    @PatchMapping("/api/admin/priority-categories/{id}")
-    public PriorityCategoryResponse updatePriorityCategory(
-            @PathVariable Long id, @Valid @RequestBody PriorityCategoryRequest input) {
-        return service.update(id, input);
+        return service.saveOrUpdate(input);
     }
 
     @RequirePrivilege(Permission.PRIORITY_CATEGORY_DELETE)

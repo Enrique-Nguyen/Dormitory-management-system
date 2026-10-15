@@ -5,18 +5,16 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.room.service.BuildingService;
-
-import java.net.URI;
-import java.util.List;
 
 @RestController
 public class BuildingController {
@@ -29,9 +27,9 @@ public class BuildingController {
 
     // Danh mục dùng chung cho form; chỉ cần một quyền trong danh sách (OR).
     @RequirePrivilege({Permission.BUILDING_READ, Permission.ROOM_CREATE, Permission.ROOM_UPDATE})
-    @GetMapping("/api/buildings")
-    public List<BuildingResponse> getBuildingList() {
-        return service.getAll();
+    @PostMapping("/api/buildings/search-by-page")
+    public PageResponse<BuildingResponse> searchByPage(@Valid @RequestBody SearchRequest search) {
+        return service.searchByPage(search);
     }
 
     @RequirePrivilege(Permission.BUILDING_READ)
@@ -40,19 +38,10 @@ public class BuildingController {
         return service.getById(id);
     }
 
-    @RequirePrivilege(Permission.BUILDING_CREATE)
-    @PostMapping("/api/admin/buildings")
-    public ResponseEntity<BuildingResponse> createBuilding(
-            @Valid @RequestBody BuildingRequest input) {
-        var result = service.create(input);
-        return ResponseEntity.created(URI.create("/api/buildings/" + result.id())).body(result);
-    }
-
-    @RequirePrivilege(Permission.BUILDING_UPDATE)
-    @PatchMapping("/api/admin/buildings/{id}")
-    public BuildingResponse updateBuilding(
-            @PathVariable Long id, @Valid @RequestBody BuildingRequest input) {
-        return service.update(id, input);
+    @RequirePrivilege({Permission.BUILDING_CREATE, Permission.BUILDING_UPDATE})
+    @PostMapping("/api/admin/buildings/save-or-update")
+    public BuildingResponse saveOrUpdate(@Valid @RequestBody BuildingRequest input) {
+        return service.saveOrUpdate(input);
     }
 
     @RequirePrivilege(Permission.BUILDING_DELETE)

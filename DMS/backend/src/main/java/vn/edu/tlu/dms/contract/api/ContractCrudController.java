@@ -1,20 +1,19 @@
 package vn.edu.tlu.dms.contract.api;
 
+import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.contract.service.ContractCrudService;
-
-import java.util.Map;
 
 /** Chỉ CRUD cơ bản, không chứa các lệnh kích hoạt, thu cọc, phân giường hoặc xét duyệt. */
 @RestController
@@ -26,16 +25,10 @@ public class ContractCrudController {
         this.service = service;
     }
 
-    @RequirePrivilege(Permission.CONTRACT_CREATE)
-    @PostMapping("/api/contracts")
-    public Object createContract(@RequestBody Map<String, Object> input) {
-        return service.createPendingContract(input);
-    }
-
-    @RequirePrivilege(Permission.CONTRACT_UPDATE)
-    @PatchMapping("/api/contracts/{id}")
-    public Object updateContract(@PathVariable Long id, @RequestBody Map<String, Object> input) {
-        return service.updatePendingContract(id, input);
+    @RequirePrivilege({Permission.CONTRACT_CREATE, Permission.CONTRACT_UPDATE})
+    @PostMapping("/api/contracts/save-or-update")
+    public Object saveOrUpdateContract(@Valid @RequestBody ContractDtos.Save input) {
+        return service.saveOrUpdateContract(input);
     }
 
     @RequirePrivilege(Permission.CONTRACT_DELETE)
@@ -46,21 +39,27 @@ public class ContractCrudController {
     }
 
     @RequirePrivilege(Permission.CONTRACT_EXTENSION_READ)
-    @GetMapping({"/api/extension-requests", "/api/me/extension-requests"})
-    public Object searchExtensions(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "") String q) {
-        return service.searchStayRequests(true, page, size, q);
+    @PostMapping("/api/extension-requests/search-by-page")
+    public Object searchExtensionsByPage(@Valid @RequestBody SearchRequest input) {
+        return service.searchStayRequestsByPage(true, input, false);
+    }
+
+    @RequirePrivilege(Permission.CONTRACT_EXTENSION_READ)
+    @PostMapping("/api/me/extension-requests/search-by-page")
+    public Object searchMyExtensionsByPage(@Valid @RequestBody SearchRequest input) {
+        return service.searchStayRequestsByPage(true, input, true);
     }
 
     @RequirePrivilege(Permission.ROOM_TRANSFER_READ)
-    @GetMapping({"/api/transfer-requests", "/api/me/transfer-requests"})
-    public Object searchTransfers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "") String q) {
-        return service.searchStayRequests(false, page, size, q);
+    @PostMapping("/api/transfer-requests/search-by-page")
+    public Object searchTransfersByPage(@Valid @RequestBody SearchRequest input) {
+        return service.searchStayRequestsByPage(false, input, false);
+    }
+
+    @RequirePrivilege(Permission.ROOM_TRANSFER_READ)
+    @PostMapping("/api/me/transfer-requests/search-by-page")
+    public Object searchMyTransfersByPage(@Valid @RequestBody SearchRequest input) {
+        return service.searchStayRequestsByPage(false, input, true);
     }
 
     @RequirePrivilege(Permission.CONTRACT_EXTENSION_READ)
@@ -75,28 +74,16 @@ public class ContractCrudController {
         return service.getStayRequest(false, id);
     }
 
-    @RequirePrivilege(Permission.CONTRACT_EXTENSION_CREATE)
-    @PostMapping("/api/extension-requests")
-    public Object createExtension(@RequestBody Map<String, Object> input) {
-        return service.createStayRequest(true, input);
+    @RequirePrivilege({Permission.CONTRACT_EXTENSION_CREATE, Permission.CONTRACT_EXTENSION_UPDATE})
+    @PostMapping("/api/extension-requests/save-or-update")
+    public Object saveOrUpdateExtension(@Valid @RequestBody ContractDtos.StaySave input) {
+        return service.saveOrUpdateStayRequest(true, input);
     }
 
-    @RequirePrivilege(Permission.ROOM_TRANSFER_CREATE)
-    @PostMapping("/api/transfer-requests")
-    public Object createTransfer(@RequestBody Map<String, Object> input) {
-        return service.createStayRequest(false, input);
-    }
-
-    @RequirePrivilege(Permission.CONTRACT_EXTENSION_UPDATE)
-    @PatchMapping("/api/extension-requests/{id}")
-    public Object updateExtension(@PathVariable Long id, @RequestBody Map<String, Object> input) {
-        return service.updateStayRequest(true, id, input);
-    }
-
-    @RequirePrivilege(Permission.ROOM_TRANSFER_UPDATE)
-    @PatchMapping("/api/transfer-requests/{id}")
-    public Object updateTransfer(@PathVariable Long id, @RequestBody Map<String, Object> input) {
-        return service.updateStayRequest(false, id, input);
+    @RequirePrivilege({Permission.ROOM_TRANSFER_CREATE, Permission.ROOM_TRANSFER_UPDATE})
+    @PostMapping("/api/transfer-requests/save-or-update")
+    public Object saveOrUpdateTransfer(@Valid @RequestBody ContractDtos.StaySave input) {
+        return service.saveOrUpdateStayRequest(false, input);
     }
 
     @RequirePrivilege(Permission.CONTRACT_EXTENSION_DELETE)

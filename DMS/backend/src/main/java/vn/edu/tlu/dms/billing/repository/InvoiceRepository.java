@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import vn.edu.tlu.dms.billing.domain.Invoice;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface InvoiceRepository
@@ -38,9 +39,8 @@ public interface InvoiceRepository
                                 AND own_stay.stay_started_at < i.billing_month + INTERVAL '1 month'
                                 AND (own_stay.ended_at IS NULL OR own_stay.ended_at > i.billing_month))))
                     AND (:type IS NULL OR i.type = :type)
-                    AND (:status IS NULL OR i.status = :status)
+                    AND (:filterStatuses = false OR i.status IN (:statuses))
                     AND (i.code ILIKE :q OR EXISTS(SELECT 1 FROM app_user u WHERE u.id=i.student_id AND u.full_name ILIKE :q))
-                    ORDER BY i.issued_at DESC, i.id DESC
                     """,
             countQuery =
                     """
@@ -65,7 +65,7 @@ public interface InvoiceRepository
                                 AND own_stay.stay_started_at < i.billing_month + INTERVAL '1 month'
                                 AND (own_stay.ended_at IS NULL OR own_stay.ended_at > i.billing_month))))
                     AND (:type IS NULL OR i.type = :type)
-                    AND (:status IS NULL OR i.status = :status)
+                    AND (:filterStatuses = false OR i.status IN (:statuses))
                     AND (i.code ILIKE :q OR EXISTS(SELECT 1 FROM app_user u WHERE u.id=i.student_id AND u.full_name ILIKE :q))
                     """,
             nativeQuery = true)
@@ -76,7 +76,8 @@ public interface InvoiceRepository
             boolean crossUnit,
             boolean mine,
             String type,
-            String status,
+            boolean filterStatuses,
+            List<String> statuses,
             String q,
             Pageable pageable);
 

@@ -1,5 +1,8 @@
 package vn.edu.tlu.dms.room.service.impl;
 
+import jakarta.persistence.criteria.Predicate;
+
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
@@ -7,6 +10,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -18,7 +22,9 @@ import vn.edu.tlu.dms.room.domain.Building;
 import vn.edu.tlu.dms.room.repository.BuildingRepository;
 import vn.edu.tlu.dms.room.service.BuildingService;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class BuildingServiceImpl
@@ -56,6 +62,37 @@ public class BuildingServiceImpl
     @Override
     protected void checkPermission(String action) {
         guard.requirePermission(Resource.BUILDING + DmsConstants.PERMISSION_SEPARATOR + action);
+    }
+
+    @Override
+    protected Long getInputId(BuildingRequest input) {
+        return input.id();
+    }
+
+    @Override
+    protected Set<String> searchableFields() {
+        return Set.of("code", "name");
+    }
+
+    @Override
+    protected Set<String> sortableFields() {
+        return Set.of("id", "managementUnitId", "code", "name", "depositAmount");
+    }
+
+    @Override
+    protected Specification<Building> searchScope(SearchRequest search) {
+        Actor actor = currentUser.get();
+        return (root, query, builder) -> {
+            var filters = new ArrayList<Predicate>();
+            // Cùng giới hạn như getAll: lọc trước cả truy vấn dữ liệu và truy vấn đếm.
+            if (actor.is(Role.STAFF) && !actor.canReadAllUnits() || actor.is(Role.TECHNICIAN)) {
+                filters.add(builder.equal(root.get("managementUnitId"), actor.unitId()));
+            }
+            if (search.managementUnitId() != null) {
+                filters.add(builder.equal(root.get("managementUnitId"), search.managementUnitId()));
+            }
+            return builder.and(filters.toArray(Predicate[]::new));
+        };
     }
 
     @Override

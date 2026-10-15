@@ -4,6 +4,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ConfigKey;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
@@ -11,6 +12,8 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.StayRequestStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -18,12 +21,15 @@ import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.ConfigService;
 import vn.edu.tlu.dms.common.service.impl.AbstractSqlCrudServiceImpl;
 import vn.edu.tlu.dms.common.support.SqlPage;
+import vn.edu.tlu.dms.contract.api.ContractDtos;
 import vn.edu.tlu.dms.contract.service.ContractCrudService;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -92,7 +98,21 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
 
     @Transactional
     @Override
-    public Object createPendingContract(Map<String, Object> input) {
+    public Object saveOrUpdateContract(ContractDtos.Save input) {
+        // Annotation OR chỉ mở cổng; quyền chính xác phải kiểm tra trước đọc/ghi và sinh mã.
+        guard.requirePermission(
+                input.id() == null ? Permission.CONTRACT_CREATE : Permission.CONTRACT_UPDATE);
+        requirePositiveId(input.id());
+        var values = new LinkedHashMap<String, Object>();
+        putIfPresent(values, "applicationId", input.applicationId());
+        putIfPresent(values, "startDate", input.startDate());
+        putIfPresent(values, "endDate", input.endDate());
+        return input.id() == null
+                ? createPendingContract(values)
+                : updatePendingContract(input.id(), values);
+    }
+
+    private Object createPendingContract(Map<String, Object> input) {
         guard.requirePermission(Permission.CONTRACT_CREATE);
         guard.requireRole(Role.STAFF);
         Long applicationId = number(input, "applicationId");
@@ -124,13 +144,10 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                                         configs.positiveInt(ConfigKey.CONTRACT_ACTIVATION_DAYS))));
     }
 
-    @Transactional
-    @Override
-    public Object updatePendingContract(Long id, Map<String, Object> input) {
+    private Object updatePendingContract(Long id, Map<String, Object> input) {
         guard.requirePermission(Permission.CONTRACT_UPDATE);
         guard.requireRole(Role.STAFF);
-        jdbc.queryForObject(
-                "SELECT id FROM dormitory_contract WHERE id=? FOR UPDATE", Long.class, id);
+        queries.one("SELECT id FROM dormitory_contract WHERE id=? FOR UPDATE", id);
         var row = requireContract(id, true);
         requirePending(row, ContractStatus.PENDING);
         requireNoAssignment(id);
@@ -146,8 +163,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
     public void deletePendingContract(Long id) {
         guard.requirePermission(Permission.CONTRACT_DELETE);
         guard.requireRole(Role.STAFF);
-        jdbc.queryForObject(
-                "SELECT id FROM dormitory_contract WHERE id=? FOR UPDATE", Long.class, id);
+        queries.one("SELECT id FROM dormitory_contract WHERE id=? FOR UPDATE", id);
         requirePending(requireContract(id, true), ContractStatus.PENDING);
         requireNoAssignment(id);
         if (Boolean.TRUE.equals(
@@ -192,13 +208,13 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
     }
 
     @Override
-    public Object searchStayRequests(boolean extension, int page, int size, String q) {
+    public Object searchStayRequestsByPage(boolean extension, SearchRequest input, boolean mine) {
         guard.requirePermission(
                 extension ? Permission.CONTRACT_EXTENSION_READ : Permission.ROOM_TRANSFER_READ);
         guard.requireRole(Role.STUDENT, Role.STAFF);
         var args = new ArrayList<Object>();
         String scope;
-        if (current.get().is(Role.STUDENT)) {
+        if (mine || current.get().is(Role.STUDENT)) {
             scope = "c.student_id=?";
             args.add(current.get().id());
         } else if (current.get().canReadAllUnits()) {
@@ -207,8 +223,16 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
             scope = "a.preferred_unit_id=?";
             args.add(current.get().unitId());
         }
-        args.add("%" + q + "%");
-        args.add("%" + q + "%");
+        args.add("%" + input.q().trim() + "%");
+        args.add("%" + input.q().trim() + "%");
+        String statusFilter = "";
+        if (input.statuses() != null && !input.statuses().isEmpty()) {
+            statusFilter =
+                    " AND req.status IN ("
+                            + String.join(",", Collections.nCopies(input.statuses().size(), "?"))
+                            + ")";
+            args.addAll(input.statuses());
+        }
         return queries.search(
                 "SELECT req.*,c.code AS contract_code,u.full_name FROM "
                         + table(extension)
@@ -216,10 +240,20 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                         + " room_application a ON a.id=c.application_id JOIN app_user u ON"
                         + " u.id=c.student_id WHERE "
                         + scope
-                        + " AND (u.full_name ILIKE ? OR c.code ILIKE ?)",
+                        + " AND (u.full_name ILIKE ? OR c.code ILIKE ?)"
+                        + statusFilter,
                 args,
-                page,
-                size);
+                input,
+                extension
+                        ? Set.of(
+                                "id",
+                                "contractCode",
+                                "fullName",
+                                "status",
+                                "createdAt",
+                                "newEndDate")
+                        : Set.of("id", "contractCode", "fullName", "status", "createdAt"),
+                "id,desc");
     }
 
     @Override
@@ -233,7 +267,30 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
 
     @Transactional
     @Override
-    public Object createStayRequest(boolean extension, Map<String, Object> input) {
+    public Object saveOrUpdateStayRequest(boolean extension, ContractDtos.StaySave input) {
+        guard.requirePermission(
+                input.id() == null
+                        ? (extension
+                                ? Permission.CONTRACT_EXTENSION_CREATE
+                                : Permission.ROOM_TRANSFER_CREATE)
+                        : (extension
+                                ? Permission.CONTRACT_EXTENSION_UPDATE
+                                : Permission.ROOM_TRANSFER_UPDATE));
+        requirePositiveId(input.id());
+        var values = new LinkedHashMap<String, Object>();
+        putIfPresent(values, "contractId", input.contractId());
+        putIfPresent(values, "newEndDate", input.newEndDate());
+        putIfPresent(values, "reason", input.reason());
+        if (!extension && input.newEndDate() != null) {
+            throw BusinessException.invalid(
+                    "newEndDate", "Yêu cầu chuyển phòng không nhận ngày gia hạn");
+        }
+        return input.id() == null
+                ? createStayRequest(extension, values)
+                : updateStayRequest(extension, input.id(), values);
+    }
+
+    private Object createStayRequest(boolean extension, Map<String, Object> input) {
         guard.requirePermission(
                 extension ? Permission.CONTRACT_EXTENSION_CREATE : Permission.ROOM_TRANSFER_CREATE);
         guard.requireRole(Role.STUDENT);
@@ -260,9 +317,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                         : Map.of("status", StayRequestStatus.PENDING));
     }
 
-    @Transactional
-    @Override
-    public Object updateStayRequest(boolean extension, Long id, Map<String, Object> input) {
+    private Object updateStayRequest(boolean extension, Long id, Map<String, Object> input) {
         guard.requirePermission(
                 extension ? Permission.CONTRACT_EXTENSION_UPDATE : Permission.ROOM_TRANSFER_UPDATE);
         var row = loadPendingRequest(extension, id);
@@ -315,9 +370,25 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
 
     private static Long number(Map<String, Object> input, String field) {
         try {
-            return Long.valueOf(input.get(field).toString());
+            long value = Long.parseLong(input.get(field).toString());
+            if (value <= 0) {
+                throw new IllegalArgumentException();
+            }
+            return value;
         } catch (RuntimeException e) {
             throw BusinessException.invalid(field, "Chọn bản ghi hợp lệ");
+        }
+    }
+
+    private static void putIfPresent(Map<String, Object> values, String name, Object value) {
+        if (value != null) {
+            values.put(name, value);
+        }
+    }
+
+    private static void requirePositiveId(Long id) {
+        if (id != null && id <= 0) {
+            throw BusinessException.invalid(ApiField.ID, ValidationMessage.ID_POSITIVE_INTEGER);
         }
     }
 }

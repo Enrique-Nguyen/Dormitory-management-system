@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,15 +20,15 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.ReasonRequest;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Assign;
-import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Create;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Note;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Response;
+import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Save;
 import vn.edu.tlu.dms.maintenance.service.MaintenanceRequestService;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.util.List;
 
@@ -44,15 +43,9 @@ public class MaintenanceRequestController {
     }
 
     @RequirePrivilege(Permission.MAINTENANCE_READ)
-    @GetMapping
-    public PageResponse<Response> searchMaintenanceRequests(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String severity,
-            @RequestParam(defaultValue = "") String q) {
-        return service.searchMaintenanceRequests(page, size, status, category, severity, q);
+    @PostMapping("/search-by-page")
+    public PageResponse<Response> searchByPage(@Valid @RequestBody SearchRequest request) {
+        return service.searchByPage(request);
     }
 
     @RequirePrivilege(Permission.MAINTENANCE_READ)
@@ -61,14 +54,12 @@ public class MaintenanceRequestController {
         return service.getMaintenanceRequestById(id);
     }
 
-    @RequirePrivilege(Permission.MAINTENANCE_CREATE)
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Response> createMaintenanceRequest(
-            @Valid @RequestPart("data") Create input,
+    @RequirePrivilege({Permission.MAINTENANCE_CREATE, Permission.MAINTENANCE_UPDATE})
+    @PostMapping(value = "/save-or-update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Response saveOrUpdate(
+            @Valid @RequestPart("data") Save input,
             @RequestPart(value = "photos", required = false) List<MultipartFile> photos) {
-        var response = service.createMaintenanceRequest(input, photos);
-        return ResponseEntity.created(URI.create("/api/maintenance-requests/" + response.id()))
-                .body(response);
+        return service.saveOrUpdate(input, photos);
     }
 
     @RequirePrivilege(Permission.MAINTENANCE_READ)

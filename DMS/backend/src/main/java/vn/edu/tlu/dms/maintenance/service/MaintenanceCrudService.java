@@ -1,12 +1,7 @@
 package vn.edu.tlu.dms.maintenance.service;
 
-import vn.edu.tlu.dms.maintenance.api.MaintenanceCrudController.Edit;
-
-/** Khai báo sửa và hủy yêu cầu còn mở; phần xử lý nằm trong MaintenanceCrudServiceImpl. */
+/** Khai báo hủy yêu cầu còn mở; thêm/sửa đi qua MaintenanceRequestService.saveOrUpdate. */
 public interface MaintenanceCrudService {
-
-    /** Chủ yêu cầu hoặc ADMIN sửa loại, mức độ và nội dung khi yêu cầu còn ở trạng thái OPEN. */
-    Object updateOpenRequest(Long id, Edit input);
 
     /**
      * Chủ yêu cầu hoặc ADMIN hủy yêu cầu còn mở bằng cách chuyển sang CANCELLED. Giữ lại ảnh và

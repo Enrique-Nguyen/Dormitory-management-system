@@ -3,6 +3,7 @@ package vn.edu.tlu.dms.account.api;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.Gender;
@@ -34,6 +35,20 @@ public final class AccountDtos {
             boolean mustChangePassword,
             Student student,
             List<String> permissions) {}
+
+    /** ID trống để tạo; có ID chỉ cập nhật các trường được gửi, không đặt lại mật khẩu. */
+    public record Save(
+            @Positive Long id,
+            @Size(max = 50) String username,
+            @Size(max = 100) String fullName,
+            @Size(max = 20) String phone,
+            @Pattern(regexp = Role.MANAGEMENT_ROLE_PATTERN) String role,
+            @Positive Long managementUnitId,
+            @Size(max = 20) String studentCode,
+            @Pattern(regexp = Gender.PATTERN) String gender,
+            LocalDate dateOfBirth,
+            @Size(max = 100) String faculty,
+            @Size(max = 10) String cohort) {}
 
     public record Create(
             @NotBlank @Size(max = 50) String username,

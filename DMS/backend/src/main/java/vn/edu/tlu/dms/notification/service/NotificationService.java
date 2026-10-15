@@ -1,6 +1,7 @@
 package vn.edu.tlu.dms.notification.service;
 
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.notification.api.NotificationDtos;
 
 import java.util.List;
@@ -12,26 +13,12 @@ import java.util.List;
 public interface NotificationService {
 
     /**
-     * Lấy thông báo của người đang đăng nhập, giới hạn theo phạm vi nhận và thời gian cư trú.
+     * Tìm kiếm và phân trang thông báo trong hộp thư theo yêu cầu tìm kiếm chuẩn hóa.
      *
-     * @param page chỉ số trang, bắt đầu từ 0
-     * @param size số thông báo trên mỗi trang
-     * @param unread true để chỉ lấy chưa đọc, false để chỉ lấy đã đọc, null để lấy cả hai
-     * @return trang thông báo mà người dùng được phép xem
+     * @param request yêu cầu tìm kiếm gồm trang, kích thước, từ khóa và bộ lọc trạng thái đọc
+     * @return trang kết quả thông báo trong hộp thư
      */
-    PageResponse<NotificationDtos.Response> getMyNotifications(int page, int size, Boolean unread);
-
-    /**
-     * Tìm kiếm thông báo trong hộp thư theo tiêu đề hoặc nội dung trước khi phân trang.
-     *
-     * @param page chỉ số trang, bắt đầu từ 0
-     * @param size số thông báo trên mỗi trang
-     * @param unread true để chỉ lấy chưa đọc, false để chỉ lấy đã đọc, null để lấy cả hai
-     * @param keyword từ khóa tìm kiếm; chuỗi rỗng để không giới hạn theo từ khóa
-     * @return trang thông báo phù hợp với bộ lọc và quyền nhận của người dùng
-     */
-    PageResponse<NotificationDtos.Response> getMyNotifications(
-            int page, int size, Boolean unread, String keyword);
+    PageResponse<NotificationDtos.Response> searchByPage(SearchRequest request);
 
     /**
      * Đếm thông báo chưa đọc trong hộp thư của người đang đăng nhập.
@@ -50,15 +37,6 @@ public interface NotificationService {
 
     /** Đánh dấu toàn bộ thông báo chưa đọc trong hộp thư của người đang đăng nhập là đã đọc. */
     void markAllNotificationsAsRead();
-
-    /**
-     * Tạo thông báo thủ công của nhân viên sau khi kiểm tra phạm vi đơn vị, tòa nhà, tầng hoặc
-     * phòng. Phạm vi toàn hệ thống yêu cầu quyền truy cập liên đơn vị.
-     *
-     * @param input phạm vi nhận, tiêu đề và nội dung thông báo
-     * @return thông báo vừa được tạo
-     */
-    NotificationDtos.Response createManualNotification(NotificationDtos.Create input);
 
     /**
      * Tạo thông báo mở đợt hè cho sinh viên có hợp đồng đang hoạt động tại các đơn vị nhận tin.

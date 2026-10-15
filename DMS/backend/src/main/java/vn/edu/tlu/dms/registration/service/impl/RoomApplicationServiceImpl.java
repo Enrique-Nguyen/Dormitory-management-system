@@ -8,13 +8,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -93,26 +97,14 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         this.jdbc = jdbc;
     }
 
-    @Override()
-    public PageResponse<Response> searchApplications(
-            int page,
-            int size,
-            List<String> sort,
-            Long periodId,
-            List<String> statuses,
-            boolean mine) {
-        return searchApplications(page, size, sort, periodId, statuses, mine, "");
-    }
-
-    @Override()
-    public PageResponse<Response> searchApplications(
-            int page,
-            int size,
-            List<String> sort,
-            Long periodId,
-            List<String> statuses,
-            boolean mine,
-            String keyword) {
+    @Override
+    public PageResponse<Response> searchByPage(SearchRequest search, boolean mine) {
+        int page = search.page();
+        int size = search.size();
+        List<String> sort = search.sort();
+        Long periodId = search.periodId();
+        List<String> statuses = search.statuses();
+        String keyword = search.q();
         guard.requirePermission(Permission.ROOM_APPLICATION_READ);
         guard.requireRole(mine ? new String[] {Role.STUDENT} : new String[] {Role.STAFF});
         var actor = current.get();
@@ -166,13 +158,22 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         return toApplicationResponse(a, true);
     }
 
+    @Override
+    @Transactional
+    public Response saveOrUpdate(Input input) {
+        Long id = input.id();
+        if (id != null && id <= 0) {
+            throw BusinessException.invalid(ApiField.ID, ValidationMessage.ID_POSITIVE);
+        }
+        // Annotation là OR, Service chỉ cấp quyền đúng với nhánh tạo hoặc sửa.
+        return id == null ? createApplication(input) : updateDraftApplication(id, input);
+    }
+
     /**
      * Sinh viên tạo đơn cho chính mình; ADMIN phải chọn sinh viên rõ ràng. Trạng thái và điểm ưu
      * tiên luôn do hệ thống xác định, lịch sử ghi đúng tài khoản thao tác.
      */
-    @Transactional
-    @Override()
-    public Response createApplication(Input input) {
+    private Response createApplication(Input input) {
         guard.requirePermission(Permission.ROOM_APPLICATION_CREATE);
         guard.requireRole(Role.STUDENT);
         if (input.periodId() == null || input.preferredUnitId() == null) {
@@ -196,13 +197,16 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         applications.saveAndFlush(a);
         replaceApplicationPriorities(a.getId(), input.priorityCategoryIds());
         history.record(
-                "APPLICATION", a.getId(), null, ApplicationStatus.DRAFT, current.get().id(), null);
+                EntityType.APPLICATION,
+                a.getId(),
+                null,
+                ApplicationStatus.DRAFT,
+                current.get().id(),
+                null);
         return toApplicationResponse(a, true);
     }
 
-    @Transactional
-    @Override()
-    public Response updateDraftApplication(Long id, Input input) {
+    private Response updateDraftApplication(Long id, Input input) {
         guard.requirePermission(Permission.ROOM_APPLICATION_UPDATE);
         guard.requireRole(Role.STUDENT);
         var a = loadAccessibleApplication(id, true);
@@ -272,7 +276,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                 });
         a.setStatusReason(reason);
         applications.saveAndFlush(a);
-        history.record("APPLICATION", id, before, a.getStatus(), current.get().id(), reason);
+        history.record(
+                EntityType.APPLICATION, id, before, a.getStatus(), current.get().id(), reason);
         return toApplicationResponse(a, true);
     }
 
@@ -393,6 +398,6 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                 a.getSubmittedAt(),
                 priorityRows,
                 detail ? RoomApplicationPolicy.allowedActions(a, current.get()) : null,
-                detail ? history.list("APPLICATION", a.getId()) : null);
+                detail ? history.list(EntityType.APPLICATION, a.getId()) : null);
     }
 }

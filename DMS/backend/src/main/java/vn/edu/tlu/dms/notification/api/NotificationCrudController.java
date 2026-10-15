@@ -5,15 +5,18 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.notification.service.NotificationCrudService;
+
+import java.util.Map;
 
 @RestController
 public class NotificationCrudController {
@@ -25,12 +28,10 @@ public class NotificationCrudController {
     }
 
     @RequirePrivilege(Permission.NOTIFICATION_READ)
-    @GetMapping("/api/notifications/published")
-    public Object searchPublished(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "") String q) {
-        return service.searchPublished(page, size, q);
+    @PostMapping("/api/notifications/published/search-by-page")
+    public PageResponse<Map<String, Object>> searchByPage(
+            @Valid @RequestBody SearchRequest request) {
+        return service.searchByPage(request);
     }
 
     @RequirePrivilege(Permission.NOTIFICATION_READ)
@@ -39,11 +40,10 @@ public class NotificationCrudController {
         return service.getPublished(id);
     }
 
-    @RequirePrivilege(Permission.NOTIFICATION_UPDATE)
-    @PatchMapping("/api/notifications/{id}")
-    public Object updatePublished(
-            @PathVariable Long id, @Valid @RequestBody NotificationDtos.Create input) {
-        return service.updatePublished(id, input);
+    @RequirePrivilege({Permission.NOTIFICATION_CREATE, Permission.NOTIFICATION_UPDATE})
+    @PostMapping("/api/notifications/save-or-update")
+    public Object saveOrUpdate(@Valid @RequestBody NotificationDtos.Create input) {
+        return service.saveOrUpdate(input);
     }
 
     @RequirePrivilege(Permission.NOTIFICATION_DELETE)

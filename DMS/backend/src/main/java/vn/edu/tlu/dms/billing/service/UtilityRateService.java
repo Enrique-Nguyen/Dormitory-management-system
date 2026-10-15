@@ -1,25 +1,17 @@
 package vn.edu.tlu.dms.billing.service;
 
 import vn.edu.tlu.dms.billing.api.UtilityRateDtos;
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 
-import java.util.List;
-
-/** Khai báo thao tác tra cứu và thêm phiên bản đơn giá điện, nước theo ngày hiệu lực. */
+/** Tra cứu và lưu phiên bản đơn giá điện nước; logic nằm trong Service Impl. */
 public interface UtilityRateService {
+    /** Tìm theo từ khóa/loại đồng hồ và phân trang, sắp xếp tại CSDL theo cột được phép. */
+    PageResponse<UtilityRateDtos.Response> searchByPage(SearchRequest input);
 
     /**
-     * Lấy các phiên bản đơn giá điện, nước, sắp xếp theo ngày hiệu lực từ mới đến cũ.
-     *
-     * @param meterType loại đồng hồ ELECTRIC hoặc WATER; null để lấy cả hai loại
-     * @return danh sách phiên bản đơn giá phù hợp
+     * ID trống: kiểm đủ dữ liệu bắt buộc và tạo phiên bản giá. Có ID: kiểm quyền sửa, người tạo và
+     * ngày hiệu lực, chỉ cập nhật trường được gửi; không sửa giá đã hiệu lực.
      */
-    List<UtilityRateDtos.Response> getUtilityRates(String meterType);
-
-    /**
-     * Thêm một phiên bản đơn giá mới và lưu người tạo; giữ nguyên các phiên bản đã có.
-     *
-     * @param input loại đồng hồ, đơn giá và ngày bắt đầu hiệu lực
-     * @return phiên bản đơn giá vừa tạo
-     */
-    UtilityRateDtos.Response createUtilityRate(UtilityRateDtos.Create input);
+    UtilityRateDtos.Response saveOrUpdate(UtilityRateDtos.Save input);
 }

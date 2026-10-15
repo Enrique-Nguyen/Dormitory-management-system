@@ -1,6 +1,7 @@
 package vn.edu.tlu.dms.billing.service.impl;
 
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,11 +12,14 @@ import vn.edu.tlu.dms.billing.domain.Invoice;
 import vn.edu.tlu.dms.billing.repository.InvoiceItemRepository;
 import vn.edu.tlu.dms.billing.repository.InvoiceRepository;
 import vn.edu.tlu.dms.billing.service.InvoiceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -68,18 +72,60 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     @Override
-    public PageResponse<InvoiceDtos.Response> searchInvoices(
-            int page, int size, String type, String status, boolean mine) {
-        return searchInvoices(page, size, type, status, mine, "");
-    }
-
-    @Override
-    public PageResponse<InvoiceDtos.Response> searchInvoices(
-            int page, int size, String type, String status, boolean mine, String q) {
+    public PageResponse<InvoiceDtos.Response> searchByPage(SearchRequest input, boolean mine) {
         scopeGuard.requirePermission(Permission.INVOICE_READ);
         scopeGuard.requireRole(mine ? new String[] {Role.STUDENT} : new String[] {Role.STAFF});
+        if (input.type() != null
+                && !Set.of(InvoiceType.ROOM_FEE, InvoiceType.UTILITY).contains(input.type())) {
+            throw BusinessException.invalid("type", "Loại hóa đơn không hợp lệ");
+        }
+        List<String> statuses = input.statuses();
+        boolean filterStatuses = statuses != null && !statuses.isEmpty();
+        if (filterStatuses
+                && statuses.stream()
+                        .anyMatch(
+                                status ->
+                                        status == null
+                                                || !Set.of(InvoiceStatus.UNPAID, InvoiceStatus.PAID)
+                                                        .contains(status))) {
+            throw BusinessException.invalid("status", "Trạng thái hóa đơn không hợp lệ");
+        }
+        var requested =
+                PageQuery.of(
+                        input.page(),
+                        input.size(),
+                        input.sort(),
+                        Set.of(
+                                "id",
+                                "code",
+                                "type",
+                                "studentId",
+                                "semesterId",
+                                "roomId",
+                                "billingMonth",
+                                "totalAmount",
+                                "dueDate",
+                                "status",
+                                "issuedAt",
+                                "paidAt"),
+                        "issuedAt,desc");
+        // Native SQL dùng tên cột thật; mọi thuộc tính đã qua whitelist trước khi đổi tên.
+        Sort sqlSort =
+                Sort.by(
+                        requested.getSort().stream()
+                                .map(
+                                        order ->
+                                                new Sort.Order(
+                                                        order.getDirection(),
+                                                        order.getProperty()
+                                                                .replaceAll(
+                                                                        "([a-z0-9])([A-Z])",
+                                                                        "$1_$2")
+                                                                .toLowerCase(
+                                                                        java.util.Locale.ROOT)))
+                                .toList());
+        var pageable = PageRequest.of(requested.getPageNumber(), requested.getPageSize(), sqlSort);
         var actor = currentUser.get();
-        PageQuery.of(page, size, null, Set.of("id"), "id,desc");
         return PageResponse.from(
                 invoices.searchAccessibleInvoices(
                                 actor.role(),
@@ -87,10 +133,11 @@ public class InvoiceServiceImpl implements InvoiceService {
                                 actor.unitId(),
                                 actor.crossUnitAccess(),
                                 mine,
-                                type,
-                                status,
-                                "%" + q.trim() + "%",
-                                PageRequest.of(page, size))
+                                input.type(),
+                                filterStatuses,
+                                filterStatuses ? statuses : List.of(InvoiceStatus.UNPAID),
+                                "%" + input.q().trim() + "%",
+                                pageable)
                         .map(invoice -> toInvoiceResponse(invoice, false)));
     }
 
@@ -152,7 +199,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setStatus(InvoiceStatus.PAID);
         invoices.saveAndFlush(invoice);
         historyService.record(
-                "INVOICE",
+                EntityType.INVOICE,
                 id,
                 InvoiceStatus.UNPAID,
                 InvoiceStatus.PAID,
@@ -230,6 +277,6 @@ public class InvoiceServiceImpl implements InvoiceService {
                 invoice.getPaidAt(),
                 itemResponses,
                 detail ? actions : null,
-                detail ? historyService.list("INVOICE", invoice.getId()) : null);
+                detail ? historyService.list(EntityType.INVOICE, invoice.getId()) : null);
     }
 }

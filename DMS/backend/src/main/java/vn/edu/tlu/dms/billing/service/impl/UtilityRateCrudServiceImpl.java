@@ -4,9 +4,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import vn.edu.tlu.dms.billing.api.UtilityRateDtos;
 import vn.edu.tlu.dms.billing.service.UtilityRateCrudService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
@@ -59,31 +59,6 @@ public class UtilityRateCrudServiceImpl implements UtilityRateCrudService {
     }
 
     @Override
-    public Object updateRate(Long id, UtilityRateDtos.Create input) {
-        guard.requirePermission(Permission.UTILITY_RATE_UPDATE);
-        var before = requireUnusedRate(id);
-        if (!input.effectiveFrom().isAfter(LocalDate.now())) {
-            throw BusinessException.conflict(ErrorCode.RATE_ALREADY_EFFECTIVE);
-        }
-        jdbc.update(
-                "UPDATE utility_rate SET meter_type=?,unit_price=?,effective_from=? WHERE id=?",
-                input.meterType(),
-                input.unitPrice(),
-                input.effectiveFrom(),
-                id);
-        audit.record(
-                current.get().id(),
-                AuditAction.RATE_UPDATE,
-                "UTILITY_RATE",
-                id,
-                before,
-                input,
-                null);
-        return queries.one(
-                "SELECT id,meter_type,unit_price,effective_from FROM utility_rate WHERE id=?", id);
-    }
-
-    @Override
     public void deleteRate(Long id) {
         guard.requirePermission(Permission.UTILITY_RATE_DELETE);
         var before = requireUnusedRate(id);
@@ -91,7 +66,7 @@ public class UtilityRateCrudServiceImpl implements UtilityRateCrudService {
         audit.record(
                 current.get().id(),
                 AuditAction.RATE_DELETE,
-                "UTILITY_RATE",
+                EntityType.UTILITY_RATE,
                 id,
                 before,
                 null,

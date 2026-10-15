@@ -1,13 +1,16 @@
 package vn.edu.tlu.dms.contract.service.impl;
 
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -49,18 +52,32 @@ public class ContractServiceImpl implements ContractService {
     }
 
     @Override
-    public PageResponse<ContractDtos.Response> searchContracts(
-            int page, int size, String status, boolean mine) {
-        return searchContracts(page, size, status, mine, "");
-    }
-
-    @Override
-    public PageResponse<ContractDtos.Response> searchContracts(
-            int page, int size, String status, boolean mine, String q) {
+    public PageResponse<ContractDtos.Response> searchByPage(SearchRequest input, boolean mine) {
         scopeGuard.requirePermission(Permission.CONTRACT_READ);
         scopeGuard.requireRole(mine ? new String[] {Role.STUDENT} : new String[] {Role.STAFF});
         var actor = currentUser.get();
-        PageQuery.of(page, size, null, Set.of("id"), "id,desc");
+        var pageable =
+                PageQuery.of(
+                        input.page(),
+                        input.size(),
+                        input.sort(),
+                        Set.of("id", "code", "status", "startDate", "endDate", "createdAt"),
+                        "createdAt,desc");
+        // Native SQL dùng tên cột được ánh xạ từ whitelist, tuyệt đối không nhận tên SQL từ client.
+        var orders =
+                pageable.getSort().stream()
+                        .map(
+                                order ->
+                                        new Sort.Order(
+                                                order.getDirection(),
+                                                switch (order.getProperty()) {
+                                                    case "startDate" -> "start_date";
+                                                    case "endDate" -> "end_date";
+                                                    case "createdAt" -> "created_at";
+                                                    default -> order.getProperty();
+                                                }))
+                        .toList();
+        List<String> statuses = input.statuses();
         return PageResponse.from(
                 repository
                         .searchAccessibleContracts(
@@ -69,9 +86,10 @@ public class ContractServiceImpl implements ContractService {
                                 actor.unitId(),
                                 actor.crossUnitAccess(),
                                 mine,
-                                status,
-                                "%" + q.trim() + "%",
-                                PageRequest.of(page, size))
+                                statuses == null || statuses.isEmpty(),
+                                statuses == null || statuses.isEmpty() ? List.of("") : statuses,
+                                "%" + input.q().trim() + "%",
+                                PageRequest.of(input.page(), input.size(), Sort.by(orders)))
                         .map(contract -> toContractResponse(contract, false)));
     }
 
@@ -125,6 +143,6 @@ public class ContractServiceImpl implements ContractService {
                 contract.getActivatedAt(),
                 contract.getStatusReason(),
                 detail ? List.of() : null,
-                detail ? historyService.list("CONTRACT", contract.getId()) : null);
+                detail ? historyService.list(EntityType.CONTRACT, contract.getId()) : null);
     }
 }

@@ -1,41 +1,28 @@
 package vn.edu.tlu.dms.registration.service;
 
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.registration.api.RegistrationPeriodDtos.Input;
 import vn.edu.tlu.dms.registration.api.RegistrationPeriodDtos.Response;
 
-import java.util.List;
-
-/**
- * Khai báo các thao tác quản lý đợt đăng ký; phần xử lý nằm trong RegistrationPeriodServiceImpl.
- */
+/** Hợp đồng quản lý đợt đăng ký; logic nằm trong RegistrationPeriodServiceImpl. */
 public interface RegistrationPeriodService {
 
     /**
-     * Lấy các đợt đăng ký theo học kỳ, loại đợt và điều kiện đang mở. Chỉ trả các đợt thuộc phạm vi
-     * người dùng được phép xem.
-     *
-     * @param semesterId mã học kỳ; null để không lọc học kỳ
-     * @param kind loại đợt; null để không lọc loại
-     * @param open điều kiện đang mở; null để không lọc thời gian mở
-     * @return danh sách đợt đăng ký phù hợp
+     * Tìm kiếm/phân trang đợt theo từ khóa, học kỳ, loại, thời gian và phạm vi được phép.
+     * openForStudent do server chỉ định: true luôn chỉ lấy đợt đang mở cho form sinh viên.
      */
-    List<Response> getRegistrationPeriods(Long semesterId, String kind, Boolean open);
+    PageResponse<Response> searchByPage(SearchRequest search, boolean openForStudent);
 
-    /** Lấy chi tiết đợt đăng ký theo mã, sau khi kiểm tra quyền và phạm vi dữ liệu. */
+    /** Đọc chi tiết đợt theo ID sau khi kiểm tra quyền và phạm vi. */
     Response getRegistrationPeriodById(Long id);
 
-    /** Tạo đợt đăng ký, đơn vị áp dụng và chỉ tiêu trong cùng một giao dịch. */
-    Response createRegistrationPeriod(Input input);
-
     /**
-     * Cập nhật đợt đăng ký được phép quản lý. Đợt đã mở chỉ được gia hạn thời điểm đóng; khóa bản
-     * ghi để tránh ghi đè đồng thời.
+     * ID trống tạo đợt và các đơn vị/chỉ tiêu, có ID cập nhật bản ghi đã tồn tại. Kiểm tra
+     * CREATE/UPDATE riêng; đợt đã mở chỉ được gia hạn ngày đóng, ghi cùng transaction.
      */
-    Response updateRegistrationPeriod(Long id, Input input);
+    Response saveOrUpdate(Input input);
 
-    /** Xóa đợt chưa mở và chưa có đơn đăng ký, cùng các chỉ tiêu và đơn vị áp dụng của đợt. */
+    /** Xóa đợt chưa mở/chưa có đơn cùng các chỉ tiêu và đơn vị áp dụng. */
     void deleteUnusedPeriod(Long id);
-
-    /** Lấy những đợt đang mở mà sinh viên đăng nhập có thể lựa chọn để lập đơn. */
-    List<Response> getOpenPeriodsForStudent();
 }

@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.account.api.AccountDtos.Create;
 import vn.edu.tlu.dms.account.api.AccountDtos.Profile;
 import vn.edu.tlu.dms.account.api.AccountDtos.ProfileInput;
+import vn.edu.tlu.dms.account.api.AccountDtos.Save;
 import vn.edu.tlu.dms.account.api.AccountDtos.TemporaryPassword;
 import vn.edu.tlu.dms.account.api.AccountDtos.Update;
 import vn.edu.tlu.dms.account.domain.AppUser;
@@ -18,11 +19,15 @@ import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.account.service.AuthService;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
 import vn.edu.tlu.dms.account.service.UserService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -80,20 +85,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public PageResponse<Profile> list(
-            int page, int size, List<String> sort, String q, String role) {
-        return list(page, size, sort, q, role, null, null);
-    }
-
-    @Override
-    public PageResponse<Profile> list(
-            int page,
-            int size,
-            List<String> sort,
-            String q,
-            String role,
-            Long managementUnitId,
-            Boolean locked) {
+    public PageResponse<Profile> searchByPage(SearchRequest input) {
+        int page = input.page();
+        int size = input.size();
+        List<String> sort = input.sort();
+        String q = input.q();
+        String role = input.role();
+        Long managementUnitId = input.managementUnitId();
+        Boolean locked = input.locked();
         guard.requirePermission(Permission.USER_READ);
         if (managementUnitId != null && managementUnitId <= 0) {
             throw BusinessException.invalid("managementUnitId", "ID đơn vị phải lớn hơn 0");
@@ -137,7 +136,46 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public TemporaryPassword create(Create input) {
+    public Object saveOrUpdate(Save input) {
+        // Phân quyền theo nhánh trước khi khóa/ghi dữ liệu hoặc gọi Keycloak.
+        if (input.id() == null) {
+            guard.requirePermission(Permission.USER_CREATE);
+            // DTO gộp không cho dùng trường hồ sơ sinh viên để tạo tài khoản cán bộ.
+            rejectStudentFieldOnCreate("studentCode", input.studentCode());
+            rejectStudentFieldOnCreate("gender", input.gender());
+            rejectStudentFieldOnCreate("dateOfBirth", input.dateOfBirth());
+            rejectStudentFieldOnCreate("faculty", input.faculty());
+            rejectStudentFieldOnCreate("cohort", input.cohort());
+            String username = trimRequiredText(input.username(), "username");
+            String fullName = trimRequiredText(input.fullName(), "fullName");
+            String role = trimRequiredText(input.role(), "role");
+            return create(
+                    new Create(username, fullName, input.phone(), role, input.managementUnitId()));
+        }
+        guard.requirePermission(Permission.USER_UPDATE);
+        if (input.id() <= 0) {
+            throw BusinessException.invalid(ApiField.ID, ValidationMessage.ID_POSITIVE);
+        }
+        // Tên đăng nhập bất biến ở API tài khoản; mã sinh viên có luồng kiểm soát riêng.
+        if (input.username() != null) {
+            throw BusinessException.invalid(
+                    "username", "Không được cập nhật tên đăng nhập qua API tài khoản");
+        }
+        return update(
+                input.id(),
+                new Update(
+                        input.fullName(),
+                        input.phone(),
+                        input.role(),
+                        input.managementUnitId(),
+                        input.studentCode(),
+                        input.gender(),
+                        input.dateOfBirth(),
+                        input.faculty(),
+                        input.cohort()));
+    }
+
+    private TemporaryPassword create(Create input) {
         guard.requirePermission(Permission.USER_CREATE);
         boolean unitRole = input.role().equals(Role.STAFF) || input.role().equals(Role.TECHNICIAN);
         if (unitRole) {
@@ -164,7 +202,7 @@ public class UserServiceImpl implements UserService {
         audit.record(
                 current.get().id(),
                 AuditAction.USER_CREATE,
-                "USER",
+                EntityType.USER,
                 u.getId(),
                 null,
                 toUserProfileResponse(u),
@@ -172,9 +210,7 @@ public class UserServiceImpl implements UserService {
         return new TemporaryPassword(u.getId(), temporary);
     }
 
-    @Override
-    @Transactional
-    public Profile update(Long id, Update input) {
+    private Profile update(Long id, Update input) {
         guard.requirePermission(Permission.USER_UPDATE);
         var u = authService.lockAccount(id);
         var before = toUserProfileResponse(u);
@@ -251,7 +287,7 @@ public class UserServiceImpl implements UserService {
         audit.record(
                 current.get().id(),
                 AuditAction.USER_UPDATE,
-                "USER",
+                EntityType.USER,
                 id,
                 before,
                 toUserProfileResponse(u),
@@ -264,7 +300,7 @@ public class UserServiceImpl implements UserService {
     public void lock(Long id, String reason) {
         guard.requirePermission(Permission.USER_LOCK);
         if (id.equals(current.get().id())) {
-            throw BusinessException.invalid("id", "Không tự khóa tài khoản đang dùng");
+            throw BusinessException.invalid(ApiField.ID, "Không tự khóa tài khoản đang dùng");
         }
         var u = authService.lockAccount(id);
         u.setLocked(true);
@@ -274,7 +310,7 @@ public class UserServiceImpl implements UserService {
         audit.record(
                 current.get().id(),
                 AuditAction.USER_LOCK,
-                "USER",
+                EntityType.USER,
                 id,
                 null,
                 Map.of("locked", true),
@@ -296,7 +332,7 @@ public class UserServiceImpl implements UserService {
         audit.record(
                 current.get().id(),
                 AuditAction.USER_UNLOCK,
-                "USER",
+                EntityType.USER,
                 id,
                 null,
                 Map.of("locked", false),
@@ -329,7 +365,7 @@ public class UserServiceImpl implements UserService {
         audit.record(
                 current.get().id(),
                 AuditAction.USER_CROSS_UNIT_ACCESS,
-                "USER",
+                EntityType.USER,
                 id,
                 before,
                 enabled,
@@ -344,7 +380,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public Profile updateProfile(ProfileInput input) {
+    public Profile saveOrUpdate(ProfileInput input) {
         guard.requirePermission(Permission.PROFILE_UPDATE);
         var u = authService.lockAccount(current.get().id());
         // kiểm tra lại phiên sau khi chờ khóa tài khoản
@@ -394,10 +430,18 @@ public class UserServiceImpl implements UserService {
     }
 
     private String trimRequiredText(String value, String field) {
-        if (value.isBlank()) {
-            throw BusinessException.invalid(field, "Trường bắt buộc");
+        if (value == null || value.isBlank()) {
+            throw BusinessException.invalid(field, ValidationMessage.REQUIRED);
         }
         return value.trim();
+    }
+
+    /** Trả lỗi đúng tên trường khi client gửi dữ liệu sinh viên vào nhánh tạo cán bộ. */
+    private void rejectStudentFieldOnCreate(String field, Object value) {
+        if (value != null) {
+            throw BusinessException.invalid(
+                    field, "Trường hồ sơ sinh viên không áp dụng khi tạo tài khoản cán bộ");
+        }
     }
 
     private String generateTemporaryPassword() {

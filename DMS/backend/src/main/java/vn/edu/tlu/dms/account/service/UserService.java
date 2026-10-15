@@ -1,50 +1,29 @@
 package vn.edu.tlu.dms.account.service;
 
-import vn.edu.tlu.dms.account.api.AccountDtos.Create;
 import vn.edu.tlu.dms.account.api.AccountDtos.Profile;
 import vn.edu.tlu.dms.account.api.AccountDtos.ProfileInput;
+import vn.edu.tlu.dms.account.api.AccountDtos.Save;
 import vn.edu.tlu.dms.account.api.AccountDtos.TemporaryPassword;
-import vn.edu.tlu.dms.account.api.AccountDtos.Update;
 import vn.edu.tlu.dms.common.dto.PageResponse;
-
-import java.util.List;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 
 public interface UserService {
 
     /**
-     * Admin tìm kiếm và phân trang tài khoản theo từ khóa/vai trò; chỉ cho phép các trường sắp xếp
-     * được khai báo.
+     * Tìm tài khoản bằng từ khóa, vai trò, đơn vị và trạng thái khóa; trang bắt đầu từ 0. Các bộ
+     * lọc giao nhau và chỉ cho phép các trường sắp xếp đã đăng ký.
      */
-    PageResponse<Profile> list(int page, int size, List<String> sort, String q, String role);
-
-    /**
-     * Admin kết hợp từ khóa, vai trò, đơn vị quản lý và trạng thái khóa để tìm tài khoản. Bộ lọc
-     * không gửi được bỏ qua; quản trị viên không gắn đơn vị sẽ không thuộc kết quả khi lọc một đơn
-     * vị cụ thể. Phân trang và tổng số bản ghi dùng cùng điều kiện lọc.
-     */
-    PageResponse<Profile> list(
-            int page,
-            int size,
-            List<String> sort,
-            String q,
-            String role,
-            Long managementUnitId,
-            Boolean locked);
+    PageResponse<Profile> searchByPage(SearchRequest input);
 
     /** Admin đọc chi tiết tài khoản theo ID; không trả mật khẩu hoặc hash. */
     Profile get(Long id);
 
     /**
-     * Admin tạo tài khoản cán bộ/quản trị, kiểm tra vai trò và đơn vị; trả mật khẩu tạm một lần.
+     * Không có ID: kiểm quyền tạo, trường bắt buộc và cấp mật khẩu tạm một lần. Có ID: kiểm quyền
+     * sửa, cập nhật trường được gửi và thu hồi phiên khi đổi vai trò/đơn vị. Kết quả tạo là
+     * TemporaryPassword; kết quả sửa là Profile, không chứa mật khẩu.
      */
-    TemporaryPassword create(Create input);
-
-    /**
-     * Admin cập nhật các trường tài khoản được phép, kiểm tra vai trò và ghi audit; thu hồi toàn bộ
-     * phiên nếu tên đăng nhập, vai trò hoặc đơn vị quản lý thay đổi để áp dụng quyền/phạm vi mới
-     * khi đăng nhập lại.
-     */
-    Profile update(Long id, Update input);
+    Object saveOrUpdate(Save input);
 
     /** Admin khóa tài khoản với lý do bắt buộc, không được tự khóa; thu hồi toàn bộ phiên đã mở. */
     void lock(Long id, String reason);
@@ -71,5 +50,5 @@ public interface UserService {
     Profile profile();
 
     /** Cập nhật các trường cá nhân được phép của chính người đăng nhập và ghi audit. */
-    Profile updateProfile(ProfileInput input);
+    Profile saveOrUpdate(ProfileInput input);
 }

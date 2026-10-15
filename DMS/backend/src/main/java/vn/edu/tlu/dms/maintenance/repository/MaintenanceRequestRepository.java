@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 
 import vn.edu.tlu.dms.maintenance.domain.MaintenanceRequest;
 
+import java.util.List;
+
 public interface MaintenanceRequestRepository
         extends JpaRepository<MaintenanceRequest, Long>,
                 JpaSpecificationExecutor<MaintenanceRequest> {
@@ -21,10 +23,9 @@ public interface MaintenanceRequestRepository
                     WHERE (:role='ADMIN' OR (:role='STUDENT' AND (m.requester_id=:userId OR m.room_id=:stayingRoomId))
                     OR (:role='TECHNICIAN' AND m.assigned_to=:userId)
                     OR (:role='STAFF' AND (:crossUnit=true OR coalesce(rb.management_unit_id,cb.management_unit_id)=:unitId)))
-                    AND (:status IS NULL OR m.status=:status) AND (:category IS NULL OR m.category=:category)
+                    AND (:allStatuses = true OR m.status IN (:statuses)) AND (:category IS NULL OR m.category=:category)
                     AND (:severity IS NULL OR m.severity=:severity)
                     AND (m.code ILIKE :q OR m.description ILIKE :q)
-                    ORDER BY m.created_at DESC, m.id DESC
                     """,
             countQuery =
                     """
@@ -33,7 +34,7 @@ public interface MaintenanceRequestRepository
                     WHERE (:role='ADMIN' OR (:role='STUDENT' AND (m.requester_id=:userId OR m.room_id=:stayingRoomId))
                     OR (:role='TECHNICIAN' AND m.assigned_to=:userId)
                     OR (:role='STAFF' AND (:crossUnit=true OR coalesce(rb.management_unit_id,cb.management_unit_id)=:unitId)))
-                    AND (:status IS NULL OR m.status=:status) AND (:category IS NULL OR m.category=:category)
+                    AND (:allStatuses = true OR m.status IN (:statuses)) AND (:category IS NULL OR m.category=:category)
                     AND (:severity IS NULL OR m.severity=:severity)
                     AND (m.code ILIKE :q OR m.description ILIKE :q)
                     """,
@@ -44,7 +45,8 @@ public interface MaintenanceRequestRepository
             Long unitId,
             boolean crossUnit,
             Long stayingRoomId,
-            String status,
+            boolean allStatuses,
+            List<String> statuses,
             String category,
             String severity,
             String q,

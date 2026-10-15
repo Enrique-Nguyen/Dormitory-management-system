@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.domain.AuditLog;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.repository.AuditLogRepository;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -19,6 +20,7 @@ import vn.edu.tlu.dms.common.support.SqlPage;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class AuditServiceImpl implements AuditService {
@@ -42,15 +44,13 @@ public class AuditServiceImpl implements AuditService {
     /** Tất cả giá trị lọc đều bind bằng tham số; không ghép nội dung client vào SQL. */
     @Transactional(readOnly = true)
     @Override
-    public PageResponse<Map<String, Object>> searchAuditLogs(
-            int page,
-            int size,
-            String q,
-            Long actorId,
-            String action,
-            String entityType,
-            OffsetDateTime from,
-            OffsetDateTime to) {
+    public PageResponse<Map<String, Object>> searchByPage(SearchRequest input) {
+        String q = input.q();
+        Long actorId = input.actorId();
+        String action = input.action();
+        String entityType = input.entityType();
+        OffsetDateTime from = input.from();
+        OffsetDateTime to = input.to();
         guard.requirePermission(Permission.AUDIT_READ);
         if (actorId != null && actorId <= 0) {
             throw BusinessException.invalid("actorId", "ID người thực hiện phải lớn hơn 0");
@@ -89,7 +89,21 @@ public class AuditServiceImpl implements AuditService {
             sql.append(" AND a.created_at <= ?");
             args.add(to);
         }
-        return queries.search(sql.toString(), args, page, size);
+        return queries.search(
+                sql.toString(),
+                args,
+                input,
+                Set.of(
+                        "id",
+                        "actorId",
+                        "fullName",
+                        "action",
+                        "entityType",
+                        "entityId",
+                        "reason",
+                        "requestId",
+                        "createdAt"),
+                "id,desc");
     }
 
     @Transactional

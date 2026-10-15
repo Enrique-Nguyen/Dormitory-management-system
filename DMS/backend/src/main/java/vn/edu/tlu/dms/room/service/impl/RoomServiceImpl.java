@@ -12,11 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RoomStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -91,6 +94,22 @@ public class RoomServiceImpl implements RoomService {
         this.references = references;
         this.accounts = accounts;
         this.audit = audit;
+    }
+
+    @Override
+    public PageResponse<Response> searchByPage(SearchRequest request) {
+        return searchRooms(
+                request.page(),
+                request.size(),
+                request.sort(),
+                request.buildingId(),
+                request.floor(),
+                request.roomTypeId(),
+                request.gender(),
+                request.status(),
+                request.hasFreeBed(),
+                request.noLeader(),
+                request.q());
     }
 
     @Override
@@ -181,8 +200,17 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     @Transactional
-    public Response createRoom(Input input) {
-        guard.requirePermission(Permission.ROOM_CREATE);
+    public Response saveOrUpdate(Input input) {
+        if (input.id() == null) {
+            guard.requirePermission(Permission.ROOM_CREATE);
+            return createRoomInternal(input);
+        } else {
+            guard.requirePermission(Permission.ROOM_UPDATE);
+            return updateRoomInternal(input.id(), input);
+        }
+    }
+
+    private Response createRoomInternal(Input input) {
         requireValue(input.buildingId(), "buildingId");
         requireValue(input.roomTypeId(), "roomTypeId");
         guard.requireUnit(references.getBuildingManagementUnitId(input.buildingId()));
@@ -205,14 +233,17 @@ public class RoomServiceImpl implements RoomService {
         }
         beds.flush();
         audit.record(
-                current.get().id(), AuditAction.ROOM_CREATE, "ROOM", r.getId(), null, input, null);
+                current.get().id(),
+                AuditAction.ROOM_CREATE,
+                EntityType.ROOM,
+                r.getId(),
+                null,
+                input,
+                null);
         return toRoomResponse(r, true);
     }
 
-    @Override
-    @Transactional
-    public Response updateRoom(Long id, Input input) {
-        guard.requirePermission(Permission.ROOM_UPDATE);
+    private Response updateRoomInternal(Long id, Input input) {
         lockRoomBedsInAscendingOrder(id);
         var r = findAccessibleRoom(id, true);
         if (input.buildingId() != null && !input.buildingId().equals(r.getBuildingId())) {
@@ -239,7 +270,14 @@ public class RoomServiceImpl implements RoomService {
             r.setRoomTypeId(input.roomTypeId());
         }
         rooms.saveAndFlush(r);
-        audit.record(current.get().id(), AuditAction.ROOM_UPDATE, "ROOM", id, null, input, null);
+        audit.record(
+                current.get().id(),
+                AuditAction.ROOM_UPDATE,
+                EntityType.ROOM,
+                id,
+                null,
+                input,
+                null);
         return toRoomResponse(r, true);
     }
 
@@ -258,7 +296,7 @@ public class RoomServiceImpl implements RoomService {
         audit.record(
                 current.get().id(),
                 AuditAction.ROOM_STATUS,
-                "ROOM",
+                EntityType.ROOM,
                 id,
                 before,
                 input.status(),
@@ -268,30 +306,50 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     @Transactional
-    public BedResponse addBedToRoom(Long roomId, BedInput input) {
-        guard.requirePermission(Permission.BED_CREATE);
-        var r = findAccessibleRoom(roomId, true);
+    public BedResponse saveOrUpdateBed(BedInput input) {
+        if (input.id() == null) {
+            guard.requirePermission(Permission.BED_CREATE);
+            return createBedInternal(input);
+        } else {
+            guard.requirePermission(Permission.BED_UPDATE);
+            return updateBedInternal(input.id(), input);
+        }
+    }
+
+    private BedResponse createBedInternal(BedInput input) {
+        requireValue(input.roomId(), "roomId");
+        var r = findAccessibleRoom(input.roomId(), true);
         var bed = new Bed();
         bed.setRoomId(r.getId());
         bed.setCode(trimRequiredText(input.code(), "code"));
         bed.setStatus(BedOperationStatus.ACTIVE);
         beds.saveAndFlush(bed);
+        audit.record(
+                current.get().id(),
+                AuditAction.BED_CREATE,
+                EntityType.BED,
+                bed.getId(),
+                null,
+                toBedResponse(bed),
+                null);
         return toBedResponse(bed);
     }
 
-    @Override
-    @Transactional
-    public BedResponse updateBedCode(Long id, BedInput input) {
-        guard.requirePermission(Permission.BED_UPDATE);
+    private BedResponse updateBedInternal(Long id, BedInput input) {
         var bed = lockAndFindBed(id);
         findAccessibleRoom(bed.getRoomId(), true);
+        if (input.roomId() != null && !input.roomId().equals(bed.getRoomId())) {
+            throw BusinessException.invalid("roomId", "Không chuyển giường sang phòng khác");
+        }
         String previous = bed.getCode();
-        bed.setCode(trimRequiredText(input.code(), "code"));
+        if (input.code() != null) {
+            bed.setCode(trimRequiredText(input.code(), "code"));
+        }
         beds.saveAndFlush(bed);
         audit.record(
                 current.get().id(),
                 AuditAction.BED_UPDATE,
-                "BED",
+                EntityType.BED,
                 id,
                 previous,
                 bed.getCode(),
@@ -314,7 +372,7 @@ public class RoomServiceImpl implements RoomService {
         audit.record(
                 current.get().id(),
                 AuditAction.BED_STATUS,
-                "BED",
+                EntityType.BED,
                 id,
                 before,
                 input.status(),
@@ -341,7 +399,13 @@ public class RoomServiceImpl implements RoomService {
         rooms.delete(r);
         rooms.flush();
         audit.record(
-                current.get().id(), AuditAction.ROOM_DELETE, "ROOM", id, r.getCode(), null, null);
+                current.get().id(),
+                AuditAction.ROOM_DELETE,
+                EntityType.ROOM,
+                id,
+                r.getCode(),
+                null,
+                null);
     }
 
     @Override
@@ -356,7 +420,13 @@ public class RoomServiceImpl implements RoomService {
         beds.delete(bed);
         beds.flush();
         audit.record(
-                current.get().id(), AuditAction.BED_DELETE, "BED", id, bed.getCode(), null, null);
+                current.get().id(),
+                AuditAction.BED_DELETE,
+                EntityType.BED,
+                id,
+                bed.getCode(),
+                null,
+                null);
     }
 
     @Override
@@ -381,7 +451,7 @@ public class RoomServiceImpl implements RoomService {
         audit.record(
                 current.get().id(),
                 AuditAction.ROOM_LEADER_CHANGE,
-                "ROOM",
+                EntityType.ROOM,
                 id,
                 before,
                 studentId,
@@ -401,7 +471,7 @@ public class RoomServiceImpl implements RoomService {
         audit.record(
                 current.get().id(),
                 AuditAction.ROOM_LEADER_CHANGE,
-                "ROOM",
+                EntityType.ROOM,
                 id,
                 before,
                 null,
@@ -506,14 +576,14 @@ public class RoomServiceImpl implements RoomService {
 
     private <T> T requireValue(T value, String field) {
         if (value == null) {
-            throw BusinessException.invalid(field, "Trường bắt buộc");
+            throw BusinessException.invalid(field, ValidationMessage.REQUIRED);
         }
         return value;
     }
 
     private String trimRequiredText(String value, String field) {
         if (value == null || value.isBlank()) {
-            throw BusinessException.invalid(field, "Trường bắt buộc");
+            throw BusinessException.invalid(field, ValidationMessage.REQUIRED);
         }
         return value.trim();
     }

@@ -21,6 +21,8 @@ spring:
     time-zone: Asia/Ho_Chi_Minh
     deserialization:
       fail-on-unknown-properties: true
+      accept-float-as-int: false
+      fail-on-null-for-primitives: true
 
 server:
   port: ${SERVER_PORT:8080}

@@ -1,11 +1,13 @@
 package vn.edu.tlu.dms.registration.service.impl;
 
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -18,6 +20,7 @@ import vn.edu.tlu.dms.registration.repository.PriorityCategoryRepository;
 import vn.edu.tlu.dms.registration.service.PriorityCategoryService;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class PriorityCategoryServiceImpl
@@ -53,6 +56,36 @@ public class PriorityCategoryServiceImpl
     protected void checkPermission(String action) {
         guard.requirePermission(
                 Resource.PRIORITY_CATEGORY + DmsConstants.PERMISSION_SEPARATOR + action);
+    }
+
+    @Override
+    protected Long getInputId(PriorityCategoryRequest input) {
+        return input.id();
+    }
+
+    @Override
+    protected Set<String> searchableFields() {
+        return Set.of("code", "name");
+    }
+
+    @Override
+    protected Set<String> sortableFields() {
+        Actor actor = currentUser.get();
+        if (actor.is(Role.STUDENT) || actor.is(Role.TECHNICIAN)) {
+            // Trọng số đã được ẩn trong response; không cho suy ra thứ tự ưu tiên qua sort.
+            return Set.of("id", "code", "name", "active");
+        }
+        return Set.of("id", "code", "name", "weight", "active");
+    }
+
+    @Override
+    protected Specification<PriorityCategory> searchScope(SearchRequest search) {
+        Actor actor = currentUser.get();
+        // Không công khai diện đã ngừng dùng cho sinh viên/KTV khi chuyển sang phân trang.
+        return (root, query, builder) ->
+                actor.is(Role.STUDENT) || actor.is(Role.TECHNICIAN)
+                        ? builder.isTrue(root.get("active"))
+                        : builder.conjunction();
     }
 
     @Override
