@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.slf4j.MDC;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ import vn.edu.tlu.dms.common.support.SqlPage;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -32,12 +34,19 @@ public class AuditServiceImpl implements AuditService {
 
     private final ScopeGuard guard;
 
+    private final JdbcTemplate jdbc;
+
     public AuditServiceImpl(
-            AuditLogRepository repository, ObjectMapper mapper, SqlPage queries, ScopeGuard guard) {
+            AuditLogRepository repository,
+            ObjectMapper mapper,
+            SqlPage queries,
+            ScopeGuard guard,
+            JdbcTemplate jdbc) {
         this.repository = repository;
         this.mapper = mapper;
         this.queries = queries;
         this.guard = guard;
+        this.jdbc = jdbc;
     }
 
     /** Tất cả giá trị lọc đều bind bằng tham số; không ghép nội dung client vào SQL. */
@@ -91,6 +100,27 @@ public class AuditServiceImpl implements AuditService {
             args.add(to);
         }
         return queries.search(sql.toString(), args, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<EntityLogEntry> listEntityLog(String entityType, Long entityId, String action) {
+        return jdbc.query(
+                "SELECT a.actor_id,u.full_name,a.old_value::text AS old_value,"
+                        + "a.new_value::text AS new_value,a.reason,a.created_at FROM audit_log a"
+                        + " LEFT JOIN app_user u ON u.id=a.actor_id WHERE a.entity_type=? AND"
+                        + " a.entity_id=? AND a.action=? ORDER BY a.created_at,a.id",
+                (rs, i) ->
+                        new EntityLogEntry(
+                                rs.getObject("actor_id", Long.class),
+                                rs.getString("full_name"),
+                                rs.getString("old_value"),
+                                rs.getString("new_value"),
+                                rs.getString("reason"),
+                                rs.getObject("created_at", OffsetDateTime.class)),
+                entityType,
+                entityId,
+                action);
     }
 
     @Transactional

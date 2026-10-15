@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditEntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
@@ -32,11 +33,13 @@ import vn.edu.tlu.dms.room.api.RoomDtos.BedResponse;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedStatus;
 import vn.edu.tlu.dms.room.api.RoomDtos.FreeBed;
 import vn.edu.tlu.dms.room.api.RoomDtos.Input;
+import vn.edu.tlu.dms.room.api.RoomDtos.LeaderChange;
 import vn.edu.tlu.dms.room.api.RoomDtos.Occupant;
 import vn.edu.tlu.dms.room.api.RoomDtos.Response;
 import vn.edu.tlu.dms.room.api.RoomDtos.RoomRef;
 import vn.edu.tlu.dms.room.api.RoomDtos.RoomTypeRef;
 import vn.edu.tlu.dms.room.api.RoomDtos.Status;
+import vn.edu.tlu.dms.room.api.RoomDtos.StudentRef;
 import vn.edu.tlu.dms.room.domain.Bed;
 import vn.edu.tlu.dms.room.domain.Building;
 import vn.edu.tlu.dms.room.domain.Room;
@@ -221,7 +224,13 @@ public class RoomServiceImpl implements RoomService {
         rooms.saveAndFlush(r);
         syncBeds(r, type.getBedCount());
         audit.record(
-                current.get().id(), AuditAction.ROOM_CREATE, "ROOM", r.getId(), null, input, null);
+                current.get().id(),
+                AuditAction.ROOM_CREATE,
+                AuditEntityType.ROOM,
+                r.getId(),
+                null,
+                input,
+                null);
         return toRoomResponse(r, true, null);
     }
 
@@ -265,7 +274,14 @@ public class RoomServiceImpl implements RoomService {
                             .orElseThrow(BusinessException::notFound)
                             .getBedCount());
         }
-        audit.record(current.get().id(), AuditAction.ROOM_UPDATE, "ROOM", id, null, input, null);
+        audit.record(
+                current.get().id(),
+                AuditAction.ROOM_UPDATE,
+                AuditEntityType.ROOM,
+                id,
+                null,
+                input,
+                null);
         return toRoomResponse(r, true, null);
     }
 
@@ -284,7 +300,7 @@ public class RoomServiceImpl implements RoomService {
         audit.record(
                 current.get().id(),
                 AuditAction.ROOM_STATUS,
-                "ROOM",
+                AuditEntityType.ROOM,
                 id,
                 before,
                 input.status(),
@@ -317,7 +333,7 @@ public class RoomServiceImpl implements RoomService {
         audit.record(
                 current.get().id(),
                 AuditAction.BED_UPDATE,
-                "BED",
+                AuditEntityType.BED,
                 id,
                 previous,
                 bed.getCode(),
@@ -340,7 +356,7 @@ public class RoomServiceImpl implements RoomService {
         audit.record(
                 current.get().id(),
                 AuditAction.BED_STATUS,
-                "BED",
+                AuditEntityType.BED,
                 id,
                 before,
                 input.status(),
@@ -367,7 +383,13 @@ public class RoomServiceImpl implements RoomService {
         rooms.delete(r);
         rooms.flush();
         audit.record(
-                current.get().id(), AuditAction.ROOM_DELETE, "ROOM", id, r.getCode(), null, null);
+                current.get().id(),
+                AuditAction.ROOM_DELETE,
+                AuditEntityType.ROOM,
+                id,
+                r.getCode(),
+                null,
+                null);
     }
 
     @Override
@@ -382,7 +404,13 @@ public class RoomServiceImpl implements RoomService {
         beds.delete(bed);
         beds.flush();
         audit.record(
-                current.get().id(), AuditAction.BED_DELETE, "BED", id, bed.getCode(), null, null);
+                current.get().id(),
+                AuditAction.BED_DELETE,
+                AuditEntityType.BED,
+                id,
+                bed.getCode(),
+                null,
+                null);
     }
 
     @Override
@@ -399,15 +427,34 @@ public class RoomServiceImpl implements RoomService {
                         id,
                         studentId);
         if (!staying) {
-            throw BusinessException.conflict(ErrorCode.LEADER_NOT_STAYING);
+            throw new BusinessException(
+                    ErrorCode.LEADER_NOT_STAYING,
+                    HttpStatus.CONFLICT,
+                    Map.of("roomCode", r.getCode()));
         }
         Long before = r.getLeaderStudentId();
+        if (studentId.equals(before)) {
+            return toRoomResponse(r, true, null);
+        }
+        // Báo rõ phòng đang do sinh viên làm trưởng; ux_room_leader vẫn chặn khi chạy đồng thời.
+        var leading =
+                jdbc.queryForList(
+                        "SELECT code FROM room WHERE leader_student_id=? AND id<>?",
+                        String.class,
+                        studentId,
+                        id);
+        if (!leading.isEmpty()) {
+            throw new BusinessException(
+                    ErrorCode.LEADER_ALREADY_ASSIGNED,
+                    HttpStatus.CONFLICT,
+                    Map.of("roomCode", leading.get(0)));
+        }
         r.setLeaderStudentId(studentId);
         rooms.saveAndFlush(r);
         audit.record(
                 current.get().id(),
                 AuditAction.ROOM_LEADER_CHANGE,
-                "ROOM",
+                AuditEntityType.ROOM,
                 id,
                 before,
                 studentId,
@@ -421,17 +468,22 @@ public class RoomServiceImpl implements RoomService {
         guard.requirePermission(Permission.ROOM_UPDATE);
         lockRoomBedsInAscendingOrder(id);
         var r = findAccessibleRoom(id, true);
+        String trimmedReason = trimRequiredText(reason, "reason");
         Long before = r.getLeaderStudentId();
+        if (before == null) {
+            // Đã không có trưởng phòng (gỡ trùng hoặc vừa tự gỡ): không ghi thêm lịch sử.
+            return;
+        }
         r.setLeaderStudentId(null);
         rooms.saveAndFlush(r);
         audit.record(
                 current.get().id(),
                 AuditAction.ROOM_LEADER_CHANGE,
-                "ROOM",
+                AuditEntityType.ROOM,
                 id,
                 before,
                 null,
-                trimRequiredText(reason, "reason"));
+                trimmedReason);
     }
 
     @Override
@@ -639,6 +691,7 @@ public class RoomServiceImpl implements RoomService {
             counts = loadOccupancy(List.of(r.getId())).get(r.getId());
         }
         List<BedResponse> children = detail ? toBedResponses(r.getId()) : null;
+        long occupied = ((Number) counts.get("occupied_beds")).longValue();
         return new Response(
                 r.getId(),
                 r.getCode(),
@@ -650,9 +703,50 @@ public class RoomServiceImpl implements RoomService {
                 r.getLeaderStudentId(),
                 ((Number) counts.get("active_beds")).longValue(),
                 ((Number) counts.get("held_beds")).longValue(),
-                ((Number) counts.get("occupied_beds")).longValue(),
+                occupied,
                 ((Number) counts.get("free_beds")).longValue(),
-                children);
+                r.getLeaderStudentId() == null && occupied > 0,
+                detail ? studentRef(r.getLeaderStudentId()) : null,
+                children,
+                detail ? leaderHistory(r.getId()) : null);
+    }
+
+    /** Lịch sử đổi trưởng phòng từ audit_log, gồm cả lần hệ thống tự gỡ (FR-ROOM-09, 10). */
+    private List<LeaderChange> leaderHistory(Long roomId) {
+        Map<Long, StudentRef> names = new java.util.HashMap<>();
+        return audit
+                .listEntityLog(AuditEntityType.ROOM, roomId, AuditAction.ROOM_LEADER_CHANGE)
+                .stream()
+                .map(
+                        e ->
+                                new LeaderChange(
+                                        cachedRef(names, parseId(e.oldValue())),
+                                        cachedRef(names, parseId(e.newValue())),
+                                        e.actorId(),
+                                        e.actorName(),
+                                        e.reason(),
+                                        e.at()))
+                .toList();
+    }
+
+    private StudentRef cachedRef(Map<Long, StudentRef> names, Long id) {
+        return id == null ? null : names.computeIfAbsent(id, this::studentRef);
+    }
+
+    private StudentRef studentRef(Long id) {
+        if (id == null) {
+            return null;
+        }
+        var u = accounts.user(id);
+        return new StudentRef(u.id(), u.fullName(), u.username());
+    }
+
+    /** Giá trị trước/sau của ROOM_LEADER_CHANGE được lưu là số JSON hoặc null. */
+    private static Long parseId(String json) {
+        if (json == null || json.isBlank() || "null".equals(json.trim())) {
+            return null;
+        }
+        return Long.valueOf(json.trim());
     }
 
     /** Giường của phòng cùng phân phòng hiệu lực, nạp bằng một truy vấn cho cả phòng. */

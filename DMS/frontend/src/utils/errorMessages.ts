@@ -87,8 +87,8 @@ const messages: Record<string, (d: Details) => string> = {
 
   // 5.3 Phòng, giường
   BED_CODE_EXISTS: () => 'Mã giường đã có trong phòng này.',
-  LEADER_ALREADY_ASSIGNED: () =>
-    'Sinh viên đang là trưởng phòng của phòng khác. Gỡ vai trò đó trước.',
+  LEADER_ALREADY_ASSIGNED: (d) =>
+    `Sinh viên đang là trưởng phòng của phòng${d.roomCode ? ` ${String(d.roomCode)}` : ' khác'}. Gỡ vai trò đó trước.`,
   LEADER_NOT_STAYING: (d) =>
     `Sinh viên này không đang ở trong phòng${d.roomCode ? ` ${String(d.roomCode)}` : ''}. Chọn sinh viên đang ở phòng.`,
   NOT_STAYING: () =>

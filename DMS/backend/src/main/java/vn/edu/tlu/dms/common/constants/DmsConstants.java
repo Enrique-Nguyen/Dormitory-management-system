@@ -685,6 +685,7 @@ public final class DmsConstants {
     /** Loại đối tượng ghi vào audit_log của module phòng; không phải tên bảng SQL. */
     public static final class AuditEntityType {
         public static final String ROOM = "ROOM";
+        public static final String BED = "BED";
         public static final String ASSIGNMENT = "ASSIGNMENT";
 
         private AuditEntityType() {}
