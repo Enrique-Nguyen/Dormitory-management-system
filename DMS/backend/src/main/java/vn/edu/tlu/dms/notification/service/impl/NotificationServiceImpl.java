@@ -13,6 +13,7 @@ import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.notification.api.NotificationDtos;
 import vn.edu.tlu.dms.notification.domain.Notification;
@@ -64,9 +65,12 @@ public class NotificationServiceImpl implements NotificationService {
         scopeGuard.requirePermission(Permission.NOTIFICATION_READ);
         PageQuery.of(page, size, null, Set.of("id"), "id,desc");
         Long userId = currentUser.get().id();
+        var actor = currentUser.get();
+        String portal =
+                actor.is(Role.STUDENT) ? "/student" : actor.isAdmin() ? "/admin" : "/staff";
         String filter = unread == null ? "" : unread ? " AND NOT is_read" : " AND is_read";
         filter += " AND (title ILIKE ? OR body ILIKE ?)";
-        String pattern = "%" + keyword.trim() + "%";
+        String pattern = LikePattern.contains(keyword.trim());
         Long total =
                 jdbc.queryForObject(
                         "SELECT count(*) FROM " + inboxSource() + filter,
@@ -91,6 +95,7 @@ public class NotificationServiceImpl implements NotificationService {
                                                 ? NotificationSource.MANUAL
                                                 : row.getString("source_type"),
                                         notificationLink(
+                                                portal,
                                                 row.getString("source_type"),
                                                 row.getObject("source_id", Long.class)),
                                         row.getObject("created_at", OffsetDateTime.class),
@@ -246,42 +251,42 @@ public class NotificationServiceImpl implements NotificationService {
     @Override()
     public void notifyActiveStudentsOfSummerPeriod(
             Long periodId, String periodName, List<Long> unitIds, Long actorId) {
-        for (Long unitId : unitIds) {
-            List<Long> studentIds =
-                    jdbc.query(
-                            """
-                            SELECT DISTINCT c.student_id FROM dormitory_contract c
-                            JOIN room_assignment_history a ON a.contract_id = c.id
-                            JOIN bed b ON b.id = a.bed_id JOIN room r ON r.id = b.room_id
-                            JOIN building bd ON bd.id = r.building_id
-                            WHERE c.status = 'ACTIVE' AND bd.management_unit_id = ?
-                            """,
-                            (row, index) -> row.getLong(1),
-                            unitId);
-            for (Long studentId : studentIds) {
-                Notification notification = new Notification();
-                notification.setScope(NotificationScope.USER);
-                notification.setUserId(studentId);
-                notification.setTitle("Mở đợt đăng ký hè");
-                notification.setBody(periodName);
-                notification.setSourceType(NotificationSource.SUMMER_PERIOD_OPENED);
-                notification.setSourceId(periodId);
-                notification.setCreatedBy(actorId);
-                notification.setCreatedAt(OffsetDateTime.now());
-                repository.save(notification);
-            }
+        if (unitIds == null || unitIds.isEmpty()) {
+            return;
+        }
+        // Chỉ xét chỗ ở hiện hành (ended_at IS NULL) và gộp các đơn vị trong một truy vấn để mỗi
+        // sinh viên chỉ nhận một thông báo.
+        List<Long> studentIds =
+                jdbc.query(
+                        """
+                        SELECT DISTINCT c.student_id FROM dormitory_contract c
+                        JOIN room_assignment_history a ON a.contract_id = c.id
+                        JOIN bed b ON b.id = a.bed_id JOIN room r ON r.id = b.room_id
+                        JOIN building bd ON bd.id = r.building_id
+                        WHERE c.status = 'ACTIVE' AND a.ended_at IS NULL
+                          AND bd.management_unit_id = ANY (?)
+                        """,
+                        (row, index) -> row.getLong(1),
+                        (Object) unitIds.toArray(new Long[0]));
+        for (Long studentId : studentIds) {
+            Notification notification = new Notification();
+            notification.setScope(NotificationScope.USER);
+            notification.setUserId(studentId);
+            notification.setTitle("Mở đợt đăng ký hè");
+            notification.setBody(periodName);
+            notification.setSourceType(NotificationSource.SUMMER_PERIOD_OPENED);
+            notification.setSourceId(periodId);
+            notification.setCreatedBy(actorId);
+            notification.setCreatedAt(OffsetDateTime.now());
+            repository.save(notification);
         }
         repository.flush();
     }
 
-    private String notificationLink(String source, Long id) {
+    private String notificationLink(String portal, String source, Long id) {
         if (source == null || id == null) {
             return null;
         }
-        String portal =
-                currentUser.get().is(Role.STUDENT)
-                        ? "/student"
-                        : currentUser.get().isAdmin() ? "/admin" : "/staff";
         return switch (source) {
             case NotificationSource.SUMMER_PERIOD_OPENED -> portal + "/summer";
             case NotificationSource.APPLICATION_APPROVED, NotificationSource.BED_HELD ->

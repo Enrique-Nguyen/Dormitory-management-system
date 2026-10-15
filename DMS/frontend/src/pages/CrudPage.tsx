@@ -137,6 +137,8 @@ function LookupInput({
     queryKey: ['crud-lookup', field.lookup],
     queryFn: () => getLookupRecords(field.lookup!),
     enabled: !!field.lookup,
+    // Danh mục tham chiếu ít đổi; refresh() vẫn invalidate sau mỗi lần ghi.
+    staleTime: 5 * 60 * 1000,
   })
   const options = field.lookup
     ? data?.map((row) => ({
@@ -250,7 +252,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     !config.readOnly &&
     hasPermission(me, permissionFor(config.permission, Action.CREATE)) &&
     !config.singleton &&
-    resource !== 'configs'
+    !config.noCreate
   const canWrite = canCreate || canUpdate || canDelete
   const idKey = config.idKey ?? 'id'
   const writeEndpoint =
@@ -576,7 +578,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     }
     try {
       const selected =
-        config.singleton || config.localSearch || resource === 'configs'
+        config.singleton || config.localSearch || config.inlineDetail
           ? row
           : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
               .data as CrudRecord)
@@ -608,12 +610,12 @@ export default function CrudPage({ resource }: { resource: string }) {
             : value
       }
       // Các DTO sửa chỉ số/thông báo cần giữ lại định danh/phạm vi đã chọn khi tạo.
-      if (editing && ['readings', 'notifications'].includes(resource))
+      if (editing && config.keepCreateOnlyOnEdit)
         for (const field of config.fields.filter((f) => f.createOnly))
           if (editing[field.name] != null)
             payload[field.name] = editing[field.name]
       if (
-        resource === 'periods' &&
+        config.closeAtOnlyAfterOpen &&
         editing &&
         hasPeriodOpened(editing.openAt)
       ) {
@@ -636,7 +638,11 @@ export default function CrudPage({ resource }: { resource: string }) {
           : writeEndpoint
       const result = await writeCrudRecord(
         endpoint,
-        resource === 'configs' ? 'put' : editing ? 'patch' : 'post',
+        config.writeMethod && editing
+          ? config.writeMethod
+          : editing
+            ? 'patch'
+            : 'post',
         body,
       )
       if (
@@ -773,13 +779,7 @@ export default function CrudPage({ resource }: { resource: string }) {
   async function showDetail(row: CrudRecord) {
     try {
       const selected =
-        config.singleton ||
-        config.localSearch ||
-        resource === 'configs' ||
-        resource === 'inbox' ||
-        resource === 'storage' ||
-        resource === 'myRoom' ||
-        resource === 'audit'
+        config.singleton || config.localSearch || config.inlineDetail
           ? row
           : resource === 'deposits'
             ? ((await api.get(`/contracts/${row.id}/deposit`))

@@ -11,6 +11,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.domain.AuditLog;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.repository.AuditLogRepository;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
@@ -60,8 +61,8 @@ public class AuditServiceImpl implements AuditService {
         }
         String keyword = q == null ? "" : q.trim();
         var args = new ArrayList<Object>();
-        args.add("%" + keyword + "%");
-        args.add("%" + keyword + "%");
+        args.add(LikePattern.contains(keyword));
+        args.add(LikePattern.contains(keyword));
         StringBuilder sql =
                 new StringBuilder(
                         "SELECT"

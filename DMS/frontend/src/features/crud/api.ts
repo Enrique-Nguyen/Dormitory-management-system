@@ -170,6 +170,8 @@ export async function getLookupRecords(
       result.content.length === 0
     )
       break
+    if (page === 99)
+      console.warn(`Lookup ${endpoint} chạm trần 100 trang, danh sách bị cắt.`)
   }
   return all
 }

@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.api.AccountDtos.TemporaryPassword;
 import vn.edu.tlu.dms.account.api.StudentManagementController.StudentInput;
+import vn.edu.tlu.dms.account.api.StudentManagementController.StudentPatch;
 import vn.edu.tlu.dms.account.repository.AppUserRepository;
 import vn.edu.tlu.dms.account.service.AuthService;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
@@ -19,6 +20,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 
 import java.util.ArrayList;
@@ -75,7 +77,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                 + " FROM app_user u JOIN student_profile p ON p.user_id=u.id";
 
     private String scope() {
-        if (current.get().is(Role.ADMIN) || current.get().crossUnitAccess()) {
+        if (current.get().canReadAllUnits()) {
             return "TRUE";
         }
         return "(EXISTS (SELECT 1 FROM room_assignment_history a JOIN bed b ON b.id=a.bed_id JOIN"
@@ -85,7 +87,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
     }
 
     private List<Object> scopeParameters() {
-        return current.get().is(Role.ADMIN) || current.get().crossUnitAccess()
+        return current.get().canReadAllUnits()
                 ? new ArrayList<>()
                 : new ArrayList<>(List.of(current.get().unitId(), current.get().unitId()));
     }
@@ -94,8 +96,8 @@ public class StudentManagementServiceImpl implements StudentManagementService {
     public PageResponse<Map<String, Object>> searchStudents(int page, int size, String q) {
         guard.requirePermission(Permission.STUDENT_READ);
         var args = scopeParameters();
-        args.add("%" + q.trim() + "%");
-        args.add("%" + q.trim() + "%");
+        args.add(LikePattern.contains(q.trim()));
+        args.add(LikePattern.contains(q.trim()));
         return queries.search(
                 SELECT
                         + " WHERE "
@@ -156,32 +158,18 @@ public class StudentManagementServiceImpl implements StudentManagementService {
 
     @Transactional
     @Override()
-    public Map<String, Object> updateStudent(Long id, StudentInput in) {
+    public Map<String, Object> updateStudent(Long id, StudentPatch in) {
         guard.requirePermission(Permission.STUDENT_UPDATE);
         var user = authService.lockAccount(id);
         var before = getStudentById(id);
         // Quyền tổng hợp không cấp quyền ghi. Phải có ít nhất một bản ghi thuộc đúng đơn vị.
         if (current.get().is(Role.STAFF)) {
-            Long unit = current.get().unitId();
-            boolean own =
-                    Boolean.TRUE.equals(
-                            jdbc.queryForObject(
-                                    "SELECT EXISTS(SELECT 1 FROM room_application WHERE"
-                                        + " student_id=? AND preferred_unit_id=?) OR EXISTS(SELECT"
-                                        + " 1 FROM room_assignment_history a JOIN bed b ON"
-                                        + " b.id=a.bed_id JOIN room r ON r.id=b.room_id JOIN"
-                                        + " building bd ON bd.id=r.building_id WHERE a.student_id=?"
-                                        + " AND bd.management_unit_id=?)",
-                                    Boolean.class,
-                                    id,
-                                    unit,
-                                    id,
-                                    unit));
-            if (!own) {
-                throw BusinessException.notFound();
-            }
+            requireOwnStudent(id);
         }
-        if (!in.gender().equals(before.get("gender"))
+        String studentCode = merged(in.studentCode(), before.get("studentCode"), "studentCode");
+        String fullName = merged(in.fullName(), before.get("fullName"), "fullName");
+        String gender = merged(in.gender(), before.get("gender"), "gender");
+        if (!gender.equals(before.get("gender"))
                 && Boolean.TRUE.equals(
                         jdbc.queryForObject(
                                 "SELECT EXISTS(SELECT 1 FROM room_assignment_history WHERE"
@@ -190,33 +178,69 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                                 id))) {
             throw BusinessException.conflict(ErrorCode.STUDENT_HAS_ACTIVE_CONTRACT);
         }
-        String username = in.studentCode().trim();
         // Đổi mã sinh viên cũng đổi tên đăng nhập; thu hồi phiên chứa tên cũ trong cùng
         // transaction.
-        if (!Objects.equals(user.getUsername(), username)) {
+        if (!Objects.equals(user.getUsername(), studentCode)) {
             authService.revokeSessions(user);
         }
-        user.setUsername(username);
-        user.setFullName(in.fullName().trim());
-        user.setPhone(in.phone());
+        user.setUsername(studentCode);
+        user.setFullName(fullName);
+        user.setPhone((String) keep(in.phone(), before.get("phone")));
         users.saveAndFlush(user);
         identities.synchronizeAccount(user);
         jdbc.update(
                 "UPDATE student_profile SET"
                     + " student_code=?,gender=?,date_of_birth=?,faculty=?,cohort=?,hometown=?,emergency_contact=?"
                     + " WHERE user_id=?",
-                in.studentCode().trim(),
-                in.gender(),
-                in.dateOfBirth(),
-                in.faculty(),
-                in.cohort(),
-                in.hometown(),
-                in.emergencyContact(),
+                studentCode,
+                gender,
+                keep(in.dateOfBirth(), before.get("dateOfBirth")),
+                keep(in.faculty(), before.get("faculty")),
+                keep(in.cohort(), before.get("cohort")),
+                keep(in.hometown(), before.get("hometown")),
+                keep(in.emergencyContact(), before.get("emergencyContact")),
                 id);
         var after = getStudentById(id);
         audit.record(
                 current.get().id(), AuditAction.STUDENT_UPDATE, "USER", id, before, after, null);
         return after;
+    }
+
+    /** Trường bắt buộc: không gửi thì giữ giá trị cũ, gửi chuỗi trống thì báo lỗi. */
+    private static String merged(String requested, Object stored, String field) {
+        if (requested == null) {
+            return String.valueOf(stored);
+        }
+        if (requested.isBlank()) {
+            throw BusinessException.invalid(field, "Không để trống");
+        }
+        return requested.trim();
+    }
+
+    private static Object keep(Object requested, Object stored) {
+        return requested != null ? requested : stored;
+    }
+
+    /** Ghi cần ít nhất một hồ sơ/nguyện vọng thuộc đúng đơn vị của Staff, không tính quyền tổng hợp. */
+    private void requireOwnStudent(Long id) {
+        Long unit = current.get().unitId();
+        boolean own =
+                Boolean.TRUE.equals(
+                        jdbc.queryForObject(
+                                "SELECT EXISTS(SELECT 1 FROM room_application WHERE"
+                                    + " student_id=? AND preferred_unit_id=?) OR EXISTS(SELECT"
+                                    + " 1 FROM room_assignment_history a JOIN bed b ON"
+                                    + " b.id=a.bed_id JOIN room r ON r.id=b.room_id JOIN"
+                                    + " building bd ON bd.id=r.building_id WHERE a.student_id=?"
+                                    + " AND bd.management_unit_id=?)",
+                                Boolean.class,
+                                id,
+                                unit,
+                                id,
+                                unit));
+        if (!own) {
+            throw BusinessException.notFound();
+        }
     }
 
     @Transactional

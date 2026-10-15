@@ -15,6 +15,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
@@ -64,7 +65,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
         if (!current.get().canReadAllUnits()) {
             args.add(current.get().unitId());
         }
-        args.add("%" + q + "%");
+        args.add(LikePattern.contains(q));
         if (month != null) {
             args.add(month.withDayOfMonth(1));
         }
@@ -117,14 +118,19 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
         if (Boolean.TRUE.equals(row.get("invoiced"))) {
             throw BusinessException.conflict(ErrorCode.READING_LOCKED);
         }
+        requireNoFollowingMonth(row.get("roomId"), row.get("meterType"), row.get("billingMonth"));
+    }
+
+    /** Chuỗi chỉ số theo tháng không được đứt: không thêm/sửa/xóa khi tháng sau đã có chỉ số. */
+    private void requireNoFollowingMonth(Object roomId, Object meterType, Object billingMonth) {
         if (Boolean.TRUE.equals(
                 jdbc.queryForObject(
                         "SELECT EXISTS(SELECT 1 FROM utility_reading WHERE room_id=? AND"
                                 + " meter_type=? AND billing_month>?)",
                         Boolean.class,
-                        row.get("roomId"),
-                        row.get("meterType"),
-                        row.get("billingMonth")))) {
+                        roomId,
+                        meterType,
+                        billingMonth))) {
             throw BusinessException.conflict(ErrorCode.READING_HAS_FOLLOWING_MONTH);
         }
     }
@@ -153,6 +159,9 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
                 throw BusinessException.invalid(
                         "roomId", "Không đổi phòng, loại đồng hồ hoặc kỳ của bản ghi");
             }
+        }
+        if (id == null) {
+            requireNoFollowingMonth(input.roomId(), input.meterType(), input.billingMonth());
         }
         var previous =
                 jdbc.query(

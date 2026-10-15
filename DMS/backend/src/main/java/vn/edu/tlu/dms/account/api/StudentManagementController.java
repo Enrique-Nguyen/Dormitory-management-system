@@ -44,6 +44,18 @@ public class StudentManagementController {
             @Size(max = 200) String hometown,
             @Size(max = 200) String emergencyContact) {}
 
+    /** PATCH: trường không gửi (null) giữ nguyên giá trị hiện có, không hỗ trợ xóa bằng null. */
+    public record StudentPatch(
+            @Size(max = 20) String studentCode,
+            @Size(max = 100) String fullName,
+            @Pattern(regexp = Gender.PATTERN) String gender,
+            LocalDate dateOfBirth,
+            @Size(max = 100) String faculty,
+            @Size(max = 10) String cohort,
+            @Size(max = 20) String phone,
+            @Size(max = 200) String hometown,
+            @Size(max = 200) String emergencyContact) {}
+
     @RequirePrivilege(Permission.STUDENT_READ)
     @GetMapping({"/api/students", "/api/admin/students"})
     public PageResponse<Map<String, Object>> searchStudents(
@@ -68,7 +80,7 @@ public class StudentManagementController {
     @RequirePrivilege(Permission.STUDENT_UPDATE)
     @PatchMapping({"/api/students/{id}", "/api/admin/students/{id}"})
     public Map<String, Object> updateStudent(
-            @PathVariable Long id, @Valid @RequestBody StudentInput input) {
+            @PathVariable Long id, @Valid @RequestBody StudentPatch input) {
         return service.updateStudent(id, input);
     }
 

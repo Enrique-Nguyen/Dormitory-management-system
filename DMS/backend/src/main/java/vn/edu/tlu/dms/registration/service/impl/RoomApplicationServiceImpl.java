@@ -14,6 +14,8 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.support.LikePattern;
+import vn.edu.tlu.dms.contract.service.ContractService;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -68,6 +70,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
 
     private final JdbcTemplate jdbc;
 
+    private final ContractService contracts;
+
     public RoomApplicationServiceImpl(
             RoomApplicationRepository applications,
             RegistrationPeriodRepository periods,
@@ -79,7 +83,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
             CurrentUser current,
             ScopeGuard guard,
             StatusHistoryService history,
-            JdbcTemplate jdbc) {
+            JdbcTemplate jdbc,
+            ContractService contracts) {
         this.applications = applications;
         this.periods = periods;
         this.periodUnits = periodUnits;
@@ -91,6 +96,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         this.guard = guard;
         this.history = history;
         this.jdbc = jdbc;
+        this.contracts = contracts;
     }
 
     @Override()
@@ -134,8 +140,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                                                         "SELECT id FROM app_user WHERE full_name"
                                                                 + " ILIKE ? OR username ILIKE ?",
                                                         (row, index) -> row.getLong(1),
-                                                        "%" + keyword.trim() + "%",
-                                                        "%" + keyword.trim() + "%");
+                                                        LikePattern.contains(keyword.trim()),
+                                                        LikePattern.contains(keyword.trim()));
                                         filters.add(
                                                 ids.isEmpty()
                                                         ? b.disjunction()
@@ -206,7 +212,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         guard.requirePermission(Permission.ROOM_APPLICATION_UPDATE);
         guard.requireRole(Role.STUDENT);
         var a = loadAccessibleApplication(id, true);
-        RoomApplicationPolicy.requireAction(a, current.get(), BusinessAction.EDIT);
+        RoomApplicationPolicy.requireAction(a, current.get(), BusinessAction.EDIT, false);
         if (input.studentId() != null && !input.studentId().equals(a.getStudentId())) {
             throw BusinessException.invalid("studentId", "Không đổi sinh viên của đơn đã tạo");
         }
@@ -239,7 +245,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                         ? Permission.ROOM_APPLICATION_DELETE
                         : Permission.ROOM_APPLICATION_UPDATE);
         var a = loadAccessibleApplication(id, true);
-        RoomApplicationPolicy.requireAction(a, current.get(), action);
+        RoomApplicationPolicy.requireAction(a, current.get(), action, hasLiveContract(a));
         if (action.equals(BusinessAction.SUBMIT)) {
             validateApplicationPeriod(a);
             if (rooms.hasPendingOrActiveContract(a.getStudentId())) {
@@ -274,6 +280,10 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         applications.saveAndFlush(a);
         history.record("APPLICATION", id, before, a.getStatus(), current.get().id(), reason);
         return toApplicationResponse(a, true);
+    }
+
+    private boolean hasLiveContract(RoomApplication a) {
+        return a.getStatus().equals(ApplicationStatus.APPROVED) && contracts.hasLiveContractForApplication(a.getId());
     }
 
     private RoomApplication loadAccessibleApplication(Long id, boolean writing) {
@@ -392,7 +402,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                 a.getStatusReason(),
                 a.getSubmittedAt(),
                 priorityRows,
-                detail ? RoomApplicationPolicy.allowedActions(a, current.get()) : null,
+                detail ? RoomApplicationPolicy.allowedActions(a, current.get(), hasLiveContract(a)) : null,
                 detail ? history.list("APPLICATION", a.getId()) : null);
     }
 }

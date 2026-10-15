@@ -11,12 +11,12 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 import vn.edu.tlu.dms.notification.api.NotificationDtos;
 import vn.edu.tlu.dms.notification.service.NotificationCrudService;
 
 import java.util.ArrayList;
-import java.util.Objects;
 
 /** CRUD bài thủ công: STAFF tự đăng, ADMIN mọi bài. Không sửa/xóa thông báo hệ thống. */
 @Service
@@ -56,8 +56,8 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
         if (!current.get().isAdmin()) {
             args.add(current.get().id());
         }
-        args.add("%" + q + "%");
-        args.add("%" + q + "%");
+        args.add(LikePattern.contains(q));
+        args.add(LikePattern.contains(q));
         return queries.search(
                 "SELECT n.id,n.scope,n.title,n.body,n.created_at,n.created_by,n.management_unit_id"
                         + " AS unit_id,n.building_id,n.floor,n.room_id FROM notification n WHERE "
@@ -100,10 +100,10 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
                                 + " notification WHERE id=?",
                         id);
         if (!input.scope().equals(row.get("scope"))
-                || !Objects.equals(input.unitId(), row.get("managementUnitId"))
-                || !Objects.equals(input.buildingId(), row.get("buildingId"))
-                || !Objects.equals(input.roomId(), row.get("roomId"))
-                || !Objects.equals(input.floor(), row.get("floor"))) {
+                || !sameNumber(input.unitId(), row.get("managementUnitId"))
+                || !sameNumber(input.buildingId(), row.get("buildingId"))
+                || !sameNumber(input.roomId(), row.get("roomId"))
+                || !sameNumber(input.floor(), row.get("floor"))) {
             throw BusinessException.invalid("scope", "Không đổi phạm vi thông báo đã đăng");
         }
         jdbc.update(
@@ -120,6 +120,14 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
                 input,
                 null);
         return getPublished(id);
+    }
+
+    /** So sánh theo giá trị số: DTO dùng Short/Long còn JDBC trả Integer/Long cho cùng một cột. */
+    private static boolean sameNumber(Number requested, Object stored) {
+        if (requested == null || stored == null) {
+            return requested == null && stored == null;
+        }
+        return stored instanceof Number number && requested.longValue() == number.longValue();
     }
 
     @Transactional

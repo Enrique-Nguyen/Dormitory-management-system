@@ -18,6 +18,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Create;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Photo;
@@ -106,7 +107,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                 status,
                                 category,
                                 severity,
-                                "%" + q.trim() + "%",
+                                LikePattern.contains(q.trim()),
                                 PageRequest.of(page, size))
                         .map(r -> toMaintenanceResponse(r, false)));
     }

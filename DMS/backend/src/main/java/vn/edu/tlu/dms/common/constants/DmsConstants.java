@@ -23,6 +23,8 @@ public final class DmsConstants {
         public static final String ACCOUNT_LOCKED = "ACCOUNT_LOCKED";
         public static final String ADMIN_PERMISSIONS_IMMUTABLE = "ADMIN_PERMISSIONS_IMMUTABLE";
         public static final String APPLICATION_EXISTS = "APPLICATION_EXISTS";
+        public static final String APPLICATION_HAS_CONTRACT = "APPLICATION_HAS_CONTRACT";
+        public static final String BED_CODE_EXISTS = "BED_CODE_EXISTS";
         public static final String BED_OCCUPIED = "BED_OCCUPIED";
         public static final String BED_TAKEN = "BED_TAKEN";
         public static final String BOOTSTRAP_USERNAME_IN_USE = "BOOTSTRAP_USERNAME_IN_USE";
@@ -33,6 +35,7 @@ public final class DmsConstants {
         public static final String DEPOSIT_INVALID = "DEPOSIT_INVALID";
         public static final String DUPLICATE_INVOICE = "DUPLICATE_INVOICE";
         public static final String DUPLICATE_USERNAME = "DUPLICATE_USERNAME";
+        public static final String DUPLICATE_VALUE = "DUPLICATE_VALUE";
         public static final String FILE_TOO_LARGE = "FILE_TOO_LARGE";
         public static final String FORBIDDEN = "FORBIDDEN";
         public static final String IDENTITY_ALREADY_LINKED = "IDENTITY_ALREADY_LINKED";
@@ -42,7 +45,9 @@ public final class DmsConstants {
         public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
         public static final String INVALID_STATE_TRANSITION = "INVALID_STATE_TRANSITION";
         public static final String INVOICE_ALREADY_PAID = "INVOICE_ALREADY_PAID";
+        public static final String LEADER_ALREADY_ASSIGNED = "LEADER_ALREADY_ASSIGNED";
         public static final String LEADER_NOT_STAYING = "LEADER_NOT_STAYING";
+        public static final String METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED";
         public static final String NOT_FOUND = "NOT_FOUND";
         public static final String NOT_STAYING = "NOT_STAYING";
         public static final String PERIOD_NOT_OPEN = "PERIOD_NOT_OPEN";
@@ -63,12 +68,14 @@ public final class DmsConstants {
         public static final String SESSION_REVOKED = "SESSION_REVOKED";
         public static final String STORAGE_RECORD_EXISTS = "STORAGE_RECORD_EXISTS";
         public static final String STUDENT_ALREADY_ASSIGNED = "STUDENT_ALREADY_ASSIGNED";
+        public static final String STUDENT_CODE_EXISTS = "STUDENT_CODE_EXISTS";
         public static final String STUDENT_HAS_ACTIVE_CONTRACT = "STUDENT_HAS_ACTIVE_CONTRACT";
         public static final String SUMMER_CHOICE_EXISTS = "SUMMER_CHOICE_EXISTS";
         public static final String TECHNICIAN_OUT_OF_UNIT = "TECHNICIAN_OUT_OF_UNIT";
         public static final String TICKET_LOCATION_INVALID = "TICKET_LOCATION_INVALID";
         public static final String UNAUTHENTICATED = "UNAUTHENTICATED";
         public static final String UNIT_NOT_IN_PERIOD = "UNIT_NOT_IN_PERIOD";
+        public static final String UNSUPPORTED_MEDIA_TYPE = "UNSUPPORTED_MEDIA_TYPE";
         public static final String USERNAME_EXISTS = "USERNAME_EXISTS";
         public static final String VALIDATION_FAILED = "VALIDATION_FAILED";
 

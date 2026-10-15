@@ -12,10 +12,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
@@ -52,7 +58,10 @@ public class GlobalExceptionHandler {
                     Map.entry("ux_storage_open", ErrorCode.STORAGE_RECORD_EXISTS),
                     Map.entry(
                             "summer_choice_contract_id_semester_id_key",
-                            ErrorCode.SUMMER_CHOICE_EXISTS));
+                            ErrorCode.SUMMER_CHOICE_EXISTS),
+                    Map.entry("ux_room_leader", ErrorCode.LEADER_ALREADY_ASSIGNED),
+                    Map.entry("student_profile_student_code_key", ErrorCode.STUDENT_CODE_EXISTS),
+                    Map.entry("bed_room_id_code_key", ErrorCode.BED_CODE_EXISTS));
 
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<ApiError> business(BusinessException e, HttpServletRequest request) {
@@ -102,27 +111,88 @@ public class GlobalExceptionHandler {
                 request);
     }
 
+    /** Thiếu tham số/phần multipart hoặc sai kiểu validate tham số: lỗi của client, không phải 500. */
+    @ExceptionHandler({
+        ServletRequestBindingException.class,
+        MissingServletRequestPartException.class,
+        HandlerMethodValidationException.class
+    })
+    ResponseEntity<ApiError> badRequest(Exception e, HttpServletRequest request) {
+        return response(
+                HttpStatus.BAD_REQUEST.value(), ErrorCode.VALIDATION_FAILED, Map.of(), request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<ApiError> methodNotAllowed(
+            HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
+        return response(
+                HttpStatus.METHOD_NOT_ALLOWED.value(),
+                ErrorCode.METHOD_NOT_ALLOWED,
+                Map.of(),
+                request);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    ResponseEntity<ApiError> unsupportedMediaType(
+            HttpMediaTypeNotSupportedException e, HttpServletRequest request) {
+        return response(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
+                ErrorCode.UNSUPPORTED_MEDIA_TYPE,
+                Map.of(),
+                request);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    ResponseEntity<ApiError> noResource(NoResourceFoundException e, HttpServletRequest request) {
+        return response(HttpStatus.NOT_FOUND.value(), ErrorCode.NOT_FOUND, Map.of(), request);
+    }
+
+    /**
+     * Ưu tiên tên ràng buộc đã khai báo; còn lại theo SQLState để lỗi xác định (trùng, khóa ngoại,
+     * CHECK) không bị báo thành "dữ liệu vừa bị người khác thay đổi" khiến người dùng thử lại vô ích.
+     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ApiError> integrity(
             DataIntegrityViolationException e, HttpServletRequest request) {
         String name = null;
+        String sqlState = null;
         for (Throwable cause = e; cause != null; cause = cause.getCause()) {
             // Hibernate không luôn nhận diện exclusion constraint; lấy metadata từ driver.
-            if (cause instanceof PSQLException postgres
-                    && postgres.getServerErrorMessage() != null) {
-                name = postgres.getServerErrorMessage().getConstraint();
+            if (cause instanceof PSQLException postgres) {
+                sqlState = postgres.getSQLState();
+                if (postgres.getServerErrorMessage() != null) {
+                    name = postgres.getServerErrorMessage().getConstraint();
+                }
             }
         }
-        String code =
-                CONSTRAINT_CODES.getOrDefault(String.valueOf(name), ErrorCode.CONCURRENT_UPDATE);
-        if (name != null && name.startsWith("deposit_transaction")) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        String code = name == null ? null : CONSTRAINT_CODES.get(name);
+        if (code == null && name != null && name.startsWith("deposit_transaction")) {
             code = ErrorCode.DEPOSIT_INVALID;
         }
-        if (name != null && name.startsWith("utility_reading")) {
+        if (code == null && name != null && name.startsWith("utility_reading")) {
             code = ErrorCode.READING_INVALID;
         }
-        log.warn("Constraint rejected request {}: {}", request.getAttribute("requestId"), name);
-        return response(HttpStatus.CONFLICT.value(), code, Map.of(), request);
+        if (code == null) {
+            code = ErrorCode.CONCURRENT_UPDATE;
+            if (sqlState != null) {
+                switch (sqlState) {
+                    case "23505", "23P01" -> code = ErrorCode.DUPLICATE_VALUE;
+                    case "23503" -> code = ErrorCode.RESOURCE_IN_USE;
+                    case "23502", "23514" -> {
+                        code = ErrorCode.VALIDATION_FAILED;
+                        status = HttpStatus.BAD_REQUEST;
+                    }
+                    default -> {}
+                }
+            }
+        }
+        log.warn(
+                "Constraint rejected request {}: {} (SQLState {})",
+                request.getAttribute("requestId"),
+                name,
+                sqlState);
+        return response(status.value(), code, Map.of(), request);
     }
 
     @ExceptionHandler(Exception.class)

@@ -27,6 +27,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 
 import java.security.SecureRandom;
@@ -118,7 +119,7 @@ public class UserServiceImpl implements UserService {
                         filters.add(b.equal(r.get("locked"), locked));
                     }
                     if (q != null && !q.isBlank()) {
-                        String pattern = "%" + q.trim().toLowerCase(Locale.ROOT) + "%";
+                        String pattern = LikePattern.contains(q.trim().toLowerCase(Locale.ROOT));
                         filters.add(
                                 b.or(
                                         b.like(b.lower(r.get("username")), pattern),
