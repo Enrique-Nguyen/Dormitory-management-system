@@ -82,6 +82,7 @@ export const statusConfig: Record<StatusEntity, Record<string, StatusStyle>> = {
     PENDING: s('Chờ duyệt', 'orange', ClockCircleOutlined),
     APPROVED: s('Đã duyệt', 'green', CheckCircleOutlined),
     REJECTED: s('Bị từ chối', 'red', CloseCircleOutlined),
+    CANCELLED: s('Đã hủy', 'gray', StopOutlined),
   },
 }
 
@@ -128,11 +129,19 @@ export const roomOperation: Record<string, { label: string; color: StatusColor }
   ACTIVE: { label: 'Hoạt động', color: 'green' },
   MAINTENANCE: { label: 'Bảo trì', color: 'orange' },
   INACTIVE: { label: 'Ngừng sử dụng', color: 'gray' },
+  CLOSED: { label: 'Đóng', color: 'gray' },
+}
+
+/** Giới tính của phòng (room.gender). */
+export const roomGender: Record<string, string> = {
+  M: 'Nam',
+  F: 'Nữ',
 }
 
 export const bedOperation: Record<string, { label: string }> = {
   ACTIVE: { label: 'Hoạt động' },
   BROKEN: { label: 'Hỏng' },
+  RETIRED: { label: 'Ngừng dùng' },
 }
 
 /** Chiếm dụng giường (tính ra, không lưu): màu nền ô giường trắng / vàng nhạt / xanh. */
@@ -142,4 +151,10 @@ export const bedOccupancy: Record<BedOccupancy, { label: string; background: str
   FREE: { label: 'Trống', background: '#FFFFFF', border: '#D1D5DB' },
   HELD: { label: 'Đang giữ', background: '#FEF3C7', border: '#B45309' },
   OCCUPIED: { label: 'Đang ở', background: '#DCFCE7', border: '#15803D' },
+}
+
+/** Loại phân phòng mở → chiếm dụng giường: giữ chỗ (HOLD) hoặc đang ở (STAY). */
+export const assignmentOccupancy: Record<'HOLD' | 'STAY', BedOccupancy> = {
+  HOLD: 'HELD',
+  STAY: 'OCCUPIED',
 }

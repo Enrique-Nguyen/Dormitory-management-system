@@ -27,7 +27,7 @@
 
 | Kiểm tra | Kết quả |
 |---|---|
-| `./mvnw test -Ddms.test.external-db=true` (PostgreSQL 16 cục bộ) | 88 test đạt: `CrudApiIntegrationTest` 41, `KeycloakAccountIntegrationTest` 33, `ModuleDependencyTest` 8, `KeycloakJwtDecoderTest` 5, `DmsApplicationTests` 1 |
+| `./mvnw test -Ddms.test.external-db=true` (PostgreSQL 16 cục bộ) | 112 test đạt sau khi gộp `origin/dev/nguyennp`: `CrudApiIntegrationTest` 41, `KeycloakAccountIntegrationTest` 33, `BedOccupancyIntegrationTest` 19, `ModuleDependencyTest` 8, `KeycloakJwtDecoderTest` 5, `RoomTransferPolicyTest` 3, `RoomLeaderIntegrationTest` 2, `DmsApplicationTests` 1 |
 | Test mới | `maintenanceEditHidesForeignTicketsAndRejectsNonOpenOnes`, `shrinkingRoomTypeRetiresBedsWithHistoryAndGrowingReactivatesThem`, `studentPatchClearsDateOfBirthOnlyWhenNullIsSentExplicitly`, `foreignKeyViolationIsValidationOnWriteAndInUseOnDelete` |
 | `npm run lint`, `npm run build` | Sạch |
 

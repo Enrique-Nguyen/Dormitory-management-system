@@ -1,7 +1,7 @@
 # Đặc tả API — DMS
 
 > **Phiên bản 0.12**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.11 (mục 3, 6.2, 10), `SAD-DMS.md` v1.4, `DB-Design-DMS.md` v0.7, `DMS-UI-UX-Design.md` (mục 27.2)
+> Căn cứ: `SRS-DMS.md` v0.11 (mục 3, 6.2, 10), `SAD-DMS.md` v1.4, `DB-Design-DMS.md` v0.8, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
 ### Lịch sử thay đổi
@@ -18,7 +18,7 @@
 | 0.8 | 15/10/2026 | Hoàn thiện luồng chung: hồ sơ bốn cổng, lọc tài khoản managementUnitId/locked, lọc audit actorId/action/entityType/from/to và kiểm tra khoảng thời gian; giữ phạm vi khung CRUD |
 | 0.9 | 15/10/2026 | GET/PUT ma trận quyền theo role; catalog có 105 quyền, kiểm giới hạn vai trò/quyền hồ sơ/READ, version và audit |
 | 0.10 | 15/10/2026 | Theo code review: bổ sung mã `RESOURCE_IN_USE`, `DUPLICATE_VALUE`, `METHOD_NOT_ALLOWED`, `UNSUPPORTED_MEDIA_TYPE`, `STUDENT_HAS_ACTIVE_CONTRACT`, `STUDENT_CODE_EXISTS`, `BED_CODE_EXISTS`, `LEADER_ALREADY_ASSIGNED`, `APPLICATION_HAS_CONTRACT`; ràng buộc CSDL ngoài danh sách ánh xạ theo SQLState thay vì luôn là `CONCURRENT_UPDATE`; hủy đơn APPROVED đã có hợp đồng bị chặn; PATCH sinh viên giữ trường không gửi |
-| 0.11 | 15/10/2026 | Đồng bộ toàn diện theo SRS v0.11, SAD v1.4 và DB-Design v0.7: cập nhật bảng endpoint mục 3.3 và bảng `allowedActions` mục 6 ghi rõ điều kiện `cancel` của đơn APPROVED (khi chưa sinh hợp đồng PENDING/ACTIVE, có hợp đồng trả 409 `APPLICATION_HAS_CONTRACT`); ghi chú chặn đổi `bedCount` của loại phòng đang gán cho phòng tồn tại tại PATCH `/api/room-types/{id}` (409 `RESOURCE_IN_USE`); làm rõ phạm vi hóa đơn của Staff theo học kỳ và ràng buộc xác nhận thanh toán qua `isInStaffUnit` (404 khi ngoài scope). |
+| 0.11 | 15/10/2026 | Chiếm/trả giường & chuyển phòng (dev/nguyennp): Bổ sung API duyệt/từ chối/hủy chuyển phòng (mục 3.4, 4.7, quyền `ROOM_TRANSFER_APPROVE`/`ROOM_TRANSFER_DELETE`, response `TransferDetail`); API giường trống `GET /api/beds/available` phục vụ split view (mục 4.4); thông tin trưởng phòng, cảnh báo `missingLeader` và lịch sử trưởng phòng (mục 3.2); cập nhật catalogue quyền lên 106 mã (STAFF 73 quyền), `allowedActions` và mã lỗi (mục 5, 6). Đồng bộ điều kiện `cancel` của đơn APPROVED (khi chưa sinh hợp đồng PENDING/ACTIVE, có hợp đồng trả 409 `APPLICATION_HAS_CONTRACT`); chặn đổi `bedCount` của loại phòng đang gán cho phòng tồn tại (409 `RESOURCE_IN_USE`); làm rõ phạm vi hóa đơn của Staff theo học kỳ và ràng buộc xác nhận thanh toán qua `isInStaffUnit` (404 khi ngoài scope). |
 | 0.12 | 15/10/2026 | Theo code review: khóa ngoại (SQLState 23503) phân biệt theo phương thức — `DELETE` trả 409 `RESOURCE_IN_USE`, ghi tham chiếu không tồn tại trả 400 `VALIDATION_FAILED`; ticket của người khác khi sửa/hủy trả 404, ticket không còn `OPEN` trả 409 `INVALID_STATE_TRANSITION`; PATCH sinh viên: `dateOfBirth: null` tường minh xóa ngày sinh, không gửi thì giữ; đổi loại phòng chuyển giường dư đã có lịch sử sang `RETIRED` thay vì báo `BED_OCCUPIED`; bổ sung mã `IDENTITY_ALREADY_LINKED`, `BOOTSTRAP_USERNAME_IN_USE` |
 
 ---
@@ -53,7 +53,7 @@ Theo phạm vi người dùng chốt, bước này chỉ dựng CRUD và giao di
 - Sinh viên: GET danh sách/chi tiết `/api/students` hoặc `/api/admin/students`; PATCH `/{id}` theo quyền. Admin POST `/api/admin/students` để thêm từng hồ sơ, DELETE `/{id}` khi chưa có dữ liệu liên quan. Tạo trả mật khẩu tạm một lần; chưa import Excel. Staff có POST `/api/students/{id}/reset-password` trong phạm vi.
 - Giường: PATCH `/api/beds/{id}` sửa `code`. Đợt đăng ký: DELETE `/api/registration-periods/{id}` chỉ khi chưa mở/chưa có đơn; GET `/api/me/registration-periods/open` cho form sinh viên.
 - Hợp đồng: POST `/api/contracts` nhận `applicationId`, `startDate`, `endDate`. Tạo PENDING từ đơn APPROVED, chưa phân giường hay thu cọc. PATCH `/{id}` chỉ sửa ngày; DELETE `/{id}` chỉ khi PENDING chưa có phân phòng, tiền cọc hoặc lịch sử. Không nhận trạng thái từ client.
-- Gia hạn/chuyển phòng: GET danh sách/chi tiết, POST, PATCH, DELETE `/api/extension-requests` và `/api/transfer-requests`. Gia hạn nhận `contractId`, `newEndDate`, `reason`; chuyển phòng nhận `contractId`, `reason`. Chỉ sinh viên sở hữu CRUD yêu cầu PENDING; PATCH không đổi hợp đồng nguồn. Staff chỉ đọc. Chưa xét duyệt hay chuyển giường.
+- Gia hạn/chuyển phòng: GET danh sách/chi tiết, POST, PATCH, DELETE `/api/extension-requests` và `/api/transfer-requests`. Gia hạn nhận `contractId`, `newEndDate`, `reason`; chuyển phòng nhận `contractId`, `reason` (`POST /api/transfer-requests` có `contractId` trong body là đường tạo yêu cầu hiện dùng, sinh viên chỉ tạo yêu cầu khi đang ở STAY; `POST /api/contracts/{id}/transfer-requests` chưa có). Yêu cầu chuyển phòng đã có các endpoint duyệt (`/approve`), từ chối (`/reject`) và hủy (`/cancel`); `DELETE /api/transfer-requests/{id}` vẫn còn nhưng giao diện không dùng (hủy đi qua `POST .../cancel`). Quyền từng endpoint: `approve`/`reject` cần `ROOM_TRANSFER_APPROVE` (Staff cùng đơn vị, Admin); `cancel` cần `ROOM_TRANSFER_DELETE` (chỉ sinh viên chủ yêu cầu); `GET /{id}` cần `ROOM_TRANSFER_READ`. Gia hạn: Staff chỉ đọc, chưa xét duyệt.
 - Lựa chọn hè: GET danh sách/chi tiết, POST, PATCH, DELETE `/api/summer-choices`. Nhận `contractId`, `semesterId`, `choice` (STAY/TEMP_LEAVE/LEAVE); chỉ sinh viên sở hữu CRUD PENDING. PATCH không đổi hợp đồng/học kỳ nguồn. Chưa cập nhật chỗ ở/hợp đồng.
 - Chỉ số: GET danh sách/chi tiết, POST, PATCH, DELETE `/api/utility-readings`. Form nhận `roomId`, `meterType`, `billingMonth`, `startReading`, `endReading`. Ngày kỳ là ngày đầu tháng; tiêu thụ do CSDL sinh. Chỉ số đã dùng trong hóa đơn hoặc có kỳ sau bị khóa sửa/xóa; PATCH không đổi phòng/loại/kỳ.
 - Đơn giá: thêm PATCH và DELETE `/api/utility-rates/{id}` cho bản tương lai do chính Staff tạo. Giá đã có hiệu lực được giữ nguyên.
@@ -247,16 +247,16 @@ Mỗi bảng tương ứng một module của SAD. "Phạm vi" nhắc lại các
 | POST, PATCH | `/api/room-types[/{id}]` | St | `{ name, bedCount, priceMain, priceSummer, areaM2, amenities, active }`. Đổi giá không ảnh hưởng phân phòng đang hiệu lực; đổi `bedCount` của loại phòng đã được gán cho ít nhất một phòng đang tồn tại bị từ chối 409 `RESOURCE_IN_USE` nhằm bảo toàn số giường vật lý và công suất | FR-ROOM-02 |
 | GET | `/api/semesters` | \* | Học kỳ (mảng), sắp theo `startDate` | FR-ROOM-11 |
 | POST, PATCH | `/api/semesters[/{id}]` | St | `{ name, academicYear, type, startDate, endDate }`; chồng thời gian → `409 SEMESTER_OVERLAP` | FR-ROOM-11 |
-| GET | `/api/rooms` | St | Lọc `buildingId`, `floor`, `roomTypeId`, `gender`, `status`, `hasFreeBed`, `noLeader`; mỗi phòng kèm số giường trống / đang giữ / đang ở (từ `v_room_occupancy`) | FR-ROOM-07, 10 |
+| GET | `/api/rooms` | St | Lọc `buildingId`, `floor`, `roomTypeId`, `gender`, `status`, `hasFreeBed`, `noLeader`; mỗi phòng kèm số giường trống / đang giữ / đang ở (từ `v_room_occupancy`), `missingLeader` (cảnh báo phòng chưa có trưởng phòng dù có người đang ở) | FR-ROOM-07, 10 |
 | POST | `/api/rooms` | St | `{ buildingId, floor, code, roomTypeId, gender }`; tự tạo giường theo `bedCount` | FR-ROOM-03, 04 |
-| GET | `/api/rooms/{id}` | St | Chi tiết: giường, người đang ở / đang giữ từng giường, trưởng phòng, lịch sử trưởng phòng | FR-ROOM-07, 09 |
+| GET | `/api/rooms/{id}` | St | Chi tiết: giường, người đang ở / đang giữ từng giường, `missingLeader`, `leader {id, fullName, studentCode}` và `leaderHistory[]` (`from`, `to`, `actorId`, `actorName`, `reason`, `at`; `actorId = null` là hệ thống tự gỡ) | FR-ROOM-07, 09 |
 | PATCH | `/api/rooms/{id}` | St | Sửa `floor`, `code`, `roomTypeId`, `gender`. Đổi `gender` hoặc `roomTypeId` khi còn phân phòng hiệu lực → `409 ROOM_OCCUPIED` | FR-ROOM-03 |
 | POST | `/api/rooms/{id}/status` | St | `{ status: ACTIVE \| MAINTENANCE \| CLOSED, reason }`; còn phân phòng hiệu lực → `409 ROOM_OCCUPIED` | FR-ROOM-05, 06 |
 | POST | `/api/rooms/{id}/beds` | St | Thêm một giường `{ code }` | FR-ROOM-04 |
 | POST | `/api/beds/{id}/status` | St | `{ status: ACTIVE \| BROKEN \| RETIRED, reason }`; còn phân phòng hiệu lực → `409 BED_OCCUPIED` | FR-ROOM-04, 05, 06 |
 | GET | `/api/beds/available` | St | Giường trống cho split view (mục 4.4). Tham số `applicationId` **hoặc** `transferRequestId` **hoặc** `storageRecordId` | FR-REG-08, FR-CON-07, 12 |
-| PUT | `/api/rooms/{id}/leader` | St | `{ studentId }`; phải đang ở trong phòng (BR-11) | FR-ROOM-09 |
-| DELETE | `/api/rooms/{id}/leader` | St | Gỡ trưởng phòng `{ reason }`; 204 | FR-ROOM-09 |
+| PUT | `/api/rooms/{id}/leader` | St | `{ studentId }`; phải đang ở trong phòng (BR-11); chỉ định lại đúng người đang là trưởng phòng thì không làm gì (idempotent, không ghi audit) | FR-ROOM-09 |
+| DELETE | `/api/rooms/{id}/leader` | St | Gỡ trưởng phòng `{ reason }` (lý do 5–500 ký tự); khi phòng không có trưởng phòng cũng không làm gì; 204 | FR-ROOM-09 |
 | GET | `/api/me/room` | S | Phòng, giường của tôi, bạn cùng phòng (họ tên), trưởng phòng; `null` nếu không ở | FR-ROOM-08 |
 
 Không có `DELETE /api/rooms/{id}` hay `DELETE /api/beds/{id}`: phòng, giường đã từng có phân phòng chỉ chuyển `CLOSED` / `RETIRED` (FR-ROOM-06). Phòng, giường chưa từng dùng cũng dùng trạng thái cho thống nhất.
@@ -307,12 +307,12 @@ Không có `DELETE /api/rooms/{id}` hay `DELETE /api/beds/{id}`: phòng, giườ
 | POST | `/api/extension-requests/{id}/approve` | St | Cập nhật `endDate`; chồng hợp đồng khác → `409 CONTRACT_PERIOD_OVERLAP` | FR-CON-06 |
 | POST | `/api/extension-requests/{id}/reject` | St | `{ reason }` | FR-CON-06 |
 | POST | `/api/extension-requests/{id}/cancel` | S | Hủy khi còn PENDING | FR-CON-06 |
-| POST | `/api/contracts/{id}/transfer-requests` | S | `{ reason }`; cần đang ở (STAY) | FR-CON-07 |
+| POST | `/api/contracts/{id}/transfer-requests` | S | `{ reason }`; cần đang ở (STAY). *Ghi chú:* đường dẫn này chưa có; hiện dùng `POST /api/transfer-requests` (có `contractId` trong body) | FR-CON-07 |
 | GET | `/api/transfer-requests` | St | Lọc `status` | FR-CON-07 |
-| GET | `/api/transfer-requests/{id}` | S, St | Chi tiết: giường hiện tại, lý do | FR-CON-07 |
-| POST | `/api/transfer-requests/{id}/approve` | St | `{ targetBedId }`: chuyển phòng (mục 4.7) | FR-CON-07, 08 |
-| POST | `/api/transfer-requests/{id}/reject` | St | `{ reason }` | FR-CON-07 |
-| POST | `/api/transfer-requests/{id}/cancel` | S | Hủy khi còn PENDING | FR-CON-07 |
+| GET | `/api/transfer-requests/{id}` | S, St | Chi tiết: giường hiện tại, lý do, timeline, `allowedActions` (mục 4.7; quyền `ROOM_TRANSFER_READ`) | FR-CON-07 |
+| POST | `/api/transfer-requests/{id}/approve` | St | `{ targetBedId }`: duyệt chuyển phòng (mục 4.7; quyền `ROOM_TRANSFER_APPROVE`) | FR-CON-07, 08 |
+| POST | `/api/transfer-requests/{id}/reject` | St | `{ reason }`: từ chối chuyển phòng (lý do bắt buộc; quyền `ROOM_TRANSFER_APPROVE`) | FR-CON-07 |
+| POST | `/api/transfer-requests/{id}/cancel` | S | Hủy khi còn PENDING (quyền `ROOM_TRANSFER_DELETE`, chỉ sinh viên chủ yêu cầu; `DELETE /api/transfer-requests/{id}` vẫn còn nhưng giao diện không dùng) | FR-CON-07 |
 | GET | `/api/contracts/{id}/move-out/preview` | St | Xem trước trả phòng: công nợ, số dư cọc, tiền hoàn, kiểu kết thúc (mục 4.8) | FR-CON-09 |
 | POST | `/api/contracts/{id}/move-out` | St | Làm thủ tục trả phòng (mục 4.8) | FR-CON-09, 10, 13 |
 | POST | `/api/contracts/{id}/storage-records` | St | Tạm rời hè: ghi phiếu gửi đồ, đóng phân phòng (mục 4.9) | FR-CON-11 |
@@ -505,21 +505,47 @@ Lỗi: `409 PERIOD_NOT_OPEN`, `409 APPLICATION_EXISTS` (đã có đơn trong đ�
 
 ### 4.4. Giường trống và phân giường
 
-`GET /api/beds/available?applicationId=88` trả giường đủ điều kiện, gom theo phòng, đã lọc: đơn vị của Staff, giới tính sinh viên, phòng `ACTIVE`, giường `ACTIVE`, không có phân phòng hiệu lực. Phòng đúng loại mong muốn xếp trước.
+`GET /api/beds/available` trả danh sách phòng và giường đủ điều kiện cho split view (UI 14.2, 15), gom theo phòng, đã lọc: đơn vị của Staff, giới tính sinh viên, phòng `ACTIVE`, giường `ACTIVE`, không có phân phòng hiệu lực. Phòng đúng loại mong muốn xếp trước.
+
+Tham số query:
+- Bắt buộc truyền **đúng một trong** `applicationId` hoặc `transferRequestId`; thiếu cả hai hoặc truyền cả hai trả `400 VALIDATION_FAILED` (thông báo: "Truyền đúng một trong applicationId hoặc transferRequestId").
+- Bộ lọc bổ sung tùy chọn: `buildingId`, `roomTypeId`.
+- `storageRecordId` chưa làm (FR-CON-12 ngoài phạm vi).
+
+Quy tắc kiểm tra nguồn:
+- Nguồn đơn đăng ký (`applicationId`): đơn phải ở trạng thái `APPROVED`; chưa `APPROVED` (hoặc đã phân phòng) trả `409 INVALID_STATE_TRANSITION`. Đơn thuộc đơn vị ngoài phạm vi Staff trả `404 NOT_FOUND`.
+- Nguồn chuyển phòng (`transferRequestId`): yêu cầu phải ở trạng thái `PENDING`; đã duyệt hoặc đã hủy trả `409 INVALID_STATE_TRANSITION`. Giường đích chỉ lấy cùng đơn vị với giường hiện tại (BR-05) và tự động loại bỏ giường hiện tại của sinh viên (`freeBeds` không chứa giường hiện tại). Yêu cầu thuộc đơn vị ngoài phạm vi Staff trả `404 NOT_FOUND`.
+
+JSON mẫu:
 
 ```json
 [
   {
-    "room": { "id": 210, "code": "A101", "buildingCode": "K1", "floor": 1, "roomType": { "id": 3, "name": "Phòng 6 giường" }, "gender": "M" },
+    "room": {
+      "id": 210,
+      "code": "A101",
+      "buildingId": 1,
+      "buildingCode": "K1",
+      "floor": 1,
+      "roomType": { "id": 3, "name": "Phòng 6 giường" },
+      "gender": "M",
+      "priceMain": 1200000
+    },
     "matchesPreferredType": true,
-    "freeBeds": [ { "id": 1532, "code": "K1-A101-03" }, { "id": 1535, "code": "K1-A101-06" } ],
+    "freeBeds": [
+      { "id": 1532, "code": "03" },
+      { "id": 1535, "code": "06" }
+    ],
+    "activeBeds": 6,
     "occupiedCount": 3,
     "heldCount": 1
   }
 ]
 ```
 
-Với `transferRequestId`: chỉ giường cùng đơn vị với giường hiện tại (BR-05), bỏ giường hiện tại. Với `storageRecordId`: giường cũ (nếu còn trống) đứng đầu, đánh dấu `isPreviousBed: true`.
+*Ghi chú định dạng:*
+- `room` có thêm `buildingId` và `priceMain`; mỗi phòng có thêm `activeBeds` (tổng số giường `ACTIVE` của phòng).
+- `freeBeds[].code` chỉ là mã ngắn của giường trong phòng (`"03"`), không phải mã đầy đủ. Mã hiển thị đầy đủ do frontend tự ghép từ `${buildingCode}-${room.code}-${code}` (ví dụ: `K1-A101-03`).
 
 `POST /api/applications/{id}/assign`
 
@@ -592,13 +618,73 @@ Frontend gặp `BED_TAKEN` thì refetch danh sách giường và giữ nguyên s
 
 ### 4.7. Chuyển phòng
 
-`POST /api/transfer-requests/{id}/approve`
+Chi tiết yêu cầu chuyển phòng được xem qua `GET /api/transfer-requests/{id}` (quyền `ROOM_TRANSFER_READ`). Các endpoint xử lý gồm:
+- Duyệt chuyển phòng: `POST /api/transfer-requests/{id}/approve` (quyền `ROOM_TRANSFER_APPROVE`), body `{ targetBedId }`.
+- Từ chối chuyển phòng: `POST /api/transfer-requests/{id}/reject` (quyền `ROOM_TRANSFER_APPROVE`), body `{ reason }`.
+- Hủy yêu cầu chuyển phòng: `POST /api/transfer-requests/{id}/cancel` (quyền `ROOM_TRANSFER_DELETE`, chỉ sinh viên chủ yêu cầu khi còn `PENDING`).
+
+Response chi tiết `TransferDetail` (trả về khi xem chi tiết hoặc sau khi duyệt/từ chối/hủy):
 
 ```json
-{ "targetBedId": 1610 }
+{
+  "id": 12,
+  "contractId": 377,
+  "contractCode": "HD-2026-0377",
+  "studentId": 501,
+  "studentCode": "2251060001",
+  "studentName": "Nguyễn Văn A",
+  "reason": "Muốn chuyển sang tầng 2 gần bạn",
+  "status": "APPROVED",
+  "targetBedId": 1610,
+  "decidedBy": 31,
+  "decidedAt": "2026-10-15T14:30:00+07:00",
+  "decisionReason": null,
+  "createdAt": "2026-10-12T09:00:00+07:00",
+  "currentBed": {
+    "assignmentId": 940,
+    "studentId": 501,
+    "contractId": 377,
+    "kind": "STAY",
+    "bedId": 1532,
+    "bedCode": "03",
+    "roomId": 210,
+    "roomCode": "A101",
+    "buildingId": 1,
+    "buildingCode": "K1",
+    "managementUnitId": 1
+  },
+  "allowedActions": [],
+  "timeline": [
+    {
+      "fromStatus": null,
+      "toStatus": "PENDING",
+      "actorId": 501,
+      "reason": "Muốn chuyển sang tầng 2 gần bạn",
+      "at": "2026-10-12T09:00:00+07:00"
+    },
+    {
+      "fromStatus": "PENDING",
+      "toStatus": "APPROVED",
+      "actorId": 31,
+      "reason": null,
+      "at": "2026-10-15T14:30:00+07:00"
+    }
+  ]
+}
 ```
 
-Một transaction: khóa giường nguồn và đích theo `bed_id` tăng dần, kiểm tra lại, đóng phân phòng cũ (`endReason = TRANSFER`), mở phân phòng `STAY` mới (đơn giá phòng mới), gỡ trưởng phòng nếu cần, yêu cầu → `APPROVED`. Lỗi: `BED_TAKEN`, `BED_NOT_AVAILABLE`, `GENDER_MISMATCH`, `409 TRANSFER_CROSS_UNIT` (giường đích khác đơn vị), `409 SAME_BED`. 200 trả chi tiết yêu cầu.
+*Quy trình và cơ chế xử lý (SAD 6.2):*
+- Duyệt chuyển phòng thực hiện trong **một transaction**:
+  1. Khóa giường nguồn và giường đích theo thứ tự `bed_id` tăng dần trong `BedOccupancyService` (chống deadlock AT-02, AT-03).
+  2. Khóa sinh viên (`student_profile`) và kiểm tra lại điều kiện chỗ ở hiện tại (`STAY`).
+  3. Kiểm tra tính hợp lệ của giường đích: giường `ACTIVE`, phòng `ACTIVE`, cùng giới tính sinh viên, cùng đơn vị quản lý với giường hiện tại (BR-05); nếu trùng giường hiện tại trả `409 SAME_BED`.
+  4. Đóng phân phòng cũ (`endReason = 'TRANSFER'`), mở phân phòng `STAY` mới với đơn giá chụp từ loại phòng mới. Nếu sinh viên đang là trưởng phòng cũ thì tự động gỡ trưởng phòng và ghi audit log (`ROOM_LEADER_CHANGE`, `actorId = null`).
+  5. Cập nhật yêu cầu chuyển phòng có điều kiện: `UPDATE room_transfer_request SET status='APPROVED', target_bed_id=?, decided_by=?, decided_at=CURRENT_TIMESTAMP WHERE id=? AND status='PENDING'`.
+  6. Ghi lịch sử trạng thái vào `status_history` (`entity_type = 'TRANSFER'`).
+- Xử lý lỗi và đồng thời:
+  - Nếu yêu cầu đã rời `PENDING` giữa lúc đọc và lúc cập nhật (ví dụ sinh viên đã hủy hoặc một lượt duyệt khác đã xử lý): trả `409 INVALID_STATE_TRANSITION` (`currentStatus`), đồng thời toàn bộ giao dịch chuyển giường bị hoàn tác (rollback).
+  - Hai lượt duyệt đồng thời trên cùng yêu cầu hoặc cùng giường đích: lượt sau nhận `409 CONCURRENT_UPDATE` hoặc `409 INVALID_STATE_TRANSITION`.
+  - `reject`: từ chối yêu cầu bắt buộc có lý do `{ reason }` trong body; thiếu lý do hoặc chuỗi rỗng trả `400 VALIDATION_FAILED`.
 
 ### 4.8. Trả phòng
 
@@ -901,7 +987,7 @@ Mã bổ sung cho Keycloak:
 | `BED_OCCUPIED` | 409 | Giường {bedCode} đang có người ở hoặc giữ chỗ |
 | `ROOM_CODE_EXISTS` | 409 | Mã phòng {code} đã có trong tòa này |
 | `BED_CODE_EXISTS` | 409 | Mã giường đã có trong phòng này |
-| `LEADER_ALREADY_ASSIGNED` | 409 | Sinh viên đang là trưởng phòng của phòng khác |
+| `LEADER_ALREADY_ASSIGNED` | 409 | Sinh viên đang là trưởng phòng của phòng {roomCode} |
 | `SEMESTER_OVERLAP` | 409 | Thời gian trùng với học kỳ {semesterName} |
 | `LEADER_NOT_STAYING` | 409 | Sinh viên này không đang ở trong phòng {roomCode} |
 | `STUDENT_ALREADY_ASSIGNED` | 409 | Sinh viên đã có chỗ ở hoặc đang giữ chỗ |
@@ -928,7 +1014,7 @@ Mã bổ sung cho Keycloak:
 | `CONTRACT_AUTO_CANCELLED` | 409 | Hợp đồng đã tự động hủy do quá hạn kích hoạt |
 | `CONTRACT_PERIOD_OVERLAP` | 409 | Khoảng thời gian mới trùng với hợp đồng {contractCode} |
 | `REQUEST_PENDING_EXISTS` | 409 | Đã có một yêu cầu đang chờ xử lý cho hợp đồng này |
-| `NOT_STAYING` | 409 | Bạn hiện không ở trong ký túc xá |
+| `NOT_STAYING` | 409 | Bạn hiện không ở trong ký túc xá (áp dụng khi tạo yêu cầu chuyển phòng lúc chưa ở thực tế, kể cả khi đang giữ chỗ HOLD) |
 | `TRANSFER_CROSS_UNIT` | 409 | Chỉ chuyển sang giường cùng đơn vị quản lý |
 | `SAME_BED` | 409 | Giường đích trùng giường hiện tại |
 | `MOVE_OUT_WARNINGS_NOT_ACKNOWLEDGED` | 409 | Sinh viên còn công nợ hoặc ticket chưa kết luận chi phí. Vui lòng xác nhận trước khi trả phòng |
@@ -998,7 +1084,8 @@ Tên hành động = đoạn cuối URL. Policy ở backend (SAD 4.3) cài đún
 | | ASSIGNED | `cancel` | `release-hold` | |
 | Hợp đồng | PENDING | | `activate` | |
 | | ACTIVE | `create-extension-request`, `create-transfer-request` (khi đang ở, không có yêu cầu chờ) | `move-out`, `create-storage-record` (khi lựa chọn hè TEMP_LEAVE đã duyệt), `top-up` (khi cần bù) | |
-| Yêu cầu gia hạn / chuyển phòng | PENDING | `cancel` | `approve`, `reject` | |
+| Yêu cầu gia hạn | PENDING | `cancel` | `approve`, `reject` | |
+| Yêu cầu chuyển phòng | PENDING | `cancel` | `approve`, `reject` | |
 | Lựa chọn hè | PENDING | `edit` | `approve`, `reject` | |
 | Ticket | OPEN | `cancel` (người tạo) | `assign`, `reject` | |
 | | ASSIGNED | | | `start` |
@@ -1007,6 +1094,8 @@ Tên hành động = đoạn cuối URL. Policy ở backend (SAD 4.3) cài đún
 | | CLOSED | | `conclude` (ticket phòng, chưa kết luận) | |
 | Hóa đơn | UNPAID | | `confirm-payment`, `add-adjustment` | |
 | Phiếu gửi đồ | chưa nhận lại | | `return` | |
+
+*Ghi chú cho yêu cầu chuyển phòng:* Chỉ khi ở trạng thái `PENDING` mới có hành động. Sinh viên chủ yêu cầu có `cancel` (chỉ khi có quyền `ROOM_TRANSFER_DELETE`). Staff cùng đơn vị của giường hiện tại và ADMIN có `approve`, `reject` (chỉ khi có quyền `ROOM_TRANSFER_APPROVE`). Danh sách `allowedActions` trong chi tiết yêu cầu chuyển phòng luôn được lọc theo quyền thực tế của người xem (`guard.hasPermission(...)`), giúp giao diện chỉ hiển thị đúng các nút bấm người dùng được phép thực thi.
 
 Mã hành động không đổi trạng thái (mục 2.6) và endpoint tương ứng:
 
@@ -1132,4 +1221,6 @@ Service Impl vẫn giữ kiểm tra quyền cho lời gọi nội bộ, phạm v
 
 `VALIDATION_FAILED` (400) kèm `details.fieldErrors` khi role/danh sách/version sai, trùng mã, mã không đăng ký, mã không phù hợp vai trò, thiếu PROFILE_READ hoặc chọn ghi mà thiếu READ của tài nguyên. `ADMIN_PERMISSIONS_IMMUTABLE` (403) khi cố sửa quyền ADMIN. `PERMISSION_MATRIX_STALE` (409) khi version cũ; tải lại rồi chọn lại trước khi lưu, không tự gửi lại bản cũ. `PERMISSION_MATRIX_UNAVAILABLE` (409) khi dòng cấu hình của role không tồn tại. Dòng thiếu/hỏng không cấp quyền mặc định khi kiểm quyền runtime.
 
-`/api/auth/me.permissions` đọc quyền CSDL hiện hành, ADMIN luôn có toàn bộ danh mục 105 mã. Thay đổi ảnh hưởng mọi tài khoản cùng role trên cùng database DMS. Các máy dùng database riêng vẫn có ma trận riêng dù cùng dùng Keycloak; muốn đồng bộ quyền phải dùng chung backend/database.
+`/api/auth/me.permissions` đọc quyền CSDL hiện hành, ADMIN luôn có toàn bộ danh mục 106 mã. Thay đổi ảnh hưởng mọi tài khoản cùng role trên cùng database DMS. Các máy dùng database riêng vẫn có ma trận riêng dù cùng dùng Keycloak; muốn đồng bộ quyền phải dùng chung backend/database.
+
+Cập nhật (bản 0.11, 15/10/2026): Thêm hành động `APPROVE` và mã quyền `ROOM_TRANSFER_APPROVE` vào catalogue phân quyền, nâng tổng số quyền từ 105 lên **106** mã. Migration `V6__room_transfer_approve_permission.sql` bổ sung mã này vào danh sách quyền của role STAFF trong `role_permission_matrix`, nâng số quyền mặc định của STAFF từ 72 lên **73** quyền. Dòng change log bản 0.9 ghi nhận lịch sử 105 quyền tại thời điểm áp dụng V5 và được giữ nguyên.

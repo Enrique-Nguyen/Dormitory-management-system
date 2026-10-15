@@ -2,7 +2,9 @@ import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
 import CrudPage from '../../pages/CrudPage'
 import CrudTabsPage from '../../pages/CrudTabsPage'
+import RoomDetailPage from '../../pages/staff/RoomDetailPage'
 import StaffHomePage from '../../pages/staff/StaffHomePage'
+import TransferReviewPage from '../../pages/staff/TransferReviewPage'
 import RequireRole from '../guards/RequireRole'
 import HomeRedirect from '../guards/HomeRedirect'
 import StaffLayout from '../layouts/StaffLayout'
@@ -40,7 +42,8 @@ export const staffRoutes: RouteObject = {
           element: <CrudPage resource="applications" />,
         },
         { path: 'rooms', element: <CrudPage resource="rooms" /> },
-        { path: 'rooms/:id', element: <CrudPage resource="rooms" /> },
+        { path: 'rooms/:id', element: <RoomDetailPage /> },
+        { path: 'transfers/:id', element: <TransferReviewPage /> },
         { path: 'students', element: <CrudPage resource="students" /> },
         { path: 'contracts', element: <CrudPage resource="contracts" /> },
         { path: 'contracts/:id', element: <CrudPage resource="contracts" /> },

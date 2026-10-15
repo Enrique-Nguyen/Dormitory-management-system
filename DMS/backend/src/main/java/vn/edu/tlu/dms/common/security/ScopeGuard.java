@@ -156,7 +156,8 @@ public class ScopeGuard {
                         Permission.STUDENT_READ,
                         Permission.STUDENT_UPDATE,
                         Permission.STUDENT_RESET_PASSWORD,
-                        Permission.DASHBOARD_READ));
+                        Permission.DASHBOARD_READ,
+                        Permission.ROOM_TRANSFER_APPROVE));
         // Đơn/yêu cầu do sinh viên tạo: Staff xử lý, không tạo hoặc hủy thay sinh viên.
         staff.removeAll(
                 Set.of(

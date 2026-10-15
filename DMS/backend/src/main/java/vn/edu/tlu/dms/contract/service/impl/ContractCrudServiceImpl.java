@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ConfigKey;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
@@ -20,6 +21,7 @@ import vn.edu.tlu.dms.common.service.impl.AbstractSqlCrudServiceImpl;
 import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 import vn.edu.tlu.dms.contract.service.ContractCrudService;
+import vn.edu.tlu.dms.room.service.OccupancyQuery;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -37,6 +39,8 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
     private final ScopeGuard guard;
 
     private final ConfigService configs;
+
+    private final OccupancyQuery occupancy;
 
     private static final Map<String, String> CONTRACT =
             Map.of(
@@ -65,10 +69,12 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
             CurrentUser current,
             AuditService audit,
             ScopeGuard guard,
-            ConfigService configs) {
+            ConfigService configs,
+            OccupancyQuery occupancy) {
         super(jdbc, queries, current, audit);
         this.guard = guard;
         this.configs = configs;
+        this.occupancy = occupancy;
     }
 
     /** Phạm vi lấy từ đơn nguyện vọng; ADMIN quản lý mọi đơn vị nhưng vẫn giữ trạng thái hợp lệ. */
@@ -244,6 +250,8 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
         }
         if (extension) {
             validateExtension(input, c.get("endDate"));
+        } else {
+            requireStaying(((Number) c.get("id")).longValue());
         }
         return insertRecord(
                 table(extension),
@@ -291,6 +299,18 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
         requireContract(((Number) row.get("contractId")).longValue(), true);
         requirePending(row, StayRequestStatus.PENDING);
         return row;
+    }
+
+    /** Chuyển phòng chỉ áp dụng khi sinh viên đang ở (STAY), không áp dụng khi mới giữ chỗ. */
+    private void requireStaying(Long contractId) {
+        boolean staying =
+                occupancy
+                        .findOpenAssignmentByContract(contractId)
+                        .map(bed -> AssignmentKind.STAY.equals(bed.kind()))
+                        .orElse(false);
+        if (!staying) {
+            throw BusinessException.conflict(ErrorCode.NOT_STAYING);
+        }
     }
 
     private void validateExtension(Map<String, Object> input, Object old) {

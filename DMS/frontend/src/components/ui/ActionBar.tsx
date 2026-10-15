@@ -13,6 +13,8 @@ export interface ActionDef {
   /** Nút chính; mặc định là nút hiển thị cuối cùng nếu không phải danger. */
   primary?: boolean
   loading?: boolean
+  /** Hiện nút nhưng chưa cho bấm (ví dụ chưa chọn giường); không thay allowedActions. */
+  disabled?: boolean
   /** Có thì bấm sẽ mở ConfirmDialog trước khi gọi onAction (Rule 04, 05). */
   confirm?: Omit<ConfirmOptions, 'onConfirm'>
 }
@@ -44,6 +46,7 @@ export default function ActionBar({ allowedActions, actions }: Props) {
             icon={def.icon}
             danger={def.danger}
             loading={def.loading}
+            disabled={def.disabled}
             type={
               (def.primary ?? (index === visible.length - 1 && !def.danger))
                 ? 'primary'

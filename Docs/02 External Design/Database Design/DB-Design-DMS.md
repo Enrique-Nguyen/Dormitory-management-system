@@ -1,12 +1,24 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.7**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.8**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.11 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
-> DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak và ma trận quyền động; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
+> DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak, ma trận quyền động V5 và quyền V6; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
 
----
+### Lịch sử thay đổi
 
+| Phiên bản | Ngày | Nội dung |
+|---|---|---|
+| 0.1 | 10/10/2026 | Bản đầu tiên: ERD, DDL PostgreSQL 16, partial unique index, ánh xạ lỗi, JPA notes |
+| 0.2 | 10/10/2026 | Chốt Q-DB-01..10, bổ sung sequence và fn_next_code |
+| 0.3 | 13/10/2026 | Bổ sung V2 bảng Spring Session |
+| 0.4 | 13/10/2026 | Bổ sung V3 security_version và ràng buộc không âm |
+| 0.5 | 14/10/2026 | Bổ sung V4 Keycloak OIDC, keycloak_user_id nullable password_hash |
+| 0.6 | 15/10/2026 | Bổ sung V5 ma trận quyền động role_permission_matrix (STAFF=72, STUDENT=35, TECHNICIAN=11, ADMIN=105) |
+| 0.7 | 15/10/2026 | Ánh xạ ràng buộc CSDL theo code review, chặn sửa bed_count loại phòng đang dùng và hủy đơn đã có hợp đồng |
+| 0.8 | 15/10/2026 | Bổ sung Flyway V6 cấp quyền ROOM_TRANSFER_APPROVE cho STAFF (STAFF=73, ADMIN=106); ghi chú JPA/Service: status_history entity_type='TRANSFER', lịch sử trưởng phòng từ audit_log (ROOM_LEADER_CHANGE), missingLeader tính động khi đọc |
+
+---
 
 ### Bổ sung Keycloak v0.5 — 14/10/2026
 
@@ -21,7 +33,7 @@ DB và Keycloak không có transaction phân tán; rollback dùng thao tác bù,
 | Hạng mục | Lựa chọn | Ghi chú |
 |---|---|---|
 | DBMS | **PostgreSQL 16** | Theo SRS mục 2.5. Cần partial unique index, `EXCLUDE`, `JSONB`, generated column |
-| Migration | Flyway V1 tạo nghiệp vụ, V2 Spring Session, V3 `security_version`, V4 Keycloak, V5 ma trận quyền | Giữ nguyên V1–V4; snapshot SQL hiện tại không dùng để nâng cấp CSDL đã chạy. Hibernate `ddl-auto: validate` |
+| Migration | Flyway V1 tạo nghiệp vụ, V2 Spring Session, V3 `security_version`, V4 Keycloak, V5 ma trận quyền, V6 cấp `ROOM_TRANSFER_APPROVE` cho STAFF | Giữ nguyên V1–V4; snapshot SQL hiện tại không dùng để nâng cấp CSDL đã chạy. Hibernate `ddl-auto: validate` |
 | Đặt tên | `snake_case`, số ít (`room`, `bed`) | `app_user` thay cho `user` vì `user` là từ khóa |
 | Khóa chính | `BIGINT GENERATED ALWAYS AS IDENTITY` | Mã hiển thị (HD-2026-0012, TK-1024) là cột `code` riêng, `UNIQUE` |
 | Mã hiển thị | Sequence riêng mỗi loại + hàm `fn_next_code` | Xem Q-DB-10 |
@@ -417,6 +429,9 @@ Kịch bản kiểm thử chưa đưa vào thư mục Database Design; có thể
 | `Invoice` | Aggregate root: tạo hóa đơn cùng các `InvoiceItem` (`cascade = ALL`), tính `totalAmount` = tổng dòng rồi lưu trong **một** `@Transactional`. Sau khi đã thanh toán thì không sửa hóa đơn; điều chỉnh bằng dòng `ADJUSTMENT` ở hóa đơn kỳ sau (`adjusts_invoice_id`, FR-BIL-12) |
 | View (`v_current_stay`, `v_user_notification`…) | Entity chỉ đọc `@Immutable` + `@Subselect` / `@Table(name = "v_…")`, hoặc projection qua native query |
 | Ràng buộc → `errorCode` | Bắt `DataIntegrityViolationException`, đọc tên ràng buộc (mục 4) để trả mã lỗi tiếng Việt |
+| `status_history` cho chuyển phòng | Dùng `entity_type = 'TRANSFER'`, `entity_id` là `room_transfer_request.id` cho các thao tác `APPROVE`, `REJECT`, `CANCEL` |
+| Lịch sử trưởng phòng | Không tạo bảng riêng; đọc từ `audit_log` (`action = 'ROOM_LEADER_CHANGE'`, `entity_type = 'ROOM'`, `old_value`/`new_value` là ID sinh viên dạng JSON number). `actor_id = null` là trường hợp hệ thống tự gỡ khi sinh viên kết thúc phân phòng đang ở (FR-ROOM-10) |
+| Cảnh báo thiếu trưởng phòng | Cờ `missingLeader` được tính động khi đọc (`status = 'ACTIVE'`, phòng có sinh viên đang ở `STAY` nhưng `leader_student_id IS NULL`), không lưu cột riêng trong CSDL (tuân thủ nguyên tắc không lưu giá trị suy ra) |
 
 Lịch sử v0.5: 14/10/2026 — thêm liên kết Keycloak, mật khẩu local nullable và database danh tính độc lập.
 
@@ -436,3 +451,11 @@ Flyway `V5__role_permission_matrix.sql` tạo một bảng `role_permission_matr
 ### Bổ sung theo code review v0.7 — 15/10/2026
 
 Mục 4 bổ sung ánh xạ `ux_room_leader` → `LEADER_ALREADY_ASSIGNED`, `student_profile_student_code_key` → `STUDENT_CODE_EXISTS`, `bed_room_id_code_key` → `BED_CODE_EXISTS`, `semester_daterange_excl` → `SEMESTER_OVERLAP` và quy tắc theo SQLState cho ràng buộc chưa có tên trong danh sách (UNIQUE/EXCLUDE → `DUPLICATE_VALUE`, khóa ngoại → `RESOURCE_IN_USE`, NOT NULL/CHECK → `VALIDATION_FAILED`, còn lại `CONCURRENT_UPDATE`). Mục 3.2, 3.3 và mục 4 ghi chú ràng buộc nghiệp vụ: không cập nhật `bed_count` khi loại phòng đã được gán cho phòng đang tồn tại (409 `RESOURCE_IN_USE`) để bảo toàn số giường và công suất; đơn `APPROVED` chỉ được hủy khi chưa sinh hợp đồng `PENDING`/`ACTIVE` liên kết (409 `APPLICATION_HAS_CONTRACT`) để tránh hợp đồng mồ côi. Không có migration mới.
+
+
+### Bổ sung cấp quyền duyệt chuyển phòng V6 v0.8 — 15/10/2026
+
+Flyway `V6__room_transfer_approve_permission.sql` bổ sung quyền duyệt chuyển phòng cho vai trò STAFF:
+- Script chỉ thực hiện `UPDATE role_permission_matrix SET permissions = permissions || '["ROOM_TRANSFER_APPROVE"]'::jsonb WHERE role = 'STAFF' AND NOT (permissions @> '["ROOM_TRANSFER_APPROVE"]'::jsonb)`.
+- Không tăng `version` của dòng cấu hình (để tránh xung đột lạc quan với màn quản trị ma trận quyền của ADMIN), không thay đổi cấu trúc bảng hay schema CSDL.
+- Sau khi áp dụng V6: vai trò STAFF mặc định có **73** quyền, ADMIN có **106** quyền (toàn bộ danh mục 106 mã).

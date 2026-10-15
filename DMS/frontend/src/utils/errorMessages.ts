@@ -87,8 +87,8 @@ const messages: Record<string, (d: Details) => string> = {
 
   // 5.3 Phòng, giường
   BED_CODE_EXISTS: () => 'Mã giường đã có trong phòng này.',
-  LEADER_ALREADY_ASSIGNED: () =>
-    'Sinh viên đang là trưởng phòng của phòng khác. Gỡ vai trò đó trước.',
+  LEADER_ALREADY_ASSIGNED: (d) =>
+    `Sinh viên đang là trưởng phòng của phòng${d.roomCode ? ` ${String(d.roomCode)}` : ' khác'}. Gỡ vai trò đó trước.`,
   LEADER_NOT_STAYING: (d) =>
     `Sinh viên này không đang ở trong phòng${d.roomCode ? ` ${String(d.roomCode)}` : ''}. Chọn sinh viên đang ở phòng.`,
   NOT_STAYING: () =>
@@ -97,6 +97,13 @@ const messages: Record<string, (d: Details) => string> = {
     `Giường ${d.bedCode ?? ''} vừa được phân cho sinh viên khác. Vui lòng chọn giường khác.`,
   BED_NOT_AVAILABLE: (d) =>
     `Giường ${d.bedCode ?? ''} hoặc phòng đang không hoạt động. Vui lòng chọn giường khác.`,
+  GENDER_MISMATCH: (d) =>
+    `Phòng${d.roomCode ? ` ${String(d.roomCode)}` : ''} dành cho giới tính khác, không phù hợp với sinh viên. Chọn phòng khác.`,
+  STUDENT_ALREADY_ASSIGNED: () =>
+    'Sinh viên đã có chỗ ở hoặc đang giữ chỗ. Tải lại trang để xem phân phòng hiện tại.',
+  TRANSFER_CROSS_UNIT: () =>
+    'Chỉ chuyển sang giường cùng đơn vị quản lý. Chọn giường khác.',
+  SAME_BED: () => 'Giường đích trùng giường hiện tại. Chọn giường khác.',
 
   // 5.4+ Đăng ký, kỳ hè, bảo trì, hóa đơn
   PERIOD_NOT_OPEN: () =>
