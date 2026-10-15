@@ -44,8 +44,10 @@ public class UserController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) List<String> sort,
             @RequestParam(required = false) String q,
-            @RequestParam(required = false) String role) {
-        return service.list(page, size, sort, q, role);
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) Long managementUnitId,
+            @RequestParam(required = false) Boolean locked) {
+        return service.list(page, size, sort, q, role, managementUnitId, locked);
     }
 
     @RequirePrivilege(Permission.USER_READ)

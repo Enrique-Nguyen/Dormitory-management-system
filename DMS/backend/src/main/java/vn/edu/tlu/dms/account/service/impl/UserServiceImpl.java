@@ -19,10 +19,10 @@ import vn.edu.tlu.dms.account.service.AuthService;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
 import vn.edu.tlu.dms.account.service.UserService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.PageResponse;
-import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -82,7 +82,22 @@ public class UserServiceImpl implements UserService {
     @Override
     public PageResponse<Profile> list(
             int page, int size, List<String> sort, String q, String role) {
+        return list(page, size, sort, q, role, null, null);
+    }
+
+    @Override
+    public PageResponse<Profile> list(
+            int page,
+            int size,
+            List<String> sort,
+            String q,
+            String role,
+            Long managementUnitId,
+            Boolean locked) {
         guard.requirePermission(Permission.USER_READ);
+        if (managementUnitId != null && managementUnitId <= 0) {
+            throw BusinessException.invalid("managementUnitId", "ID đơn vị phải lớn hơn 0");
+        }
         var pageable =
                 PageQuery.of(
                         page,
@@ -95,6 +110,12 @@ public class UserServiceImpl implements UserService {
                     var filters = new ArrayList<Predicate>();
                     if (role != null) {
                         filters.add(b.equal(r.get("role"), role));
+                    }
+                    if (managementUnitId != null) {
+                        filters.add(b.equal(r.get("managementUnitId"), managementUnitId));
+                    }
+                    if (locked != null) {
+                        filters.add(b.equal(r.get("locked"), locked));
                     }
                     if (q != null && !q.isBlank()) {
                         String pattern = "%" + q.trim().toLowerCase(Locale.ROOT) + "%";

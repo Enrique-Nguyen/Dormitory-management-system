@@ -43,6 +43,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -1125,6 +1126,153 @@ class CrudApiIntegrationTest {
                 .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_APPLICATION_CREATE")))
                 .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_APPLICATION_DELETE")))
                 .andExpect(jsonPath("$.permissions").value(not(hasItem("INVOICE_UPDATE"))));
+    }
+
+    /** Các điều kiện tìm tài khoản phải giao nhau; không để tìm theo tên bỏ qua đơn vị/khóa. */
+    @Test
+    void accountFiltersCombineRoleUnitLockedAndSearchWithAccuratePaging() throws Exception {
+        String marker = "Filter " + suffix;
+        jdbc.update(
+                "UPDATE app_user SET full_name=? WHERE id IN (?, ?, ?)",
+                marker,
+                staffId,
+                otherStaffId,
+                technicianId);
+        jdbc.update("UPDATE app_user SET locked=true WHERE id=?", otherStaffId);
+        Long lockedFirstUnitStaff =
+                jdbc.queryForObject(
+                        "INSERT INTO"
+                            + " app_user(username,role,full_name,management_unit_id,locked,keycloak_user_id)"
+                            + " VALUES(?,'STAFF',?,?,true,?) RETURNING id",
+                        Long.class,
+                        "locked-filter-" + suffix,
+                        marker,
+                        firstUnitId,
+                        UUID.randomUUID().toString());
+
+        mvc.perform(
+                        get("/api/admin/users")
+                                .param("q", marker)
+                                .param("role", "STAFF")
+                                .param("size", "1")
+                                .param("page", "1")
+                                .param("sort", "id,desc")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(otherStaffId));
+        mvc.perform(
+                        get("/api/admin/users")
+                                .param("q", marker)
+                                .param("role", "STAFF")
+                                .param("managementUnitId", firstUnitId.toString())
+                                .param("locked", "true")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(lockedFirstUnitStaff));
+        mvc.perform(
+                        get("/api/admin/users")
+                                .param("q", marker)
+                                .param("role", "STAFF")
+                                .param("managementUnitId", firstUnitId.toString())
+                                .param("locked", "false")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(staffId));
+    }
+
+    /** Fixture ở hai biên thời gian và các bản ghi gần giống phải cho đúng count lẫn từng trang. */
+    @Test
+    void auditFiltersCombineActorActionTypeSearchAndInclusiveTimeBoundaries() throws Exception {
+        String marker = "Audit " + suffix;
+        String action = "FILTER_" + suffix;
+        jdbc.update("UPDATE app_user SET full_name=? WHERE id=?", marker, staffId);
+        Long startBoundary = createAuditFixture(staffId, action, "USER", "2045-01-01T00:00:00Z");
+        Long endBoundary = createAuditFixture(staffId, action, "USER", "2045-01-02T00:00:00Z");
+        createAuditFixture(otherStaffId, action, "USER", "2045-01-01T12:00:00Z");
+        createAuditFixture(staffId, action, "ROOM", "2045-01-01T12:00:00Z");
+        createAuditFixture(staffId, "OTHER_ACTION", "USER", "2045-01-01T12:00:00Z");
+        createAuditFixture(staffId, action, "USER", "2044-12-31T23:59:59Z");
+        createAuditFixture(staffId, action, "USER", "2045-01-02T00:00:01Z");
+
+        for (int page = 0; page < 2; page++) {
+            mvc.perform(
+                            get("/api/admin/audit-logs")
+                                    .param("q", marker)
+                                    .param("actorId", staffId.toString())
+                                    .param("action", action)
+                                    .param("entityType", "USER")
+                                    .param("from", "2045-01-01T00:00:00Z")
+                                    .param("to", "2045-01-02T00:00:00Z")
+                                    .param("page", Integer.toString(page))
+                                    .param("size", "1")
+                                    .with(asUser(adminId, "ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalElements").value(2))
+                    .andExpect(jsonPath("$.totalPages").value(2))
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(
+                            jsonPath("$.content[0].id")
+                                    .value(page == 0 ? endBoundary : startBoundary));
+        }
+        // Chuỗi tìm kiếm được bind như dữ liệu; không biến dấu nháy thành một phần câu SQL.
+        mvc.perform(
+                        get("/api/admin/audit-logs")
+                                .param("action", "' OR 1=1 --")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    /** Đầu vào bộ lọc sai phải báo 400; quyền tổng hợp của Staff vẫn không mở API quản trị. */
+    @Test
+    void managementFiltersRejectInvalidIdentifiersRangesAndNonAdminAccess() throws Exception {
+        mvc.perform(
+                        get("/api/admin/users")
+                                .param("managementUnitId", "0")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+        mvc.perform(
+                        get("/api/admin/users")
+                                .param("locked", "invalid")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+        mvc.perform(
+                        get("/api/admin/audit-logs")
+                                .param("actorId", "-1")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+        mvc.perform(
+                        get("/api/admin/audit-logs")
+                                .param("from", "2045-01-02T00:00:00Z")
+                                .param("to", "2045-01-01T00:00:00Z")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+        jdbc.update("UPDATE app_user SET cross_unit_access=true WHERE id=?", staffId);
+        mvc.perform(get("/api/admin/users").with(asUser(staffId, "STAFF")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/audit-logs").with(asUser(staffId, "STAFF")))
+                .andExpect(status().isForbidden());
+    }
+
+    private Long createAuditFixture(Long actorId, String action, String type, String createdAt) {
+        return jdbc.queryForObject(
+                "INSERT INTO audit_log(actor_id,action,entity_type,entity_id,created_at)"
+                        + " VALUES(?,?,?,?,?) RETURNING id",
+                Long.class,
+                actorId,
+                action,
+                type,
+                firstRoomId,
+                OffsetDateTime.parse(createdAt));
     }
 
     private RequestPostProcessor asUser(Long id, String role) {

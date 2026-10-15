@@ -240,6 +240,103 @@ class KeycloakAccountIntegrationTest {
                 .andExpect(jsonPath("$.permissions").value(hasItem("USER_CREATE")));
     }
 
+    /** Đổi đơn vị giữ nguyên role nhưng token cũ không được tiếp tục sử dụng phạm vi cũ. */
+    @Test
+    void changingManagementUnitRevokesExistingTokenAndReturnsNewScope() throws Exception {
+        Long firstUnit =
+                jdbc.queryForObject("SELECT id FROM management_unit WHERE code='K1'", Long.class);
+        Long nextUnit =
+                jdbc.queryForObject("SELECT id FROM management_unit WHERE code='N23'", Long.class);
+        Long targetId = createLinkedUser("STAFF", firstUnit, false);
+        String targetSubject =
+                jdbc.queryForObject(
+                        "SELECT keycloak_user_id FROM app_user WHERE id=?", String.class, targetId);
+        RequestPostProcessor oldToken = token(targetSubject, "STAFF", 0);
+        mvc.perform(get("/api/auth/me").with(oldToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.managementUnit.id").value(firstUnit));
+        mvc.perform(
+                        patch("/api/admin/users/" + targetId)
+                                .with(token(subject, "ADMIN", 0))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"managementUnitId\":" + nextUnit + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("STAFF"))
+                .andExpect(jsonPath("$.managementUnitId").value(nextUnit));
+        mvc.perform(get("/api/auth/me").with(oldToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SESSION_REVOKED"));
+        mvc.perform(get("/api/auth/me").with(token(targetSubject, "STAFF", 1)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.managementUnit.id").value(nextUnit));
+    }
+
+    /** Mở khóa không hồi sinh phiên cũ; reset chỉ trả mật khẩu tạm và thu hồi phiên mới nhất. */
+    @Test
+    void lockUnlockAndPasswordResetKeepOldTokensRevokedWithoutStoringPassword() throws Exception {
+        Long unit =
+                jdbc.queryForObject("SELECT id FROM management_unit WHERE code='K1'", Long.class);
+        Long targetId = createLinkedUser("TECHNICIAN", unit, false);
+        String targetSubject =
+                jdbc.queryForObject(
+                        "SELECT keycloak_user_id FROM app_user WHERE id=?", String.class, targetId);
+        RequestPostProcessor originalToken = token(targetSubject, "TECHNICIAN", 0);
+        mvc.perform(
+                        post("/api/admin/users/" + targetId + "/lock")
+                                .with(token(subject, "ADMIN", 0))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"reason\":\"Khóa tài khoản kiểm thử\"}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/auth/me").with(originalToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("ACCOUNT_LOCKED"));
+        mvc.perform(
+                        post("/api/admin/users/" + targetId + "/unlock")
+                                .with(token(subject, "ADMIN", 0)))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/auth/me").with(originalToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SESSION_REVOKED"));
+        RequestPostProcessor afterUnlock = token(targetSubject, "TECHNICIAN", 1);
+        mvc.perform(get("/api/auth/me").with(afterUnlock)).andExpect(status().isOk());
+        mvc.perform(
+                        post("/api/admin/users/" + targetId + "/reset-password")
+                                .with(token(subject, "ADMIN", 0)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(targetId))
+                .andExpect(jsonPath("$.temporaryPassword").isString());
+        mvc.perform(get("/api/auth/me").with(afterUnlock))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SESSION_REVOKED"));
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT security_version FROM app_user WHERE id=?",
+                                Long.class,
+                                targetId))
+                .isEqualTo(2);
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT password_hash FROM app_user WHERE id=?",
+                                String.class,
+                                targetId))
+                .isNull();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT must_change_password FROM app_user WHERE id=?",
+                                Boolean.class,
+                                targetId))
+                .isTrue();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM audit_log WHERE actor_id=? AND entity_id=?"
+                                    + " AND action='USER_RESET_PASSWORD' AND old_value IS NULL AND"
+                                    + " new_value IS NULL",
+                                Long.class,
+                                id,
+                                targetId))
+                .isEqualTo(1);
+    }
+
     /** Controller không có guard trong thân hàm: thiếu quyền phải bị chặn trước khi chạy hàm. */
     @Test
     void privilegeAnnotationBlocksControllerBeforeItsBodyRuns() throws Exception {
