@@ -18,6 +18,7 @@ export const Action = {
   UNLOCK: 'UNLOCK',
   RESET_PASSWORD: 'RESET_PASSWORD',
   CROSS_UNIT_ACCESS: 'CROSS_UNIT_ACCESS',
+  APPROVE: 'APPROVE',
 } as const
 
 export type Action = (typeof Action)[keyof typeof Action]
@@ -57,7 +58,7 @@ export const Resource = {
 export type Resource = (typeof Resource)[keyof typeof Resource]
 
 /**
- * Danh mục 105 mã quyền khớp DmsConstants.Permission; không phải mọi nghiệp vụ đều có đủ CRUD.
+ * Danh mục 106 mã quyền khớp DmsConstants.Permission; không phải mọi nghiệp vụ đều có đủ CRUD.
  * Đây chỉ là tên quyền để gọi/hiển thị, không tự cấp quyền cho bất kỳ vai trò nào.
  * Nguồn quyền được cấp vẫn là Me.permissions do /api/auth/me trả về.
  */
@@ -118,6 +119,7 @@ export const Permission = {
   ROOM_TRANSFER_CREATE: `${Resource.ROOM_TRANSFER}_${Action.CREATE}`,
   ROOM_TRANSFER_UPDATE: `${Resource.ROOM_TRANSFER}_${Action.UPDATE}`,
   ROOM_TRANSFER_DELETE: `${Resource.ROOM_TRANSFER}_${Action.DELETE}`,
+  ROOM_TRANSFER_APPROVE: `${Resource.ROOM_TRANSFER}_${Action.APPROVE}`,
   MOVE_OUT_READ: `${Resource.MOVE_OUT}_${Action.READ}`,
   MOVE_OUT_CREATE: `${Resource.MOVE_OUT}_${Action.CREATE}`,
   MOVE_OUT_UPDATE: `${Resource.MOVE_OUT}_${Action.UPDATE}`,

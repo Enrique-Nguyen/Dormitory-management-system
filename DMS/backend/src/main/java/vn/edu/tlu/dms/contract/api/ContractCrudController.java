@@ -69,12 +69,6 @@ public class ContractCrudController {
         return service.getStayRequest(true, id);
     }
 
-    @RequirePrivilege(Permission.ROOM_TRANSFER_READ)
-    @GetMapping("/api/transfer-requests/{id}")
-    public Object getTransfer(@PathVariable Long id) {
-        return service.getStayRequest(false, id);
-    }
-
     @RequirePrivilege(Permission.CONTRACT_EXTENSION_CREATE)
     @PostMapping("/api/extension-requests")
     public Object createExtension(@RequestBody Map<String, Object> input) {

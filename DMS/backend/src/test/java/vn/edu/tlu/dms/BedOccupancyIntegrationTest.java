@@ -26,12 +26,17 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditEntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditReason;
+import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.StayRequestStatus;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.contract.api.ContractDtos.TransferDetail;
+import vn.edu.tlu.dms.contract.service.ContractCrudService;
+import vn.edu.tlu.dms.contract.service.RoomTransferService;
 import vn.edu.tlu.dms.room.service.BedOccupancyService;
 import vn.edu.tlu.dms.room.api.RoomDtos.AvailableRoom;
 import vn.edu.tlu.dms.room.service.OccupancyQuery;
@@ -40,6 +45,7 @@ import vn.edu.tlu.dms.room.service.RoomService;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -50,7 +56,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * Kiểm thử dịch vụ chiếm/trả/chuyển giường trên PostgreSQL thật: khóa, hai partial unique index,
  * chuyển phòng và tự gỡ trưởng phòng (BR-01, BR-02, BR-05, BR-11; AT-02, AT-03, AT-04, AT-08,
- * AT-21). AuditService được mock vì audit_log chỉ ghi thêm, không dọn được sau case commit thật.
+ * AT-21), cùng xét duyệt yêu cầu chuyển phòng (FR-CON-07/08). AuditService được mock vì audit_log
+ * chỉ ghi thêm, không dọn được sau case commit thật.
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -62,6 +69,10 @@ class BedOccupancyIntegrationTest {
     @Autowired OccupancyQuery occupancyQuery;
 
     @Autowired RoomService roomService;
+
+    @Autowired RoomTransferService transfers;
+
+    @Autowired ContractCrudService contractCrud;
 
     @Autowired JdbcTemplate jdbc;
 
@@ -479,6 +490,186 @@ class BedOccupancyIntegrationTest {
         }
     }
 
+    @Test
+    void approveTransferMovesStudentAndRecordsDecision() {
+        Long student = createStudent("M");
+        Long contract = createContract(student, "ACTIVE");
+        occupancy.occupyStay(beds.get(0), student, contract, null);
+        Long request = createTransferRequest(contract);
+
+        TransferDetail detail = transfers.getTransferRequest(request);
+        assertThat(detail.currentBed().bedId()).isEqualTo(beds.get(0));
+        assertThat(detail.allowedActions())
+                .containsExactly(BusinessAction.APPROVE, BusinessAction.REJECT);
+
+        TransferDetail approved = transfers.approve(request, beds.get(2));
+
+        assertThat(approved.status()).isEqualTo(StayRequestStatus.APPROVED);
+        assertThat(approved.targetBedId()).isEqualTo(beds.get(2));
+        assertThat(approved.decidedBy()).isEqualTo(staffId);
+        assertThat(approved.decidedAt()).isNotNull();
+        assertThat(approved.currentBed().bedId()).isEqualTo(beds.get(2));
+        assertThat(approved.allowedActions()).isEmpty();
+        assertThat(approved.timeline())
+                .extracting(e -> e.fromStatus() + ">" + e.toStatus())
+                .containsExactly(StayRequestStatus.PENDING + ">" + StayRequestStatus.APPROVED);
+        assertThat(
+                        jdbc.queryForList(
+                                "SELECT end_reason FROM room_assignment_history WHERE contract_id=?"
+                                        + " ORDER BY id",
+                                String.class,
+                                contract))
+                .containsExactly(AssignmentEndReason.TRANSFER, null);
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT status FROM dormitory_contract WHERE id=?",
+                                String.class,
+                                contract))
+                .isEqualTo("ACTIVE");
+        // Đã duyệt thì không duyệt lại được, phân phòng không đổi thêm.
+        assertConflict(
+                () -> transfers.approve(request, beds.get(3)), ErrorCode.INVALID_STATE_TRANSITION);
+    }
+
+    @Test
+    void approveValidatesScopeTargetBedAndState() {
+        Long student = createStudent("M");
+        Long contract = createContract(student, "ACTIVE");
+        occupancy.occupyStay(beds.get(0), student, contract, null);
+        Long other = createStudent("M");
+        Long otherContract = createContract(other, "ACTIVE");
+        occupancy.occupyStay(beds.get(2), other, otherContract, null);
+        Long request = createTransferRequest(contract);
+
+        assertConflict(() -> transfers.approve(request, beds.get(2)), ErrorCode.BED_TAKEN);
+        assertConflict(
+                () -> transfers.approve(request, beds.get(5)), ErrorCode.TRANSFER_CROSS_UNIT);
+        assertThat(requestStatus(request)).isEqualTo(StayRequestStatus.PENDING);
+
+        Long otherStaff = createUser(Role.STAFF, otherUnitId);
+        actAs(otherStaff, Role.STAFF, otherUnitId);
+        assertThatThrownBy(() -> transfers.approve(request, beds.get(1)))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+        assertThatThrownBy(() -> transfers.getTransferRequest(request))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+
+        actAs(student, Role.STUDENT, null);
+        assertThatThrownBy(() -> transfers.approve(request, beds.get(1)))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN));
+    }
+
+    @Test
+    void rejectRequiresReasonAndCancelBelongsToOwner() {
+        Long student = createStudent("M");
+        Long contract = createContract(student, "ACTIVE");
+        occupancy.occupyStay(beds.get(0), student, contract, null);
+        Long rejected = createTransferRequest(contract);
+
+        assertThatThrownBy(() -> transfers.reject(rejected, " "))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.VALIDATION_FAILED));
+        TransferDetail detail = transfers.reject(rejected, "Hết phòng phù hợp");
+        assertThat(detail.status()).isEqualTo(StayRequestStatus.REJECTED);
+        assertThat(detail.decisionReason()).isEqualTo("Hết phòng phù hợp");
+        assertThat(detail.timeline()).extracting(e -> e.reason()).containsExactly("Hết phòng phù hợp");
+        assertConflict(
+                () -> transfers.approve(rejected, beds.get(1)), ErrorCode.INVALID_STATE_TRANSITION);
+
+        Long cancelled = createTransferRequest(contract);
+        assertThatThrownBy(() -> transfers.cancel(cancelled))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN));
+
+        Long stranger = createStudent("M");
+        actAs(stranger, Role.STUDENT, null);
+        assertThatThrownBy(() -> transfers.cancel(cancelled))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+
+        actAs(student, Role.STUDENT, null);
+        assertThat(transfers.getTransferRequest(cancelled).allowedActions())
+                .containsExactly(BusinessAction.CANCEL);
+        assertThat(transfers.cancel(cancelled).status()).isEqualTo(StayRequestStatus.CANCELLED);
+        assertConflict(() -> transfers.cancel(cancelled), ErrorCode.INVALID_STATE_TRANSITION);
+        assertThat(occupancyQuery.findOpenAssignmentByContract(contract).orElseThrow().bedId())
+                .isEqualTo(beds.get(0));
+    }
+
+    @Test
+    void studentCreatesTransferRequestOnlyWhileStaying() {
+        Long student = createStudent("M");
+        Long contract = createContract(student, "ACTIVE");
+        occupancy.occupyHold(beds.get(0), student, contract, null);
+        actAs(student, Role.STUDENT, null);
+        Map<String, Object> input = Map.of("contractId", contract, "reason", "Muốn đổi phòng");
+
+        assertConflict(() -> contractCrud.createStayRequest(false, input), ErrorCode.NOT_STAYING);
+
+        actAs(staffId, Role.STAFF, firstUnitId);
+        occupancy.convertHoldToStay(contract, staffId);
+        actAs(student, Role.STUDENT, null);
+        contractCrud.createStayRequest(false, input);
+        assertThatThrownBy(() -> contractCrud.createStayRequest(false, input))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("ux_transfer_pending");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void concurrentApprovalsMoveStudentOnlyOnce() throws Exception {
+        try {
+            Long student = createStudent("M");
+            Long contract = createContract(student, "ACTIVE");
+            inTransaction(() -> occupancy.occupyStay(beds.get(0), student, contract, null));
+            Long request = createTransferRequest(contract);
+
+            var results =
+                    runConcurrently(
+                            () -> transfers.approve(request, beds.get(2)),
+                            () -> transfers.approve(request, beds.get(3)));
+
+            assertThat(results).contains("OK").hasSize(2);
+            assertThat(results.stream().filter(r -> !"OK".equals(r)).toList())
+                    .hasSize(1)
+                    .allMatch(
+                            code ->
+                                    ErrorCode.CONCURRENT_UPDATE.equals(code)
+                                            || ErrorCode.INVALID_STATE_TRANSITION.equals(code));
+            assertThat(requestStatus(request)).isEqualTo(StayRequestStatus.APPROVED);
+            assertThat(
+                            jdbc.queryForObject(
+                                    "SELECT count(*) FROM room_assignment_history WHERE"
+                                            + " contract_id=?",
+                                    Long.class,
+                                    contract))
+                    .isEqualTo(2L);
+        } finally {
+            cleanUp();
+        }
+    }
+
+    private Long createTransferRequest(Long contract) {
+        return jdbc.queryForObject(
+                "INSERT INTO room_transfer_request(contract_id,reason) VALUES(?,?) RETURNING id",
+                Long.class,
+                contract,
+                "Muốn đổi phòng");
+    }
+
+    private String requestStatus(Long request) {
+        return jdbc.queryForObject(
+                "SELECT status FROM room_transfer_request WHERE id=?", String.class, request);
+    }
+
     private List<String> runConcurrently(Runnable... actions) throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(actions.length);
         try {
@@ -633,6 +824,18 @@ class BedOccupancyIntegrationTest {
                         + " room_id IN ("
                         + roomIds
                         + "))");
+        String contracts =
+                "SELECT c.id FROM dormitory_contract c JOIN room_application a ON"
+                        + " a.id=c.application_id WHERE a.period_id=?";
+        jdbc.update(
+                "DELETE FROM status_history WHERE entity_type='TRANSFER' AND entity_id IN (SELECT"
+                        + " id FROM room_transfer_request WHERE contract_id IN ("
+                        + contracts
+                        + "))",
+                periodId);
+        jdbc.update(
+                "DELETE FROM room_transfer_request WHERE contract_id IN (" + contracts + ")",
+                periodId);
         jdbc.update(
                 "DELETE FROM dormitory_contract WHERE application_id IN (SELECT id FROM"
                         + " room_application WHERE period_id=?)",

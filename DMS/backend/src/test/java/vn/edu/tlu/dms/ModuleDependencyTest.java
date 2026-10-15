@@ -156,11 +156,11 @@ class ModuleDependencyTest {
     @ArchTest
     void constantsRefactorKeepsExistingRolePrivileges(JavaClasses classes) throws Exception {
         Map<String, Integer> expectedCounts =
-                Map.of("ADMIN", 105, "STAFF", 72, "STUDENT", 35, "TECHNICIAN", 11);
+                Map.of("ADMIN", 106, "STAFF", 73, "STUDENT", 35, "TECHNICIAN", 11);
         Map<String, String> expectedDigests =
                 Map.of(
-                        "ADMIN", "37ad53d9c061d1102e7e7b356a9f7eaa00317f0ae2d953931400146a599eb877",
-                        "STAFF", "e2bbba0bfe43fc61920463cd513da6bf7ae2626509d12d805b10459fdebe1b4d",
+                        "ADMIN", "a97cbfba33bfd8cb8e6341f9d987e52fd4efc08d36d5e653e9ab26fb899094a4",
+                        "STAFF", "1b34615232fd20c4c695d0fd6a6a0911920266f1964da125b2884f02357da0e3",
                         "STUDENT",
                                 "8f6ded25810fce60f71926b83efe9b1b3cb8b52a492dd9c836672fc794d97ca3",
                         "TECHNICIAN",
@@ -211,7 +211,7 @@ class ModuleDependencyTest {
             declaredCodes.add(code);
         }
         assertThat(declaredCodes)
-                .hasSize(105)
+                .hasSize(106)
                 .doesNotHaveDuplicates()
                 .containsExactlyInAnyOrderElementsOf(DmsConstants.Permission.ALL);
         assertThat(ScopeGuard.permissionsForRole(DmsConstants.Role.ADMIN))

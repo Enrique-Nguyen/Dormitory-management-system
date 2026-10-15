@@ -150,18 +150,20 @@ public final class DmsConstants {
                         Action.LOCK,
                         Action.UNLOCK,
                         Action.RESET_PASSWORD,
-                        Action.CROSS_UNIT_ACCESS);
+                        Action.CROSS_UNIT_ACCESS,
+                        Action.APPROVE);
 
         public static final Map<String, String> ACTION_LABELS =
-                Map.of(
-                        Action.READ, "Tìm kiếm / xem",
-                        Action.CREATE, "Thêm",
-                        Action.UPDATE, "Sửa / xử lý",
-                        Action.DELETE, "Xóa",
-                        Action.LOCK, "Khóa tài khoản",
-                        Action.UNLOCK, "Mở khóa tài khoản",
-                        Action.RESET_PASSWORD, "Đặt lại mật khẩu",
-                        Action.CROSS_UNIT_ACCESS, "Cấp quyền tổng hợp");
+                Map.ofEntries(
+                        Map.entry(Action.READ, "Tìm kiếm / xem"),
+                        Map.entry(Action.CREATE, "Thêm"),
+                        Map.entry(Action.UPDATE, "Sửa / xử lý"),
+                        Map.entry(Action.DELETE, "Xóa"),
+                        Map.entry(Action.LOCK, "Khóa tài khoản"),
+                        Map.entry(Action.UNLOCK, "Mở khóa tài khoản"),
+                        Map.entry(Action.RESET_PASSWORD, "Đặt lại mật khẩu"),
+                        Map.entry(Action.CROSS_UNIT_ACCESS, "Cấp quyền tổng hợp"),
+                        Map.entry(Action.APPROVE, "Duyệt / từ chối"));
 
         /** Chỉ tạo ô cho mã có trong Permission.ALL; không tạo quyền theo dữ liệu client gửi. */
         public static final List<ScreenDefinition> SCREENS =
@@ -243,6 +245,7 @@ public final class DmsConstants {
         public static final String UNLOCK = "UNLOCK";
         public static final String RESET_PASSWORD = "RESET_PASSWORD";
         public static final String CROSS_UNIT_ACCESS = "CROSS_UNIT_ACCESS";
+        public static final String APPROVE = "APPROVE";
 
         public static final List<String> CRUD = List.of(READ, CREATE, UPDATE, DELETE);
 
@@ -391,6 +394,8 @@ public final class DmsConstants {
                 Resource.ROOM_TRANSFER + PERMISSION_SEPARATOR + Action.UPDATE;
         public static final String ROOM_TRANSFER_DELETE =
                 Resource.ROOM_TRANSFER + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String ROOM_TRANSFER_APPROVE =
+                Resource.ROOM_TRANSFER + PERMISSION_SEPARATOR + Action.APPROVE;
         public static final String MOVE_OUT_READ =
                 Resource.MOVE_OUT + PERMISSION_SEPARATOR + Action.READ;
         public static final String MOVE_OUT_CREATE =
@@ -547,6 +552,7 @@ public final class DmsConstants {
                         ROOM_TRANSFER_CREATE,
                         ROOM_TRANSFER_UPDATE,
                         ROOM_TRANSFER_DELETE,
+                        ROOM_TRANSFER_APPROVE,
                         MOVE_OUT_READ,
                         MOVE_OUT_CREATE,
                         MOVE_OUT_UPDATE,
@@ -667,6 +673,13 @@ public final class DmsConstants {
         public static final String TRANSFER_REQUEST = "transferRequestId";
 
         private PlacementSource() {}
+    }
+
+    /** Loại đối tượng của status_history; giá trị khớp CHECK entity_type của CSDL. */
+    public static final class StatusEntityType {
+        public static final String TRANSFER = "TRANSFER";
+
+        private StatusEntityType() {}
     }
 
     /** Loại đối tượng ghi vào audit_log của module phòng; không phải tên bảng SQL. */
