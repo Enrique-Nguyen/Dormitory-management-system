@@ -1,7 +1,14 @@
 import { adminNav } from '../../constants/navigation'
 import SidebarShell from './SidebarShell'
 
-// Admin không có thông báo nghiệp vụ và không có tìm kiếm chung (UI mục 23).
+// Admin quản lý mọi nghiệp vụ, dùng chung các màn CRUD và thông báo.
 export default function AdminLayout() {
-  return <SidebarShell groups={adminNav} portalName="Quản trị" homePath="/admin/users" />
+  return (
+    <SidebarShell
+      groups={adminNav}
+      portalName="Quản trị"
+      homePath="/admin/users"
+      notificationsPath="/admin/notifications"
+    />
+  )
 }

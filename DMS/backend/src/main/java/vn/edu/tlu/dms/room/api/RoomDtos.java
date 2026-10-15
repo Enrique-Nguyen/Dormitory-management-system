@@ -7,6 +7,10 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Gender;
+import vn.edu.tlu.dms.common.constants.DmsConstants.RoomStatus;
+
 import java.util.List;
 
 public final class RoomDtos {
@@ -18,10 +22,10 @@ public final class RoomDtos {
             @Min(0) Short floor,
             @Size(max = 20) String code,
             @Positive Long roomTypeId,
-            @Pattern(regexp = "M|F") String gender) {}
+            @Pattern(regexp = Gender.PATTERN) String gender) {}
 
     public record Status(
-            @NotBlank @Pattern(regexp = "ACTIVE|MAINTENANCE|CLOSED") String status,
+            @NotBlank @Pattern(regexp = RoomStatus.PATTERN) String status,
             @NotBlank @Size(min = 5, max = 500) String reason) {
 
         public Status {
@@ -34,7 +38,7 @@ public final class RoomDtos {
     public record BedInput(@NotBlank @Size(max = 10) String code) {}
 
     public record BedStatus(
-            @NotBlank @Pattern(regexp = "ACTIVE|BROKEN|RETIRED") String status,
+            @NotBlank @Pattern(regexp = BedOperationStatus.PATTERN) String status,
             @NotBlank @Size(min = 5, max = 500) String reason) {
 
         public BedStatus {

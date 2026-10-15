@@ -1,4 +1,7 @@
-import axios, { type InternalAxiosRequestConfig } from 'axios'
+import axios from 'axios'
+import { queryClient } from '../../app/queryClient'
+import { CHANGE_PASSWORD_PATH } from '../../constants/navigation'
+import { keycloak, loginPath } from './auth'
 
 /** Lỗi nghiệp vụ backend trả về (API Spec mục 5, UI 27.2). */
 export interface ApiError {
@@ -8,52 +11,90 @@ export interface ApiError {
   requestId?: string
 }
 
-// Phiên bằng cookie HttpOnly; Axios tự đọc cookie XSRF-TOKEN và gửi header X-XSRF-TOKEN (SAD 7.1)
+// API xác thực bằng Bearer JWT; trình duyệt không gửi cookie phiên để đăng nhập.
 export const api = axios.create({
   baseURL: '/api',
-  withCredentials: true,
-  xsrfCookieName: 'XSRF-TOKEN',
-  xsrfHeaderName: 'X-XSRF-TOKEN',
+  withCredentials: false,
 })
 
-const WRITE_METHODS = new Set(['post', 'put', 'patch', 'delete'])
+// Làm mới token trước request; không lưu token vào localStorage/sessionStorage.
+api.interceptors.request.use(async (config) => {
+  if (keycloak.authenticated) {
+    try {
+      await keycloak.updateToken(30)
+    } catch {
+      keycloak.clearToken()
+      queryClient.clear()
+      if (window.location.pathname !== '/login')
+        window.location.assign(loginPath('expired'))
+      throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+    }
+    if (keycloak.token)
+      config.headers.set('Authorization', `Bearer ${keycloak.token}`)
+  }
+  return config
+})
 
-// Cookie XSRF-TOKEN có thể thiếu/hết hạn (tải lại trang, đổi phiên). Backend từ chối ghi bằng 403 FORBIDDEN
-// trước khi chạy nghiệp vụ nên làm mới token rồi gửi lại đúng một lần là an toàn, thay cho việc gọi
-// /auth/csrf trước mỗi lần ghi.
-type RetryableConfig = InternalAxiosRequestConfig & { _csrfRetried?: boolean }
+/** Xóa cache nghiệp vụ; giữ kết quả /me để guard đọc được lỗi đang trả về. */
+function clearBusinessCache() {
+  queryClient.removeQueries({
+    predicate: (query) => query.queryKey[0] !== 'me',
+  })
+}
 
-// 401 → /login, quay lại đúng trang cũ sau khi đăng nhập (UI 22C). Lần tải đầu (/auth/me) chưa có phiên
-// nên không báo "hết hạn"; các cuộc gọi sau đó mới là phiên hết hạn thật.
+let navigatingToAuthentication = false
+
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const config = axios.isAxiosError(error)
-      ? (error.config as RetryableConfig | undefined)
-      : undefined
-    if (
-      axios.isAxiosError<ApiError>(error) &&
-      config &&
-      !config._csrfRetried &&
-      WRITE_METHODS.has((config.method ?? '').toLowerCase()) &&
-      error.response?.status === 403 &&
-      error.response.data?.errorCode === 'FORBIDDEN'
+  (error: unknown) => {
+    if (!axios.isAxiosError<ApiError>(error)) return Promise.reject(error)
+    const status = error.response?.status
+    const code = error.response?.data?.errorCode
+    const endpoint = error.config?.url?.split('?')[0]
+    // Để hàm logout xử lý phản hồi thu hồi token trước khi chuyển sang Keycloak.
+    if (endpoint === '/auth/logout') return Promise.reject(error)
+
+    if (code === 'PASSWORD_CHANGE_REQUIRED') {
+      clearBusinessCache()
+      if (endpoint !== '/auth/me')
+        void queryClient.invalidateQueries({ queryKey: ['me'] })
+      if (
+        window.location.pathname !== CHANGE_PASSWORD_PATH &&
+        !navigatingToAuthentication
+      ) {
+        navigatingToAuthentication = true
+        window.location.assign(CHANGE_PASSWORD_PATH)
+      }
+    } else if (status === 401 || code === 'ACCOUNT_LOCKED') {
+      if (status === 401) keycloak.clearToken()
+      clearBusinessCache()
+      // /me chưa có phiên là bình thường tại login; guard xử lý lỗi khi ở cổng riêng.
+      if (
+        endpoint !== '/auth/me' &&
+        window.location.pathname !== '/login' &&
+        !navigatingToAuthentication
+      ) {
+        navigatingToAuthentication = true
+        queryClient.clear()
+        const reason =
+          code === 'ACCOUNT_LOCKED'
+            ? 'locked'
+            : code === 'SESSION_REVOKED'
+              ? 'revoked'
+              : 'expired'
+        window.location.assign(
+          loginPath(reason, window.location.pathname + window.location.search),
+        )
+      }
+    } else if (
+      status === 403 &&
+      code === 'FORBIDDEN' &&
+      endpoint !== '/auth/me'
     ) {
-      config._csrfRetried = true
-      await api.get('/auth/csrf')
-      return api.request(config)
+      // Quyền có thể vừa bị thu hồi; làm mới menu/nút nhưng không tự gửi lại request đã bị từ chối.
+      void queryClient.invalidateQueries({ queryKey: ['me'] })
     }
-    if (
-      axios.isAxiosError(error) &&
-      error.response?.status === 401 &&
-      window.location.pathname !== '/login'
-    ) {
-      const back = encodeURIComponent(
-        window.location.pathname + window.location.search,
-      )
-      const expired = error.config?.url !== '/auth/me' ? '&reason=expired' : ''
-      window.location.assign(`/login?redirect=${back}${expired}`)
-    }
+    // Không tự gửi lại thao tác ghi để tránh tạo dữ liệu trùng ngoài ý muốn.
     return Promise.reject(error)
   },
 )

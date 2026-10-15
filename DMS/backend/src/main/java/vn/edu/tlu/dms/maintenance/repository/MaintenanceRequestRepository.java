@@ -18,7 +18,7 @@ public interface MaintenanceRequestRepository
                     """
                     SELECT m.* FROM maintenance_request m LEFT JOIN room r ON r.id=m.room_id
                     LEFT JOIN building rb ON rb.id=r.building_id LEFT JOIN building cb ON cb.id=m.building_id
-                    WHERE ((:role='STUDENT' AND (m.requester_id=:userId OR m.room_id=:stayingRoomId))
+                    WHERE (:role='ADMIN' OR (:role='STUDENT' AND (m.requester_id=:userId OR m.room_id=:stayingRoomId))
                     OR (:role='TECHNICIAN' AND m.assigned_to=:userId)
                     OR (:role='STAFF' AND (:crossUnit=true OR coalesce(rb.management_unit_id,cb.management_unit_id)=:unitId)))
                     AND (:status IS NULL OR m.status=:status) AND (:category IS NULL OR m.category=:category)
@@ -30,7 +30,7 @@ public interface MaintenanceRequestRepository
                     """
                     SELECT count(*) FROM maintenance_request m LEFT JOIN room r ON r.id=m.room_id
                     LEFT JOIN building rb ON rb.id=r.building_id LEFT JOIN building cb ON cb.id=m.building_id
-                    WHERE ((:role='STUDENT' AND (m.requester_id=:userId OR m.room_id=:stayingRoomId))
+                    WHERE (:role='ADMIN' OR (:role='STUDENT' AND (m.requester_id=:userId OR m.room_id=:stayingRoomId))
                     OR (:role='TECHNICIAN' AND m.assigned_to=:userId)
                     OR (:role='STAFF' AND (:crossUnit=true OR coalesce(rb.management_unit_id,cb.management_unit_id)=:unitId)))
                     AND (:status IS NULL OR m.status=:status) AND (:category IS NULL OR m.category=:category)

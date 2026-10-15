@@ -1,4 +1,4 @@
-import type { Role } from '../../types/auth'
+import type { Resource } from '../../constants/authorization'
 
 export type CrudRecord = Record<string, unknown> & { id?: number | string }
 export interface CrudField {
@@ -27,13 +27,17 @@ export interface CrudField {
 /** Mỗi màn chỉ khai báo API và trường được ghi; mẫu trang dùng chung không tự suy ra nghiệp vụ. */
 export interface CrudResource {
   title: string
+  /** Mã nghiệp vụ; READ/CREATE/UPDATE/DELETE được kiểm tra riêng từ /auth/me. */
+  permission: Resource
   endpoint: string
   writeEndpoint?: string
   detailEndpoint?: string
   fields: CrudField[]
+  /** Bộ lọc GET được màn khai báo; chỉ gửi các tên này, không nhận tên cột tùy ý từ URL. */
+  filters?: CrudField[]
   columns: { key: string; label: string }[]
-  writeRoles?: Role[]
-  createRoles?: Role[]
+  /** Trường chỉ hiện ở chi tiết, không được đưa vào payload thêm/sửa. */
+  detailColumns?: { key: string; label: string }[]
   localSearch?: boolean
   note?: string
   editStates?: string[]

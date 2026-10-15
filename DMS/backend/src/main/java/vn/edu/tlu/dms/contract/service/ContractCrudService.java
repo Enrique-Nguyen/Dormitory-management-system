@@ -2,12 +2,15 @@ package vn.edu.tlu.dms.contract.service;
 
 import java.util.Map;
 
-/** Khai báo CRUD hồ sơ hợp đồng và yêu cầu lưu trú đang chờ xử lý. */
+/**
+ * Khai báo CRUD hồ sơ hợp đồng và yêu cầu lưu trú đang chờ xử lý. ADMIN có quyền trên mọi đơn vị;
+ * vai trò khác vẫn bị giới hạn đơn vị hoặc chủ sở hữu. Quyền không bỏ qua kiểm tra trạng thái.
+ */
 public interface ContractCrudService {
 
     /**
-     * Tạo hợp đồng PENDING từ đơn đã APPROVED thuộc đơn vị của cán bộ; chưa phân giường và chưa
-     * phát sinh tiền cọc.
+     * Tạo hợp đồng PENDING từ đơn đã APPROVED: STAFF trong đơn vị được giao, ADMIN mọi đơn vị; chưa
+     * phân giường và chưa phát sinh tiền cọc.
      *
      * @param input mã đơn đăng ký, ngày bắt đầu và ngày kết thúc hợp đồng
      * @return hồ sơ hợp đồng vừa tạo
@@ -51,8 +54,8 @@ public interface ContractCrudService {
     Object getStayRequest(boolean extension, Long id);
 
     /**
-     * Tạo yêu cầu PENDING cho hợp đồng ACTIVE của sinh viên đang đăng nhập; chưa duyệt và chưa thay
-     * đổi hợp đồng hoặc giường.
+     * Tạo yêu cầu PENDING cho hợp đồng ACTIVE: sinh viên chọn hợp đồng của mình, ADMIN được tạo
+     * thay chủ hợp đồng đã chọn qua contractId. Chưa duyệt và chưa đổi hợp đồng hoặc giường.
      *
      * @param extension true cho yêu cầu gia hạn; false cho yêu cầu chuyển phòng
      * @param input mã hợp đồng, lý do và ngày kết thúc mới nếu là yêu cầu gia hạn
@@ -61,7 +64,8 @@ public interface ContractCrudService {
     Object createStayRequest(boolean extension, Map<String, Object> input);
 
     /**
-     * Sửa yêu cầu PENDING thuộc sinh viên đang đăng nhập và giữ nguyên hợp đồng nguồn.
+     * Sửa yêu cầu PENDING: STUDENT của mình, STAFF đúng đơn vị, ADMIN toàn hệ thống; giữ hợp đồng
+     * nguồn.
      *
      * @param extension true cho yêu cầu gia hạn; false cho yêu cầu chuyển phòng
      * @param id mã định danh yêu cầu gia hạn hoặc chuyển phòng
@@ -71,7 +75,7 @@ public interface ContractCrudService {
     Object updateStayRequest(boolean extension, Long id, Map<String, Object> input);
 
     /**
-     * Xóa yêu cầu gia hạn hoặc chuyển phòng còn PENDING của sinh viên đang đăng nhập.
+     * Xóa yêu cầu gia hạn hoặc chuyển phòng còn PENDING: STUDENT của mình hoặc ADMIN toàn hệ thống.
      *
      * @param extension true cho yêu cầu gia hạn; false cho yêu cầu chuyển phòng
      * @param id mã định danh yêu cầu gia hạn hoặc chuyển phòng

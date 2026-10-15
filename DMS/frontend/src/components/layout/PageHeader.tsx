@@ -1,4 +1,4 @@
-import { Breadcrumb, Flex, Typography } from 'antd'
+import { Breadcrumb, Flex } from 'antd'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 
@@ -12,24 +12,34 @@ interface Props {
   extra?: ReactNode
 }
 
-export default function PageHeader({ title, status, subtitle, breadcrumb, extra }: Props) {
+export default function PageHeader({
+  title,
+  status,
+  subtitle,
+  breadcrumb,
+  extra,
+}: Props) {
   return (
-    <header style={{ marginBottom: 16 }}>
+    <header className="dms-page-header">
       {breadcrumb && breadcrumb.length > 0 && (
         <Breadcrumb
-          style={{ marginBottom: 8 }}
-          items={breadcrumb.map((crumb) => ({ title: crumb.to ? <Link to={crumb.to}>{crumb.label}</Link> : crumb.label }))}
+          style={{ marginBottom: 10, fontSize: 13 }}
+          items={breadcrumb.map((crumb) => ({
+            title: crumb.to ? (
+              <Link to={crumb.to}>{crumb.label}</Link>
+            ) : (
+              crumb.label
+            ),
+          }))}
         />
       )}
-      <Flex justify="space-between" align="flex-start" wrap gap={12}>
+      <Flex justify="space-between" align="center" wrap gap={12}>
         <div className="dms-wrap">
-          <Flex align="center" wrap gap={8}>
-            <Typography.Title level={3} style={{ margin: 0 }}>
-              {title}
-            </Typography.Title>
+          <Flex align="center" wrap gap={10}>
+            <h1 className="dms-page-title">{title}</h1>
             {status}
           </Flex>
-          {subtitle && <Typography.Text type="secondary">{subtitle}</Typography.Text>}
+          {subtitle && <p className="dms-page-subtitle">{subtitle}</p>}
         </div>
         {extra}
       </Flex>

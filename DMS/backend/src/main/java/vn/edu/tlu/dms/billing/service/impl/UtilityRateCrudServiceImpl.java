@@ -6,6 +6,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.billing.api.UtilityRateDtos;
 import vn.edu.tlu.dms.billing.service.UtilityRateCrudService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -43,22 +47,23 @@ public class UtilityRateCrudServiceImpl implements UtilityRateCrudService {
     }
 
     private Object requireUnusedRate(Long id) {
-        guard.requireRole("STAFF");
+        guard.requireRole(Role.STAFF);
         var row = queries.one("SELECT * FROM utility_rate WHERE id=? FOR UPDATE", id);
-        if (!current.get().id().equals(row.get("createdBy"))) {
+        if (!current.get().isAdmin() && !current.get().id().equals(row.get("createdBy"))) {
             throw BusinessException.notFound();
         }
         if (!((LocalDate) row.get("effectiveFrom")).isAfter(LocalDate.now())) {
-            throw BusinessException.conflict("RATE_ALREADY_EFFECTIVE");
+            throw BusinessException.conflict(ErrorCode.RATE_ALREADY_EFFECTIVE);
         }
         return row;
     }
 
     @Override
     public Object updateRate(Long id, UtilityRateDtos.Create input) {
+        guard.requirePermission(Permission.UTILITY_RATE_UPDATE);
         var before = requireUnusedRate(id);
         if (!input.effectiveFrom().isAfter(LocalDate.now())) {
-            throw BusinessException.conflict("RATE_ALREADY_EFFECTIVE");
+            throw BusinessException.conflict(ErrorCode.RATE_ALREADY_EFFECTIVE);
         }
         jdbc.update(
                 "UPDATE utility_rate SET meter_type=?,unit_price=?,effective_from=? WHERE id=?",
@@ -66,15 +71,30 @@ public class UtilityRateCrudServiceImpl implements UtilityRateCrudService {
                 input.unitPrice(),
                 input.effectiveFrom(),
                 id);
-        audit.record(current.get().id(), "RATE_UPDATE", "UTILITY_RATE", id, before, input, null);
+        audit.record(
+                current.get().id(),
+                AuditAction.RATE_UPDATE,
+                "UTILITY_RATE",
+                id,
+                before,
+                input,
+                null);
         return queries.one(
                 "SELECT id,meter_type,unit_price,effective_from FROM utility_rate WHERE id=?", id);
     }
 
     @Override
     public void deleteRate(Long id) {
+        guard.requirePermission(Permission.UTILITY_RATE_DELETE);
         var before = requireUnusedRate(id);
         jdbc.update("DELETE FROM utility_rate WHERE id=?", id);
-        audit.record(current.get().id(), "RATE_DELETE", "UTILITY_RATE", id, before, null, null);
+        audit.record(
+                current.get().id(),
+                AuditAction.RATE_DELETE,
+                "UTILITY_RATE",
+                id,
+                before,
+                null,
+                null);
     }
 }

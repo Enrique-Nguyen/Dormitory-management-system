@@ -1,5 +1,127 @@
 import { api } from '../../services/api/client'
-import type { CrudRecord } from './types'
+import axios from 'axios'
+import type { CrudRecord, CrudResource } from './types'
+
+export const CRUD_PAGE_SIZES = [10, 20, 50, 100]
+export const CRUD_DEFAULT_PAGE_SIZE = 20
+
+export interface CrudQuery {
+  search: string
+  page: number
+  size: number
+  filters: Record<string, string>
+}
+
+/** Mỗi tab/màn có khóa riêng, giữ tìm kiếm khi quay lại và không trộn bộ lọc của màn khác. */
+export function readCrudQuery(
+  params: URLSearchParams,
+  resource: string,
+  config: CrudResource,
+): CrudQuery {
+  const prefix = `${resource}.`
+  const requestedPage = Number(params.get(`${prefix}page`) ?? 1)
+  const requestedSize = Number(
+    params.get(`${prefix}size`) ?? CRUD_DEFAULT_PAGE_SIZE,
+  )
+  const size = CRUD_PAGE_SIZES.includes(requestedSize)
+    ? requestedSize
+    : CRUD_DEFAULT_PAGE_SIZE
+  const filters: Record<string, string> = {}
+  for (const field of config.filters ?? []) {
+    const value = params.get(`${prefix}${field.name}`)?.trim()
+    if (!value) continue
+    if (
+      field.options &&
+      !field.options.some((option) => String(option.value) === value)
+    )
+      continue
+    if (
+      (field.kind === 'number' || field.lookup) &&
+      (!Number.isSafeInteger(Number(value)) || Number(value) < (field.min ?? 1))
+    )
+      continue
+    if (
+      ['date', 'datetime'].includes(field.kind ?? '') &&
+      !Number.isFinite(new Date(value).getTime())
+    )
+      continue
+    filters[field.name] =
+      field.kind === 'number' || field.lookup
+        ? String(Number(value))
+        : field.maxLength
+          ? value.slice(0, field.maxLength)
+          : value
+  }
+  return {
+    search: params.get(`${prefix}q`)?.trim() ?? '',
+    page:
+      Number.isSafeInteger(requestedPage) &&
+      requestedPage >= 1 &&
+      (requestedPage - 1) * size <= 2147483647
+        ? requestedPage
+        : 1,
+    size,
+    filters,
+  }
+}
+
+/** Chỉ cập nhật trạng thái của màn hiện tại; giữ query của các tab và chức năng khác. */
+export function updateCrudQuery(
+  previous: URLSearchParams,
+  resource: string,
+  query: CrudQuery,
+): URLSearchParams {
+  const params = new URLSearchParams(previous)
+  const prefix = `${resource}.`
+  for (const key of [...params.keys()])
+    if (key.startsWith(prefix)) params.delete(key)
+  if (query.search) params.set(`${prefix}q`, query.search)
+  if (query.page !== 1) params.set(`${prefix}page`, String(query.page))
+  if (query.size !== CRUD_DEFAULT_PAGE_SIZE)
+    params.set(`${prefix}size`, String(query.size))
+  for (const [name, value] of Object.entries(query.filters))
+    if (value !== '') params.set(`${prefix}${name}`, value)
+  return params
+}
+
+/** datetime-local dùng múi giờ trình duyệt; API nhận ISO có múi giờ rõ ràng. */
+export function toLocalDateTime(value: unknown): string {
+  const date = new Date(String(value))
+  if (!Number.isFinite(date.getTime())) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16)
+}
+
+export function crudRequestParams(query: CrudQuery, config: CrudResource) {
+  const params: Record<string, string | number | undefined> = {
+    page: query.page - 1,
+    size: query.size,
+    q: config.localSearch ? undefined : query.search,
+  }
+  for (const field of config.filters ?? []) {
+    const value = query.filters[field.name]
+    if (value)
+      params[field.name] =
+        field.kind === 'datetime' ? new Date(value).toISOString() : value
+  }
+  return params
+}
+
+/** Chỉ đọc lỗi trường đúng định dạng; không để response lỗi bất thường làm hỏng form. */
+export function validationFieldErrors(
+  error: unknown,
+): { field: string; message: string }[] {
+  if (!axios.isAxiosError(error)) return []
+  const fields: unknown = error.response?.data?.details?.fieldErrors
+  if (!Array.isArray(fields)) return []
+  return fields.filter(
+    (item): item is { field: string; message: string } =>
+      !!item &&
+      typeof item.field === 'string' &&
+      typeof item.message === 'string',
+  )
+}
 
 export interface CrudPage {
   content: CrudRecord[]
@@ -59,7 +181,7 @@ export async function writeCrudRecord(
   method: 'post' | 'patch' | 'put' | 'delete',
   values?: unknown,
 ) {
-  // Token CSRF hết hạn được interceptor trong services/api/client.ts làm mới và gửi lại một lần.
+  // Axios gắn Bearer token Keycloak; backend kiểm quyền và phạm vi ở từng thao tác.
   return (await api.request({ url: endpoint, method, data: values }))
     .data as unknown
 }

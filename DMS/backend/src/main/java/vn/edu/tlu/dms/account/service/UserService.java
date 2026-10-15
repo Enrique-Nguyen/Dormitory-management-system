@@ -17,6 +17,20 @@ public interface UserService {
      */
     PageResponse<Profile> list(int page, int size, List<String> sort, String q, String role);
 
+    /**
+     * Admin kết hợp từ khóa, vai trò, đơn vị quản lý và trạng thái khóa để tìm tài khoản. Bộ lọc
+     * không gửi được bỏ qua; quản trị viên không gắn đơn vị sẽ không thuộc kết quả khi lọc một đơn
+     * vị cụ thể. Phân trang và tổng số bản ghi dùng cùng điều kiện lọc.
+     */
+    PageResponse<Profile> list(
+            int page,
+            int size,
+            List<String> sort,
+            String q,
+            String role,
+            Long managementUnitId,
+            Boolean locked);
+
     /** Admin đọc chi tiết tài khoản theo ID; không trả mật khẩu hoặc hash. */
     Profile get(Long id);
 
@@ -25,25 +39,31 @@ public interface UserService {
      */
     TemporaryPassword create(Create input);
 
-    /** Admin cập nhật các trường tài khoản được phép, kiểm tra ràng buộc vai trò và ghi audit. */
+    /**
+     * Admin cập nhật các trường tài khoản được phép, kiểm tra vai trò và ghi audit; thu hồi toàn bộ
+     * phiên nếu tên đăng nhập, vai trò hoặc đơn vị quản lý thay đổi để áp dụng quyền/phạm vi mới
+     * khi đăng nhập lại.
+     */
     Profile update(Long id, Update input);
 
-    /**
-     * Admin khóa tài khoản với lý do bắt buộc; các phiên đang mở cũng bị chặn ở lần truy cập tiếp
-     * theo.
-     */
+    /** Admin khóa tài khoản với lý do bắt buộc, không được tự khóa; thu hồi toàn bộ phiên đã mở. */
     void lock(Long id, String reason);
 
     /**
-     * Admin mở khóa tài khoản và xóa trạng thái khóa tạm/bộ đếm đăng nhập sai theo quy tắc hiện có.
+     * Admin mở khóa và xóa khóa tạm/bộ đếm đăng nhập sai; người dùng phải đăng nhập mới, các phiên
+     * bị thu hồi trước đó không được khôi phục.
      */
     void unlock(Long id);
 
-    /** Admin đặt mật khẩu tạm mới, trả một lần và bật cờ bắt đổi mật khẩu khi đăng nhập. */
+    /**
+     * Admin đặt mật khẩu tạm mới cho tài khoản, trả một lần, xóa khóa tạm/bộ đếm sai và thu hồi các
+     * phiên cũ; lần đăng nhập tiếp theo bắt buộc đổi mật khẩu.
+     */
     TemporaryPassword resetPassword(Long id);
 
     /**
      * Admin bật/tắt quyền đọc tổng hợp liên đơn vị cho Staff; quyền này không mở rộng quyền ghi.
+     * Thu hồi phiên khi giá trị quyền thực sự thay đổi, yêu cầu đăng nhập lại để nhận quyền mới.
      */
     void crossUnitAccess(Long id, boolean enabled);
 

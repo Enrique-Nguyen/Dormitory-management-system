@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.billing.service.UtilityRateService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 
 import java.net.URI;
 import java.util.List;
@@ -25,12 +27,14 @@ public class UtilityRateController {
         this.service = service;
     }
 
+    @RequirePrivilege(Permission.UTILITY_RATE_READ)
     @GetMapping
     public List<UtilityRateDtos.Response> getUtilityRates(
             @RequestParam(required = false) String meterType) {
         return service.getUtilityRates(meterType);
     }
 
+    @RequirePrivilege(Permission.UTILITY_RATE_CREATE)
     @PostMapping
     public ResponseEntity<UtilityRateDtos.Response> createUtilityRate(
             @Valid @RequestBody UtilityRateDtos.Create input) {

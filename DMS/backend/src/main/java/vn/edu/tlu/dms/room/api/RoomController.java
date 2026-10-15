@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.ReasonRequest;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedInput;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedResponse;
 import vn.edu.tlu.dms.room.api.RoomDtos.Input;
@@ -37,6 +39,7 @@ public class RoomController {
         this.service = service;
     }
 
+    @RequirePrivilege(Permission.ROOM_READ)
     @GetMapping
     public PageResponse<Response> searchRooms(
             @RequestParam(defaultValue = "0") int page,
@@ -64,27 +67,32 @@ public class RoomController {
                 q);
     }
 
+    @RequirePrivilege(Permission.ROOM_READ)
     @GetMapping("/{id}")
     public Response getRoomById(@PathVariable Long id) {
         return service.getRoomById(id);
     }
 
+    @RequirePrivilege(Permission.ROOM_CREATE)
     @PostMapping
     public ResponseEntity<Response> create(@Valid @RequestBody Input input) {
         var result = service.createRoom(input);
         return ResponseEntity.created(URI.create("/api/rooms/" + result.id())).body(result);
     }
 
+    @RequirePrivilege(Permission.ROOM_UPDATE)
     @PatchMapping("/{id}")
     public Response updateRoom(@PathVariable Long id, @Valid @RequestBody Input input) {
         return service.updateRoom(id, input);
     }
 
+    @RequirePrivilege(Permission.ROOM_UPDATE)
     @PostMapping("/{id}/status")
     public Response changeRoomStatus(@PathVariable Long id, @Valid @RequestBody Status input) {
         return service.changeRoomStatus(id, input);
     }
 
+    @RequirePrivilege(Permission.BED_CREATE)
     @PostMapping("/{id}/beds")
     public ResponseEntity<BedResponse> bed(
             @PathVariable Long id, @Valid @RequestBody BedInput input) {
@@ -92,17 +100,20 @@ public class RoomController {
         return ResponseEntity.created(URI.create("/api/beds/" + result.id())).body(result);
     }
 
+    @RequirePrivilege(Permission.ROOM_DELETE)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.deleteRoom(id);
         return ResponseEntity.noContent().build();
     }
 
+    @RequirePrivilege(Permission.ROOM_UPDATE)
     @PutMapping("/{id}/leader")
     public Response assignRoomLeader(@PathVariable Long id, @Valid @RequestBody Leader input) {
         return service.assignRoomLeader(id, input.studentId());
     }
 
+    @RequirePrivilege(Permission.ROOM_UPDATE)
     @DeleteMapping("/{id}/leader")
     public ResponseEntity<Void> removeLeader(
             @PathVariable Long id, @Valid @RequestBody ReasonRequest input) {

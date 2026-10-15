@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.notification.service.NotificationService;
 import vn.edu.tlu.dms.registration.domain.RegistrationPeriodCreatedEvent;
 
@@ -30,7 +31,7 @@ public class RegistrationNotificationListener {
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onRegistrationPeriodCreated(RegistrationPeriodCreatedEvent event) {
-        if (!event.kind().equals("SUMMER")) {
+        if (!event.kind().equals(RegistrationKind.SUMMER)) {
             return;
         }
         try {

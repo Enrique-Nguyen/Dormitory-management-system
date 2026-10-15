@@ -5,7 +5,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.security.CurrentUser;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
@@ -30,23 +33,25 @@ public class OverviewController {
     }
 
     private String scope(List<Object> args) {
-        if (current.get().is("STUDENT")) {
+        if (current.get().is(Role.STUDENT)) {
             args.add(current.get().id());
             return "c.student_id=?";
         }
-        if (current.get().crossUnitAccess()) {
+        if (current.get().canReadAllUnits()) {
             return "TRUE";
         }
         args.add(current.get().unitId());
         return "ap.preferred_unit_id=?";
     }
 
+    @RequirePrivilege(Permission.DEPOSIT_READ)
     @GetMapping({"/api/deposits", "/api/me/deposits"})
     public Object searchDeposits(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "") String q) {
-        guard.requireRole("STAFF", "STUDENT");
+        guard.requirePermission(Permission.DEPOSIT_READ);
+        guard.requireRole(Role.STAFF, Role.STUDENT);
         var args = new ArrayList<Object>();
         String filter = scope(args);
         args.add(LikePattern.contains(q));
@@ -64,9 +69,11 @@ public class OverviewController {
                 size);
     }
 
+    @RequirePrivilege(Permission.DEPOSIT_READ)
     @GetMapping("/api/contracts/{id}/deposit")
     public Object getDeposit(@PathVariable Long id) {
-        guard.requireRole("STAFF", "STUDENT");
+        guard.requirePermission(Permission.DEPOSIT_READ);
+        guard.requireRole(Role.STAFF, Role.STUDENT);
         var args = new ArrayList<Object>();
         String filter = scope(args);
         args.add(id);
@@ -88,12 +95,14 @@ public class OverviewController {
         return record;
     }
 
+    @RequirePrivilege(Permission.STORAGE_READ)
     @GetMapping({"/api/storage-records", "/api/me/storage-records"})
     public Object searchStorage(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "") String q) {
-        guard.requireRole("STAFF", "STUDENT");
+        guard.requirePermission(Permission.STORAGE_READ);
+        guard.requireRole(Role.STAFF, Role.STUDENT);
         var args = new ArrayList<Object>();
         String filter = scope(args);
         args.add(LikePattern.contains(q));
@@ -108,9 +117,11 @@ public class OverviewController {
                 size);
     }
 
+    @RequirePrivilege(Permission.ROOM_READ)
     @GetMapping("/api/me/room")
     public Object getMyRoom() {
-        guard.requireRole("STUDENT");
+        guard.requirePermission(Permission.ROOM_READ);
+        guard.requireRole(Role.STUDENT);
         return queries.list(
                 "SELECT room_id AS"
                     + " id,room_code,bed_code,building_code,assignment_kind,price_main,price_summer"

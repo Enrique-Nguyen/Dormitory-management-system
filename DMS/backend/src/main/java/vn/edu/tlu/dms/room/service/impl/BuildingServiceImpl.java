@@ -3,6 +3,10 @@ package vn.edu.tlu.dms.room.service.impl;
 import org.springframework.stereotype.Service;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -41,12 +45,17 @@ public class BuildingServiceImpl
 
     @Override
     protected void checkRead() {
-        guard.requireRole("STUDENT", "STAFF", "TECHNICIAN", "ADMIN");
+        guard.requirePermission(Permission.BUILDING_READ);
     }
 
     @Override
     protected void checkWrite() {
-        guard.requireRole("ADMIN");
+        guard.requireRole(Role.ADMIN);
+    }
+
+    @Override
+    protected void checkPermission(String action) {
+        guard.requirePermission(Resource.BUILDING + DmsConstants.PERMISSION_SEPARATOR + action);
     }
 
     @Override
@@ -87,7 +96,7 @@ public class BuildingServiceImpl
     public List<BuildingResponse> getAll() {
         checkRead();
         Actor actor = currentUser.get();
-        if (actor.is("STAFF") && !actor.crossUnitAccess() || actor.is("TECHNICIAN")) {
+        if (actor.is(Role.STAFF) && !actor.canReadAllUnits() || actor.is(Role.TECHNICIAN)) {
             return ((BuildingRepository) repository)
                             .findAll(
                                     (r, q, b) -> b.equal(r.get("managementUnitId"), actor.unitId()))
@@ -103,7 +112,7 @@ public class BuildingServiceImpl
         checkRead();
         var entity = findEntityById(id);
         Actor actor = currentUser.get();
-        if (actor.is("STAFF") || actor.is("TECHNICIAN")) {
+        if (actor.is(Role.STAFF) || actor.is(Role.TECHNICIAN)) {
             guard.requireReadableUnit(entity.getManagementUnitId());
         }
         return toResponse(entity);

@@ -1,7 +1,7 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.6**, 14/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.7 (mục 3, 6.2, 10), `SAD-DMS.md` v1.1, `DB-Design-DMS.md` v0.5, `DMS-UI-UX-Design.md` (mục 27.2)
+> **Phiên bản 0.11**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.11 (mục 3, 6.2, 10), `SAD-DMS.md` v1.4, `DB-Design-DMS.md` v0.7, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
 ### Lịch sử thay đổi
@@ -12,8 +12,13 @@
 | 0.2 | 10/10/2026 | Theo thẩm định: Staff tạo ticket của phòng (`roomId`); xem trước trả phòng cảnh báo ticket chưa kết luận chi phí; xem trước điện nước trả phòng thiếu trưởng phòng và thiếu chỉ số; một thông báo `ROOM` cho mỗi hóa đơn điện nước; tổng hóa đơn không âm sau điều chỉnh; quy ước tên hành động không đổi trạng thái; `link` của thông báo do backend suy ra; chốt Q-API-01..07; trừ cọc chia cho người Staff chọn (`chargedStudentIds`, endpoint `chargeable-students`) |
 | 0.3 | 13/10/2026 | Bổ sung GET chi tiết/DELETE danh mục và DELETE phòng/giường chưa có lịch sử cho khung CRUD; ghi rõ giới hạn triển khai và dẫn README backend |
 | 0.4 | 13/10/2026 | Chốt phạm vi khung CRUD BE + React; bổ sung hồ sơ sinh viên, hợp đồng/hóa đơn chờ, yêu cầu/lựa chọn chờ, chỉ số, sửa/xóa thông báo và các ngoại lệ chỉ đọc |
-| 0.5 | 14/10/2026 | Theo code review: bổ sung mã `RESOURCE_IN_USE`, `DUPLICATE_VALUE`, `METHOD_NOT_ALLOWED`, `UNSUPPORTED_MEDIA_TYPE`, `STUDENT_HAS_ACTIVE_CONTRACT`, `STUDENT_CODE_EXISTS`, `BED_CODE_EXISTS`, `LEADER_ALREADY_ASSIGNED`, `APPLICATION_HAS_CONTRACT`; ràng buộc CSDL ngoài danh sách ánh xạ theo SQLState thay vì luôn là `CONCURRENT_UPDATE`; hủy đơn APPROVED đã có hợp đồng bị chặn; PATCH sinh viên giữ trường không gửi |
-| 0.6 | 14/10/2026 | Đồng bộ toàn diện theo SRS v0.7, SAD v1.1 và DB-Design v0.5: cập nhật bảng endpoint mục 3.3 và bảng `allowedActions` mục 6 ghi rõ điều kiện `cancel` của đơn APPROVED (khi chưa sinh hợp đồng PENDING/ACTIVE, có hợp đồng trả 409 `APPLICATION_HAS_CONTRACT`); ghi chú chặn đổi `bedCount` của loại phòng đang gán cho phòng tồn tại tại PATCH `/api/room-types/{id}` (409 `RESOURCE_IN_USE`); làm rõ phạm vi hóa đơn của Staff theo học kỳ và ràng buộc xác nhận thanh toán qua `isInStaffUnit` (404 khi ngoài scope). |
+| 0.5 | 13/10/2026 | Đồng bộ login/logout Spring Security, CSRF và thu hồi phiên; đổi/reset mật khẩu yêu cầu đăng nhập lại, reset Staff theo BR-07, giới hạn BCrypt và bỏ demo/mock |
+| 0.6 | 14/10/2026 | Keycloak OIDC/PKCE, Bearer JWT, /me và logout thu hồi version; tạo/reset/khóa tài khoản qua Admin REST |
+| 0.7 | 14/10/2026 | ADMIN toàn quyền nghiệp vụ; permissions trong /me, quyền CRUD theo role, PATCH role tài khoản và tạo đơn hộ sinh viên |
+| 0.8 | 15/10/2026 | Hoàn thiện luồng chung: hồ sơ bốn cổng, lọc tài khoản managementUnitId/locked, lọc audit actorId/action/entityType/from/to và kiểm tra khoảng thời gian; giữ phạm vi khung CRUD |
+| 0.9 | 15/10/2026 | GET/PUT ma trận quyền theo role; catalog có 105 quyền, kiểm giới hạn vai trò/quyền hồ sơ/READ, version và audit |
+| 0.10 | 15/10/2026 | Theo code review: bổ sung mã `RESOURCE_IN_USE`, `DUPLICATE_VALUE`, `METHOD_NOT_ALLOWED`, `UNSUPPORTED_MEDIA_TYPE`, `STUDENT_HAS_ACTIVE_CONTRACT`, `STUDENT_CODE_EXISTS`, `BED_CODE_EXISTS`, `LEADER_ALREADY_ASSIGNED`, `APPLICATION_HAS_CONTRACT`; ràng buộc CSDL ngoài danh sách ánh xạ theo SQLState thay vì luôn là `CONCURRENT_UPDATE`; hủy đơn APPROVED đã có hợp đồng bị chặn; PATCH sinh viên giữ trường không gửi |
+| 0.11 | 15/10/2026 | Đồng bộ toàn diện theo SRS v0.11, SAD v1.4 và DB-Design v0.7: cập nhật bảng endpoint mục 3.3 và bảng `allowedActions` mục 6 ghi rõ điều kiện `cancel` của đơn APPROVED (khi chưa sinh hợp đồng PENDING/ACTIVE, có hợp đồng trả 409 `APPLICATION_HAS_CONTRACT`); ghi chú chặn đổi `bedCount` của loại phòng đang gán cho phòng tồn tại tại PATCH `/api/room-types/{id}` (409 `RESOURCE_IN_USE`); làm rõ phạm vi hóa đơn của Staff theo học kỳ và ràng buộc xác nhận thanh toán qua `isInStaffUnit` (404 khi ngoài scope). |
 
 ---
 
@@ -58,7 +63,7 @@ Theo phạm vi người dùng chốt, bước này chỉ dựng CRUD và giao di
 
 Danh sách nghiệp vụ hỗ trợ `q`, `page`, `size`, lọc phạm vi trước khi đếm/phân trang; danh mục trả mảng được tìm kiếm/phân trang trên React. PATCH giữ nguyên trường không gửi/null; không hỗ trợ xóa giá trị bằng null. Field ngoài danh sách server cho phép trả 400 VALIDATION_ERROR. Các điều kiện đang sử dụng/hết quyền sửa trả 409 như RESOURCE_IN_USE, INVALID_STATE_TRANSITION, READING_LOCKED, READING_HAS_FOLLOWING_MONTH, RATE_ALREADY_EFFECTIVE; lịch sử không bị xóa để vượt kiểm tra.
 
-Màn hồ sơ cá nhân/cấu hình chỉ sửa; tài khoản cán bộ dùng khóa, đơn đăng ký/ticket dùng hủy. Các nút React phụ thuộc vai trò và trạng thái; backend vẫn là nơi quyết định cuối. Hướng dẫn: [README backend](../../../DMS/backend/README.md) và [README frontend](../../../DMS/frontend/README.md).
+Màn hồ sơ cá nhân/cấu hình chỉ sửa; tài khoản cán bộ dùng khóa, đơn đăng ký/ticket dùng hủy. Các nút React phụ thuộc vai trò và trạng thái; backend vẫn là nơi quyết định cuối. Hướng dẫn: [README backend](../../../DMS/backend/README.md) và [README chung](../../../README.md).
 
 ---
 
@@ -80,12 +85,14 @@ Màn hồ sơ cá nhân/cấu hình chỉ sửa; tài khoản cán bộ dùng kh
 | Trường rỗng | Có trong response với giá trị `null`, không bỏ trường |
 | Mã ký tự | UTF-8; tên tiếng Việt có dấu giữ nguyên |
 
-### 2.2. Xác thực, phiên, CSRF
+### 2.2. Xác thực Keycloak
 
-- Đăng nhập tạo phiên phía máy chủ (Spring Session JDBC). Trình duyệt giữ cookie `SESSION` (`HttpOnly`, `Secure`, `SameSite=Lax`). Frontend gọi Axios với `withCredentials: true`; không lưu gì vào `localStorage`.
-- **CSRF:** mọi request `POST`, `PUT`, `PATCH`, `DELETE` phải có header `X-XSRF-TOKEN` bằng giá trị cookie `XSRF-TOKEN`. Axios tự làm việc này. Khi mở ứng dụng, frontend gọi `GET /api/auth/csrf` một lần để nhận cookie.
-- Phiên hết hạn sau **30 phút** không hoạt động → `401 UNAUTHENTICATED`; interceptor chuyển về `/login` và nhớ trang cũ.
-- Tài khoản có cờ `mustChangePassword` chỉ được gọi `GET /api/auth/me`, `POST /api/auth/change-password`, `POST /api/auth/logout`; mọi API khác trả `403 PASSWORD_CHANGE_REQUIRED`.
+Frontend đăng nhập qua Keycloak `dms-web`, PKCE S256; gửi `Authorization: Bearer <access_token>` khi gọi DMS. JWT chỉ giữ trong bộ nhớ. Backend kiểm tra chữ ký, issuer, audience `dms-api` và expiry; subject phải liên kết vào DMS, role/version phải khớp. API không dùng cookie session/CSRF trong chế độ Keycloak.
+
+GET /api/auth/me trả hồ sơ DMS. POST /api/auth/logout cần Bearer hợp lệ, thu hồi version/phiên của tài khoản và trả 204; gọi bằng token cũ trả 401. Sau đó frontend gọi logout Keycloak. Đăng nhập và đổi mật khẩu dùng endpoint/trang Keycloak, không gửi mật khẩu vào API DMS.
+
+Tạo/reset trả mật khẩu tạm một lần; mật khẩu/hash không được ghi audit. Required action UPDATE_PASSWORD bắt buộc hoàn tất trước khi được cấp token. Login/CSRF/change-password của session cũ đã được bỏ; chỉ dùng endpoint/trang Keycloak.
+
 
 ### 2.3. Mã HTTP
 
@@ -202,28 +209,28 @@ Mỗi bảng tương ứng một module của SAD. "Phạm vi" nhắc lại các
 
 | Method | Path | Vai trò | Mô tả | FR |
 |---|---|---|---|---|
-| GET | `/api/auth/csrf` | công khai | Nhận cookie `XSRF-TOKEN`; 204 | NFR-SEC |
-| POST | `/api/auth/login` | công khai | Đăng nhập (mục 4.1) | FR-ACC-01, 02 |
-| POST | `/api/auth/logout` | \* | Hủy phiên; 204 | FR-ACC-01 |
+| GET | `/api/auth/csrf` | legacy-session | Chỉ có ở chế độ session cũ; không dùng với Keycloak | NFR-SEC |
+| POST | `/api/auth/login` | legacy-session | Không tồn tại ở chế độ Keycloak; đăng nhập bằng OIDC tại Keycloak | FR-ACC-01, 02 |
+| POST | `/api/auth/logout` | Bearer hợp lệ | Thu hồi version và phiên của tài khoản; 204. Sau đó FE logout Keycloak | FR-ACC-01 |
 | GET | `/api/auth/me` | \* | Người dùng hiện tại (mục 4.1) | FR-ACC-01 |
-| POST | `/api/auth/change-password` | \* | `{ currentPassword, newPassword }`; 204. Mật khẩu mới 8–64 ký tự, có chữ và số, khác mật khẩu cũ | FR-ACC-03 |
+| POST | `/api/auth/change-password` | legacy-session | Không dùng với Keycloak; React gọi action UPDATE_PASSWORD tại Keycloak | FR-ACC-03 |
 | GET | `/api/me/profile` | \* | Hồ sơ của tôi (kèm `studentProfile` nếu là sinh viên) | FR-ACC-04 |
-| PATCH | `/api/me/profile` | \* | Sửa `phone`, `hometown`, `emergencyContact`; trường khác bị bỏ qua → 400 nếu gửi | FR-ACC-04 |
+| PATCH | `/api/me/profile` | \* | Sinh viên sửa `phone`, `hometown`, `emergencyContact`; cán bộ chỉ sửa `phone`; trường ngoài DTO trả 400 | FR-ACC-04 |
 | GET | `/api/students` | St | Sinh viên trong phạm vi đơn vị (BR-07). Lọc `q`, `cohort`, `faculty`, `hasActiveContract` | UC-14 |
 | GET | `/api/students/{id}` | St | Hồ sơ + chỗ ở hiện tại + danh sách hợp đồng | UC-14 |
-| POST | `/api/students/{id}/reset-password` | St | Đặt lại mật khẩu sinh viên trong phạm vi (mục 4.1) | FR-ACC-07 |
+| POST | `/api/students/{id}/reset-password` | St | Sinh viên có đơn trong đợt đang mở hoặc phân phòng hiệu lực đúng đơn vị; trả mật khẩu tạm và thu hồi phiên (mục 4.1) | FR-ACC-07 |
 | GET | `/api/technicians` | St | KTV cùng đơn vị, kèm số ticket đang xử lý (để giao việc) | FR-MNT-03 |
-| GET | `/api/admin/users` | A | Lọc `role`, `unitId`, `locked`, `q` | FR-ACC-06 |
+| GET | `/api/admin/users` | A | Lọc `role`, `managementUnitId`, `locked`, `q`; kết hợp bằng AND, phân trang sau lọc | FR-ACC-06 |
 | POST | `/api/admin/users` | A | Tạo Staff / Technician / Admin: `{ username, fullName, phone, role, managementUnitId }`; trả mật khẩu tạm một lần (mục 4.1) | FR-ACC-06 |
 | GET | `/api/admin/users/{id}` | A | Chi tiết | FR-ACC-06 |
-| PATCH | `/api/admin/users/{id}` | A | Sửa `fullName`, `phone`, `managementUnitId`; với sinh viên thêm `studentCode`, `gender`, `dateOfBirth`, `faculty`, `cohort` | FR-ACC-04, 06 |
-| POST | `/api/admin/users/{id}/lock` | A | `{ reason }` | FR-ACC-06 |
-| POST | `/api/admin/users/{id}/unlock` | A | Mở khóa, xóa đếm đăng nhập sai | FR-ACC-02, 06 |
+| PATCH | `/api/admin/users/{id}` | A | Sửa `fullName`, `phone`, `role` (Staff/KTV/Admin), `managementUnitId`; với sinh viên thêm `studentCode`, `gender`, `dateOfBirth`, `faculty`, `cohort`. Đổi username/role/đơn vị thu hồi token cũ | FR-ACC-04, 06 |
+| POST | `/api/admin/users/{id}/lock` | A | `{ reason }`; thu hồi phiên, không tự khóa tài khoản đang dùng | FR-ACC-06 |
+| POST | `/api/admin/users/{id}/unlock` | A | Mở khóa, xóa đếm đăng nhập sai/khóa tạm; không phục hồi phiên cũ | FR-ACC-02, 06 |
 | POST | `/api/admin/users/{id}/reset-password` | A | Như Staff nhưng cho mọi tài khoản | FR-ACC-07 |
-| PUT | `/api/admin/users/{id}/cross-unit-access` | A | `{ enabled: true }`; chỉ cho Staff | FR-ACC-08 |
+| PUT | `/api/admin/users/{id}/cross-unit-access` | A | `{ enabled: true }`; chỉ cho Staff; giá trị thay đổi thu hồi phiên để đăng nhập lại nhận quyền mới | FR-ACC-08 |
 | POST | `/api/admin/student-imports` | A | Import Excel, hai bước (mục 4.10) | FR-ACC-05 |
 | GET | `/api/admin/student-imports/template` | A | Tải file mẫu `.xlsx` | FR-ACC-05 |
-| GET | `/api/admin/audit-logs` | A | Lọc `userId`, `action`, `entityType`, `from`, `to`; sắp `createdAt,desc` | FR-ACC-09 |
+| GET | `/api/admin/audit-logs` | A | Lọc `actorId`, `action`, `entityType`, `from`, `to`, `q`; thời gian ISO có múi giờ, hai biên inclusive, từ > đến trả 400. Khung phân trang theo `id,desc` | FR-ACC-09 |
 | GET | `/api/admin/configs` | A | Tham số cấu hình (`system_config`) | SRS 2.6 |
 | PUT | `/api/admin/configs/{key}` | A | `{ value }`; kiểm tra kiểu theo khóa | SRS 2.6 |
 
@@ -376,7 +383,9 @@ Không có `DELETE /api/rooms/{id}` hay `DELETE /api/beds/{id}`: phòng, giườ
 
 Chỉ ghi những endpoint có logic hoặc dữ liệu phức tạp. Các endpoint CRUD đơn giản dùng đúng trường của bảng tương ứng trong CSDL (đổi sang `camelCase`).
 
-### 4.1. Đăng nhập, người dùng hiện tại, mật khẩu tạm
+### 4.1. Người dùng hiện tại và mật khẩu tạm
+
+**Keycloak là chế độ mặc định:** `/me` giữ schema hồ sơ bên dưới; mật khẩu tạm giữ schema `{ userId, temporaryPassword }`. JSON username/password, CSRF và change-password bên dưới là hợp đồng lịch sử v0.5, không còn endpoint tương ứng trong ứng dụng hiện tại. Đổi mật khẩu ở Keycloak không bị giới hạn 72 byte của BCrypt cũ. JWT phát hành trước thay đổi trực tiếp ngoài DMS có thể còn hiệu lực tối đa 5 phút.
 
 `POST /api/auth/login`
 
@@ -402,6 +411,18 @@ Chỉ ghi những endpoint có logic hoặc dữ liệu phức tạp. Các endpo
 - Sai tên hoặc mật khẩu: `401 INVALID_CREDENTIALS` (không phân biệt sai tên hay sai mật khẩu). `details.remainingAttempts` khi còn ≤ 2 lần.
 - Bị khóa tạm: `403 ACCOUNT_TEMP_LOCKED`, `details.lockedUntil`. Bị Admin khóa: `403 ACCOUNT_LOCKED`.
 - Với Staff / KTV: `managementUnit` là `UnitRef`, `student` là `null`.
+- Request JSON thiếu/sai trường hoặc gửi thêm `role`/trường lạ trả `400 VALIDATION_FAILED`. Filter Spring Security nhận login, chạy strategy đổi session ID/xoay CSRF rồi lưu context; không nhận quyền do client tự khai báo.
+- `GET /api/auth/me` trả `401 UNAUTHENTICATED` khi không có/hết phiên, `401 SESSION_REVOKED` khi phiên bản bảo mật thay đổi, `403 ACCOUNT_LOCKED` nếu tài khoản bị khóa. Sau thu hồi vật lý, lỗi có thể là `UNAUTHENTICATED`; client xử lý cả hai bằng đăng nhập lại.
+
+`POST /api/auth/change-password`:
+
+```json
+{ "currentPassword": "********", "newPassword": "********" }
+```
+
+Thành công trả 204, thu hồi **mọi phiên kể cả phiên hiện tại**, xóa context/cookie CSRF và chuyển về đăng nhập. Mật khẩu mới có 8–64 ký tự, ít nhất một chữ ASCII và một chữ số, khác mật khẩu cũ; tổng mã hóa UTF-8 không quá 72 byte theo BCrypt. Sai mật khẩu hiện tại trả `400 WRONG_CURRENT_PASSWORD`, sai chính sách trả `400 PASSWORD_POLICY`; các lỗi này không thay đổi mật khẩu hoặc version.
+
+`POST /api/auth/logout` không cần phiên hợp lệ nhưng luôn cần token CSRF; dùng `GET /api/auth/csrf` để lấy lại token trước logout. Spring Security dọn phiên và trả 204; việc gọi lặp không khôi phục hoặc tạo phiên đăng nhập.
 
 Đặt lại mật khẩu (`/api/students/{id}/reset-password`, `/api/admin/users/{id}/reset-password`) và tạo tài khoản (`POST /api/admin/users`) trả:
 
@@ -409,7 +430,9 @@ Chỉ ghi những endpoint có logic hoặc dữ liệu phức tạp. Các endpo
 { "userId": 501, "temporaryPassword": "Kt7mQ2vx" }
 ```
 
-Mật khẩu tạm sinh ngẫu nhiên, **chỉ trả một lần** trong response này, không lưu dạng rõ, không ghi log; tài khoản bật `mustChangePassword`. Người đặt lại đọc cho sinh viên. Riêng import Excel dùng mật khẩu mặc định theo cấu hình (FR-ACC-05).
+Mật khẩu tạm sinh ngẫu nhiên, **chỉ trả một lần** trong response này, không lưu dạng rõ, không ghi log; tài khoản bật `mustChangePassword`. Reset xóa khóa tạm/bộ đếm sai, thu hồi mọi phiên cũ, không tự mở khóa do Admin. Staff chỉ reset sinh viên có hồ sơ thật và có đơn trong đợt `openAt <= hiện tại <= closeAt` hoặc phân phòng `endedAt = null` tại đơn vị mình; lịch sử hết hiệu lực/quyền đọc liên đơn vị không đủ quyền reset. Ngoài phạm vi trả 404. Admin reset được mọi tài khoản; người được reset phải đăng nhập bằng mật khẩu tạm rồi đổi.
+
+Quên mật khẩu được xử lý qua người quản lý có quyền; chưa có endpoint tự đăng ký hoặc gửi email reset. Bootstrap Admin mặc định tắt và yêu cầu mật khẩu do người triển khai cung cấp, không có tài khoản/mật khẩu demo tự tạo. Import Excel vẫn là nghiệp vụ dự kiến của FR-ACC-05, chưa nằm trong phần khung CRUD đã triển khai.
 
 ### 4.2. Tạo đợt đăng ký
 
@@ -827,6 +850,8 @@ Câu tiếng Việt là gợi ý cho `errorMessages.ts`; `{x}` lấy từ `detai
 |---|---|---|
 | `VALIDATION_FAILED` | 400 | Lỗi gắn vào từng ô theo `fieldErrors` |
 | `UNAUTHENTICATED` | 401 | Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại |
+| `SESSION_REVOKED` | 401 | Phiên đã bị thu hồi do thay đổi mật khẩu hoặc quyền. Vui lòng đăng nhập lại |
+| `CSRF_TOKEN_INVALID` | 403 | Phiên chống CSRF không hợp lệ. Tải lại trang và thực hiện lại thao tác |
 | `FORBIDDEN` | 403 | Bạn không có quyền thực hiện thao tác này |
 | `NOT_FOUND` | 404 | Không tìm thấy dữ liệu hoặc bạn không có quyền xem |
 | `INVALID_STATE_TRANSITION` | 409 | Thao tác không còn hợp lệ vì trạng thái đã thay đổi ({currentStatus}). Trang đã được tải lại |
@@ -840,6 +865,13 @@ Câu tiếng Việt là gợi ý cho `errorMessages.ts`; `{x}` lấy từ `detai
 
 ### 5.2. Tài khoản
 
+Mã bổ sung cho Keycloak:
+- `IDENTITY_NOT_LINKED` (403 khi đăng nhập, 409 khi quản lý): danh tính chưa có liên kết DMS.
+- `IDENTITY_UNAVAILABLE` (503): Keycloak/Admin REST chưa sẵn sàng; không tự lặp thao tác ghi.
+- `IDENTITY_NOT_CONFIGURED` (503): thiếu secret service account backend.
+- `DUPLICATE_USERNAME` (409): username đã tồn tại trên Keycloak.
+
+
 | Mã | HTTP | Gợi ý thông báo |
 |---|---|---|
 | `INVALID_CREDENTIALS` | 401 | Tên đăng nhập hoặc mật khẩu không đúng (còn {remainingAttempts} lần thử) |
@@ -847,7 +879,7 @@ Câu tiếng Việt là gợi ý cho `errorMessages.ts`; `{x}` lấy từ `detai
 | `ACCOUNT_LOCKED` | 403 | Tài khoản đã bị khóa. Liên hệ quản trị viên |
 | `PASSWORD_CHANGE_REQUIRED` | 403 | Bạn cần đổi mật khẩu trước khi tiếp tục |
 | `WRONG_CURRENT_PASSWORD` | 400 | Mật khẩu hiện tại không đúng |
-| `PASSWORD_POLICY` | 400 | Mật khẩu mới phải 8–64 ký tự, có chữ và số, khác mật khẩu cũ |
+| `PASSWORD_POLICY` | 400 | Mật khẩu mới phải 8–64 ký tự, có chữ và số, khác mật khẩu cũ và không quá 72 byte UTF-8 |
 | `USERNAME_EXISTS` | 409 | Tên đăng nhập {username} đã tồn tại |
 | `STUDENT_CODE_EXISTS` | 409 | Mã sinh viên đã tồn tại |
 | `STUDENT_HAS_ACTIVE_CONTRACT` | 409 | Sinh viên đang có chỗ ở hoặc giữ chỗ, không đổi giới tính được |
@@ -919,7 +951,9 @@ Câu tiếng Việt là gợi ý cho `errorMessages.ts`; `{x}` lấy từ `detai
 |---|---|---|
 | `READING_INVALID` | 400 / dòng | Chỉ số cuối ({endReading}) nhỏ hơn chỉ số đầu ({startReading}) |
 | `READING_LOCKED` | 409 / dòng | Tháng {billingMonth} đã phát hành hóa đơn, không sửa chỉ số |
+| `READING_HAS_FOLLOWING_MONTH` | 409 / dòng | Đã có chỉ số của tháng sau, không thêm/sửa/xóa chỉ số tháng này (áp dụng cả khi tạo mới) |
 | `RATE_EXISTS` | 409 | Đã có đơn giá áp dụng từ ngày {effectiveFrom} |
+| `RATE_ALREADY_EFFECTIVE` | 409 | Đơn giá đã có hiệu lực, không sửa hoặc xóa. Hãy thêm bản giá mới |
 | `DUPLICATE_INVOICE` | 409 | Hóa đơn cho {subject} kỳ này đã tồn tại |
 | `INVOICE_ALREADY_PAID` | 409 | Hóa đơn đã được xác nhận thanh toán |
 | `ADJUSTMENT_INVALID` | 409 | Chỉ điều chỉnh hóa đơn đã thanh toán, ghi vào hóa đơn chưa thanh toán của cùng sinh viên / phòng; tổng sau điều chỉnh không được âm ({totalAfter} đ) |
@@ -1056,3 +1090,43 @@ Chốt ngày 10/10/2026 theo thẩm định của nhóm.
 | Q-API-05 | Phòng chưa có trưởng phòng có phát hành hóa đơn điện nước không? | Có; một thông báo `ROOM` cho cả phòng; `roomsWithoutLeader` có ở cả preview và kết quả phát hành |
 | Q-API-06 | Lưu chỉ số điện nước khi có dòng lỗi | Lưu từng dòng hợp lệ, trả danh sách dòng lỗi |
 | Q-API-07 | Số chưa đọc thông báo | Hỏi lại mỗi 60 giây và khi đổi trang |
+
+
+Ghi chú dọn cấu trúc 14/10/2026: chỉ giữ Keycloak; dùng lại AuthController, SecurityConfig, BootstrapAdmin và AuthService/Impl. Không tạo lớp legacy hay Service chuyển đổi riêng. Migration đã áp dụng và các kiểm thử JWT/CRUD cần thiết được giữ. Hướng dẫn chạy gom vào README gốc.
+
+## Phân quyền Role → thao tác (cập nhật 14/10/2026)
+
+Theo quyết định mới của người phụ trách, ADMIN có mọi quyền nghiệp vụ trên toàn hệ thống. ADMIN không cần gắn management_unit_id; bỏ giới hạn đơn vị/chủ sở hữu/người được giao khi xác định quyền, nhưng vẫn phải qua trạng thái, ràng buộc dữ liệu, đối tượng sinh viên thật và lịch sử/audit. Không đổi hoặc giả vai trò/người thao tác để vượt phạm vi.
+
+Khung tham khảo RolePrivilege của HR-V5: `ScopeGuard` kiểm tra quyền hiện hành qua `RolePermissionService`; ma trận trong code chỉ xác định quyền mặc định và giới hạn nghiệp vụ của từng role, mỗi mã là `<RESOURCE>_<READ|CREATE|UPDATE|DELETE>`. READ dùng cho tìm kiếm và xem chi tiết; khóa/mở khóa/reset/gán phạm vi tài khoản có mã riêng. `/api/auth/me` trả thêm `permissions: string[]`; React dùng danh sách này cho menu, route và từng nút. API khai quyền bằng @RequirePrivilege giống V5; Spring Security Method Security kiểm tra trước thân Controller. Service Impl tiếp tục kiểm quyền nội bộ, phạm vi và trạng thái. Không chỉ dựa vào việc ẩn nút.
+
+- ADMIN: mọi quyền quản trị và nghiệp vụ ở mọi đơn vị; tài khoản và người thao tác trong audit vẫn là ADMIN thực.
+- STAFF: nghiệp vụ trong đơn vị được giao; crossUnitAccess chỉ mở rộng đọc. Đơn/yêu cầu do sinh viên tạo không mặc nhiên cho Staff tạo hoặc hủy thay sinh viên; quyền sửa/xét duyệt phụ thuộc endpoint và trạng thái.
+- TECHNICIAN: đọc/cập nhật tiến độ ticket được giao, không CRUD dữ liệu phòng/hợp đồng/hóa đơn.
+- STUDENT: dữ liệu cá nhân và phòng đang ở; đơn/yêu cầu của mình, không sửa role hoặc ID người sở hữu.
+
+Đổi role của tài khoản Staff/KTV/Admin qua PATCH `/api/admin/users/{id}` hỗ trợ trường `role`, đồng bộ Keycloak và thu hồi token cũ. Staff/KTV phải có đơn vị; chuyển sang ADMIN xóa đơn vị và cờ tổng hợp; không chuyển hồ sơ STUDENT thành tài khoản cán bộ, không tự đổi role tài khoản đang sử dụng. ADMIN tạo đơn đăng ký hộ sinh viên bằng `studentId` rõ ràng; STUDENT không được gửi ID của người khác.
+
+Cập nhật 15/10/2026: ADMIN quản lý ma trận động tại `/admin/role-permissions`, lưu quyền của STAFF/STUDENT/TECHNICIAN trong `role_permission_matrix` qua Flyway V5. ADMIN giữ mọi quyền đã đăng ký và không có bản ghi để thu hồi quyền ADMIN. Mã quyền vẫn cố định trong Constants; quyền đang được cấp đọc từ CSDL. Sổ cọc/audit vẫn giữ chỉ đọc, hồ sơ có lịch sử và trạng thái vẫn chịu ràng buộc xóa/hủy như trước.
+
+
+Trong bảng endpoint, vai trò ghi ở cột là quyền của người dùng thông thường; ADMIN được dùng thêm mọi endpoint nghiệp vụ theo quy tắc mới. Endpoint cá nhân vẫn là dữ liệu của tài khoản hiện tại; thao tác hộ sinh viên dùng endpoint nghiệp vụ và ID sinh viên/hợp đồng đích rõ ràng. Các mẫu auth/session lịch sử ở mục 4.1 không được dùng cho luồng Keycloak hiện hành.
+
+### Khai quyền API bằng @RequirePrivilege — 14/10/2026
+
+Mọi hàm REST mapped trong ứng dụng khai `@RequirePrivilege(Permission.ROOM_CREATE)` hoặc một danh sách như `@RequirePrivilege({Permission.ROOM_TYPE_READ, Permission.ROOM_CREATE, Permission.ROOM_UPDATE})`. Nhiều mã dùng OR: có ít nhất một quyền mới được chạy API. Danh sách OR phù hợp API tra cứu cho form; thao tác ghi phải khai riêng CREATE/UPDATE/DELETE, không ghép quyền thêm/sửa để mở cả hai.
+
+`common/security/RequirePrivilege.java` chỉ khai annotation; `ScopeGuard.hasDeclaredPrivilege` đọc khai báo trên hàm thật, dùng khai báo lớp nếu hàm chưa khai, và kiểm role với dữ liệu tài khoản hiện tại. `SecurityConfig` bật Spring Security Method Security và đăng ký AuthorizationManagerBeforeMethodInterceptor: thiếu annotation, mảng rỗng hoặc không có quyền thì trả 403 trước thân Controller. Chưa đăng nhập/token không hợp lệ vẫn bị filter chain trả 401. Annotation ở hàm thay thế annotation lớp; Admin không vượt qua mã quyền chưa đăng ký.
+
+Service Impl vẫn giữ kiểm tra quyền cho lời gọi nội bộ, phạm vi đơn vị/chủ sở hữu, trạng thái và ràng buộc dữ liệu; việc thêm annotation không biến dữ liệu đang dùng thành dữ liệu được phép xóa. ADMIN tiếp tục có mọi quyền nghiệp vụ đã đăng ký trên toàn hệ thống. Frontend và `/api/auth/me.permissions` giữ nguyên mã quyền hiện có.
+
+Ở bước bổ sung annotation chỉ thêm một file source là `RequirePrivilege.java`; không thêm migration, Aspect/Service mới hoặc dependency V5. Bộ test kiểm OR, chặn trước thân Controller, lớp/hàm, thiếu/rỗng/sai annotation và quét mọi API để không bỏ sót quyền. Backend clean verify đạt **53/53 test**.
+
+### API ma trận quyền theo vai trò (FR-ACC-10)
+
+- `GET /api/admin/role-permissions/{role}`: chỉ ADMIN, `ROLE_PERMISSION_READ`. Role là ADMIN/STAFF/STUDENT/TECHNICIAN. Trả `{role, roleLabel, version, readOnly, screens}`. Mỗi screen gồm `{code, label, group, privileges}`; mỗi privilege gồm `{code, action, label, granted, defaultGranted, assignable, required}`. ADMIN có readOnly=true và mọi mã quyền; quyền không phù hợp/không tồn tại không thể tick.
+- `PUT /api/admin/role-permissions/{role}`: chỉ ADMIN, `ROLE_PERMISSION_UPDATE`. Body `{version: 0, permissions: ["PROFILE_READ", ...]}` là toàn bộ danh sách mới, không phải phần thay đổi. Thành công trả ma trận đã lưu và version mới. Cả việc ghi quyền và audit là một transaction; không gọi Keycloak hoặc thu hồi phiên để cập nhật quyền theo role.
+
+`VALIDATION_FAILED` (400) kèm `details.fieldErrors` khi role/danh sách/version sai, trùng mã, mã không đăng ký, mã không phù hợp vai trò, thiếu PROFILE_READ hoặc chọn ghi mà thiếu READ của tài nguyên. `ADMIN_PERMISSIONS_IMMUTABLE` (403) khi cố sửa quyền ADMIN. `PERMISSION_MATRIX_STALE` (409) khi version cũ; tải lại rồi chọn lại trước khi lưu, không tự gửi lại bản cũ. `PERMISSION_MATRIX_UNAVAILABLE` (409) khi dòng cấu hình của role không tồn tại. Dòng thiếu/hỏng không cấp quyền mặc định khi kiểm quyền runtime.
+
+`/api/auth/me.permissions` đọc quyền CSDL hiện hành, ADMIN luôn có toàn bộ danh mục 105 mã. Thay đổi ảnh hưởng mọi tài khoản cùng role trên cùng database DMS. Các máy dùng database riêng vẫn có ma trận riêng dù cùng dùng Keycloak; muốn đồng bộ quyền phải dùng chung backend/database.

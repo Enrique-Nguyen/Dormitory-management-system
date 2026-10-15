@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.billing.service.UtilityReadingService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.MeterType;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 
 import java.time.LocalDate;
 
@@ -35,7 +38,7 @@ public class UtilityReadingController {
 
     public record Input(
             @NotNull @Positive Long roomId,
-            @NotBlank @Pattern(regexp = "ELECTRIC|WATER") String meterType,
+            @NotBlank @Pattern(regexp = MeterType.PATTERN) String meterType,
             @NotNull LocalDate billingMonth,
             @Min(0) Integer startReading,
             @Min(0) int endReading,
@@ -43,6 +46,7 @@ public class UtilityReadingController {
             @Min(0) Integer newMeterStart,
             @Size(max = 300) String replacementReason) {}
 
+    @RequirePrivilege(Permission.UTILITY_READING_READ)
     @GetMapping
     public Object searchReadings(
             @RequestParam(defaultValue = "0") int page,
@@ -52,21 +56,25 @@ public class UtilityReadingController {
         return service.searchReadings(page, size, q, billingMonth);
     }
 
+    @RequirePrivilege(Permission.UTILITY_READING_READ)
     @GetMapping("/{id}")
     public Object getReading(@PathVariable Long id) {
         return service.getReading(id);
     }
 
+    @RequirePrivilege(Permission.UTILITY_READING_CREATE)
     @PostMapping
     public Object createReading(@Valid @RequestBody Input input) {
         return service.saveReading(null, input);
     }
 
+    @RequirePrivilege(Permission.UTILITY_READING_UPDATE)
     @PatchMapping("/{id}")
     public Object updateReading(@PathVariable Long id, @Valid @RequestBody Input input) {
         return service.saveReading(id, input);
     }
 
+    @RequirePrivilege(Permission.UTILITY_READING_DELETE)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteReading(@PathVariable Long id) {
         service.deleteUnusedReading(id);

@@ -12,7 +12,7 @@ Mức ưu tiên: 🔴 nên sửa trước khi nộp/thuyết trình · 🟡 nên
 - **Mô hình sức chứa theo giường + ràng buộc ở CSDL** là quyết định thiết kế tốt, có lý do rõ (chống vượt chỗ ngay cả khi tầng ứng dụng lỗi) và có test/demo chứng minh (tranh giường A101).
 - **Lịch sử phân phòng dạng khoảng thời gian** (`RoomAssignmentHistory`), không ghi đè `room_id`. Đúng tư duy dữ liệu có thời gian.
 - **Không lưu dữ liệu suy ra** (số chỗ trống, "Đầy", "Expiring"). Nhất quán và giảm lỗi lệch dữ liệu.
-- **RBAC + phạm vi tòa + kiểm tra trên từng đối tượng**, Admin không mặc nhiên có quyền nghiệp vụ. Phản ánh đúng bài toán hai đơn vị.
+- **RBAC + phạm vi tòa + kiểm tra trên từng đối tượng**, Quyết định cũ Admin không có quyền nghiệp vụ đã được thay thế ngày 14/10/2026: Admin có mọi quyền nghiệp vụ ở mọi đơn vị, vẫn giữ trạng thái và ràng buộc dữ liệu. Phản ánh đúng bài toán hai đơn vị.
 - **Quản trị phạm vi tốt**: MoSCoW theo độ sâu, có "đường cắt" tuần 7 với thứ tự cắt cụ thể. Ít nhóm sinh viên làm được điều này.
 - **Trung thực về hiện trạng**: ghi rõ là quan sát của nhóm, có kế hoạch khảo sát, ví dụ đơn giá ghi rõ là giả định.
 - Test case bắt buộc bám sát quy tắc nghiệp vụ, kịch bản demo có kết quả mong đợi đo được.

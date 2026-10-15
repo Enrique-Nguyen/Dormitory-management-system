@@ -4,6 +4,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -55,7 +58,8 @@ public class ContractServiceImpl implements ContractService {
     @Override
     public PageResponse<ContractDtos.Response> searchContracts(
             int page, int size, String status, boolean mine, String q) {
-        scopeGuard.requireRole(mine ? new String[] {"STUDENT"} : new String[] {"STAFF"});
+        scopeGuard.requirePermission(Permission.CONTRACT_READ);
+        scopeGuard.requireRole(mine ? new String[] {Role.STUDENT} : new String[] {Role.STAFF});
         var actor = currentUser.get();
         PageQuery.of(page, size, null, Set.of("id"), "id,desc");
         return PageResponse.from(
@@ -65,6 +69,7 @@ public class ContractServiceImpl implements ContractService {
                                 actor.id(),
                                 actor.unitId(),
                                 actor.crossUnitAccess(),
+                                mine,
                                 status,
                                 LikePattern.contains(q.trim()),
                                 PageRequest.of(page, size))
@@ -73,7 +78,8 @@ public class ContractServiceImpl implements ContractService {
 
     @Override
     public ContractDtos.Response getContractById(Long id) {
-        scopeGuard.requireRole("STUDENT", "STAFF");
+        scopeGuard.requirePermission(Permission.CONTRACT_READ);
+        scopeGuard.requireRole(Role.STUDENT, Role.STAFF);
         var actor = currentUser.get();
         DormitoryContract contract =
                 repository
@@ -89,14 +95,16 @@ public class ContractServiceImpl implements ContractService {
 
     @Override
     public ContractDtos.Response getMyCurrentContract() {
-        scopeGuard.requireRole("STUDENT");
+        scopeGuard.requirePermission(Permission.CONTRACT_READ);
+        scopeGuard.requireRole(Role.STUDENT);
         return repository
                 .findAll(
                         (root, query, builder) ->
                                 builder.and(
                                         builder.equal(
                                                 root.get("studentId"), currentUser.get().id()),
-                                        root.get("status").in("PENDING", "ACTIVE")))
+                                        root.get("status")
+                                                .in(ContractStatus.PENDING, ContractStatus.ACTIVE)))
                 .stream()
                 .findFirst()
                 .map(contract -> toContractResponse(contract, true))

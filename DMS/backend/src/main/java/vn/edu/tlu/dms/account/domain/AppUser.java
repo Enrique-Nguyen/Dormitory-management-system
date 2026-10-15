@@ -25,7 +25,7 @@ public class AppUser {
     @Column(name = "username", nullable = false, length = 50)
     private String username;
 
-    @Column(name = "password_hash", nullable = false, length = 100)
+    @Column(name = "password_hash", length = 100)
     private String passwordHash;
 
     @Column(name = "role", nullable = false, length = 20)
@@ -57,6 +57,28 @@ public class AppUser {
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
+
+    @Column(name = "security_version", nullable = false)
+    private Long securityVersion = 0L;
+
+    @Column(name = "keycloak_user_id", length = 255)
+    private String keycloakUserId;
+
+    public String getKeycloakUserId() {
+        return keycloakUserId;
+    }
+
+    public void setKeycloakUserId(String value) {
+        this.keycloakUserId = value;
+    }
+
+    public Long getSecurityVersion() {
+        return securityVersion;
+    }
+
+    public void setSecurityVersion(Long value) {
+        this.securityVersion = value;
+    }
 
     public Long getId() {
         return id;

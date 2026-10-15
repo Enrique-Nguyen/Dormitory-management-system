@@ -4,6 +4,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -14,9 +17,8 @@ import vn.edu.tlu.dms.notification.api.NotificationDtos;
 import vn.edu.tlu.dms.notification.service.NotificationCrudService;
 
 import java.util.ArrayList;
-import java.util.List;
 
-/** CRUD thông báo thủ công của người đăng. Không sửa/xóa thông báo hệ thống. */
+/** CRUD bài thủ công: STAFF tự đăng, ADMIN mọi bài. Không sửa/xóa thông báo hệ thống. */
 @Service
 @Transactional(readOnly = true)
 public class NotificationCrudServiceImpl implements NotificationCrudService {
@@ -46,31 +48,49 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
 
     @Override()
     public Object searchPublished(int page, int size, String q) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.NOTIFICATION_READ);
+        guard.requireRole(Role.STAFF);
+        var args = new ArrayList<Object>();
+        // Admin xem thông báo thủ công của mọi người; Staff vẫn chỉ quản lý bài tự đăng.
+        String owner = current.get().isAdmin() ? "TRUE" : "n.created_by=?";
+        if (!current.get().isAdmin()) {
+            args.add(current.get().id());
+        }
+        args.add(LikePattern.contains(q));
+        args.add(LikePattern.contains(q));
         return queries.search(
                 "SELECT n.id,n.scope,n.title,n.body,n.created_at,n.created_by,n.management_unit_id"
-                        + " AS unit_id,n.building_id,n.floor,n.room_id FROM notification n WHERE"
-                        + " n.created_by=? AND n.source_type IS NULL AND (n.title ILIKE ? OR n.body"
+                        + " AS unit_id,n.building_id,n.floor,n.room_id FROM notification n WHERE "
+                        + owner
+                        + " AND n.source_type IS NULL AND (n.title ILIKE ? OR n.body"
                         + " ILIKE ?)",
-                new ArrayList<>(List.of(current.get().id(), LikePattern.contains(q), LikePattern.contains(q))),
+                args,
                 page,
                 size);
     }
 
     @Override()
     public Object getPublished(Long id) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.NOTIFICATION_READ);
+        guard.requireRole(Role.STAFF);
+        var args = new ArrayList<Object>();
+        args.add(id);
+        String owner = current.get().isAdmin() ? "TRUE" : "created_by=?";
+        if (!current.get().isAdmin()) {
+            args.add(current.get().id());
+        }
         return queries.one(
                 "SELECT id,scope,title,body,created_at,management_unit_id AS"
-                        + " unit_id,building_id,floor,room_id FROM notification WHERE id=? AND"
-                        + " created_by=? AND source_type IS NULL",
-                id,
-                current.get().id());
+                        + " unit_id,building_id,floor,room_id FROM notification WHERE id=? AND "
+                        + owner
+                        + " AND source_type IS NULL",
+                args.toArray());
     }
 
     @Transactional
     @Override()
     public Object updatePublished(Long id, NotificationDtos.Create input) {
+        guard.requirePermission(Permission.NOTIFICATION_UPDATE);
         getPublished(id);
         jdbc.queryForObject("SELECT id FROM notification WHERE id=? FOR UPDATE", Long.class, id);
         // Chỉ sửa nội dung; đổi phạm vi làm thay đổi người nhận cũ nên phải tạo thông báo mới.
@@ -92,7 +112,13 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
                 input.body().trim(),
                 id);
         audit.record(
-                current.get().id(), "NOTIFICATION_UPDATE", "NOTIFICATION", id, null, input, null);
+                current.get().id(),
+                AuditAction.NOTIFICATION_UPDATE,
+                "NOTIFICATION",
+                id,
+                null,
+                input,
+                null);
         return getPublished(id);
     }
 
@@ -107,11 +133,18 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
     @Transactional
     @Override()
     public void deletePublished(Long id) {
+        guard.requirePermission(Permission.NOTIFICATION_DELETE);
         var before = getPublished(id);
         jdbc.queryForObject("SELECT id FROM notification WHERE id=? FOR UPDATE", Long.class, id);
         jdbc.update("DELETE FROM notification_read WHERE notification_id=?", id);
         jdbc.update("DELETE FROM notification WHERE id=?", id);
         audit.record(
-                current.get().id(), "NOTIFICATION_DELETE", "NOTIFICATION", id, before, null, null);
+                current.get().id(),
+                AuditAction.NOTIFICATION_DELETE,
+                "NOTIFICATION",
+                id,
+                before,
+                null,
+                null);
     }
 }

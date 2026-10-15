@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.billing.service.InvoiceCrudService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.security.RequirePrivilege;
 
 import java.util.Map;
 
@@ -21,16 +23,19 @@ public class InvoiceCrudController {
         this.service = service;
     }
 
+    @RequirePrivilege(Permission.INVOICE_CREATE)
     @PostMapping("/api/invoices")
     public Object createInvoice(@RequestBody Map<String, Object> input) {
         return service.createInvoiceRecord(input);
     }
 
+    @RequirePrivilege(Permission.INVOICE_UPDATE)
     @PatchMapping("/api/invoices/{id}")
     public Object updateInvoice(@PathVariable Long id, @RequestBody Map<String, Object> input) {
         return service.updateUnpaidInvoiceRecord(id, input);
     }
 
+    @RequirePrivilege(Permission.INVOICE_DELETE)
     @DeleteMapping("/api/invoices/{id}")
     public ResponseEntity<Void> deleteInvoice(@PathVariable Long id) {
         service.deleteUnusedInvoiceRecord(id);

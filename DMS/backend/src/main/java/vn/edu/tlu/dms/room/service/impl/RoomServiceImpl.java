@@ -4,11 +4,18 @@ import jakarta.persistence.criteria.Predicate;
 
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.RoomStatus;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -100,7 +107,8 @@ public class RoomServiceImpl implements RoomService {
             Boolean hasFreeBed,
             Boolean noLeader,
             String keyword) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.ROOM_READ);
+        guard.requireRole(Role.STAFF);
         var actor = current.get();
         var pageable =
                 PageQuery.of(
@@ -118,7 +126,7 @@ public class RoomServiceImpl implements RoomService {
                     var bd = building.from(Building.class);
                     building.select(bd.get("id"))
                             .where(
-                                    actor.crossUnitAccess()
+                                    actor.canReadAllUnits()
                                             ? b.conjunction()
                                             : b.equal(bd.get("managementUnitId"), actor.unitId()));
                     filters.add(r.get("buildingId").in(building));
@@ -155,7 +163,7 @@ public class RoomServiceImpl implements RoomService {
                         free.select(bed.get("id"))
                                 .where(
                                         b.equal(bed.get("roomId"), r.get("id")),
-                                        b.equal(bed.get("status"), "ACTIVE"),
+                                        b.equal(bed.get("status"), BedOperationStatus.ACTIVE),
                                         b.not(b.exists(occupied)));
                         filters.add(hasFreeBed ? b.exists(free) : b.not(b.exists(free)));
                     }
@@ -170,7 +178,8 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     public Response getRoomById(Long id) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.ROOM_READ);
+        guard.requireRole(Role.STAFF);
         var r = findAccessibleRoom(id, false);
         return toRoomResponse(r, true, null);
     }
@@ -178,7 +187,7 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional
     public Response createRoom(Input input) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.ROOM_CREATE);
         requireValue(input.buildingId(), "buildingId");
         requireValue(input.roomTypeId(), "roomTypeId");
         guard.requireUnit(references.getBuildingManagementUnitId(input.buildingId()));
@@ -190,17 +199,18 @@ public class RoomServiceImpl implements RoomService {
         r.setFloor(requireValue(input.floor(), "floor"));
         r.setCode(trimRequiredText(input.code(), "code"));
         r.setGender(requireValue(input.gender(), "gender"));
-        r.setStatus("ACTIVE");
+        r.setStatus(RoomStatus.ACTIVE);
         rooms.saveAndFlush(r);
         syncBeds(r, type.getBedCount());
-        audit.record(current.get().id(), "ROOM_CREATE", "ROOM", r.getId(), null, input, null);
+        audit.record(
+                current.get().id(), AuditAction.ROOM_CREATE, "ROOM", r.getId(), null, input, null);
         return toRoomResponse(r, true, null);
     }
 
     @Override
     @Transactional
     public Response updateRoom(Long id, Input input) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.ROOM_UPDATE);
         lockRoomBedsInAscendingOrder(id);
         var r = findAccessibleRoom(id, true);
         if (input.buildingId() != null && !input.buildingId().equals(r.getBuildingId())) {
@@ -237,17 +247,17 @@ public class RoomServiceImpl implements RoomService {
                             .orElseThrow(BusinessException::notFound)
                             .getBedCount());
         }
-        audit.record(current.get().id(), "ROOM_UPDATE", "ROOM", id, null, input, null);
+        audit.record(current.get().id(), AuditAction.ROOM_UPDATE, "ROOM", id, null, input, null);
         return toRoomResponse(r, true, null);
     }
 
     @Override
     @Transactional
     public Response changeRoomStatus(Long id, Status input) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.ROOM_UPDATE);
         lockRoomBedsInAscendingOrder(id);
         var r = findAccessibleRoom(id, true);
-        if (!input.status().equals("ACTIVE")) {
+        if (!input.status().equals(RoomStatus.ACTIVE)) {
             requireRoomWithoutOpenAssignments(r);
         }
         String before = r.getStatus();
@@ -255,7 +265,7 @@ public class RoomServiceImpl implements RoomService {
         rooms.saveAndFlush(r);
         audit.record(
                 current.get().id(),
-                "ROOM_STATUS",
+                AuditAction.ROOM_STATUS,
                 "ROOM",
                 id,
                 before,
@@ -267,12 +277,12 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional
     public BedResponse addBedToRoom(Long roomId, BedInput input) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.BED_CREATE);
         var r = findAccessibleRoom(roomId, true);
         var bed = new Bed();
         bed.setRoomId(r.getId());
         bed.setCode(trimRequiredText(input.code(), "code"));
-        bed.setStatus("ACTIVE");
+        bed.setStatus(BedOperationStatus.ACTIVE);
         beds.saveAndFlush(bed);
         return toBedResponse(bed);
     }
@@ -280,31 +290,38 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional
     public BedResponse updateBedCode(Long id, BedInput input) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.BED_UPDATE);
         var bed = lockAndFindBed(id);
         findAccessibleRoom(bed.getRoomId(), true);
         String previous = bed.getCode();
         bed.setCode(trimRequiredText(input.code(), "code"));
         beds.saveAndFlush(bed);
-        audit.record(current.get().id(), "BED_UPDATE", "BED", id, previous, bed.getCode(), null);
+        audit.record(
+                current.get().id(),
+                AuditAction.BED_UPDATE,
+                "BED",
+                id,
+                previous,
+                bed.getCode(),
+                null);
         return toBedResponse(bed);
     }
 
     @Override
     @Transactional
     public BedResponse changeBedStatus(Long id, BedStatus input) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.BED_UPDATE);
         var bed = lockAndFindBed(id);
         findAccessibleRoom(bed.getRoomId(), true);
-        if (!input.status().equals("ACTIVE") && hasOpenBedAssignment(id)) {
-            throw BusinessException.conflict("BED_OCCUPIED");
+        if (!input.status().equals(BedOperationStatus.ACTIVE) && hasOpenBedAssignment(id)) {
+            throw BusinessException.conflict(ErrorCode.BED_OCCUPIED);
         }
         String before = bed.getStatus();
         bed.setStatus(input.status());
         beds.saveAndFlush(bed);
         audit.record(
                 current.get().id(),
-                "BED_STATUS",
+                AuditAction.BED_STATUS,
                 "BED",
                 id,
                 before,
@@ -316,7 +333,7 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional
     public void deleteRoom(Long id) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.ROOM_DELETE);
         lockRoomBedsInAscendingOrder(id);
         var r = findAccessibleRoom(id, true);
         if (jdbc.queryForObject(
@@ -324,34 +341,36 @@ public class RoomServiceImpl implements RoomService {
                         + " WHERE b.room_id=?)",
                 Boolean.class,
                 id)) {
-            throw BusinessException.conflict("ROOM_OCCUPIED");
+            throw BusinessException.conflict(ErrorCode.ROOM_OCCUPIED);
         }
         var rows = beds.findAll((b, q, cb) -> cb.equal(b.get("roomId"), id));
         beds.deleteAll(rows);
         beds.flush();
         rooms.delete(r);
         rooms.flush();
-        audit.record(current.get().id(), "ROOM_DELETE", "ROOM", id, r.getCode(), null, null);
+        audit.record(
+                current.get().id(), AuditAction.ROOM_DELETE, "ROOM", id, r.getCode(), null, null);
     }
 
     @Override
     @Transactional
     public void deleteBed(Long id) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.BED_DELETE);
         var bed = lockAndFindBed(id);
         findAccessibleRoom(bed.getRoomId(), true);
         if (assignments.exists((r, q, b) -> b.equal(r.get("bedId"), id))) {
-            throw BusinessException.conflict("BED_OCCUPIED");
+            throw BusinessException.conflict(ErrorCode.BED_OCCUPIED);
         }
         beds.delete(bed);
         beds.flush();
-        audit.record(current.get().id(), "BED_DELETE", "BED", id, bed.getCode(), null, null);
+        audit.record(
+                current.get().id(), AuditAction.BED_DELETE, "BED", id, bed.getCode(), null, null);
     }
 
     @Override
     @Transactional
     public Response assignRoomLeader(Long id, Long studentId) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.ROOM_UPDATE);
         lockRoomBedsInAscendingOrder(id);
         var r = findAccessibleRoom(id, true);
         boolean staying =
@@ -362,19 +381,26 @@ public class RoomServiceImpl implements RoomService {
                         id,
                         studentId);
         if (!staying) {
-            throw BusinessException.conflict("LEADER_NOT_STAYING");
+            throw BusinessException.conflict(ErrorCode.LEADER_NOT_STAYING);
         }
         Long before = r.getLeaderStudentId();
         r.setLeaderStudentId(studentId);
         rooms.saveAndFlush(r);
-        audit.record(current.get().id(), "ROOM_LEADER_CHANGE", "ROOM", id, before, studentId, null);
+        audit.record(
+                current.get().id(),
+                AuditAction.ROOM_LEADER_CHANGE,
+                "ROOM",
+                id,
+                before,
+                studentId,
+                null);
         return toRoomResponse(r, true, null);
     }
 
     @Override
     @Transactional
     public void removeRoomLeader(Long id, String reason) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.ROOM_UPDATE);
         lockRoomBedsInAscendingOrder(id);
         var r = findAccessibleRoom(id, true);
         Long before = r.getLeaderStudentId();
@@ -382,7 +408,7 @@ public class RoomServiceImpl implements RoomService {
         rooms.saveAndFlush(r);
         audit.record(
                 current.get().id(),
-                "ROOM_LEADER_CHANGE",
+                AuditAction.ROOM_LEADER_CHANGE,
                 "ROOM",
                 id,
                 before,
@@ -420,7 +446,7 @@ public class RoomServiceImpl implements RoomService {
         }
         beds.flush();
         if (existing.size() > target) {
-            throw BusinessException.conflict("BED_OCCUPIED");
+            throw BusinessException.conflict(ErrorCode.BED_OCCUPIED);
         }
     }
 
@@ -463,7 +489,9 @@ public class RoomServiceImpl implements RoomService {
                         r.getId());
         if (count > 0) {
             throw new BusinessException(
-                    "ROOM_OCCUPIED", 409, Map.of("roomCode", r.getCode(), "count", count));
+                    ErrorCode.ROOM_OCCUPIED,
+                    HttpStatus.CONFLICT,
+                    Map.of("roomCode", r.getCode(), "count", count));
         }
     }
 

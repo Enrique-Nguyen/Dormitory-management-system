@@ -7,6 +7,7 @@ import org.postgresql.util.PSQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -22,6 +23,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.dto.ApiError;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 
@@ -34,27 +37,31 @@ public class GlobalExceptionHandler {
 
     private static final Map<String, String> CONSTRAINT_CODES =
             Map.ofEntries(
-                    Map.entry("ux_assignment_open_bed", "BED_TAKEN"),
-                    Map.entry("ux_assignment_open_student", "STUDENT_ALREADY_ASSIGNED"),
-                    Map.entry("ux_contract_live_student", "CONTRACT_EXISTS"),
-                    Map.entry("ux_contract_live_application", "CONTRACT_EXISTS"),
-                    Map.entry("room_application_student_id_period_id_key", "APPLICATION_EXISTS"),
-                    Map.entry("app_user_username_key", "USERNAME_EXISTS"),
-                    Map.entry("room_building_id_code_key", "ROOM_CODE_EXISTS"),
-                    Map.entry("semester_daterange_excl", "SEMESTER_OVERLAP"),
-                    Map.entry("utility_rate_meter_type_effective_from_key", "RATE_EXISTS"),
-                    Map.entry("ux_deposit_once", "DEPOSIT_INVALID"),
-                    Map.entry("ux_refund_once", "DEPOSIT_INVALID"),
-                    Map.entry("ux_deduction_ticket", "DEPOSIT_INVALID"),
-                    Map.entry("ux_invoice_room_fee", "DUPLICATE_INVOICE"),
-                    Map.entry("ux_invoice_utility", "DUPLICATE_INVOICE"),
-                    Map.entry("ux_extension_pending", "REQUEST_PENDING_EXISTS"),
-                    Map.entry("ux_transfer_pending", "REQUEST_PENDING_EXISTS"),
-                    Map.entry("ux_storage_open", "STORAGE_RECORD_EXISTS"),
-                    Map.entry("summer_choice_contract_id_semester_id_key", "SUMMER_CHOICE_EXISTS"),
-                    Map.entry("ux_room_leader", "LEADER_ALREADY_ASSIGNED"),
-                    Map.entry("student_profile_student_code_key", "STUDENT_CODE_EXISTS"),
-                    Map.entry("bed_room_id_code_key", "BED_CODE_EXISTS"));
+                    Map.entry("ux_assignment_open_bed", ErrorCode.BED_TAKEN),
+                    Map.entry("ux_assignment_open_student", ErrorCode.STUDENT_ALREADY_ASSIGNED),
+                    Map.entry("ux_contract_live_student", ErrorCode.CONTRACT_EXISTS),
+                    Map.entry("ux_contract_live_application", ErrorCode.CONTRACT_EXISTS),
+                    Map.entry(
+                            "room_application_student_id_period_id_key",
+                            ErrorCode.APPLICATION_EXISTS),
+                    Map.entry("app_user_username_key", ErrorCode.USERNAME_EXISTS),
+                    Map.entry("room_building_id_code_key", ErrorCode.ROOM_CODE_EXISTS),
+                    Map.entry("semester_daterange_excl", ErrorCode.SEMESTER_OVERLAP),
+                    Map.entry("utility_rate_meter_type_effective_from_key", ErrorCode.RATE_EXISTS),
+                    Map.entry("ux_deposit_once", ErrorCode.DEPOSIT_INVALID),
+                    Map.entry("ux_refund_once", ErrorCode.DEPOSIT_INVALID),
+                    Map.entry("ux_deduction_ticket", ErrorCode.DEPOSIT_INVALID),
+                    Map.entry("ux_invoice_room_fee", ErrorCode.DUPLICATE_INVOICE),
+                    Map.entry("ux_invoice_utility", ErrorCode.DUPLICATE_INVOICE),
+                    Map.entry("ux_extension_pending", ErrorCode.REQUEST_PENDING_EXISTS),
+                    Map.entry("ux_transfer_pending", ErrorCode.REQUEST_PENDING_EXISTS),
+                    Map.entry("ux_storage_open", ErrorCode.STORAGE_RECORD_EXISTS),
+                    Map.entry(
+                            "summer_choice_contract_id_semester_id_key",
+                            ErrorCode.SUMMER_CHOICE_EXISTS),
+                    Map.entry("ux_room_leader", ErrorCode.LEADER_ALREADY_ASSIGNED),
+                    Map.entry("student_profile_student_code_key", ErrorCode.STUDENT_CODE_EXISTS),
+                    Map.entry("bed_room_id_code_key", ErrorCode.BED_CODE_EXISTS));
 
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<ApiError> business(BusinessException e, HttpServletRequest request) {
@@ -68,12 +75,16 @@ public class GlobalExceptionHandler {
                         .map(
                                 f ->
                                         Map.of(
-                                                "field",
+                                                ApiField.FIELD,
                                                 f.getField(),
-                                                "message",
+                                                ApiField.MESSAGE,
                                                 String.valueOf(f.getDefaultMessage())))
                         .toList();
-        return response(400, "VALIDATION_FAILED", Map.of("fieldErrors", fields), request);
+        return response(
+                HttpStatus.BAD_REQUEST.value(),
+                ErrorCode.VALIDATION_FAILED,
+                Map.of(ApiField.FIELD_ERRORS, fields),
+                request);
     }
 
     @ExceptionHandler({
@@ -82,17 +93,22 @@ public class GlobalExceptionHandler {
         ConstraintViolationException.class
     })
     ResponseEntity<ApiError> malformed(Exception e, HttpServletRequest request) {
-        return response(400, "VALIDATION_FAILED", Map.of(), request);
+        return response(
+                HttpStatus.BAD_REQUEST.value(), ErrorCode.VALIDATION_FAILED, Map.of(), request);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ApiError> denied(AccessDeniedException e, HttpServletRequest request) {
-        return response(403, "FORBIDDEN", Map.of(), request);
+        return response(HttpStatus.FORBIDDEN.value(), ErrorCode.FORBIDDEN, Map.of(), request);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     ResponseEntity<ApiError> tooLarge(Exception e, HttpServletRequest request) {
-        return response(413, "FILE_TOO_LARGE", Map.of("maxMb", 5), request);
+        return response(
+                HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                ErrorCode.FILE_TOO_LARGE,
+                Map.of("maxMb", 5),
+                request);
     }
 
     /** Thiếu tham số/phần multipart hoặc sai kiểu validate tham số: lỗi của client, không phải 500. */
@@ -102,24 +118,33 @@ public class GlobalExceptionHandler {
         HandlerMethodValidationException.class
     })
     ResponseEntity<ApiError> badRequest(Exception e, HttpServletRequest request) {
-        return response(400, "VALIDATION_FAILED", Map.of(), request);
+        return response(
+                HttpStatus.BAD_REQUEST.value(), ErrorCode.VALIDATION_FAILED, Map.of(), request);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     ResponseEntity<ApiError> methodNotAllowed(
             HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
-        return response(405, "METHOD_NOT_ALLOWED", Map.of(), request);
+        return response(
+                HttpStatus.METHOD_NOT_ALLOWED.value(),
+                ErrorCode.METHOD_NOT_ALLOWED,
+                Map.of(),
+                request);
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     ResponseEntity<ApiError> unsupportedMediaType(
             HttpMediaTypeNotSupportedException e, HttpServletRequest request) {
-        return response(415, "UNSUPPORTED_MEDIA_TYPE", Map.of(), request);
+        return response(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
+                ErrorCode.UNSUPPORTED_MEDIA_TYPE,
+                Map.of(),
+                request);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
     ResponseEntity<ApiError> noResource(NoResourceFoundException e, HttpServletRequest request) {
-        return response(404, "NOT_FOUND", Map.of(), request);
+        return response(HttpStatus.NOT_FOUND.value(), ErrorCode.NOT_FOUND, Map.of(), request);
     }
 
     /**
@@ -140,23 +165,23 @@ public class GlobalExceptionHandler {
                 }
             }
         }
-        int status = 409;
+        HttpStatus status = HttpStatus.CONFLICT;
         String code = name == null ? null : CONSTRAINT_CODES.get(name);
         if (code == null && name != null && name.startsWith("deposit_transaction")) {
-            code = "DEPOSIT_INVALID";
+            code = ErrorCode.DEPOSIT_INVALID;
         }
         if (code == null && name != null && name.startsWith("utility_reading")) {
-            code = "READING_INVALID";
+            code = ErrorCode.READING_INVALID;
         }
         if (code == null) {
-            code = "CONCURRENT_UPDATE";
+            code = ErrorCode.CONCURRENT_UPDATE;
             if (sqlState != null) {
                 switch (sqlState) {
-                    case "23505", "23P01" -> code = "DUPLICATE_VALUE";
-                    case "23503" -> code = "RESOURCE_IN_USE";
+                    case "23505", "23P01" -> code = ErrorCode.DUPLICATE_VALUE;
+                    case "23503" -> code = ErrorCode.RESOURCE_IN_USE;
                     case "23502", "23514" -> {
-                        code = "VALIDATION_FAILED";
-                        status = 400;
+                        code = ErrorCode.VALIDATION_FAILED;
+                        status = HttpStatus.BAD_REQUEST;
                     }
                     default -> {}
                 }
@@ -167,13 +192,17 @@ public class GlobalExceptionHandler {
                 request.getAttribute("requestId"),
                 name,
                 sqlState);
-        return response(status, code, Map.of(), request);
+        return response(status.value(), code, Map.of(), request);
     }
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiError> unexpected(Exception e, HttpServletRequest request) {
         log.error("Unexpected request error {}", request.getAttribute("requestId"), e);
-        return response(500, "INTERNAL_ERROR", Map.of(), request);
+        return response(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                ErrorCode.INTERNAL_ERROR,
+                Map.of(),
+                request);
     }
 
     private ResponseEntity<ApiError> response(

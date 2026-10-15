@@ -17,7 +17,8 @@ public final class ApplicationDtos {
             @Positive Long preferredUnitId,
             @Positive Long preferredRoomTypeId,
             List<@Positive Long> priorityCategoryIds,
-            @Size(max = 500) String note) {}
+            @Size(max = 500) String note,
+            @Positive Long studentId) {}
 
     public record Priority(Long categoryId, String name, Integer weight, Boolean verified) {}
 

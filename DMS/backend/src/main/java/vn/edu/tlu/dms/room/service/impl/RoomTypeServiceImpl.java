@@ -2,6 +2,11 @@ package vn.edu.tlu.dms.room.service.impl;
 
 import org.springframework.stereotype.Service;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -39,12 +44,17 @@ public class RoomTypeServiceImpl
 
     @Override
     protected void checkRead() {
-        guard.requireRole("STAFF", "STUDENT");
+        guard.requirePermission(Permission.ROOM_TYPE_READ);
     }
 
     @Override
     protected void checkWrite() {
-        guard.requireRole("STAFF");
+        guard.requireRole(Role.STAFF);
+    }
+
+    @Override
+    protected void checkPermission(String action) {
+        guard.requirePermission(Resource.ROOM_TYPE + DmsConstants.PERMISSION_SEPARATOR + action);
     }
 
     @Override
@@ -68,7 +78,7 @@ public class RoomTypeServiceImpl
                     && !input.bedCount().equals(entity.getBedCount())
                     && rooms.exists((r, q, b) -> b.equal(r.get("roomTypeId"), entity.getId()))) {
                 // Phòng đã tạo giữ số giường cũ; đổi sức chứa của loại phòng đang dùng làm lệch.
-                throw BusinessException.conflict("RESOURCE_IN_USE");
+                throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
             }
             entity.setBedCount(input.bedCount());
         }

@@ -6,6 +6,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.billing.api.UtilityReadingController.Input;
 import vn.edu.tlu.dms.billing.service.UtilityReadingService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -18,6 +23,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 @Service
 @Transactional(readOnly = true)
@@ -52,10 +58,11 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
 
     @Override
     public Object searchReadings(int page, int size, String q, LocalDate month) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.UTILITY_READING_READ);
+        guard.requireRole(Role.STAFF);
         var args = new ArrayList<Object>();
-        String scope = current.get().crossUnitAccess() ? "TRUE" : "bd.management_unit_id=?";
-        if (!current.get().crossUnitAccess()) {
+        String scope = current.get().canReadAllUnits() ? "TRUE" : "bd.management_unit_id=?";
+        if (!current.get().canReadAllUnits()) {
             args.add(current.get().unitId());
         }
         args.add(LikePattern.contains(q));
@@ -76,7 +83,8 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
 
     @Override
     public Map<String, Object> getReading(Long id) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.UTILITY_READING_READ);
+        guard.requireRole(Role.STAFF);
         var row =
                 queries.one(
                         "SELECT ur.*,EXISTS(SELECT 1 FROM invoice_item ii WHERE"
@@ -88,10 +96,19 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
         row.put(
                 "allowedActions",
                 !Boolean.TRUE.equals(row.get("invoiced"))
-                                && rooms.getRoomLocation(roomId)
-                                        .unitId()
-                                        .equals(current.get().unitId())
-                        ? List.of("edit", "delete")
+                                && (current.get().isAdmin()
+                                        || rooms.getRoomLocation(roomId)
+                                                .unitId()
+                                                .equals(current.get().unitId()))
+                        ? Stream.of(BusinessAction.EDIT, BusinessAction.DELETE)
+                                .filter(
+                                        action ->
+                                                guard.hasPermission(
+                                                        action.equals(BusinessAction.EDIT)
+                                                                ? Permission.UTILITY_READING_UPDATE
+                                                                : Permission
+                                                                        .UTILITY_READING_DELETE))
+                                .toList()
                         : List.of());
         return row;
     }
@@ -99,7 +116,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
     private void requireEditable(Map<String, Object> row) {
         guard.requireUnit(rooms.getRoomLocation(((Number) row.get("roomId")).longValue()).unitId());
         if (Boolean.TRUE.equals(row.get("invoiced"))) {
-            throw BusinessException.conflict("READING_LOCKED");
+            throw BusinessException.conflict(ErrorCode.READING_LOCKED);
         }
         requireNoFollowingMonth(row.get("roomId"), row.get("meterType"), row.get("billingMonth"));
     }
@@ -114,14 +131,16 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
                         roomId,
                         meterType,
                         billingMonth))) {
-            throw BusinessException.conflict("READING_HAS_FOLLOWING_MONTH");
+            throw BusinessException.conflict(ErrorCode.READING_HAS_FOLLOWING_MONTH);
         }
     }
 
     @Transactional
     @Override
     public Object saveReading(Long id, Input input) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(
+                id == null ? Permission.UTILITY_READING_CREATE : Permission.UTILITY_READING_UPDATE);
+        guard.requireRole(Role.STAFF);
         guard.requireUnit(rooms.getRoomLocation(input.roomId()).unitId());
         jdbc.queryForObject(
                 "SELECT id FROM room WHERE id=? FOR UPDATE", Long.class, input.roomId());
@@ -170,7 +189,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
                         || input.endReading() < input.newMeterStart()
                         || replacement == null
                         || replacement.isBlank()) {
-            throw BusinessException.conflict("READING_INVALID");
+            throw BusinessException.conflict(ErrorCode.READING_INVALID);
         }
         if (id == null) {
             id =
@@ -204,7 +223,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
         var after = getReading(id);
         audit.record(
                 current.get().id(),
-                before == null ? "READING_CREATE" : "READING_UPDATE",
+                before == null ? AuditAction.READING_CREATE : AuditAction.READING_UPDATE,
                 "UTILITY_READING",
                 id,
                 before,
@@ -216,11 +235,19 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
     @Transactional
     @Override
     public void deleteUnusedReading(Long id) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.UTILITY_READING_DELETE);
+        guard.requireRole(Role.STAFF);
         jdbc.queryForObject("SELECT id FROM utility_reading WHERE id=? FOR UPDATE", Long.class, id);
         var row = getReading(id);
         requireEditable(row);
         jdbc.update("DELETE FROM utility_reading WHERE id=?", id);
-        audit.record(current.get().id(), "READING_DELETE", "UTILITY_READING", id, row, null, null);
+        audit.record(
+                current.get().id(),
+                AuditAction.READING_DELETE,
+                "UTILITY_READING",
+                id,
+                row,
+                null,
+                null);
     }
 }

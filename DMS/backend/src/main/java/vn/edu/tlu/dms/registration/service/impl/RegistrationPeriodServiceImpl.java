@@ -9,6 +9,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.SemesterType;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -80,14 +85,15 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
      */
     @Override()
     public List<Response> getRegistrationPeriods(Long semesterId, String kind, Boolean open) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.REGISTRATION_PERIOD_READ);
+        guard.requireRole(Role.STAFF);
         var actor = current.get();
         OffsetDateTime now = OffsetDateTime.now();
         return periods
                 .findAll(
                         (r, q, b) -> {
                             var filters = new ArrayList<Predicate>();
-                            if (!actor.crossUnitAccess()) {
+                            if (!actor.canReadAllUnits()) {
                                 var sub = q.subquery(Long.class);
                                 var unit = sub.from(RegistrationPeriodUnit.class);
                                 sub.select(unit.get("periodId"))
@@ -120,7 +126,8 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
 
     @Override()
     public Response getRegistrationPeriodById(Long id) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.REGISTRATION_PERIOD_READ);
+        guard.requireRole(Role.STAFF);
         var period = periods.findById(id).orElseThrow(BusinessException::notFound);
         checkPeriodScope(id);
         return toPeriodResponse(period);
@@ -130,7 +137,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     @Transactional
     @Override()
     public Response createRegistrationPeriod(Input input) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.REGISTRATION_PERIOD_CREATE);
         var period = new RegistrationPeriod();
         period.setCreatedBy(current.get().id());
         applyPeriodInput(period, input, true);
@@ -153,14 +160,13 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     @Transactional
     @Override()
     public Response updateRegistrationPeriod(Long id, Input input) {
-        guard.requireRole("STAFF");
-        checkPeriodScope(id);
+        guard.requirePermission(Permission.REGISTRATION_PERIOD_UPDATE);
         jdbc.query(
                 "SELECT id FROM registration_period WHERE id=? FOR UPDATE",
                 (r, i) -> r.getLong(1),
                 id);
         var period = periods.findById(id).orElseThrow(BusinessException::notFound);
-        requireWritablePeriodUnits(id);
+        checkPeriodWriteScope(id);
         if (!period.getOpenAt().isAfter(OffsetDateTime.now())) {
             if (input.semesterId() != null
                     || input.kind() != null
@@ -168,7 +174,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                     || input.openAt() != null
                     || input.unitIds() != null
                     || input.quotas() != null) {
-                throw BusinessException.conflict("INVALID_STATE_TRANSITION");
+                throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
             }
             if (input.closeAt() == null || !input.closeAt().isAfter(period.getCloseAt())) {
                 throw BusinessException.invalid("closeAt", "Chỉ được gia hạn ngày đóng");
@@ -185,19 +191,18 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     @Transactional
     @Override()
     public void deleteUnusedPeriod(Long id) {
-        guard.requireRole("STAFF");
-        checkPeriodScope(id);
+        guard.requirePermission(Permission.REGISTRATION_PERIOD_DELETE);
         var period = periods.findById(id).orElseThrow(BusinessException::notFound);
         jdbc.queryForObject(
                 "SELECT id FROM registration_period WHERE id=? FOR UPDATE", Long.class, id);
-        requireWritablePeriodUnits(id);
+        checkPeriodWriteScope(id);
         if (!period.getOpenAt().isAfter(OffsetDateTime.now())
                 || Boolean.TRUE.equals(
                         jdbc.queryForObject(
                                 "SELECT EXISTS(SELECT 1 FROM room_application WHERE period_id=?)",
                                 Boolean.class,
                                 id))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
         quotas.deleteAll(quotas.findAll((r, q, b) -> b.equal(r.get("periodId"), id)));
         quotas.flush();
@@ -209,7 +214,8 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
 
     @Override()
     public List<Response> getOpenPeriodsForStudent() {
-        guard.requireRole("STUDENT");
+        guard.requirePermission(Permission.REGISTRATION_PERIOD_READ);
+        guard.requireRole(Role.STUDENT);
         var now = OffsetDateTime.now();
         return periods
                 .findAll(
@@ -254,7 +260,8 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
             throw BusinessException.invalid("closeAt", "Ngày đóng phải sau ngày mở");
         }
         var semester = rooms.getSemesterReference(p.getSemesterId());
-        if (p.getKind().equals("SUMMER") && !semester.type().equals("SUMMER")) {
+        if (p.getKind().equals(RegistrationKind.SUMMER)
+                && !semester.type().equals(SemesterType.SUMMER)) {
             throw BusinessException.invalid("semesterId", "Đợt hè phải dùng học kỳ hè");
         }
     }
@@ -268,8 +275,8 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         for (Long unitId : chosenUnits) {
             accounts.requireUnit(unitId);
             var actor = current.get();
-            if (!actor.crossUnitAccess() && !unitId.equals(actor.unitId())) {
-                throw new BusinessException("FORBIDDEN", 403);
+            if (!actor.isAdmin() && !actor.crossUnitAccess() && !unitId.equals(actor.unitId())) {
+                throw BusinessException.forbidden();
             }
         }
         String kind = periods.findById(id).orElseThrow(BusinessException::notFound).getKind();
@@ -279,7 +286,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                                 .map(r -> new Quota(r.getBuildingId(), r.getQuota()))
                                 .toList()
                         : input.quotas();
-        if (kind.equals("SUMMER") && !chosenQuotas.isEmpty()) {
+        if (kind.equals(RegistrationKind.SUMMER) && !chosenQuotas.isEmpty()) {
             throw BusinessException.invalid("quotas", "Đợt hè không có chỉ tiêu");
         }
         Set<Long> seen = new HashSet<>();
@@ -322,21 +329,21 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                 .toList();
     }
 
-    /**
-     * Ghi (sửa/xóa) cần đúng đơn vị của mình nằm trong đợt; Staff thường không được ghi đè đợt dùng
-     * chung với đơn vị khác. Đọc dữ liệu sau khi đã khóa bản ghi đợt.
-     */
-    private void requireWritablePeriodUnits(Long id) {
-        var actor = current.get();
-        var unitIds = periodUnitIds(id);
-        if (!unitIds.contains(actor.unitId()) || (!actor.crossUnitAccess() && unitIds.size() > 1)) {
+    private void checkPeriodScope(Long id) {
+        if (!current.get().canReadAllUnits()
+                && !periodUnitIds(id).contains(current.get().unitId())) {
             throw BusinessException.notFound();
         }
     }
 
-    private void checkPeriodScope(Long id) {
-        if (!current.get().crossUnitAccess()
-                && !periodUnitIds(id).contains(current.get().unitId())) {
+    /** ADMIN ghi mọi đơn vị; cán bộ tổng hợp vẫn phải có đơn vị của mình trong đợt cần sửa. */
+    private void checkPeriodWriteScope(Long id) {
+        var actor = current.get();
+        if (actor.isAdmin()) {
+            return;
+        }
+        var unitIds = periodUnitIds(id);
+        if (!unitIds.contains(actor.unitId()) || (!actor.crossUnitAccess() && unitIds.size() > 1)) {
             throw BusinessException.notFound();
         }
     }

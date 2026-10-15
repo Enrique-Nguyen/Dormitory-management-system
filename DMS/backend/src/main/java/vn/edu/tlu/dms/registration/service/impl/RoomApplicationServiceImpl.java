@@ -2,11 +2,18 @@ package vn.edu.tlu.dms.registration.service.impl;
 
 import jakarta.persistence.criteria.Predicate;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.contract.service.ContractService;
 import vn.edu.tlu.dms.common.dto.PageResponse;
@@ -112,7 +119,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
             List<String> statuses,
             boolean mine,
             String keyword) {
-        guard.requireRole(mine ? new String[] {"STUDENT"} : new String[] {"STAFF"});
+        guard.requirePermission(Permission.ROOM_APPLICATION_READ);
+        guard.requireRole(mine ? new String[] {Role.STUDENT} : new String[] {Role.STAFF});
         var actor = current.get();
         var pageable =
                 PageQuery.of(
@@ -141,7 +149,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                                     }
                                     if (mine) {
                                         filters.add(b.equal(r.get("studentId"), actor.id()));
-                                    } else if (!actor.crossUnitAccess()) {
+                                    } else if (!actor.canReadAllUnits()) {
                                         filters.add(
                                                 b.equal(r.get("preferredUnitId"), actor.unitId()));
                                     }
@@ -159,47 +167,55 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
 
     @Override()
     public Response getApplicationById(Long id) {
+        guard.requirePermission(Permission.ROOM_APPLICATION_READ);
         var a = loadAccessibleApplication(id, false);
         return toApplicationResponse(a, true);
     }
 
     /**
-     * Sinh viên lấy từ phiên, không nhận studentId/status/priorityScore từ request để tránh giả
-     * mạo.
+     * Sinh viên tạo đơn cho chính mình; ADMIN phải chọn sinh viên rõ ràng. Trạng thái và điểm ưu
+     * tiên luôn do hệ thống xác định, lịch sử ghi đúng tài khoản thao tác.
      */
     @Transactional
     @Override()
     public Response createApplication(Input input) {
-        guard.requireRole("STUDENT");
+        guard.requirePermission(Permission.ROOM_APPLICATION_CREATE);
+        guard.requireRole(Role.STUDENT);
         if (input.periodId() == null || input.preferredUnitId() == null) {
             throw BusinessException.invalid("periodId", "Thiếu đợt hoặc đơn vị nguyện vọng");
         }
-        rooms.lockStudentProfile(current.get().id());
-        if (rooms.hasPendingOrActiveContract(current.get().id())) {
-            throw BusinessException.conflict("CONTRACT_EXISTS");
+        Long studentId = resolveApplicationStudent(input.studentId());
+        rooms.lockStudentProfile(studentId);
+        if (rooms.hasPendingOrActiveContract(studentId)) {
+            throw BusinessException.conflict(ErrorCode.CONTRACT_EXISTS);
         }
         var a = new RoomApplication();
-        a.setStudentId(current.get().id());
+        a.setStudentId(studentId);
         a.setPeriodId(input.periodId());
         a.setPreferredUnitId(input.preferredUnitId());
         a.setPreferredRoomTypeId(input.preferredRoomTypeId());
         a.setNote(input.note());
-        a.setStatus("DRAFT");
+        a.setStatus(ApplicationStatus.DRAFT);
         a.setPriorityScore(0);
         a.setCreatedAt(OffsetDateTime.now());
         validateApplicationPeriod(a);
         applications.saveAndFlush(a);
         replaceApplicationPriorities(a.getId(), input.priorityCategoryIds());
-        history.record("APPLICATION", a.getId(), null, "DRAFT", current.get().id(), null);
+        history.record(
+                "APPLICATION", a.getId(), null, ApplicationStatus.DRAFT, current.get().id(), null);
         return toApplicationResponse(a, true);
     }
 
     @Transactional
     @Override()
     public Response updateDraftApplication(Long id, Input input) {
-        guard.requireRole("STUDENT");
+        guard.requirePermission(Permission.ROOM_APPLICATION_UPDATE);
+        guard.requireRole(Role.STUDENT);
         var a = loadAccessibleApplication(id, true);
-        RoomApplicationPolicy.requireAction(a, current.get(), "edit", false);
+        RoomApplicationPolicy.requireAction(a, current.get(), BusinessAction.EDIT, false);
+        if (input.studentId() != null && !input.studentId().equals(a.getStudentId())) {
+            throw BusinessException.invalid("studentId", "Không đổi sinh viên của đơn đã tạo");
+        }
         if (input.periodId() != null && !input.periodId().equals(a.getPeriodId())) {
             throw BusinessException.invalid("periodId", "Không đổi đợt của đơn đã tạo");
         }
@@ -224,17 +240,16 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
     @Transactional
     @Override()
     public Response performApplicationAction(Long id, String action, String reason) {
+        guard.requirePermission(
+                BusinessAction.CANCEL.equals(action)
+                        ? Permission.ROOM_APPLICATION_DELETE
+                        : Permission.ROOM_APPLICATION_UPDATE);
         var a = loadAccessibleApplication(id, true);
-        boolean liveContract = hasLiveContract(a);
-        if (action.equals("cancel") && liveContract) {
-            // Hợp đồng PENDING/ACTIVE sinh từ đơn này phải được xử lý trước, tránh hợp đồng mồ côi.
-            throw BusinessException.conflict("APPLICATION_HAS_CONTRACT");
-        }
-        RoomApplicationPolicy.requireAction(a, current.get(), action, liveContract);
-        if (action.equals("submit")) {
+        RoomApplicationPolicy.requireAction(a, current.get(), action, hasLiveContract(a));
+        if (action.equals(BusinessAction.SUBMIT)) {
             validateApplicationPeriod(a);
             if (rooms.hasPendingOrActiveContract(a.getStudentId())) {
-                throw BusinessException.conflict("CONTRACT_EXISTS");
+                throw BusinessException.conflict(ErrorCode.CONTRACT_EXISTS);
             }
             a.setPriorityScore(
                     priorities.findAll((r, q, b) -> b.equal(r.get("applicationId"), id)).stream()
@@ -248,16 +263,17 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                             .sum());
             a.setSubmittedAt(OffsetDateTime.now());
         }
-        if (action.equals("reject") && (reason == null || reason.trim().length() < 5)) {
+        if (action.equals(BusinessAction.REJECT)
+                && (reason == null || reason.trim().length() < 5)) {
             throw BusinessException.invalid("reason", "Cần lý do từ chối");
         }
         String before = a.getStatus();
         a.setStatus(
                 switch (action) {
-                    case "submit" -> "SUBMITTED";
-                    case "approve" -> "APPROVED";
-                    case "reject" -> "REJECTED";
-                    case "cancel" -> "CANCELLED";
+                    case BusinessAction.SUBMIT -> ApplicationStatus.SUBMITTED;
+                    case BusinessAction.APPROVE -> ApplicationStatus.APPROVED;
+                    case BusinessAction.REJECT -> ApplicationStatus.REJECTED;
+                    case BusinessAction.CANCEL -> ApplicationStatus.CANCELLED;
                     default -> throw BusinessException.invalid("action", "Hành động không hỗ trợ");
                 });
         a.setStatusReason(reason);
@@ -267,11 +283,11 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
     }
 
     private boolean hasLiveContract(RoomApplication a) {
-        return a.getStatus().equals("APPROVED") && contracts.hasLiveContractForApplication(a.getId());
+        return a.getStatus().equals(ApplicationStatus.APPROVED) && contracts.hasLiveContractForApplication(a.getId());
     }
 
     private RoomApplication loadAccessibleApplication(Long id, boolean writing) {
-        guard.requireRole("STUDENT", "STAFF");
+        guard.requireRole(Role.STUDENT, Role.STAFF);
         if (writing) {
             jdbc.query(
                     "SELECT id FROM room_application WHERE id=? FOR UPDATE",
@@ -280,10 +296,10 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         }
         var a = applications.findById(id).orElseThrow(BusinessException::notFound);
         var actor = current.get();
-        if (actor.is("STUDENT") && !actor.id().equals(a.getStudentId())) {
+        if (actor.is(Role.STUDENT) && !actor.id().equals(a.getStudentId())) {
             throw BusinessException.notFound();
         }
-        if (actor.is("STAFF")) {
+        if (actor.is(Role.STAFF)) {
             if (writing) {
                 guard.requireUnit(a.getPreferredUnitId());
             } else {
@@ -293,17 +309,36 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         return a;
     }
 
+    /** Không dùng ID ADMIN làm sinh viên và không cho sinh viên gửi ID của người khác. */
+    private Long resolveApplicationStudent(Long requestedStudentId) {
+        var actor = current.get();
+        if (!actor.isAdmin()) {
+            if (requestedStudentId != null && !requestedStudentId.equals(actor.id())) {
+                throw BusinessException.forbidden();
+            }
+            return actor.id();
+        }
+        if (requestedStudentId == null) {
+            throw BusinessException.invalid("studentId", "ADMIN cần chọn sinh viên cần tạo đơn");
+        }
+        var student = accounts.user(requestedStudentId);
+        if (!Role.STUDENT.equals(student.role())) {
+            throw BusinessException.invalid("studentId", "Tài khoản được chọn phải là sinh viên");
+        }
+        return student.id();
+    }
+
     private void validateApplicationPeriod(RoomApplication a) {
         var p = periods.findById(a.getPeriodId()).orElseThrow(BusinessException::notFound);
         var now = OffsetDateTime.now();
-        if (!p.getKind().equals("REGULAR")
+        if (!p.getKind().equals(RegistrationKind.REGULAR)
                 || now.isBefore(p.getOpenAt())
                 || !now.isBefore(p.getCloseAt())) {
-            throw BusinessException.conflict("PERIOD_NOT_OPEN");
+            throw BusinessException.conflict(ErrorCode.PERIOD_NOT_OPEN);
         }
         if (!periodUnits.existsById(
                 new RegistrationPeriodUnitId(p.getId(), a.getPreferredUnitId()))) {
-            throw new BusinessException("UNIT_NOT_IN_PERIOD", 400);
+            throw new BusinessException(ErrorCode.UNIT_NOT_IN_PERIOD, HttpStatus.BAD_REQUEST);
         }
         if (a.getPreferredRoomTypeId() != null) {
             rooms.requireActiveRoomType(a.getPreferredRoomTypeId());

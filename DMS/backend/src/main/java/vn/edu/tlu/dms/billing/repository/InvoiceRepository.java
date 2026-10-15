@@ -48,12 +48,24 @@ public interface InvoiceRepository
                         AND rp.semester_id = i.semester_id)))
             """;
 
+    /** Admin đọc toàn bộ; Student và Staff bị giới hạn theo phạm vi ở trên. */
     String ACCESS_SCOPE =
-            "((:role = 'STUDENT' AND ("
+            "(:role = 'ADMIN' OR (:role = 'STUDENT' AND ("
                     + STUDENT_SCOPE
                     + ")) OR (:role = 'STAFF' AND (:crossUnit = true OR "
                     + STAFF_UNIT_SCOPE
                     + ")))";
+
+    /** Cổng sinh viên ("mine") chỉ hiện hóa đơn của chính mình dù tài khoản có quyền rộng hơn. */
+    String MINE_FILTER =
+            """
+            AND (:mine = false OR (i.type = 'ROOM_FEE' AND i.student_id = :userId)
+                OR (i.type = 'UTILITY' AND EXISTS (
+                    SELECT 1 FROM room_assignment_history own_stay JOIN bed own_bed ON own_bed.id = own_stay.bed_id
+                    WHERE own_stay.student_id = :userId AND own_bed.room_id = i.room_id AND own_stay.kind = 'STAY'
+                        AND own_stay.stay_started_at < i.billing_month + INTERVAL '1 month'
+                        AND (own_stay.ended_at IS NULL OR own_stay.ended_at > i.billing_month))))
+            """;
 
     String SEARCH_FILTER =
             """
@@ -66,15 +78,21 @@ public interface InvoiceRepository
             value =
                     "SELECT i.* FROM invoice i WHERE "
                             + ACCESS_SCOPE
+                            + MINE_FILTER
                             + SEARCH_FILTER
                             + " ORDER BY i.issued_at DESC, i.id DESC",
-            countQuery = "SELECT count(*) FROM invoice i WHERE " + ACCESS_SCOPE + SEARCH_FILTER,
+            countQuery =
+                    "SELECT count(*) FROM invoice i WHERE "
+                            + ACCESS_SCOPE
+                            + MINE_FILTER
+                            + SEARCH_FILTER,
             nativeQuery = true)
     Page<Invoice> searchAccessibleInvoices(
             String role,
             Long userId,
             Long unitId,
             boolean crossUnit,
+            boolean mine,
             String type,
             String status,
             String q,

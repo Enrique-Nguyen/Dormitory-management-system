@@ -1,8 +1,12 @@
 package vn.edu.tlu.dms.common.service.impl;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.repository.SystemConfigRepository;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -38,7 +42,7 @@ public class ConfigServiceImpl implements ConfigService {
 
     @Override()
     public List<ConfigValue> list() {
-        guard.requireRole("ADMIN");
+        guard.requirePermission(Permission.CONFIG_READ);
         return repository.findAll().stream()
                 .map(r -> new ConfigValue(r.getKey(), r.getValue(), r.getDescription()))
                 .toList();
@@ -53,21 +57,28 @@ public class ConfigServiceImpl implements ConfigService {
     @Transactional
     @Override()
     public ConfigValue update(String key, String value) {
-        guard.requireRole("ADMIN");
+        guard.requirePermission(Permission.CONFIG_UPDATE);
         var row = repository.findById(key).orElseThrow(BusinessException::notFound);
         try {
             if (value == null || Integer.parseInt(value) < 1 || Integer.parseInt(value) > 3650) {
                 throw new NumberFormatException();
             }
         } catch (NumberFormatException e) {
-            throw new BusinessException("CONFIG_VALUE_INVALID", 400);
+            throw new BusinessException(ErrorCode.CONFIG_VALUE_INVALID, HttpStatus.BAD_REQUEST);
         }
         String before = row.getValue();
         row.setValue(value);
         row.setUpdatedBy(currentUser.get().id());
         row.setUpdatedAt(OffsetDateTime.now());
         repository.saveAndFlush(row);
-        audit.record(currentUser.get().id(), "CONFIG_UPDATE", "CONFIG", null, before, value, null);
+        audit.record(
+                currentUser.get().id(),
+                AuditAction.CONFIG_UPDATE,
+                "CONFIG",
+                null,
+                before,
+                value,
+                null);
         return new ConfigValue(key, row.getValue(), row.getDescription());
     }
 }

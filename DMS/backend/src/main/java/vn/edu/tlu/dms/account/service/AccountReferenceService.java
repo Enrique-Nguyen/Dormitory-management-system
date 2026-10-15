@@ -1,6 +1,5 @@
 package vn.edu.tlu.dms.account.service;
 
-
 public interface AccountReferenceService {
 
     /** Kiểm tra đơn vị quản lý tồn tại; báo NOT_FOUND nếu ID không hợp lệ. */

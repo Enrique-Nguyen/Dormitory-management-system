@@ -1,25 +1,33 @@
 package vn.edu.tlu.dms.account.service.impl;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.api.AccountDtos.Me;
 import vn.edu.tlu.dms.account.api.AccountDtos.Student;
+import vn.edu.tlu.dms.account.api.AccountDtos.TemporaryPassword;
 import vn.edu.tlu.dms.account.api.AccountDtos.UnitRef;
 import vn.edu.tlu.dms.account.domain.AppUser;
 import vn.edu.tlu.dms.account.repository.AppUserRepository;
 import vn.edu.tlu.dms.account.repository.ManagementUnitRepository;
 import vn.edu.tlu.dms.account.repository.StudentProfileRepository;
-import vn.edu.tlu.dms.account.security.DmsPrincipal;
 import vn.edu.tlu.dms.account.service.AuthService;
+import vn.edu.tlu.dms.account.service.IdentityAccountService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
+import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.ResidencyLookup;
+import vn.edu.tlu.dms.common.service.RolePermissionService;
 
-import java.time.OffsetDateTime;
-import java.util.Map;
+import java.security.SecureRandom;
+import java.util.Base64;
 
+/** Hồ sơ DMS và thu hồi token; mật khẩu đăng nhập do Keycloak quản lý. */
 @Service
 public class AuthServiceImpl implements AuthService {
 
@@ -29,84 +37,50 @@ public class AuthServiceImpl implements AuthService {
 
     private final StudentProfileRepository students;
 
-    private final PasswordEncoder passwords;
-
     private final CurrentUser currentUser;
 
     private final ResidencyLookup residency;
 
-    /** Hash cùng độ khó với hash thật, dùng để cân bằng thời gian khi tên đăng nhập không tồn tại. */
-    private final String absentUserHash;
+    private final IdentityAccountService identities;
+
+    private final AuditService audit;
+
+    private final EntityManager entityManager;
+
+    private final RolePermissionService rolePermissions;
+
+    private final SecureRandom random = new SecureRandom();
 
     public AuthServiceImpl(
             AppUserRepository users,
             ManagementUnitRepository units,
             StudentProfileRepository students,
-            PasswordEncoder passwords,
             CurrentUser currentUser,
-            ResidencyLookup residency) {
+            ResidencyLookup residency,
+            IdentityAccountService identities,
+            AuditService audit,
+            EntityManager entityManager,
+            RolePermissionService rolePermissions) {
         this.users = users;
         this.units = units;
         this.students = students;
-        this.passwords = passwords;
         this.currentUser = currentUser;
         this.residency = residency;
-        this.absentUserHash = passwords.encode("absent-user-" + System.nanoTime());
+        this.identities = identities;
+        this.audit = audit;
+        this.entityManager = entityManager;
+        this.rolePermissions = rolePermissions;
     }
 
-    /**
-     * Khóa tài khoản khi kiểm tra mật khẩu để không mất số lần sai khi có request đồng thời. Không
-     * rollback BusinessException: đăng nhập thất bại vẫn phải lưu bộ đếm và hạn khóa. Mật khẩu và
-     * hash không được ghi log hoặc đưa vào response.
-     */
-    @Transactional(noRollbackFor = BusinessException.class)
-    @Override()
-    public DmsPrincipal authenticate(String username, String password) {
-        var found = users.lockByUsername(username);
-        if (found.isEmpty()) {
-            // Vẫn băm một lần để thời gian phản hồi không cho biết tên đăng nhập có tồn tại hay không.
-            passwords.matches(password, absentUserHash);
-            throw new BusinessException("INVALID_CREDENTIALS", 401);
-        }
-        var user = found.get();
-        if (Boolean.TRUE.equals(user.getLocked())) {
-            throw new BusinessException("ACCOUNT_LOCKED", 403);
-        }
-        OffsetDateTime now = OffsetDateTime.now();
-        if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(now)) {
-            throw new BusinessException(
-                    "ACCOUNT_TEMP_LOCKED", 403, Map.of("lockedUntil", user.getLockedUntil()));
-        }
-        if (user.getLockedUntil() != null) {
-            user.setFailedLoginCount(0);
-            user.setLockedUntil(null);
-        }
-        if (!passwords.matches(password, user.getPasswordHash())) {
-            int failures = user.getFailedLoginCount() + 1;
-            user.setFailedLoginCount(failures);
-            if (failures >= 5) {
-                user.setLockedUntil(now.plusMinutes(15));
-            }
-            users.saveAndFlush(user);
-            if (failures >= 5) {
-                throw new BusinessException(
-                        "ACCOUNT_TEMP_LOCKED", 403, Map.of("lockedUntil", user.getLockedUntil()));
-            }
-            throw new BusinessException(
-                    "INVALID_CREDENTIALS",
-                    401,
-                    failures >= 3 ? Map.of("remainingAttempts", 5 - failures) : Map.of());
-        }
-        user.setFailedLoginCount(0);
-        user.setLockedUntil(null);
-        users.save(user);
-        return new DmsPrincipal(user.getId(), user.getUsername());
-    }
-
-    @Transactional(readOnly = true)
+    @Transactional
     @Override()
     public Me getCurrentUser() {
         AppUser u = users.findById(currentUser.get().id()).orElseThrow(BusinessException::notFound);
+        if (u.getKeycloakUserId() != null && Boolean.TRUE.equals(u.getMustChangePassword())) {
+            // Token được cấp sau khi người dùng hoàn tất đổi mật khẩu tại Keycloak.
+            u.setMustChangePassword(false);
+            users.saveAndFlush(u);
+        }
         UnitRef unit =
                 u.getManagementUnitId() == null
                         ? null
@@ -133,27 +107,52 @@ public class AuthServiceImpl implements AuthService {
                 unit,
                 u.getCrossUnitAccess(),
                 u.getMustChangePassword(),
-                student);
+                student,
+                rolePermissions.getGrantedPermissions(u.getRole()));
     }
 
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public AppUser lockAccount(Long id) {
+        var user = users.lockById(id).orElseThrow(BusinessException::notFound);
+        // Khóa rồi refresh để không dùng dữ liệu cũ trong persistence context.
+        entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
+        return user;
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void revokeSessions(AppUser user) {
+        user.setSecurityVersion(Math.incrementExact(user.getSecurityVersion()));
+        identities.synchronizeAccount(user);
+        identities.revokeIdentitySessions(user);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public TemporaryPassword resetPassword(AppUser user, Long actorId) {
+        byte[] bytes = new byte[18];
+        random.nextBytes(bytes);
+        String temporary = "Kt7" + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        user.setPasswordHash(null);
+        user.setMustChangePassword(true);
+        user.setFailedLoginCount(0);
+        user.setLockedUntil(null);
+        revokeSessions(user);
+        users.saveAndFlush(user);
+        identities.resetAccountPassword(user, temporary);
+        identities.clearTemporaryLoginFailures(user);
+        audit.record(
+                actorId, AuditAction.USER_RESET_PASSWORD, "USER", user.getId(), null, null, null);
+        return new TemporaryPassword(user.getId(), temporary);
+    }
+
+    @Override
     @Transactional
-    @Override()
-    public void changePassword(String current, String next) {
-        var u = users.lockById(currentUser.get().id()).orElseThrow(BusinessException::notFound);
-        if (!passwords.matches(current, u.getPasswordHash())) {
-            throw new BusinessException("WRONG_CURRENT_PASSWORD", 400);
-        }
-        if (next.length() < 8
-                || next.length() > 64
-                || !next.matches(".*[A-Za-z].*")
-                || !next.matches(".*[0-9].*")
-                || current.equals(next)) {
-            throw new BusinessException("PASSWORD_POLICY", 400);
-        }
-        u.setPasswordHash(passwords.encode(next));
-        u.setMustChangePassword(false);
-        users.saveAndFlush(u);
-        // Actor trong request đã nạp với cờ cũ; bỏ để các lần đọc sau thấy cờ mới.
-        currentUser.invalidate();
+    public void revokeCurrentIdentitySessions() {
+        var user = lockAccount(currentUser.get().id());
+        currentUser.get();
+        revokeSessions(user);
+        users.saveAndFlush(user);
     }
 }

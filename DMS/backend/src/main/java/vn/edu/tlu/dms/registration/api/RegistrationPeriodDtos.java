@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -19,7 +21,7 @@ public final class RegistrationPeriodDtos {
 
     public record Input(
             @Positive Long semesterId,
-            @Pattern(regexp = "REGULAR|SUMMER") String kind,
+            @Pattern(regexp = RegistrationKind.PATTERN) String kind,
             @Size(max = 100) String name,
             OffsetDateTime openAt,
             OffsetDateTime closeAt,

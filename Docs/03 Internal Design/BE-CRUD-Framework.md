@@ -33,7 +33,7 @@ Khóa phòng/giường không thay thế khóa của nghiệp vụ phân giườ
 
 ## Khung React
 
-`features/crud/resources.ts` khai báo endpoint, trường form, cột bảng, quyền và điều kiện trạng thái của từng màn. `CrudPage` dùng chung tìm kiếm, phân trang, thêm/sửa, xác nhận xóa/hủy và xem chi tiết. `features/crud/api.ts` gọi API và xử lý CSRF. Phân quyền ở UI chỉ điều khiển nút; backend luôn kiểm tra lại. Cấu hình màn và hướng dẫn chạy nằm ở [README frontend](../../DMS/frontend/README.md).
+`features/crud/resources.ts` khai báo endpoint, trường form, cột bảng, quyền và điều kiện trạng thái của từng màn. `CrudPage` dùng chung tìm kiếm, phân trang, thêm/sửa, xác nhận xóa/hủy và xem chi tiết. `features/crud/api.ts` gọi API qua client gửi Bearer JWT. Phân quyền ở UI chỉ điều khiển nút; backend luôn kiểm tra lại. Hướng dẫn chạy nằm ở [README chung](../../README.md).
 
 ## Trạng thái bàn giao
 

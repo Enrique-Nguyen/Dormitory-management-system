@@ -4,6 +4,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ConfigKey;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.StayRequestStatus;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -64,15 +71,15 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
         this.configs = configs;
     }
 
-    /** Phạm vi khung lấy từ đơn nguyện vọng, kể cả hợp đồng chưa phân giường. */
+    /** Phạm vi lấy từ đơn nguyện vọng; ADMIN quản lý mọi đơn vị nhưng vẫn giữ trạng thái hợp lệ. */
     private Map<String, Object> requireContract(Long id, boolean writing) {
-        guard.requireRole("STAFF", "STUDENT");
+        guard.requireRole(Role.STAFF, Role.STUDENT);
         var row =
                 queries.one(
                         "SELECT c.*,a.preferred_unit_id FROM dormitory_contract c JOIN"
                                 + " room_application a ON a.id=c.application_id WHERE c.id=?",
                         id);
-        if (current.get().is("STUDENT")) {
+        if (current.get().is(Role.STUDENT)) {
             if (!current.get().id().equals(row.get("studentId"))) {
                 throw BusinessException.notFound();
             }
@@ -87,13 +94,14 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
     @Transactional
     @Override
     public Object createPendingContract(Map<String, Object> input) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.CONTRACT_CREATE);
+        guard.requireRole(Role.STAFF);
         Long applicationId = number(input, "applicationId");
         var application =
                 queries.one("SELECT * FROM room_application WHERE id=? FOR UPDATE", applicationId);
         guard.requireUnit(((Number) application.get("preferredUnitId")).longValue());
-        if (!"APPROVED".equals(application.get("status"))) {
-            throw BusinessException.conflict("INVALID_STATE_TRANSITION");
+        if (!ApplicationStatus.APPROVED.equals(application.get("status"))) {
+            throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
         validateDates(input, null);
         String code =
@@ -110,20 +118,22 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                         "code",
                         code,
                         "status",
-                        "PENDING",
+                        ContractStatus.PENDING,
                         "activation_deadline",
                         OffsetDateTime.now()
-                                .plusDays(configs.positiveInt("contract.activation_days"))));
+                                .plusDays(
+                                        configs.positiveInt(ConfigKey.CONTRACT_ACTIVATION_DAYS))));
     }
 
     @Transactional
     @Override
     public Object updatePendingContract(Long id, Map<String, Object> input) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.CONTRACT_UPDATE);
+        guard.requireRole(Role.STAFF);
         jdbc.queryForObject(
                 "SELECT id FROM dormitory_contract WHERE id=? FOR UPDATE", Long.class, id);
         var row = requireContract(id, true);
-        requirePending(row);
+        requirePending(row, ContractStatus.PENDING);
         requireNoAssignment(id);
         validateDates(input, row);
         if (input.containsKey("applicationId")) {
@@ -135,10 +145,11 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
     @Transactional
     @Override
     public void deletePendingContract(Long id) {
-        guard.requireRole("STAFF");
+        guard.requirePermission(Permission.CONTRACT_DELETE);
+        guard.requireRole(Role.STAFF);
         jdbc.queryForObject(
                 "SELECT id FROM dormitory_contract WHERE id=? FOR UPDATE", Long.class, id);
-        requirePending(requireContract(id, true));
+        requirePending(requireContract(id, true), ContractStatus.PENDING);
         requireNoAssignment(id);
         if (Boolean.TRUE.equals(
                 jdbc.queryForObject(
@@ -146,7 +157,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                                 + " AND entity_id=?)",
                         Boolean.class,
                         id))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
         deleteRecord("dormitory_contract", id);
     }
@@ -159,7 +170,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                         Boolean.class,
                         id,
                         id))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
     }
 
@@ -183,13 +194,15 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
 
     @Override
     public Object searchStayRequests(boolean extension, int page, int size, String q) {
-        guard.requireRole("STUDENT", "STAFF");
+        guard.requirePermission(
+                extension ? Permission.CONTRACT_EXTENSION_READ : Permission.ROOM_TRANSFER_READ);
+        guard.requireRole(Role.STUDENT, Role.STAFF);
         var args = new ArrayList<Object>();
         String scope;
-        if (current.get().is("STUDENT")) {
+        if (current.get().is(Role.STUDENT)) {
             scope = "c.student_id=?";
             args.add(current.get().id());
-        } else if (current.get().crossUnitAccess()) {
+        } else if (current.get().canReadAllUnits()) {
             scope = "TRUE";
         } else {
             scope = "a.preferred_unit_id=?";
@@ -212,6 +225,8 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
 
     @Override
     public Object getStayRequest(boolean extension, Long id) {
+        guard.requirePermission(
+                extension ? Permission.CONTRACT_EXTENSION_READ : Permission.ROOM_TRANSFER_READ);
         var row = queries.one("SELECT * FROM " + table(extension) + " WHERE id=?", id);
         requireContract(((Number) row.get("contractId")).longValue(), false);
         return row;
@@ -220,10 +235,12 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
     @Transactional
     @Override
     public Object createStayRequest(boolean extension, Map<String, Object> input) {
-        guard.requireRole("STUDENT");
+        guard.requirePermission(
+                extension ? Permission.CONTRACT_EXTENSION_CREATE : Permission.ROOM_TRANSFER_CREATE);
+        guard.requireRole(Role.STUDENT);
         var c = requireContract(number(input, "contractId"), false);
-        if (!"ACTIVE".equals(c.get("status"))) {
-            throw BusinessException.conflict("INVALID_STATE_TRANSITION");
+        if (!ContractStatus.ACTIVE.equals(c.get("status"))) {
+            throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
         if (extension) {
             validateExtension(input, c.get("endDate"));
@@ -236,13 +253,19 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                         : Set.of("contractId", "reason"),
                 input,
                 extension
-                        ? Map.of("old_end_date", c.get("endDate"), "status", "PENDING")
-                        : Map.of("status", "PENDING"));
+                        ? Map.of(
+                                "old_end_date",
+                                c.get("endDate"),
+                                "status",
+                                StayRequestStatus.PENDING)
+                        : Map.of("status", StayRequestStatus.PENDING));
     }
 
     @Transactional
     @Override
     public Object updateStayRequest(boolean extension, Long id, Map<String, Object> input) {
+        guard.requirePermission(
+                extension ? Permission.CONTRACT_EXTENSION_UPDATE : Permission.ROOM_TRANSFER_UPDATE);
         var row = loadPendingRequest(extension, id);
         if (input.containsKey("contractId")) {
             throw BusinessException.invalid("contractId", "Không đổi hợp đồng");
@@ -256,15 +279,17 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
     @Transactional
     @Override
     public void deletePendingStayRequest(boolean extension, Long id) {
+        guard.requirePermission(
+                extension ? Permission.CONTRACT_EXTENSION_DELETE : Permission.ROOM_TRANSFER_DELETE);
         loadPendingRequest(extension, id);
         deleteRecord(table(extension), id);
     }
 
     private Map<String, Object> loadPendingRequest(boolean extension, Long id) {
-        guard.requireRole("STUDENT");
+        guard.requireRole(Role.STUDENT, Role.STAFF);
         var row = queries.one("SELECT * FROM " + table(extension) + " WHERE id=? FOR UPDATE", id);
-        requireContract(((Number) row.get("contractId")).longValue(), false);
-        requirePending(row);
+        requireContract(((Number) row.get("contractId")).longValue(), true);
+        requirePending(row, StayRequestStatus.PENDING);
         return row;
     }
 
@@ -283,9 +308,9 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
         return extension ? "contract_extension_request" : "room_transfer_request";
     }
 
-    private static void requirePending(Map<String, Object> row) {
-        if (!"PENDING".equals(row.get("status"))) {
-            throw BusinessException.conflict("RESOURCE_IN_USE");
+    private static void requirePending(Map<String, Object> row, String pendingStatus) {
+        if (!pendingStatus.equals(row.get("status"))) {
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
     }
 

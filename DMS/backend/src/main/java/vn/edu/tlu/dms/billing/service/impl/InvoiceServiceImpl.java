@@ -11,6 +11,10 @@ import vn.edu.tlu.dms.billing.domain.Invoice;
 import vn.edu.tlu.dms.billing.repository.InvoiceItemRepository;
 import vn.edu.tlu.dms.billing.repository.InvoiceRepository;
 import vn.edu.tlu.dms.billing.service.InvoiceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -68,7 +72,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     public PageResponse<InvoiceDtos.Response> searchInvoices(
             int page, int size, String type, String status, boolean mine, String q) {
-        scopeGuard.requireRole(mine ? new String[] {"STUDENT"} : new String[] {"STAFF"});
+        scopeGuard.requirePermission(Permission.INVOICE_READ);
+        scopeGuard.requireRole(mine ? new String[] {Role.STUDENT} : new String[] {Role.STAFF});
         var actor = currentUser.get();
         PageQuery.of(page, size, null, Set.of("id"), "id,desc");
         return PageResponse.from(
@@ -77,6 +82,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                                 actor.id(),
                                 actor.unitId(),
                                 actor.crossUnitAccess(),
+                                mine,
                                 type,
                                 status,
                                 LikePattern.contains(q.trim()),
@@ -86,7 +92,8 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     public InvoiceDtos.Response getInvoiceById(Long id) {
-        scopeGuard.requireRole("STUDENT", "STAFF");
+        scopeGuard.requirePermission(Permission.INVOICE_READ);
+        scopeGuard.requireRole(Role.STUDENT, Role.STAFF);
         return toInvoiceResponse(findAccessibleInvoice(id), true);
     }
 
@@ -97,18 +104,21 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Transactional
     @Override
     public InvoiceDtos.Response confirmInvoicePayment(Long id, InvoiceDtos.Payment input) {
-        scopeGuard.requireRole("STAFF");
+        scopeGuard.requirePermission(Permission.INVOICE_UPDATE);
+        scopeGuard.requireRole(Role.STAFF);
         jdbc.query(
                 "SELECT id FROM invoice WHERE id = ? FOR UPDATE",
                 (row, index) -> row.getLong(1),
                 id);
         Invoice invoice = findAccessibleInvoice(id);
-        // Quyền tổng hợp chỉ mở rộng quyền đọc; ghi cần đúng đơn vị của hóa đơn (kỳ/phòng của nó).
-        if (!invoices.isInStaffUnit(id, currentUser.get().unitId())) {
+        // Quyền tổng hợp chỉ mở rộng quyền đọc; Staff ghi cần đúng đơn vị của hóa đơn (kỳ/phòng của
+        // nó), còn Admin được ghi mọi đơn vị.
+        if (!currentUser.get().isAdmin()
+                && !invoices.isInStaffUnit(id, currentUser.get().unitId())) {
             throw BusinessException.notFound();
         }
-        if (!invoice.getStatus().equals("UNPAID")) {
-            throw BusinessException.conflict("INVOICE_ALREADY_PAID");
+        if (!invoice.getStatus().equals(InvoiceStatus.UNPAID)) {
+            throw BusinessException.conflict(ErrorCode.INVOICE_ALREADY_PAID);
         }
         if (input.payerUserId() != null) {
             accounts.user(input.payerUserId());
@@ -122,9 +132,15 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setPaymentMethod(input.paymentMethod());
         invoice.setPaidAt(OffsetDateTime.now());
         invoice.setConfirmedBy(currentUser.get().id());
-        invoice.setStatus("PAID");
+        invoice.setStatus(InvoiceStatus.PAID);
         invoices.saveAndFlush(invoice);
-        historyService.record("INVOICE", id, "UNPAID", "PAID", currentUser.get().id(), null);
+        historyService.record(
+                "INVOICE",
+                id,
+                InvoiceStatus.UNPAID,
+                InvoiceStatus.PAID,
+                currentUser.get().id(),
+                null);
         return toInvoiceResponse(invoice, true);
     }
 
@@ -155,12 +171,14 @@ public class InvoiceServiceImpl implements InvoiceService {
                                                         item.getNote()))
                                 .toList()
                         : null;
-        // Quyền tổng hợp chỉ mở rộng quyền đọc; quyền ghi cần đúng đơn vị của hóa đơn.
+        // ADMIN được ghi mọi đơn vị; STAFF tổng hợp chỉ mở rộng đọc, còn xác nhận tiền vẫn đúng đơn
+        // vị.
         List<String> actions = List.of();
         if (detail
-                && currentUser.get().is("STAFF")
-                && invoice.getStatus().equals("UNPAID")
-                && invoices.isInStaffUnit(invoice.getId(), currentUser.get().unitId())) {
+                && scopeGuard.hasPermission(Permission.INVOICE_UPDATE)
+                && invoice.getStatus().equals(InvoiceStatus.UNPAID)
+                && (currentUser.get().isAdmin()
+                        || invoices.isInStaffUnit(invoice.getId(), currentUser.get().unitId()))) {
             actions = List.of("confirm-payment");
         }
         return new InvoiceDtos.Response(

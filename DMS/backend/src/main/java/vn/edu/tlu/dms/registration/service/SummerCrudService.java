@@ -11,12 +11,12 @@ public interface SummerCrudService {
     /** Lấy chi tiết lựa chọn hè theo mã sau khi kiểm tra chủ sở hữu hoặc phạm vi của cán bộ. */
     Object getChoice(Long id);
 
-    /** Tạo lựa chọn hè đang chờ cho sinh viên đăng nhập; chỉ nhận các trường được cho phép. */
+    /** Tạo lựa chọn hè đang chờ cho hợp đồng của mình; ADMIN được tạo hộ ở mọi đơn vị. */
     Object createChoice(Map<String, Object> input);
 
-    /** Cập nhật lựa chọn hè còn đang chờ và thuộc sinh viên đăng nhập. */
+    /** Sửa lựa chọn hè còn đang chờ của mình; ADMIN được sửa hộ ở mọi đơn vị. */
     Object updateChoice(Long id, Map<String, Object> input);
 
-    /** Xóa lựa chọn hè còn đang chờ của sinh viên đăng nhập; chặn dữ liệu đã được xử lý. */
+    /** Xóa lựa chọn hè đang chờ của mình hoặc bởi ADMIN; chặn dữ liệu đã được xử lý. */
     void deleteChoice(Long id);
 }

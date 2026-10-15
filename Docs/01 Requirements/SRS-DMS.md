@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Phiên bản | **0.7** |
-| Ngày | 14/10/2026 |
+| Phiên bản | **0.11** |
+| Ngày | 15/10/2026 |
 | Học phần | Chuyên đề CNTT, lớp 65CNTT, Nhóm 3 |
 | Giảng viên | Hoàng Quốc Dũng |
 | Thành viên | Nguyễn Văn Séc, Nguyễn Phú Nguyên, Lê Đức Nguyên, Nguyễn Văn Quyền, Nguyễn Tiến Lộc |
@@ -21,7 +21,11 @@
 | 0.4 | 08/10/2026 | Nhóm 3 | Bù cọc chưa nộp được tất toán bằng số dư khi trả phòng, không ghi thành công nợ (tránh thu hai lần); công nợ sau trả phòng chỉ gồm phí phòng chưa đóng và số dư cọc âm. Mục 6.2 thêm quy ước `errorCode` và `allowedActions` |
 | 0.5 | 10/10/2026 | Nhóm 3 | Mục 5 đồng bộ với thiết kế CSDL v0.2 (`DB-Design-DMS.md`): tách hồ sơ sinh viên; thêm diện ưu tiên, đơn vị áp dụng của đợt, cấu hình, ảnh sự cố; lịch sử trạng thái dùng chung; mã hiển thị HD / TK / HP / DN; thông báo xem theo khoảng thời gian ở thực tế |
 | 0.6 | 10/10/2026 | Nhóm 3 | Đồng bộ với Đặc tả API v0.2: Staff tạo được ticket **của phòng** (ví dụ hư hỏng phát hiện khi trả phòng) và tự nghiệm thu ticket do mình tạo; phát hành điện nước **bỏ qua** phòng thiếu chỉ số thay vì khóa cả đợt (UC-21, 1a); trừ cọc chia đều cho **người Staff chọn** trong số người ở lúc tạo ticket (mặc định chọn cả phòng, FR-MNT-10, Q-15) |
-| 0.7 | 14/10/2026 | Nhóm 3 | Cập nhật đồng bộ theo kết quả code review và quyết định kỹ thuật: (1) Mục 10.1, FR-REG-04 & AT-27: Đơn ở trạng thái APPROVED chỉ được hủy (`cancel`) khi chưa sinh hợp đồng PENDING hoặc ACTIVE liên kết (nếu đã có hợp đồng, chặn 409 `APPLICATION_HAS_CONTRACT` để tránh hợp đồng mồ côi, phải hủy giữ chỗ/hợp đồng trước); (2) Mục 3.1, 3.6 và BR-07: Quy định rõ phạm vi phân quyền (scope) của Staff đối với hóa đơn tiền phòng được xác định theo `semester_id` của hóa đơn (sinh viên có lịch sử ở tại đơn vị trong kỳ hoặc nộp đơn vào đơn vị cho đợt thuộc kỳ), tránh lộ dữ liệu khi sinh viên chuyển đơn vị giữa các kỳ; (3) Mục 3.2 (FR-ROOM-02), mục 5.1 & AT-28: Bổ sung ràng buộc không cho phép đổi số giường (`bed_count`) khi loại phòng đã được gán cho phòng đang tồn tại (trả 409 `RESOURCE_IN_USE`); đồng bộ tham chiếu `DB-Design-DMS.md` v0.5. |
+| 0.7 | 13/10/2026 | Nhóm 3 | Đồng bộ luồng đăng nhập Spring Security thật: xác thực JSON, CSRF, thu hồi phiên khi thay đổi bảo mật, giới hạn BCrypt và quyền reset theo đợt/phân phòng hiệu lực; bỏ cơ chế demo/mock |
+| 0.8 | 14/10/2026 | Nhóm 3 | Theo yêu cầu chuyển đăng nhập sang Keycloak: OIDC/PKCE, JWT Bearer, tài khoản tập trung, liên kết subject và giữ RBAC/phạm vi DMS; không tự tạo tài khoản demo |
+| 0.9 | 14/10/2026 | Nhóm 3 | Cập nhật ADMIN làm mọi nghiệp vụ ở mọi đơn vị; ma trận role/quyền CRUD, /me trả permissions, đổi role thu hồi token cũ |
+| 0.10 | 15/10/2026 | Nhóm 3 | ADMIN tick quyền động theo role/màn/thao tác, lưu CSDL và áp dụng ngay; giữ giới hạn nghiệp vụ của vai trò, quyền hồ sơ bắt buộc và chống ghi đè khi nhiều Admin cùng sửa |
+| 0.11 | 15/10/2026 | Nhóm 3 | Cập nhật đồng bộ theo kết quả code review và quyết định kỹ thuật: (1) Mục 10.1, FR-REG-04 & AT-32: Đơn ở trạng thái APPROVED chỉ được hủy (`cancel`) khi chưa sinh hợp đồng PENDING hoặc ACTIVE liên kết (nếu đã có hợp đồng, chặn 409 `APPLICATION_HAS_CONTRACT` để tránh hợp đồng mồ côi, phải hủy giữ chỗ/hợp đồng trước); (2) Mục 3.1, 3.6 và BR-07: Quy định rõ phạm vi phân quyền (scope) của Staff đối với hóa đơn tiền phòng được xác định theo `semester_id` của hóa đơn (sinh viên có lịch sử ở tại đơn vị trong kỳ hoặc nộp đơn vào đơn vị cho đợt thuộc kỳ), tránh lộ dữ liệu khi sinh viên chuyển đơn vị giữa các kỳ; (3) Mục 3.2 (FR-ROOM-02), mục 5.1 & AT-33: Bổ sung ràng buộc không cho phép đổi số giường (`bed_count`) khi loại phòng đã được gán cho phòng đang tồn tại (trả 409 `RESOURCE_IN_USE`); đồng bộ tham chiếu `DB-Design-DMS.md` v0.7. |
 
 ---
 
@@ -134,7 +138,7 @@ Hiện hai đơn vị quản lý bằng sổ sách, Excel riêng lẻ và nhóm 
 | Student | Sinh viên đăng ký ở và đang ở KTX; một sinh viên mỗi phòng được chỉ định làm **trưởng phòng** | ~1.500 | Dùng điện thoại là chính; thao tác không thường xuyên |
 | Staff | Cán bộ BQL của một đơn vị | 5–10 | Dùng máy tính; thao tác nghiệp vụ hằng ngày |
 | Technician | Kỹ thuật viên của một đơn vị | 3–6 | Dùng điện thoại tại hiện trường |
-| Admin | Quản trị hệ thống | 1–2 | Quản lý tài khoản, danh mục; không làm nghiệp vụ |
+| Admin | Quản trị hệ thống và nghiệp vụ | 1–2 | Quản lý tài khoản, danh mục và mọi nghiệp vụ ở mọi đơn vị |
 
 ### 2.4. Môi trường vận hành
 
@@ -174,15 +178,18 @@ Quy ước chung cho mọi yêu cầu:
 
 | Mã | Yêu cầu | Vai trò | Ưu tiên |
 |---|---|---|---|
-| FR-ACC-01 | Người dùng đăng nhập bằng tên đăng nhập (mã SV với sinh viên) và mật khẩu; đăng xuất hủy phiên phía máy chủ | Tất cả | Must |
+| FR-ACC-01 | Người dùng đăng nhập tại Keycloak bằng tên đăng nhập/mã SV và mật khẩu; React dùng OIDC Authorization Code + PKCE, backend kiểm tra JWT. Đăng xuất từ DMS thu hồi token/phiên của tài khoản rồi chuyển sang logout Keycloak | Tất cả | Must |
 | FR-ACC-02 | Sau 5 lần đăng nhập sai liên tiếp, tài khoản bị khóa tạm 15 phút [Giả định] | Tất cả | Should |
-| FR-ACC-03 | Người dùng đổi mật khẩu; tài khoản có cờ "bắt buộc đổi mật khẩu" phải đổi trước khi dùng chức năng khác | Tất cả | Must |
+| FR-ACC-03 | Đổi mật khẩu qua Keycloak, 8–64 ký tự, có chữ/số, không dùng lại mật khẩu hiện tại; mật khẩu tạm bắt hoàn tất UPDATE_PASSWORD trước khi được cấp token. JWT đã cấp trước thay đổi trực tiếp tại Keycloak có thể còn hiệu lực tối đa 5 phút | Tất cả | Must |
 | FR-ACC-04 | Người dùng xem và cập nhật hồ sơ cá nhân (số điện thoại, quê quán, liên hệ khẩn cấp); mã SV, họ tên, giới tính chỉ Admin sửa | Tất cả | Must |
-| FR-ACC-05 | Admin import danh sách sinh viên từ Excel: kiểm tra định dạng, báo lỗi theo từng dòng, bỏ qua mã SV đã tồn tại, tạo tài khoản với mật khẩu mặc định và cờ bắt buộc đổi mật khẩu | Admin | Must |
-| FR-ACC-06 | Admin tạo, khóa, mở khóa tài khoản Staff, Technician, Admin; gán vai trò và đơn vị quản lý | Admin | Must |
-| FR-ACC-07 | Đặt lại mật khẩu: Admin cho mọi tài khoản; Staff cho sinh viên thuộc phạm vi đơn vị mình (xem BR-07) | Admin, Staff | Must |
+| FR-ACC-05 | Admin import danh sách sinh viên từ Excel: kiểm tra định dạng, báo lỗi theo từng dòng, bỏ qua mã SV đã tồn tại, tạo tài khoản với mật khẩu tạm ngẫu nhiên tại Keycloak và required action đổi mật khẩu | Admin | Must |
+| FR-ACC-06 | Admin tạo, khóa, mở khóa tài khoản Staff, Technician, Admin; gán/thay đổi vai trò và đơn vị quản lý, thu hồi token cũ | Admin | Must |
+| FR-ACC-07 | Đặt lại mật khẩu: Admin cho mọi tài khoản; Staff chỉ cho sinh viên có đơn trong đợt đang mở hoặc phân phòng còn hiệu lực tại đơn vị mình (BR-07). Trả mật khẩu tạm một lần, bắt đổi khi đăng nhập, xóa bộ đếm sai/khóa tạm và thu hồi mọi phiên cũ | Admin, Staff | Must |
 | FR-ACC-08 | Admin cấp quyền tổng hợp liên đơn vị cho một Staff cụ thể | Admin | Must |
 | FR-ACC-09 | Admin xem `AuditLog`, lọc theo người, loại thao tác, thời gian | Admin | Must |
+| FR-ACC-10 | Admin chọn STAFF/STUDENT/TECHNICIAN và tick quyền theo màn/thao tác; tìm màn, chọn tất cả quyền phù hợp, khôi phục mặc định vào bản nháp, lưu/hủy. Quyền ADMIN bất biến; PROFILE_READ bắt buộc. Lưu có version chống ghi đè và audit trước/sau; thu hồi quyền áp dụng cho mọi tài khoản cùng role từ lần gọi API tiếp theo | Admin | Must |
+
+**Quy tắc phiên tài khoản Keycloak (v0.8):** khóa tài khoản, đổi tên đăng nhập/vai trò/đơn vị quản lý hoặc thay đổi quyền đọc liên đơn vị làm thu hồi các phiên cũ. Mở khóa chỉ cho phép đăng nhập mới, không phục hồi phiên đã thu hồi. Khởi tạo Admin phải bật cấu hình riêng và cung cấp mật khẩu; ứng dụng không tự tạo tài khoản demo và không dùng vai trò mock để vượt qua đăng nhập. Quên mật khẩu được xử lý bằng reset của người quản lý có quyền; chưa có đăng ký tự do hoặc gửi liên kết reset qua email.
 
 **Quy tắc phân quyền phạm vi (Scope) của Staff:**
 - Staff chỉ có quyền xem và thao tác dữ liệu thuộc đơn vị quản lý của mình (K1 hoặc N2 + N3), trừ khi được Admin cấp quyền tổng hợp liên đơn vị (FR-ACC-08). Truy cập ngoài phạm vi trả về lỗi **404** (không làm lộ sự tồn tại của tài nguyên ngoài phạm vi).
@@ -307,7 +314,7 @@ Có hai loại hóa đơn và một sổ cọc:
 | **BR-04 Hóa đơn** | Một hóa đơn phí phòng cho mỗi (sinh viên, học kỳ); một hóa đơn điện nước cho mỗi (phòng, kỳ điện nước). Hóa đơn đã thanh toán không sửa | CSDL: hai partial unique index theo loại hóa đơn. Service: chặn sửa khi đã thanh toán |
 | **BR-05 Chuyển phòng** | Giường đích trống và **cùng đơn vị** với giường nguồn; đóng phân phòng cũ và mở mới trong một transaction; hợp đồng không thay đổi | Service: khóa hai giường theo thứ tự `bed_id` tăng dần |
 | **BR-06 Sửa chữa** | Sinh viên chỉ tạo ticket cho phòng đang ở; chỉ KTV được giao cập nhật xử lý; chỉ đóng sau RESOLVED; KTV không tự đóng | Service: kiểm tra chuyển trạng thái theo bảng ở mục 10 |
-| **BR-07 Phạm vi** | Staff chỉ thấy và thao tác dữ liệu thuộc đơn vị mình. Đơn đăng ký thuộc đơn vị nguyện vọng. Sinh viên thuộc phạm vi đơn vị khi có đơn trong đợt hiện hành hoặc phân phòng hiệu lực tại đơn vị đó. Hóa đơn phí phòng thuộc phạm vi đơn vị theo học kỳ (`semester_id`) của hóa đơn (sinh viên có lịch sử ở tại đơn vị trong học kỳ hoặc nộp đơn vào đơn vị cho đợt thuộc học kỳ, tránh lộ hóa đơn khi chuyển đơn vị giữa các kỳ). Admin không mặc nhiên có quyền nghiệp vụ | Service: mọi truy vấn của Staff lọc theo `management_unit_id` và điều kiện thời gian/học kỳ; kiểm tra trên từng đối tượng (trả 404 nếu ngoài phạm vi) |
+| **BR-07 Phạm vi** | Staff chỉ thấy và thao tác dữ liệu thuộc đơn vị mình. Đơn đăng ký thuộc đơn vị nguyện vọng. Sinh viên thuộc phạm vi đơn vị khi có đơn trong đợt hiện hành hoặc phân phòng hiệu lực tại đơn vị đó. Hóa đơn phí phòng thuộc phạm vi đơn vị theo học kỳ (`semester_id`) của hóa đơn (sinh viên có lịch sử ở tại đơn vị trong học kỳ hoặc nộp đơn vào đơn vị cho đợt thuộc học kỳ, tránh lộ hóa đơn khi chuyển đơn vị giữa các kỳ); quyền ghi (xác nhận thanh toán) chỉ tính phân phòng/phòng thực tế của đúng đơn vị. Admin được làm mọi nghiệp vụ ở mọi đơn vị, vẫn kiểm tra trạng thái và ràng buộc dữ liệu | Service: mọi truy vấn của Staff lọc theo `management_unit_id`; kiểm tra trên từng đối tượng |
 | **BR-08 Dữ liệu suy ra** | Số chỗ trống, "Đầy", "Sắp hết hạn", "Quá hạn", "Quá hạn trả phòng" không lưu, luôn tính từ dữ liệu gốc | Thiết kế CSDL / view |
 | **BR-09 Lịch sử** | Không ghi đè dữ liệu lịch sử; mọi chuyển trạng thái lưu người, thời gian, lý do | Bảng lịch sử cho từng đối tượng + `AuditLog` |
 | **BR-10 Tiền cọc** | Hợp đồng chỉ ACTIVE khi đã thu đủ mức cọc của tòa. Số dư cọc = tổng giao dịch sổ cọc. Trừ cọc chỉ phát sinh từ ticket của phòng đã CLOSED, nguyên nhân hư hỏng do sử dụng, có chi phí > 0; hao mòn tự nhiên không trừ cọc; tổng trừ của các sinh viên = chi phí ticket. Hoàn cọc ≤ số dư; mỗi hợp đồng tối đa một giao dịch hoàn cọc. Khi trả phòng, khoản bù cọc chưa nộp được tất toán bằng số dư (hoàn = số dư nếu dương, số dư âm thành công nợ), không ghi thêm nợ bù cọc | Service trong transaction; CSDL: `CHECK` dấu số tiền theo loại giao dịch, `UNIQUE(contract_id) WHERE type = 'REFUND'` |
@@ -324,7 +331,7 @@ Mục này mô tả ở mức nghiệp vụ. Tên bảng, kiểu dữ liệu và
 | Thực thể | Thuộc tính chính | Ghi chú |
 |---|---|---|
 | `ManagementUnit` | id, tên | K1; N2 + N3 |
-| `User` | id, username, password_hash, role, management_unit_id (Staff, Technician), họ tên, SĐT, cờ đổi mật khẩu, trạng thái khóa, quyền tổng hợp liên đơn vị (Staff) | Sinh viên dùng mã SV làm username |
+| `User` | id, username, password_hash, role, management_unit_id (Staff, Technician), họ tên, SĐT, cờ đổi mật khẩu, trạng thái khóa, quyền tổng hợp liên đơn vị (Staff), `security_version` | Sinh viên dùng mã SV làm username; phiên giữ phiên bản lúc đăng nhập để kiểm tra thu hồi |
 | `StudentProfile` | user_id, mã SV, giới tính, ngày sinh, khoa, khóa, quê quán, liên hệ khẩn cấp | 1–1 với `User` có role Student; mọi thực thể nghiệp vụ tham chiếu sinh viên qua đây |
 | `Building` | id, tên, management_unit_id, **mức cọc** | K1: 1.000.000 đ; N2, N3: 2.000.000 đ |
 | `RoomType` | id, tên, số giường, **giá gốc / học kỳ chính**, **giá gốc / học kỳ hè**, diện tích, tiện ích | Nơi duy nhất lưu giá gốc. Không sửa số giường khi loại phòng đã được gán cho phòng đang tồn tại (409 `RESOURCE_IN_USE`) |
@@ -382,6 +389,7 @@ Mục này mô tả ở mức nghiệp vụ. Tên bảng, kiểu dữ liệu và
 
 - JSON qua HTTPS; tiền tố `/api`. Hành động chuyển trạng thái dùng `POST /api/<tài nguyên>/{id}/<hành động>` (ví dụ `/approve`, `/reject`, `/activate`, `/move-out`).
 - Mã lỗi: 400 dữ liệu không hợp lệ, 401 chưa đăng nhập, 403 ngoài quyền / phạm vi, 404 không tồn tại **hoặc ngoài phạm vi đọc**, 409 xung đột trạng thái / ràng buộc (giường đã bị chiếm, gửi trùng).
+- Xác thực trả `SESSION_REVOKED` (401) khi phiên không còn khớp phiên bản bảo mật; `CSRF_TOKEN_INVALID` (403) khi request ghi thiếu/sai token. Giao diện yêu cầu đăng nhập lại khi hết hạn/thu hồi và không giữ dữ liệu của tài khoản trước.
 - Lỗi 400 / 409 trả về `errorCode` ổn định (ví dụ `BED_TAKEN`, `DUPLICATE_INVOICE`, `CONTRACT_AUTO_CANCELLED`) kèm dữ liệu chi tiết; giao diện dựng thông báo tiếng Việt từ mã, không dựa vào chuỗi `message`.
 - API chi tiết của đơn, hợp đồng, ticket, hóa đơn và yêu cầu trả về `allowedActions`: các hành động người dùng hiện tại được thực hiện ở trạng thái hiện tại. Giao diện chỉ hiển thị nút theo danh sách này; API vẫn kiểm tra lại khi nhận request.
 - Danh sách endpoint chi tiết thuộc tài liệu đặc tả API (tuần 3–4); tối thiểu bao phủ mọi FR trong mục 3.
@@ -396,10 +404,10 @@ Không có tích hợp phần cứng. Không tích hợp hệ thống bên ngoà
 
 | Mã | Yêu cầu | Cách kiểm chứng |
 |---|---|---|
-| NFR-SEC-01 | Mật khẩu băm bằng BCrypt; không lưu, không ghi log mật khẩu | Review code, kiểm tra CSDL |
+| NFR-SEC-01 | Mật khẩu do Keycloak quản lý và băm; DMS không lưu bản sao mật khẩu/hash của tài khoản đã liên kết. Không đưa secret vào frontend, log hoặc Git | Review code, kiểm tra CSDL |
 | NFR-SEC-02 | Phân quyền kiểm tra ở API trên từng đối tượng theo vai trò + phạm vi + trạng thái | Integration test truy cập chéo đơn vị |
 | NFR-SEC-03 | Validate mọi input phía server; chống SQL injection (truy vấn tham số hóa) và XSS (escape đầu ra) | Test với input độc hại |
-| NFR-SEC-04 | Phiên đăng nhập hết hạn sau 30 phút không hoạt động; cookie phiên HttpOnly, Secure | Kiểm thử thủ công |
+| NFR-SEC-04 | Phiên SSO Keycloak hết hạn sau 30 phút không hoạt động; access token 5 phút, chỉ giữ trong bộ nhớ. API DMS nhận Bearer JWT, kiểm tra issuer/audience/chữ ký/thời hạn. Khóa/reset/quyền/logout từ DMS chặn token cũ qua security_version | Kiểm thử cookie và token thật, nhiều phiên và request đồng thời |
 | NFR-SEC-05 | Thông tin bí mật (mật khẩu CSDL, khóa) cấu hình qua biến môi trường, không nằm trong mã nguồn | Review repo |
 | NFR-PER-01 | 95% request phản hồi dưới 2 giây với 100 người dùng đồng thời, dữ liệu ~1.500 sinh viên | Kiểm thử tải (JMeter / k6) kịch bản nộp đơn + tra cứu |
 | NFR-PER-02 | Phát hành hóa đơn phí phòng cho toàn KTX (~1.500 sinh viên) hoàn tất dưới 30 giây | Đo thời gian chạy |
@@ -446,8 +454,13 @@ Không có tích hợp phần cứng. Không tích hợp hệ thống bên ngoà
 | AT-24 | Sinh viên chọn tạm rời hè | Có phiếu gửi đồ; giường trống trong hè; hợp đồng vẫn ACTIVE, nhãn "Tạm rời hè"; không có hóa đơn hè; cọc giữ nguyên | FR-CON-11, BR-02 |
 | AT-25 | Đầu HK1, phân lại giường cho sinh viên tạm rời hè khi giường cũ đã có người | Phân được giường khác, không cần đơn mới; phiếu gửi đồ ghi ngày nhận lại | FR-CON-12, BR-01 |
 | AT-26 | Sinh viên đăng ký ở hè được duyệt | Ngày kết thúc hợp đồng gia hạn qua hè; có hóa đơn phí phòng học kỳ hè | FR-REG-15, FR-BIL-05 |
-| AT-27 | Sinh viên hủy đơn APPROVED khi đã sinh hợp đồng PENDING / ACTIVE | Bị từ chối (409 `APPLICATION_HAS_CONTRACT`), ẩn thao tác `cancel` trong `allowedActions` | FR-REG-04, mục 10.1 |
-| AT-28 | Sửa số giường (`bed_count`) của loại phòng đã được gán cho ít nhất một phòng đang tồn tại | Bị từ chối (409 `RESOURCE_IN_USE`) | FR-ROOM-02 |
+| AT-27 | Đăng nhập đúng bằng từng vai trò; gửi vai trò giả từ client | Quyền lấy từ CSDL, trường lạ bị từ chối; không thể nâng quyền | FR-ACC-01, NFR-SEC-02 |
+| AT-28 | Đổi/reset mật khẩu khi tài khoản có nhiều phiên; khóa rồi mở khóa tài khoản | Phiên cũ mất hiệu lực; chỉ đăng nhập mới được dùng; mật khẩu tạm bắt đổi | FR-ACC-03, 06, 07, NFR-SEC-04 |
+| AT-29 | Staff reset sinh viên chỉ có đơn hết đợt hoặc phân phòng đã kết thúc, kể cả có quyền đọc liên đơn vị | Bị từ chối; chỉ đơn trong đợt đang mở/phân phòng hiệu lực đúng đơn vị cho phép reset | FR-ACC-07, BR-07 |
+| AT-30 | Đăng nhập PKCE, token sai issuer/audience/chữ ký, logout DMS và gọi lại token cũ | Token sai bị từ chối; token cũ sau logout bị DMS chặn | FR-ACC-01, NFR-SEC-04 |
+| AT-31 | Token có username giống tài khoản DMS nhưng subject chưa liên kết | Trả IDENTITY_NOT_LINKED, không tự nhận hồ sơ/quyền bằng username | FR-ACC-03, NFR-SEC-01 |
+| AT-32 | Sinh viên hủy đơn APPROVED khi đã sinh hợp đồng PENDING / ACTIVE | Bị từ chối (409 `APPLICATION_HAS_CONTRACT`), ẩn thao tác `cancel` trong `allowedActions` | FR-REG-04, mục 10.1 |
+| AT-33 | Sửa số giường (`bed_count`) của loại phòng đã được gán cho ít nhất một phòng đang tồn tại | Bị từ chối (409 `RESOURCE_IN_USE`) | FR-ROOM-02 |
 
 ### 8.2. Ma trận Use Case ↔ Yêu cầu
 
@@ -479,7 +492,7 @@ Không có tích hợp phần cứng. Không tích hợp hệ thống bên ngoà
 | UC-24 View Dashboard | FR-NOT-05, 06 |
 | UC-25..27 (Technician) | FR-MNT-04 |
 | UC-28 Manage Accounts | FR-ACC-05, 06, 07 |
-| UC-29 Manage Roles & Scopes | FR-ACC-06, 08, FR-ROOM-01 |
+| UC-29 Manage Roles & Scopes | FR-ACC-06, 08, 10, FR-ROOM-01 |
 | UC-30 View Audit Log | FR-ACC-09 |
 | UC-31 Manage Registration Period | FR-REG-01 |
 | UC-32 Activate Contract | FR-CON-01, 02 |
@@ -665,3 +678,36 @@ Nhãn suy ra trên ACTIVE: "Sắp hết hạn", "Quá hạn trả phòng", "Tạ
 | Hoàn cọc | − | Trả phòng, bằng số dư cọc | Staff |
 
 Nhãn suy ra trên UNPAID: "Quá hạn" khi qua hạn đóng.
+
+
+### Ghi chú chuyển xác thực ngày 14/10/2026
+
+Keycloak là tích hợp xác thực được người dùng yêu cầu thêm, là ngoại lệ cho ràng buộc ban đầu không tích hợp bên ngoài. Các quy định session cookie/BCrypt thuộc lịch sử v0.7; mã ứng dụng của luồng cũ đã được bỏ. Mật khẩu/tài khoản không đồng bộ qua Git; nhóm phải dùng cùng Keycloak/realm. Mật khẩu cũ không chuyển; ID hồ sơ và dữ liệu nghiệp vụ được giữ nguyên. Keycloak và PostgreSQL DMS không có transaction phân tán: thao tác bù có thể cần đối soát nếu mất kết nối, chưa có outbox bền vững.
+
+
+Ghi chú dọn cấu trúc 14/10/2026: chỉ giữ Keycloak; dùng lại AuthController, SecurityConfig, BootstrapAdmin và AuthService/Impl. Không tạo lớp legacy hay Service chuyển đổi riêng. Migration đã áp dụng và các kiểm thử JWT/CRUD cần thiết được giữ. Hướng dẫn chạy gom vào README gốc.
+
+## Phân quyền Role → thao tác (cập nhật 14/10/2026)
+
+Theo quyết định mới của người phụ trách, ADMIN có mọi quyền nghiệp vụ trên toàn hệ thống. ADMIN không cần gắn management_unit_id; bỏ giới hạn đơn vị/chủ sở hữu/người được giao khi xác định quyền, nhưng vẫn phải qua trạng thái, ràng buộc dữ liệu, đối tượng sinh viên thật và lịch sử/audit. Không đổi hoặc giả vai trò/người thao tác để vượt phạm vi.
+
+Khung tham khảo RolePrivilege của HR-V5: `ScopeGuard` kiểm tra quyền hiện hành qua `RolePermissionService`; ma trận trong code chỉ xác định quyền mặc định và giới hạn nghiệp vụ của từng role, mỗi mã là `<RESOURCE>_<READ|CREATE|UPDATE|DELETE>`. READ dùng cho tìm kiếm và xem chi tiết; khóa/mở khóa/reset/gán phạm vi tài khoản có mã riêng. `/api/auth/me` trả thêm `permissions: string[]`; React dùng danh sách này cho menu, route và từng nút. API khai quyền bằng @RequirePrivilege giống V5; Spring Security Method Security kiểm tra trước thân Controller. Service Impl tiếp tục kiểm quyền nội bộ, phạm vi và trạng thái. Không chỉ dựa vào việc ẩn nút.
+
+- ADMIN: mọi quyền quản trị và nghiệp vụ ở mọi đơn vị; tài khoản và người thao tác trong audit vẫn là ADMIN thực.
+- STAFF: nghiệp vụ trong đơn vị được giao; crossUnitAccess chỉ mở rộng đọc. Đơn/yêu cầu do sinh viên tạo không mặc nhiên cho Staff tạo hoặc hủy thay sinh viên; quyền sửa/xét duyệt phụ thuộc endpoint và trạng thái.
+- TECHNICIAN: đọc/cập nhật tiến độ ticket được giao, không CRUD dữ liệu phòng/hợp đồng/hóa đơn.
+- STUDENT: dữ liệu cá nhân và phòng đang ở; đơn/yêu cầu của mình, không sửa role hoặc ID người sở hữu.
+
+Đổi role của tài khoản Staff/KTV/Admin qua PATCH `/api/admin/users/{id}` hỗ trợ trường `role`, đồng bộ Keycloak và thu hồi token cũ. Staff/KTV phải có đơn vị; chuyển sang ADMIN xóa đơn vị và cờ tổng hợp; không chuyển hồ sơ STUDENT thành tài khoản cán bộ, không tự đổi role tài khoản đang sử dụng. ADMIN tạo đơn đăng ký hộ sinh viên bằng `studentId` rõ ràng; STUDENT không được gửi ID của người khác.
+
+Cập nhật 15/10/2026: ADMIN quản lý ma trận động tại `/admin/role-permissions`, lưu quyền của STAFF/STUDENT/TECHNICIAN trong `role_permission_matrix` qua Flyway V5. ADMIN giữ mọi quyền đã đăng ký và không có bản ghi để thu hồi quyền ADMIN. Mã quyền vẫn cố định trong Constants; quyền đang được cấp đọc từ CSDL. Sổ cọc/audit vẫn giữ chỉ đọc, hồ sơ có lịch sử và trạng thái vẫn chịu ràng buộc xóa/hủy như trước.
+
+### Khai quyền API bằng @RequirePrivilege — 14/10/2026
+
+Mọi hàm REST mapped trong ứng dụng khai `@RequirePrivilege(Permission.ROOM_CREATE)` hoặc một danh sách như `@RequirePrivilege({Permission.ROOM_TYPE_READ, Permission.ROOM_CREATE, Permission.ROOM_UPDATE})`. Nhiều mã dùng OR: có ít nhất một quyền mới được chạy API. Danh sách OR phù hợp API tra cứu cho form; thao tác ghi phải khai riêng CREATE/UPDATE/DELETE, không ghép quyền thêm/sửa để mở cả hai.
+
+`common/security/RequirePrivilege.java` chỉ khai annotation; `ScopeGuard.hasDeclaredPrivilege` đọc khai báo trên hàm thật, dùng khai báo lớp nếu hàm chưa khai, và kiểm role với dữ liệu tài khoản hiện tại. `SecurityConfig` bật Spring Security Method Security và đăng ký AuthorizationManagerBeforeMethodInterceptor: thiếu annotation, mảng rỗng hoặc không có quyền thì trả 403 trước thân Controller. Chưa đăng nhập/token không hợp lệ vẫn bị filter chain trả 401. Annotation ở hàm thay thế annotation lớp; Admin không vượt qua mã quyền chưa đăng ký.
+
+Service Impl vẫn giữ kiểm tra quyền cho lời gọi nội bộ, phạm vi đơn vị/chủ sở hữu, trạng thái và ràng buộc dữ liệu; việc thêm annotation không biến dữ liệu đang dùng thành dữ liệu được phép xóa. ADMIN tiếp tục có mọi quyền nghiệp vụ đã đăng ký trên toàn hệ thống. Frontend và `/api/auth/me.permissions` giữ nguyên mã quyền hiện có.
+
+Ở bước bổ sung annotation chỉ thêm một file source là `RequirePrivilege.java`; không thêm migration, Aspect/Service mới hoặc dependency V5. Bộ test kiểm OR, chặn trước thân Controller, lớp/hàm, thiếu/rỗng/sai annotation và quét mọi API để không bỏ sót quyền. Backend clean verify đạt **53/53 test**.

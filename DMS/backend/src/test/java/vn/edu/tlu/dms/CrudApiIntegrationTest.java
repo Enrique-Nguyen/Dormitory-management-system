@@ -1,10 +1,19 @@
 package vn.edu.tlu.dms;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -19,26 +28,28 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import vn.edu.tlu.dms.account.security.DmsPrincipal;
+import vn.edu.tlu.dms.account.domain.AppUser;
+import vn.edu.tlu.dms.account.service.IdentityAccountService;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /** Kiểm thử API trên PostgreSQL thật: mapping, ràng buộc, phạm vi và luồng trạng thái. */
-@SpringBootTest(properties = "dms.upload-dir=${java.io.tmpdir}/dms-upload-integration")
+@SpringBootTest(properties = {"dms.upload-dir=${java.io.tmpdir}/dms-upload-integration"})
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 @Transactional
@@ -50,9 +61,11 @@ class CrudApiIntegrationTest {
 
     @Autowired ObjectMapper mapper;
 
-    @Autowired PasswordEncoder passwordEncoder;
-
     @Autowired EntityManager entityManager;
+
+    @MockitoBean JwtDecoder decoder;
+
+    @MockitoBean IdentityAccountService identities;
 
     private Long adminId;
 
@@ -82,6 +95,15 @@ class CrudApiIntegrationTest {
 
     @BeforeEach
     void createFixtureData() {
+        doAnswer(
+                        invocation -> {
+                            AppUser user = invocation.getArgument(0);
+                            user.setKeycloakUserId(UUID.randomUUID().toString());
+                            user.setPasswordHash(null);
+                            return null;
+                        })
+                .when(identities)
+                .provisionAccount(any(AppUser.class), anyString());
         suffix = UUID.randomUUID().toString().substring(0, 6);
         firstUnitId =
                 jdbc.queryForObject("SELECT id FROM management_unit WHERE code = 'K1'", Long.class);
@@ -141,8 +163,7 @@ class CrudApiIntegrationTest {
                                     .file(data)
                                     .file(validPhoto)
                                     .file(invalidPhoto)
-                                    .with(asUser(staffId, "STAFF"))
-                                    .with(csrf()))
+                                    .with(asUser(staffId, "STAFF")))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errorCode").value("PHOTO_INVALID"));
             assertThat(
@@ -192,7 +213,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/" + firstRoomId + "/status")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"status\":\"MAINTENANCE\",\"reason\":\"x    \"}"))
                 .andExpect(status().isBadRequest());
@@ -204,7 +224,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/rooms")
                                         .with(asUser(staffId, "STAFF"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(
                                                 """
@@ -221,12 +240,11 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/rooms/" + id)
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"code\":\"A103\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("A103"));
-        mvc.perform(delete("/api/rooms/" + id).with(asUser(staffId, "STAFF")).with(csrf()))
+        mvc.perform(delete("/api/rooms/" + id).with(asUser(staffId, "STAFF")))
                 .andExpect(status().isNoContent());
         assertThat(
                         jdbc.queryForObject(
@@ -251,7 +269,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/rooms/" + otherRoomId)
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"code\":\"INVALID\"}"))
                 .andExpect(status().isNotFound());
@@ -264,7 +281,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
@@ -280,7 +296,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
@@ -297,7 +312,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/admin/management-units")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(
                                                 "{\"code\":\"U"
@@ -311,15 +325,11 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/admin/management-units/" + id)
                                 .with(asUser(adminId, "ADMIN"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"name\":\"Đơn vị cập nhật\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("U" + suffix));
-        mvc.perform(
-                        delete("/api/admin/management-units/" + id)
-                                .with(asUser(adminId, "ADMIN"))
-                                .with(csrf()))
+        mvc.perform(delete("/api/admin/management-units/" + id).with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isNoContent());
     }
 
@@ -333,7 +343,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/semesters")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
@@ -347,28 +356,18 @@ class CrudApiIntegrationTest {
     void applicationWorkflowRecordsHistoryAndRejectsRepeatedActions() throws Exception {
         Long periodId = createOpenPeriod();
         Long id = createDraftApplication(periodId);
-        mvc.perform(
-                        post("/api/applications/" + id + "/submit")
-                                .with(asUser(studentId, "STUDENT"))
-                                .with(csrf()))
+        mvc.perform(post("/api/applications/" + id + "/submit").with(asUser(studentId, "STUDENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SUBMITTED"));
         mvc.perform(
                         post("/api/applications/" + id + "/approve")
-                                .with(asUser(otherStaffId, "STAFF"))
-                                .with(csrf()))
+                                .with(asUser(otherStaffId, "STAFF")))
                 .andExpect(status().isNotFound());
-        mvc.perform(
-                        post("/api/applications/" + id + "/approve")
-                                .with(asUser(staffId, "STAFF"))
-                                .with(csrf()))
+        mvc.perform(post("/api/applications/" + id + "/approve").with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APPROVED"))
                 .andExpect(jsonPath("$.timeline.length()").value(3));
-        mvc.perform(
-                        post("/api/applications/" + id + "/approve")
-                                .with(asUser(staffId, "STAFF"))
-                                .with(csrf()))
+        mvc.perform(post("/api/applications/" + id + "/approve").with(asUser(staffId, "STAFF")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("INVALID_STATE_TRANSITION"));
     }
@@ -379,7 +378,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/registration-periods")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
@@ -393,7 +391,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/registration-periods")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
@@ -420,8 +417,7 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 multipart("/api/maintenance-requests")
                                         .file(data)
-                                        .with(asUser(staffId, "STAFF"))
-                                        .with(csrf()))
+                                        .with(asUser(staffId, "STAFF")))
                         .andExpect(status().isCreated())
                         .andReturn()
                         .getResponse()
@@ -433,29 +429,25 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/maintenance-requests/" + id + "/assign")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"technicianId\":" + technicianId + "}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ASSIGNED"));
         mvc.perform(
                         post("/api/maintenance-requests/" + id + "/start")
-                                .with(asUser(technicianId, "TECHNICIAN"))
-                                .with(csrf()))
+                                .with(asUser(technicianId, "TECHNICIAN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
         mvc.perform(
                         post("/api/maintenance-requests/" + id + "/resolve")
                                 .with(asUser(technicianId, "TECHNICIAN"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"note\":\"Đã thay bóng đèn\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RESOLVED"));
         mvc.perform(
                         post("/api/maintenance-requests/" + id + "/accept")
-                                .with(asUser(staffId, "STAFF"))
-                                .with(csrf()))
+                                .with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CLOSED"));
     }
@@ -476,8 +468,7 @@ class CrudApiIntegrationTest {
         for (int repeat = 0; repeat < 2; repeat++) {
             mvc.perform(
                             post("/api/notifications/" + id + "/read")
-                                    .with(asUser(studentId, "STUDENT"))
-                                    .with(csrf()))
+                                    .with(asUser(studentId, "STUDENT")))
                     .andExpect(status().isNoContent());
         }
         mvc.perform(get("/api/notifications").with(asUser(studentId, "STUDENT")))
@@ -486,90 +477,11 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/notifications")
                                 .with(asUser(studentId, "STUDENT"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         "{\"scope\":\"ALL\",\"title\":\"Hi\",\"body\":\"Nội"
                                                 + " dung\"}"))
                 .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void realLoginCreatesSessionAndPasswordFlagsApplyToExistingSessions() throws Exception {
-        String username =
-                jdbc.queryForObject(
-                        "SELECT username FROM app_user WHERE id=?", String.class, adminId);
-        var login =
-                mvc.perform(
-                                post("/api/auth/login")
-                                        .with(csrf())
-                                        .contentType(MediaType.APPLICATION_JSON)
-                                        .content(
-                                                mapper.writeValueAsString(
-                                                        Map.of(
-                                                                "username",
-                                                                username,
-                                                                "password",
-                                                                "Password123"))))
-                        .andExpect(status().isOk())
-                        .andExpect(jsonPath("$.role").value("ADMIN"))
-                        .andReturn();
-        var session = login.getResponse().getCookie("SESSION");
-        assertThat(session).isNotNull();
-        mvc.perform(get("/api/auth/me").cookie(session)).andExpect(status().isOk());
-        jdbc.update("UPDATE app_user SET must_change_password = true WHERE id = ?", adminId);
-        entityManager.clear();
-        mvc.perform(get("/api/admin/users").cookie(session))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.errorCode").value("PASSWORD_CHANGE_REQUIRED"));
-        mvc.perform(
-                        post("/api/auth/change-password")
-                                .cookie(session)
-                                .with(csrf())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        "{\"currentPassword\":\"Password123\",\"newPassword\":\"NewPassword123\"}"))
-                .andExpect(status().isNoContent());
-        mvc.perform(get("/api/admin/users").cookie(session)).andExpect(status().isOk());
-        jdbc.update("UPDATE app_user SET locked = true WHERE id = ?", adminId);
-        entityManager.clear();
-        mvc.perform(get("/api/auth/me").cookie(session))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.errorCode").value("ACCOUNT_LOCKED"));
-    }
-
-    @Test
-    void invalidLoginAttemptsPersistAndTemporarilyLockAccount() throws Exception {
-        String username =
-                jdbc.queryForObject(
-                        "SELECT username FROM app_user WHERE id=?", String.class, studentId);
-        for (int attempt = 1; attempt <= 5; attempt++) {
-            var result =
-                    mvc.perform(
-                            post("/api/auth/login")
-                                    .with(csrf())
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(
-                                            mapper.writeValueAsString(
-                                                    Map.of(
-                                                            "username",
-                                                            username,
-                                                            "password",
-                                                            "wrong"))));
-            if (attempt < 5) {
-                result.andExpect(status().isUnauthorized())
-                        .andExpect(jsonPath("$.errorCode").value("INVALID_CREDENTIALS"));
-            } else {
-                result.andExpect(status().isForbidden())
-                        .andExpect(jsonPath("$.errorCode").value("ACCOUNT_TEMP_LOCKED"));
-            }
-        }
-        assertThat(
-                        jdbc.queryForObject(
-                                "SELECT failed_login_count FROM app_user WHERE id=?",
-                                Integer.class,
-                                studentId))
-                .isEqualTo(5);
     }
 
     @Test
@@ -605,7 +517,7 @@ class CrudApiIntegrationTest {
                 .andExpect(jsonPath("$.totalElements").value(1));
         mvc.perform(get("/api/contracts/" + contractId).with(asUser(otherStaffId, "STAFF")))
                 .andExpect(status().isNotFound());
-        mvc.perform(delete("/api/rooms/" + firstRoomId).with(asUser(staffId, "STAFF")).with(csrf()))
+        mvc.perform(delete("/api/rooms/" + firstRoomId).with(asUser(staffId, "STAFF")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("ROOM_OCCUPIED"));
         Long invoiceId =
@@ -628,12 +540,24 @@ class CrudApiIntegrationTest {
         mvc.perform(get("/api/me/invoices").with(asUser(studentId, "STUDENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
+        // API tổng hợp của ADMIN xem toàn hệ thống; /me vẫn chỉ là dữ liệu của chính ADMIN.
+        mvc.perform(get("/api/contracts").with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+        mvc.perform(get("/api/invoices").with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+        mvc.perform(get("/api/me/contracts").with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(get("/api/me/invoices").with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
         for (int attempt = 1; attempt <= 2; attempt++) {
             var result =
                     mvc.perform(
                             post("/api/invoices/" + invoiceId + "/confirm-payment")
                                     .with(asUser(staffId, "STAFF"))
-                                    .with(csrf())
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(
                                             "{\"payerUserId\":"
@@ -658,7 +582,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/contracts")
                                         .with(asUser(staffId, "STAFF"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(
                                                 mapper.writeValueAsString(
@@ -693,18 +616,16 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/contracts/" + id)
                                 .with(asUser(otherStaffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"endDate\":\"2041-02-01\"}"))
                 .andExpect(status().isNotFound());
         mvc.perform(
                         patch("/api/contracts/" + id)
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"endDate\":\"2041-02-01\",\"status\":\"ACTIVE\"}"))
                 .andExpect(status().isBadRequest());
-        mvc.perform(delete("/api/contracts/" + id).with(asUser(staffId, "STAFF")).with(csrf()))
+        mvc.perform(delete("/api/contracts/" + id).with(asUser(staffId, "STAFF")))
                 .andExpect(status().isNoContent());
     }
 
@@ -725,7 +646,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/admin/students")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(json))
                         .andExpect(status().isOk())
@@ -740,13 +660,10 @@ class CrudApiIntegrationTest {
                                 .with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
-        mvc.perform(delete("/api/admin/students/" + id).with(asUser(adminId, "ADMIN")).with(csrf()))
+        mvc.perform(delete("/api/admin/students/" + id).with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isNoContent());
         createDraftApplication(createOpenPeriod());
-        mvc.perform(
-                        delete("/api/admin/students/" + studentId)
-                                .with(asUser(adminId, "ADMIN"))
-                                .with(csrf()))
+        mvc.perform(delete("/api/admin/students/" + studentId).with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isConflict());
     }
 
@@ -770,7 +687,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/utility-readings")
                                         .with(asUser(staffId, "STAFF"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(reading))
                         .andExpect(status().isOk())
@@ -781,13 +697,9 @@ class CrudApiIntegrationTest {
         Long readingId = mapper.readTree(created).get("id").asLong();
         mvc.perform(
                         delete("/api/utility-readings/" + readingId)
-                                .with(asUser(otherStaffId, "STAFF"))
-                                .with(csrf()))
+                                .with(asUser(otherStaffId, "STAFF")))
                 .andExpect(status().isNotFound());
-        mvc.perform(
-                        delete("/api/utility-readings/" + readingId)
-                                .with(asUser(staffId, "STAFF"))
-                                .with(csrf()))
+        mvc.perform(delete("/api/utility-readings/" + readingId).with(asUser(staffId, "STAFF")))
                 .andExpect(status().isNoContent());
         String invoice =
                 mapper.writeValueAsString(
@@ -806,7 +718,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/invoices")
                                         .with(asUser(staffId, "STAFF"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(invoice))
                         .andExpect(status().isOk())
@@ -817,7 +728,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/invoices/" + invoiceId)
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"totalAmount\":30000}"))
                 .andExpect(status().isOk())
@@ -825,10 +735,7 @@ class CrudApiIntegrationTest {
         mvc.perform(get("/api/invoices").param("q", "DN-").with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
-        mvc.perform(
-                        delete("/api/invoices/" + invoiceId)
-                                .with(asUser(staffId, "STAFF"))
-                                .with(csrf()))
+        mvc.perform(delete("/api/invoices/" + invoiceId).with(asUser(staffId, "STAFF")))
                 .andExpect(status().isNoContent());
     }
 
@@ -846,7 +753,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/notifications")
                                         .with(asUser(staffId, "STAFF"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(body.formatted(firstBuildingId, "Cũ")))
                         .andReturn()
@@ -856,7 +762,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/notifications/" + id)
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body.formatted(firstBuildingId, "Mới")))
                 .andExpect(status().isOk())
@@ -878,7 +783,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/maintenance-requests/" + ticketId)
                                 .with(asUser(studentId, "STUDENT"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
@@ -897,13 +801,13 @@ class CrudApiIntegrationTest {
             mvc.perform(
                             post("/api/applications/" + id + "/" + action)
                                     .with(asUser(studentId, "STUDENT"))
-                                    .with(csrf()))
+                                    )
                     .andExpect(status().isOk());
         }
         mvc.perform(
                         post("/api/applications/" + id + "/approve")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf()))
+                                )
                 .andExpect(status().isOk());
         Long contractId =
                 jdbc.queryForObject(
@@ -918,7 +822,7 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/applications/" + id + "/cancel")
                                 .with(asUser(studentId, "STUDENT"))
-                                .with(csrf()))
+                                )
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("APPLICATION_HAS_CONTRACT"));
         mvc.perform(get("/api/applications/" + id).with(asUser(studentId, "STUDENT")))
@@ -928,7 +832,7 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/applications/" + id + "/cancel")
                                 .with(asUser(studentId, "STUDENT"))
-                                .with(csrf()))
+                                )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
@@ -954,7 +858,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/registration-periods/" + periodId)
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"unitIds\":[" + firstUnitId + "]}"))
                 .andExpect(status().isNotFound());
@@ -972,7 +875,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/admin/students")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(
                                                 mapper.writeValueAsString(
@@ -990,7 +892,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/admin/students/" + id)
                                 .with(asUser(adminId, "ADMIN"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"fullName\":\"Tên mới\"}"))
                 .andExpect(status().isOk())
@@ -1006,7 +907,6 @@ class CrudApiIntegrationTest {
             mvc.perform(
                             post("/api/utility-readings")
                                     .with(asUser(staffId, "STAFF"))
-                                    .with(csrf())
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(
                                             mapper.writeValueAsString(
@@ -1039,7 +939,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/" + roomId + "/beds")
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"code\":\"01\"}"))
                 .andExpect(status().isConflict())
@@ -1058,7 +957,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/rooms/" + roomId)
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"roomTypeId\":" + biggerType + "}"))
                 .andExpect(status().isOk())
@@ -1066,7 +964,6 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         patch("/api/room-types/" + biggerType)
                                 .with(asUser(staffId, "STAFF"))
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"bedCount\":5}"))
                 .andExpect(status().isConflict())
@@ -1085,7 +982,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/rooms")
                                         .with(asUser(staffId, "STAFF"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(
                                                 """
@@ -1102,26 +998,568 @@ class CrudApiIntegrationTest {
         return mapper.readTree(response).get("id").asLong();
     }
 
+    @Test
+    void adminWithoutUnitCanManageRoomsInEveryUnit() throws Exception {
+        // ADMIN không cần giả vai STAFF hoặc gắn đơn vị để dùng CRUD nghiệp vụ.
+        mvc.perform(get("/api/rooms/" + otherRoomId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk());
+        String created =
+                mvc.perform(
+                                post("/api/rooms")
+                                        .with(asUser(adminId, "ADMIN"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                """
+                                                {"buildingId":%d,"roomTypeId":%d,"floor":2,"code":"B102","gender":"M"}
+                                                """
+                                                        .formatted(otherBuildingId, roomTypeId)))
+                        .andExpect(status().isCreated())
+                        .andExpect(jsonPath("$.beds.length()").value(2))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long roomId = mapper.readTree(created).get("id").asLong();
+        mvc.perform(
+                        get("/api/rooms")
+                                .param("buildingId", otherBuildingId.toString())
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2));
+        mvc.perform(
+                        patch("/api/rooms/" + roomId)
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"code\":\"B103\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("B103"));
+        mvc.perform(
+                        patch("/api/rooms/" + roomId)
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"code\":\"Không có quyền\"}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/rooms").with(asUser(studentId, "STUDENT")))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/rooms/" + roomId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isNoContent());
+        entityManager.flush();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT actor_id FROM audit_log WHERE action='ROOM_DELETE' AND"
+                                        + " entity_id=?",
+                                Long.class,
+                                roomId))
+                .isEqualTo(adminId);
+    }
+
+    @Test
+    void adminCanManageForeignRegistrationPeriodWhileAggregateStaffCannotWriteIt()
+            throws Exception {
+        Long semesterId = createSemester();
+        String created =
+                mvc.perform(
+                                post("/api/registration-periods")
+                                        .with(asUser(adminId, "ADMIN"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                """
+                                                {"semesterId":%d,"kind":"REGULAR","name":"Đợt đơn vị khác",
+                                                "openAt":"2040-08-01T08:00:00+07:00","closeAt":"2040-08-31T08:00:00+07:00",
+                                                "unitIds":[%d],"quotas":[{"buildingId":%d,"quota":10}]}
+                                                """
+                                                        .formatted(
+                                                                semesterId,
+                                                                otherUnitId,
+                                                                otherBuildingId)))
+                        .andExpect(status().isCreated())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long periodId = mapper.readTree(created).get("id").asLong();
+        jdbc.update("UPDATE app_user SET cross_unit_access=true WHERE id=?", staffId);
+        entityManager.clear();
+        mvc.perform(get("/api/registration-periods/" + periodId).with(asUser(staffId, "STAFF")))
+                .andExpect(status().isOk());
+        mvc.perform(
+                        patch("/api/registration-periods/" + periodId)
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"name\":\"Sửa ngoài phạm vi\"}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        patch("/api/registration-periods/" + periodId)
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"name\":\"ADMIN cập nhật\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("ADMIN cập nhật"));
+        mvc.perform(delete("/api/registration-periods/" + periodId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void adminCreatesAndProcessesApplicationOnBehalfWithoutChangingAuditActor() throws Exception {
+        Long periodId = createOpenPeriod();
+        jdbc.update(
+                "INSERT INTO registration_period_unit(period_id,management_unit_id) VALUES(?,?)",
+                periodId,
+                otherUnitId);
+        String created =
+                mvc.perform(
+                                post("/api/applications")
+                                        .with(asUser(adminId, "ADMIN"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                mapper.writeValueAsString(
+                                                        Map.of(
+                                                                "periodId", periodId,
+                                                                "preferredUnitId", otherUnitId,
+                                                                "studentId", studentId))))
+                        .andExpect(status().isCreated())
+                        .andExpect(jsonPath("$.student.id").value(studentId))
+                        .andExpect(jsonPath("$.timeline[0].actorId").value(adminId))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long applicationId = mapper.readTree(created).get("id").asLong();
+        mvc.perform(
+                        patch("/api/applications/" + applicationId)
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"note\":\"ADMIN sửa đơn hộ sinh viên\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.note").value("ADMIN sửa đơn hộ sinh viên"));
+        mvc.perform(
+                        post("/api/applications/" + applicationId + "/submit")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowedActions").value(hasItem("approve")));
+        mvc.perform(
+                        post("/api/applications/" + applicationId + "/approve")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+        // Có mọi quyền không có nghĩa là được bỏ qua trạng thái đã xử lý.
+        mvc.perform(
+                        post("/api/applications/" + applicationId + "/approve")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_STATE_TRANSITION"));
+        mvc.perform(
+                        post("/api/applications/" + applicationId + "/cancel")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+        entityManager.flush();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM status_history WHERE"
+                                    + " entity_type='APPLICATION' AND entity_id=? AND actor_id=?",
+                                Long.class,
+                                applicationId,
+                                adminId))
+                .isEqualTo(4);
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM status_history WHERE"
+                                    + " entity_type='APPLICATION' AND entity_id=? AND actor_id<>?",
+                                Long.class,
+                                applicationId,
+                                adminId))
+                .isZero();
+    }
+
+    @Test
+    void studentCannotForgeApplicantAndAdminMustChooseAStudent() throws Exception {
+        Long periodId = createOpenPeriod();
+        mvc.perform(
+                        post("/api/applications")
+                                .with(asUser(studentId, "STUDENT"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        mapper.writeValueAsString(
+                                                Map.of(
+                                                        "periodId", periodId,
+                                                        "preferredUnitId", firstUnitId,
+                                                        "studentId", adminId))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+        mvc.perform(
+                        post("/api/applications")
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        mapper.writeValueAsString(
+                                                Map.of(
+                                                        "periodId", periodId,
+                                                        "preferredUnitId", firstUnitId))))
+                .andExpect(status().isBadRequest());
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM room_application WHERE period_id=?",
+                                Long.class,
+                                periodId))
+                .isZero();
+    }
+
+    @Test
+    void adminCanWorkTicketAssignedToAnotherTechnicianButCannotRestartClosedTicket()
+            throws Exception {
+        Long otherTechnicianId = createUser("TECHNICIAN", otherUnitId);
+        MockMultipartFile data =
+                new MockMultipartFile(
+                        "data",
+                        "data.json",
+                        "application/json",
+                        """
+                        {"category":"ELECTRIC","severity":"MEDIUM","description":"Đèn hỏng ở đơn vị khác","buildingId":%d,"floor":1}
+                        """
+                                .formatted(otherBuildingId)
+                                .getBytes(StandardCharsets.UTF_8));
+        String created =
+                mvc.perform(
+                                multipart("/api/maintenance-requests")
+                                        .file(data)
+                                        .with(asUser(otherStaffId, "STAFF")))
+                        .andExpect(status().isCreated())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long ticketId = mapper.readTree(created).get("id").asLong();
+        mvc.perform(
+                        post("/api/maintenance-requests/" + ticketId + "/assign")
+                                .with(asUser(otherStaffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"technicianId\":" + otherTechnicianId + "}"))
+                .andExpect(status().isOk());
+        mvc.perform(
+                        post("/api/maintenance-requests/" + ticketId + "/start")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.assignedTo").value(otherTechnicianId))
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+        mvc.perform(
+                        post("/api/maintenance-requests/" + ticketId + "/resolve")
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"note\":\"ADMIN xác nhận đã sửa xong\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RESOLVED"));
+        mvc.perform(
+                        post("/api/maintenance-requests/" + ticketId + "/accept")
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"reason\":\"ADMIN nghiệm thu thay người yêu cầu\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CLOSED"));
+        mvc.perform(
+                        post("/api/maintenance-requests/" + ticketId + "/start")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_STATE_TRANSITION"));
+    }
+
+    @Test
+    void adminManagesForeignUtilityInvoiceAndStudentCannotUpdateIt() throws Exception {
+        String created =
+                mvc.perform(
+                                post("/api/invoices")
+                                        .with(asUser(adminId, "ADMIN"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                mapper.writeValueAsString(
+                                                        Map.of(
+                                                                "type",
+                                                                "UTILITY",
+                                                                "roomId",
+                                                                otherRoomId,
+                                                                "billingMonth",
+                                                                "2026-10-01",
+                                                                "totalAmount",
+                                                                20000,
+                                                                "dueDate",
+                                                                LocalDate.now()
+                                                                        .plusDays(7)
+                                                                        .toString()))))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long invoiceId = mapper.readTree(created).get("id").asLong();
+        mvc.perform(get("/api/invoices/" + invoiceId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/invoices/" + invoiceId).with(asUser(staffId, "STAFF")))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        patch("/api/invoices/" + invoiceId)
+                                .with(asUser(studentId, "STUDENT"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"totalAmount\":1}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(
+                        patch("/api/invoices/" + invoiceId)
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"totalAmount\":30000}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalAmount").value(30000));
+        mvc.perform(delete("/api/invoices/" + invoiceId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void adminCanEditAnotherPublishersNotificationWhileStaffCannot() throws Exception {
+        String created =
+                mvc.perform(
+                                post("/api/notifications")
+                                        .with(asUser(otherStaffId, "STAFF"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                mapper.writeValueAsString(
+                                                        Map.of(
+                                                                "scope",
+                                                                "UNIT",
+                                                                "unitId",
+                                                                otherUnitId,
+                                                                "title",
+                                                                "Thông báo khác " + suffix,
+                                                                "body",
+                                                                "Nội dung ban đầu"))))
+                        .andExpect(status().isCreated())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long notificationId = mapper.readTree(created).get("id").asLong();
+        mvc.perform(
+                        get("/api/notifications/published/" + notificationId)
+                                .with(asUser(staffId, "STAFF")))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        get("/api/notifications/published")
+                                .param("q", "Thông báo khác " + suffix)
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+        mvc.perform(
+                        patch("/api/notifications/" + notificationId)
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        mapper.writeValueAsString(
+                                                Map.of(
+                                                        "scope", "UNIT",
+                                                        "unitId", otherUnitId,
+                                                        "title", "ADMIN cập nhật",
+                                                        "body", "Nội dung mới"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("ADMIN cập nhật"));
+        mvc.perform(delete("/api/notifications/" + notificationId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void meExposesRoleSpecificCrudPermissions() throws Exception {
+        mvc.perform(get("/api/auth/me").with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_CREATE")))
+                .andExpect(jsonPath("$.permissions").value(hasItem("USER_CREATE")));
+        mvc.perform(get("/api/auth/me").with(asUser(staffId, "STAFF")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_CREATE")))
+                .andExpect(jsonPath("$.permissions").value(not(hasItem("USER_CREATE"))))
+                .andExpect(jsonPath("$.permissions").value(hasItem("CONTRACT_EXTENSION_UPDATE")))
+                .andExpect(
+                        jsonPath("$.permissions").value(not(hasItem("CONTRACT_EXTENSION_CREATE"))))
+                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_TRANSFER_UPDATE")))
+                .andExpect(jsonPath("$.permissions").value(not(hasItem("ROOM_TRANSFER_DELETE"))))
+                .andExpect(jsonPath("$.permissions").value(hasItem("SUMMER_REGISTRATION_READ")))
+                .andExpect(
+                        jsonPath("$.permissions")
+                                .value(not(hasItem("SUMMER_REGISTRATION_UPDATE"))));
+        mvc.perform(get("/api/auth/me").with(asUser(technicianId, "TECHNICIAN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions").value(hasItem("MAINTENANCE_UPDATE")))
+                .andExpect(jsonPath("$.permissions").value(not(hasItem("ROOM_CREATE"))));
+        mvc.perform(get("/api/auth/me").with(asUser(studentId, "STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_APPLICATION_CREATE")))
+                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_APPLICATION_DELETE")))
+                .andExpect(jsonPath("$.permissions").value(not(hasItem("INVOICE_UPDATE"))));
+    }
+
+    /** Các điều kiện tìm tài khoản phải giao nhau; không để tìm theo tên bỏ qua đơn vị/khóa. */
+    @Test
+    void accountFiltersCombineRoleUnitLockedAndSearchWithAccuratePaging() throws Exception {
+        String marker = "Filter " + suffix;
+        jdbc.update(
+                "UPDATE app_user SET full_name=? WHERE id IN (?, ?, ?)",
+                marker,
+                staffId,
+                otherStaffId,
+                technicianId);
+        jdbc.update("UPDATE app_user SET locked=true WHERE id=?", otherStaffId);
+        Long lockedFirstUnitStaff =
+                jdbc.queryForObject(
+                        "INSERT INTO"
+                            + " app_user(username,role,full_name,management_unit_id,locked,keycloak_user_id)"
+                            + " VALUES(?,'STAFF',?,?,true,?) RETURNING id",
+                        Long.class,
+                        "locked-filter-" + suffix,
+                        marker,
+                        firstUnitId,
+                        UUID.randomUUID().toString());
+
+        mvc.perform(
+                        get("/api/admin/users")
+                                .param("q", marker)
+                                .param("role", "STAFF")
+                                .param("size", "1")
+                                .param("page", "1")
+                                .param("sort", "id,desc")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(otherStaffId));
+        mvc.perform(
+                        get("/api/admin/users")
+                                .param("q", marker)
+                                .param("role", "STAFF")
+                                .param("managementUnitId", firstUnitId.toString())
+                                .param("locked", "true")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(lockedFirstUnitStaff));
+        mvc.perform(
+                        get("/api/admin/users")
+                                .param("q", marker)
+                                .param("role", "STAFF")
+                                .param("managementUnitId", firstUnitId.toString())
+                                .param("locked", "false")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(staffId));
+    }
+
+    /** Fixture ở hai biên thời gian và các bản ghi gần giống phải cho đúng count lẫn từng trang. */
+    @Test
+    void auditFiltersCombineActorActionTypeSearchAndInclusiveTimeBoundaries() throws Exception {
+        String marker = "Audit " + suffix;
+        String action = "FILTER_" + suffix;
+        jdbc.update("UPDATE app_user SET full_name=? WHERE id=?", marker, staffId);
+        Long startBoundary = createAuditFixture(staffId, action, "USER", "2045-01-01T00:00:00Z");
+        Long endBoundary = createAuditFixture(staffId, action, "USER", "2045-01-02T00:00:00Z");
+        createAuditFixture(otherStaffId, action, "USER", "2045-01-01T12:00:00Z");
+        createAuditFixture(staffId, action, "ROOM", "2045-01-01T12:00:00Z");
+        createAuditFixture(staffId, "OTHER_ACTION", "USER", "2045-01-01T12:00:00Z");
+        createAuditFixture(staffId, action, "USER", "2044-12-31T23:59:59Z");
+        createAuditFixture(staffId, action, "USER", "2045-01-02T00:00:01Z");
+
+        for (int page = 0; page < 2; page++) {
+            mvc.perform(
+                            get("/api/admin/audit-logs")
+                                    .param("q", marker)
+                                    .param("actorId", staffId.toString())
+                                    .param("action", action)
+                                    .param("entityType", "USER")
+                                    .param("from", "2045-01-01T00:00:00Z")
+                                    .param("to", "2045-01-02T00:00:00Z")
+                                    .param("page", Integer.toString(page))
+                                    .param("size", "1")
+                                    .with(asUser(adminId, "ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalElements").value(2))
+                    .andExpect(jsonPath("$.totalPages").value(2))
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(
+                            jsonPath("$.content[0].id")
+                                    .value(page == 0 ? endBoundary : startBoundary));
+        }
+        // Chuỗi tìm kiếm được bind như dữ liệu; không biến dấu nháy thành một phần câu SQL.
+        mvc.perform(
+                        get("/api/admin/audit-logs")
+                                .param("action", "' OR 1=1 --")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    /** Đầu vào bộ lọc sai phải báo 400; quyền tổng hợp của Staff vẫn không mở API quản trị. */
+    @Test
+    void managementFiltersRejectInvalidIdentifiersRangesAndNonAdminAccess() throws Exception {
+        mvc.perform(
+                        get("/api/admin/users")
+                                .param("managementUnitId", "0")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+        mvc.perform(
+                        get("/api/admin/users")
+                                .param("locked", "invalid")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+        mvc.perform(
+                        get("/api/admin/audit-logs")
+                                .param("actorId", "-1")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+        mvc.perform(
+                        get("/api/admin/audit-logs")
+                                .param("from", "2045-01-02T00:00:00Z")
+                                .param("to", "2045-01-01T00:00:00Z")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+        jdbc.update("UPDATE app_user SET cross_unit_access=true WHERE id=?", staffId);
+        mvc.perform(get("/api/admin/users").with(asUser(staffId, "STAFF")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/audit-logs").with(asUser(staffId, "STAFF")))
+                .andExpect(status().isForbidden());
+    }
+
+    private Long createAuditFixture(Long actorId, String action, String type, String createdAt) {
+        return jdbc.queryForObject(
+                "INSERT INTO audit_log(actor_id,action,entity_type,entity_id,created_at)"
+                        + " VALUES(?,?,?,?,?) RETURNING id",
+                Long.class,
+                actorId,
+                action,
+                type,
+                firstRoomId,
+                OffsetDateTime.parse(createdAt));
+    }
+
     private RequestPostProcessor asUser(Long id, String role) {
-        return authentication(
-                UsernamePasswordAuthenticationToken.authenticated(
-                        new DmsPrincipal(id, "fixture"),
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role))));
+        String identity =
+                jdbc.queryForObject(
+                        "SELECT keycloak_user_id FROM app_user WHERE id=?", String.class, id);
+        Long version =
+                jdbc.queryForObject(
+                        "SELECT security_version FROM app_user WHERE id=?", Long.class, id);
+        return jwt().jwt(
+                        builder ->
+                                builder.subject(identity)
+                                        .claim("realm_access", Map.of("roles", List.of(role)))
+                                        .claim("dms_security_version", version))
+                .authorities(new SimpleGrantedAuthority("ROLE_" + role));
     }
 
     private Long createUser(String role, Long unitId) {
         return jdbc.queryForObject(
-                """
-                INSERT INTO app_user(username,password_hash,role,full_name,management_unit_id,must_change_password)
-                VALUES(?,?,?,?,?,false)RETURNING id
-                """,
+                "INSERT INTO"
+                    + " app_user(username,role,full_name,management_unit_id,must_change_password,keycloak_user_id)"
+                    + " VALUES(?,?,?,?,false,?) RETURNING id",
                 Long.class,
                 role + "-" + unitId + "-" + suffix,
-                passwordEncoder.encode("Password123"),
                 role,
                 "Người dùng " + role,
-                unitId);
+                unitId,
+                UUID.randomUUID().toString());
     }
 
     private Long createBuilding(Long unitId, String code) {
@@ -1178,7 +1616,6 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/applications")
                                         .with(asUser(studentId, "STUDENT"))
-                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(
                                                 "{\"periodId\":"
