@@ -4,18 +4,19 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
-import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
-import vn.edu.tlu.dms.maintenance.api.MaintenanceCrudController.Edit;
 import vn.edu.tlu.dms.maintenance.service.MaintenanceCrudService;
-import vn.edu.tlu.dms.maintenance.service.MaintenanceRequestService;
+import vn.edu.tlu.dms.room.service.RoomReferenceService;
+
+import java.util.Objects;
 
 @Service
 @Transactional
@@ -27,9 +28,7 @@ public class MaintenanceCrudServiceImpl implements MaintenanceCrudService {
 
     private final ScopeGuard guard;
 
-    private final MaintenanceRequestService requests;
-
-    private final AuditService audit;
+    private final RoomReferenceService rooms;
 
     private final StatusHistoryService history;
 
@@ -37,59 +36,73 @@ public class MaintenanceCrudServiceImpl implements MaintenanceCrudService {
             JdbcTemplate jdbc,
             CurrentUser current,
             ScopeGuard guard,
-            MaintenanceRequestService requests,
-            AuditService audit,
+            RoomReferenceService rooms,
             StatusHistoryService history) {
         this.jdbc = jdbc;
         this.current = current;
         this.guard = guard;
-        this.requests = requests;
-        this.audit = audit;
+        this.rooms = rooms;
         this.history = history;
     }
 
     private void requireOpenRequestOfCreator(Long id) {
-        jdbc.queryForObject(
-                "SELECT id FROM maintenance_request WHERE id=? FOR UPDATE", Long.class, id);
-        var request = requests.getMaintenanceRequestById(id);
-        if ((!current.get().isAdmin() && !current.get().id().equals(request.requesterId()))
-                || !MaintenanceStatus.OPEN.equals(request.status())) {
+        guard.requireRole(Role.STUDENT, Role.STAFF, Role.TECHNICIAN);
+        // Đọc dữ liệu sau khóa bằng JDBC, tránh nạp entity rồi để UPDATE bên dưới làm cache cũ.
+        var row =
+                jdbc
+                        .query(
+                                "SELECT requester_id,status,room_id,building_id,assigned_to FROM"
+                                        + " maintenance_request WHERE id=? FOR UPDATE",
+                                (result, index) ->
+                                        new OpenRequest(
+                                                result.getLong("requester_id"),
+                                                result.getString("status"),
+                                                result.getObject("room_id", Long.class),
+                                                result.getObject("building_id", Long.class),
+                                                result.getObject("assigned_to", Long.class)),
+                                id)
+                        .stream()
+                        .findFirst()
+                        .orElseThrow(BusinessException::notFound);
+        if (current.get().is(Role.STAFF)) {
+            guard.requireUnit(
+                    row.roomId() == null
+                            ? rooms.getBuildingManagementUnitId(row.buildingId())
+                            : rooms.getRoomLocation(row.roomId()).unitId());
+        }
+        if (current.get().is(Role.STUDENT)
+                && !current.get().id().equals(row.requesterId())
+                && !Objects.equals(
+                        row.roomId(),
+                        rooms.findCurrentStayingRoomId(current.get().id()).orElse(-1L))) {
+            throw BusinessException.notFound();
+        }
+        if (current.get().is(Role.TECHNICIAN) && !current.get().id().equals(row.assignedTo())) {
+            throw BusinessException.notFound();
+        }
+        if ((!current.get().isAdmin() && !current.get().id().equals(row.requesterId()))
+                || !MaintenanceStatus.OPEN.equals(row.status())) {
             throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
     }
 
-    @Override()
-    public Object updateOpenRequest(Long id, Edit input) {
-        guard.requirePermission(Permission.MAINTENANCE_UPDATE);
-        requireOpenRequestOfCreator(id);
-        jdbc.update(
-                "UPDATE maintenance_request SET category=?,severity=?,description=? WHERE id=?",
-                input.category(),
-                input.severity(),
-                input.description().trim(),
-                id);
-        audit.record(
-                current.get().id(),
-                AuditAction.MAINTENANCE_UPDATE,
-                "MAINTENANCE",
-                id,
-                null,
-                input,
-                null);
-        return requests.getMaintenanceRequestById(id);
-    }
+    private record OpenRequest(
+            Long requesterId, String status, Long roomId, Long buildingId, Long assignedTo) {}
 
     /** DELETE ở ticket là hủy logic: giữ ảnh và lịch sử để tra cứu, không xóa dữ liệu nghiệp vụ. */
     @Override()
     public void cancelOpenRequest(Long id) {
         guard.requirePermission(Permission.MAINTENANCE_DELETE);
         requireOpenRequestOfCreator(id);
-        jdbc.update("UPDATE maintenance_request SET status='CANCELLED' WHERE id=?", id);
+        jdbc.update(
+                "UPDATE maintenance_request SET status=? WHERE id=?",
+                MaintenanceStatus.CANCELLED,
+                id);
         history.record(
-                "MAINTENANCE",
+                EntityType.MAINTENANCE,
                 id,
                 MaintenanceStatus.OPEN,
-                "CANCELLED",
+                MaintenanceStatus.CANCELLED,
                 current.get().id(),
                 current.get().isAdmin() ? "Quản trị viên hủy yêu cầu" : "Người tạo hủy yêu cầu");
     }

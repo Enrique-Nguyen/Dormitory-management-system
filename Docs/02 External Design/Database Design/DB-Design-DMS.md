@@ -1,7 +1,7 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.6**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.10 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
+> **Phiên bản 0.7**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.11 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
 > DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak và ma trận quyền động; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
 
@@ -162,7 +162,7 @@ Mật khẩu chỉ lưu hash BCrypt; mật khẩu tạm trả một lần, khôn
 | Bảng | Mục đích | Ràng buộc chính | Truy vết |
 |---|---|---|---|
 | `building` | Tòa, thuộc một đơn vị, có **mức cọc** | `deposit_amount > 0` | FR-ROOM-01 |
-| `room_type` | Số giường, **giá gốc HK chính và hè** | Nơi duy nhất lưu giá gốc | FR-ROOM-02 |
+| `room_type` | Số giường, **giá gốc HK chính và hè** | Nơi duy nhất lưu giá gốc. Ràng buộc nghiệp vụ: không cho phép cập nhật `bed_count` khi loại phòng đã được gán cho ít nhất một phòng đang tồn tại (trả 409 `RESOURCE_IN_USE`) nhằm bảo toàn số giường vật lý và công suất | FR-ROOM-02 |
 | `room` | Phòng; trạng thái vận hành; **trưởng phòng** | `UNIQUE(building_id, code)`; một sinh viên làm trưởng tối đa một phòng | FR-ROOM-03, 05, 09 |
 | `bed` | Giường; `ACTIVE` / `BROKEN` / `RETIRED` | `RETIRED` thay cho xóa khi bớt giường (FR-ROOM-04, 06) | FR-ROOM-04..06 |
 | `semester` | HK1, HK2, Hè | `UNIQUE(academic_year, type)`; **không chồng thời gian** (`EXCLUDE`) | FR-ROOM-11 |
@@ -175,7 +175,7 @@ Mật khẩu chỉ lưu hash BCrypt; mật khẩu tạm trả một lần, khôn
 | `registration_period_unit` | Đợt áp dụng cho đơn vị nào | PK kép | FR-REG-01 |
 | `registration_quota` | Chỉ tiêu theo tòa | PK kép | FR-REG-01 |
 | `priority_category` | Diện ưu tiên + trọng số cấu hình được | | Q-07, FR-REG-05 |
-| `room_application` | Đơn đăng ký | `UNIQUE(student_id, period_id)`; REJECTED bắt buộc lý do | FR-REG-02..12 |
+| `room_application` | Đơn đăng ký | `UNIQUE(student_id, period_id)`; REJECTED bắt buộc lý do. Đơn APPROVED chỉ được phép hủy khi chưa sinh hợp đồng PENDING hoặc ACTIVE liên kết (trả 409 `APPLICATION_HAS_CONTRACT`) | FR-REG-02..12 |
 | `application_priority` | Diện sinh viên khai và kết quả Staff xác nhận | `verified` NULL / TRUE / FALSE | FR-REG-06 |
 
 ### 3.4. Hợp đồng, phân phòng, kỳ hè
@@ -231,7 +231,10 @@ Mật khẩu chỉ lưu hash BCrypt; mật khẩu tạm trả một lần, khôn
 | BR-10 Sổ cọc | CHECK dấu theo loại; `UNIQUE(contract_id) WHERE type='DEPOSIT'` và `='REFUND'`; `UNIQUE(contract_id, maintenance_request_id) WHERE type='DEDUCTION'` | → `DEPOSIT_INVALID` |
 | BR-10 Hoàn cọc bằng số dư | `move_out_record`: `refund_amount = GREATEST(deposit_balance, 0)` | |
 | FR-MNT-09 Nguyên nhân, chi phí | 4 CHECK trên `maintenance_request` | → `COST_INVALID` |
-| Học kỳ không chồng nhau | `EXCLUDE USING gist (daterange(...) WITH &&)` | |
+| Học kỳ không chồng nhau | `EXCLUDE USING gist (daterange(...) WITH &&)` | `semester_daterange_excl` → `SEMESTER_OVERLAP` |
+| Một trưởng phòng một phòng | `UNIQUE(leader_student_id) WHERE leader_student_id IS NOT NULL` | `ux_room_leader` → `LEADER_ALREADY_ASSIGNED` |
+| Mã sinh viên duy nhất; mã giường duy nhất trong phòng | `UNIQUE(student_code)`, `UNIQUE(room_id, code)` | → `STUDENT_CODE_EXISTS`, `BED_CODE_EXISTS` |
+| Ràng buộc còn lại | | UNIQUE / EXCLUDE → `DUPLICATE_VALUE`; khóa ngoại → `RESOURCE_IN_USE`; NOT NULL / CHECK → `VALIDATION_FAILED`; còn lại `CONCURRENT_UPDATE` |
 | Nhật ký chỉ ghi thêm | Trigger `tg_audit_log_append_only` | |
 
 ### Service vẫn phải kiểm tra (CSDL không diễn đạt gọn được)
@@ -244,6 +247,8 @@ Mật khẩu chỉ lưu hash BCrypt; mật khẩu tạm trả một lần, khôn
 - `summer_choice.semester_id` là học kỳ hè; ≤ 3 ảnh mỗi ticket.
 - `invoice.total_amount` = tổng `invoice_item.amount`: aggregate `Invoice` tạo hóa đơn và các dòng, tính tổng trong **cùng một transaction** (mục 10).
 - Hợp đồng ACTIVE luôn có phân phòng `STAY` trừ khi có phiếu gửi đồ mở (BR-02).
+- **Bảo toàn số giường loại phòng (`room_type`)**: Khi cập nhật `room_type`, nếu `bed_count` thay đổi so với giá trị hiện tại, Service phải kiểm tra xem loại phòng đã được gán cho phòng nào trong bảng `room` chưa (`rooms.exists(roomTypeId == entity.id)`). Nếu loại phòng đang được sử dụng bởi ít nhất một phòng đang tồn tại, từ chối cập nhật và trả 409 `RESOURCE_IN_USE` nhằm bảo toàn số giường vật lý và công suất phòng.
+- **Hủy đơn APPROVED tránh hợp đồng mồ côi**: Khi sinh viên hủy đơn `APPROVED`, Service phải kiểm tra xem đơn đã sinh hợp đồng `PENDING` hoặc `ACTIVE` liên kết chưa (`ContractService.hasLiveContractForApplication(applicationId)`). Nếu có, chặn 409 `APPLICATION_HAS_CONTRACT` và ẩn thao tác `cancel` trong `allowedActions` nhằm bảo toàn tính toàn vẹn và tránh hợp đồng mồ côi; người dùng phải thực hiện thủ tục hủy giữ chỗ / hợp đồng trước.
 
 ---
 
@@ -426,3 +431,8 @@ Flyway `V5__role_permission_matrix.sql` tạo một bảng `role_permission_matr
 `version BIGINT NOT NULL DEFAULT 0 CHECK(version >= 0)` là phiên bản ma trận, độc lập với `app_user.security_version`. `updated_by` tham chiếu app_user, ON DELETE SET NULL; `updated_at TIMESTAMPTZ` lưu thời điểm thay đổi. Khi lưu, khóa dòng SELECT FOR UPDATE, so version đã đọc, cập nhật toàn bộ tập quyền, tăng version và ghi audit trước/sau cùng transaction. Lưu không thay đổi không tăng version hoặc ghi audit.
 
 Đọc quyền runtime không dùng mặc định nếu dòng thiếu/hỏng và không cần sửa JWT hay realm role Keycloak. ADMIN vẫn quản trị được để sửa lại dòng hỏng; dòng bị xóa cần quản trị CSDL khôi phục từ dữ liệu hợp lệ. Quyền của các tài khoản dùng chung role/database thay đổi cùng nhau; database khác không tự đồng bộ. V1–V4 giữ nguyên checksum.
+
+
+### Bổ sung theo code review v0.7 — 15/10/2026
+
+Mục 4 bổ sung ánh xạ `ux_room_leader` → `LEADER_ALREADY_ASSIGNED`, `student_profile_student_code_key` → `STUDENT_CODE_EXISTS`, `bed_room_id_code_key` → `BED_CODE_EXISTS`, `semester_daterange_excl` → `SEMESTER_OVERLAP` và quy tắc theo SQLState cho ràng buộc chưa có tên trong danh sách (UNIQUE/EXCLUDE → `DUPLICATE_VALUE`, khóa ngoại → `RESOURCE_IN_USE`, NOT NULL/CHECK → `VALIDATION_FAILED`, còn lại `CONCURRENT_UPDATE`). Mục 3.2, 3.3 và mục 4 ghi chú ràng buộc nghiệp vụ: không cập nhật `bed_count` khi loại phòng đã được gán cho phòng đang tồn tại (409 `RESOURCE_IN_USE`) để bảo toàn số giường và công suất; đơn `APPROVED` chỉ được hủy khi chưa sinh hợp đồng `PENDING`/`ACTIVE` liên kết (409 `APPLICATION_HAS_CONTRACT`) để tránh hợp đồng mồ côi. Không có migration mới.

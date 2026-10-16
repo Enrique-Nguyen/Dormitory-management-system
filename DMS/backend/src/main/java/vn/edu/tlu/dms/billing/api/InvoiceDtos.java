@@ -1,7 +1,9 @@
 package vn.edu.tlu.dms.billing.api;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.PaymentMethod;
@@ -44,4 +46,14 @@ public final class InvoiceDtos {
             List<Item> items,
             List<String> allowedActions,
             List<StatusHistoryService.Entry> timeline) {}
+
+    public record Save(
+            @Positive Long id,
+            String type,
+            @Positive Long studentId,
+            @Positive Long semesterId,
+            @Positive Long roomId,
+            LocalDate billingMonth,
+            @Min(0) Long totalAmount,
+            LocalDate dueDate) {}
 }

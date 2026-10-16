@@ -1,12 +1,16 @@
 package vn.edu.tlu.dms.contract.api;
 
+import jakarta.validation.Valid;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.contract.service.ContractService;
 
@@ -20,13 +24,10 @@ public class ContractController {
     }
 
     @RequirePrivilege(Permission.CONTRACT_READ)
-    @GetMapping("/api/contracts")
-    public PageResponse<ContractDtos.Response> searchContracts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String status,
-            @RequestParam(defaultValue = "") String q) {
-        return service.searchContracts(page, size, status, false, q);
+    @PostMapping("/api/contracts/search-by-page")
+    public PageResponse<ContractDtos.Response> searchByPage(
+            @Valid @RequestBody SearchRequest input) {
+        return service.searchByPage(input, false);
     }
 
     @RequirePrivilege(Permission.CONTRACT_READ)
@@ -36,12 +37,10 @@ public class ContractController {
     }
 
     @RequirePrivilege(Permission.CONTRACT_READ)
-    @GetMapping("/api/me/contracts")
-    public PageResponse<ContractDtos.Response> getMyContracts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "") String q) {
-        return service.searchContracts(page, size, null, true, q);
+    @PostMapping("/api/me/contracts/search-by-page")
+    public PageResponse<ContractDtos.Response> searchMyContractsByPage(
+            @Valid @RequestBody SearchRequest input) {
+        return service.searchByPage(input, true);
     }
 
     @RequirePrivilege(Permission.CONTRACT_READ)

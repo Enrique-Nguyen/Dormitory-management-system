@@ -1,16 +1,17 @@
 package vn.edu.tlu.dms.common.api;
 
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import jakarta.validation.Valid;
+
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.common.service.AuditService;
 
-import java.time.OffsetDateTime;
 import java.util.Map;
 
 /** Nhật ký chỉ đọc: CSDL cũng cấm UPDATE/DELETE để bảo vệ dấu vết thao tác. */
@@ -23,19 +24,9 @@ public class AuditController {
         this.service = service;
     }
 
-    @GetMapping("/api/admin/audit-logs")
+    @PostMapping("/api/admin/audit-logs/search-by-page")
     @RequirePrivilege(Permission.AUDIT_READ)
-    public PageResponse<Map<String, Object>> searchAuditLogs(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "") String q,
-            @RequestParam(required = false) Long actorId,
-            @RequestParam(required = false) String action,
-            @RequestParam(required = false) String entityType,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                    OffsetDateTime from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                    OffsetDateTime to) {
-        return service.searchAuditLogs(page, size, q, actorId, action, entityType, from, to);
+    public PageResponse<Map<String, Object>> searchByPage(@Valid @RequestBody SearchRequest input) {
+        return service.searchByPage(input);
     }
 }

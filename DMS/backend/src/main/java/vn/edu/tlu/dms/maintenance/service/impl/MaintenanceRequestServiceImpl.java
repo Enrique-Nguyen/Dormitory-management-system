@@ -1,6 +1,9 @@
 package vn.edu.tlu.dms.maintenance.service.impl;
 
+import jakarta.persistence.EntityManager;
+
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -8,20 +11,27 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
+import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
-import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Create;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Photo;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Response;
+import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Save;
 import vn.edu.tlu.dms.maintenance.domain.MaintenanceRequest;
 import vn.edu.tlu.dms.maintenance.domain.MaintenanceRequestPolicy;
 import vn.edu.tlu.dms.maintenance.repository.MaintenancePhotoRepository;
@@ -58,6 +68,10 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
     private final JdbcTemplate jdbc;
 
+    private final AuditService audit;
+
+    private final EntityManager entityManager;
+
     public MaintenanceRequestServiceImpl(
             MaintenanceRequestRepository requests,
             MaintenancePhotoRepository photoRows,
@@ -67,7 +81,9 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             CurrentUser current,
             ScopeGuard guard,
             StatusHistoryService history,
-            JdbcTemplate jdbc) {
+            JdbcTemplate jdbc,
+            AuditService audit,
+            EntityManager entityManager) {
         this.requests = requests;
         this.photoRows = photoRows;
         this.photos = photos;
@@ -77,25 +93,38 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         this.guard = guard;
         this.history = history;
         this.jdbc = jdbc;
+        this.audit = audit;
+        this.entityManager = entityManager;
     }
 
-    @Override()
-    public PageResponse<Response> searchMaintenanceRequests(
-            int page, int size, String status, String category, String severity) {
-        return searchMaintenanceRequests(page, size, status, category, severity, "");
-    }
-
-    @Override()
-    public PageResponse<Response> searchMaintenanceRequests(
-            int page, int size, String status, String category, String severity, String q) {
+    @Override
+    public PageResponse<Response> searchByPage(SearchRequest request) {
         guard.requirePermission(Permission.MAINTENANCE_READ);
         guard.requireRole(Role.STUDENT, Role.STAFF, Role.TECHNICIAN);
         var actor = current.get();
-        PageQuery.of(page, size, null, Set.of("id"), "id,desc");
+        var pageable =
+                PageQuery.of(
+                        request.page(),
+                        request.size(),
+                        request.sort(),
+                        Set.of("id", "code", "category", "severity", "status", "createdAt"),
+                        "createdAt,desc");
+        var sort =
+                Sort.by(
+                        pageable.getSort().stream()
+                                .map(
+                                        order ->
+                                                new Sort.Order(
+                                                        order.getDirection(),
+                                                        "createdAt".equals(order.getProperty())
+                                                                ? "created_at"
+                                                                : order.getProperty()))
+                                .toList());
         Long roomId =
                 actor.is(Role.STUDENT)
                         ? rooms.findCurrentStayingRoomId(actor.id()).orElse(-1L)
                         : -1L;
+        List<String> statuses = request.statuses();
         return PageResponse.from(
                 requests.searchVisibleRequests(
                                 actor.role(),
@@ -103,12 +132,58 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                 actor.unitId(),
                                 actor.crossUnitAccess(),
                                 roomId,
-                                status,
-                                category,
-                                severity,
-                                "%" + q.trim() + "%",
-                                PageRequest.of(page, size))
-                        .map(r -> toMaintenanceResponse(r, false)));
+                                statuses == null || statuses.isEmpty(),
+                                statuses == null || statuses.isEmpty() ? List.of("") : statuses,
+                                request.category(),
+                                request.severity(),
+                                LikePattern.contains(request.q()),
+                                PageRequest.of(request.page(), request.size(), sort))
+                        .map(row -> toMaintenanceResponse(row, false)));
+    }
+
+    @Transactional
+    @Override
+    public Response saveOrUpdate(Save input, List<MultipartFile> files) {
+        guard.requirePermission(
+                input.id() == null ? Permission.MAINTENANCE_CREATE : Permission.MAINTENANCE_UPDATE);
+        if (input.id() != null && input.id() <= 0) {
+            throw BusinessException.invalid(ApiField.ID, ValidationMessage.ID_POSITIVE_INTEGER);
+        }
+        if (input.id() == null) {
+            return createMaintenanceRequest(input, files);
+        }
+        if (files != null && files.stream().anyMatch(f -> f != null && !f.isEmpty())) {
+            throw BusinessException.invalid("photos", "Không hỗ trợ cập nhật ảnh khi sửa yêu cầu");
+        }
+        // Khóa trước, nạp lại dữ liệu thật rồi mới kiểm tra OPEN/chủ sở hữu, tránh ghi theo dữ liệu
+        // cũ.
+        var req = loadAccessibleRequest(input.id(), true);
+        if ((!current.get().isAdmin() && !current.get().id().equals(req.getRequesterId()))
+                || !MaintenanceStatus.OPEN.equals(req.getStatus())) {
+            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
+        }
+        if (input.roomId() != null || input.buildingId() != null || input.floor() != null) {
+            throw BusinessException.invalid("roomId", "Không đổi vị trí của yêu cầu đã tạo");
+        }
+        if (input.category() == null && input.severity() == null && input.description() == null) {
+            throw BusinessException.invalid(ApiField.FORM, ValidationMessage.NOTHING_TO_UPDATE);
+        }
+        if (input.category() != null) req.setCategory(input.category());
+        if (input.severity() != null) req.setSeverity(input.severity());
+        if (input.description() != null) {
+            requireNonBlank(input.description(), "description");
+            req.setDescription(input.description().trim());
+        }
+        requests.saveAndFlush(req);
+        audit.record(
+                current.get().id(),
+                AuditAction.MAINTENANCE_UPDATE,
+                EntityType.MAINTENANCE,
+                input.id(),
+                null,
+                input,
+                null);
+        return toMaintenanceResponse(req, true);
     }
 
     @Override()
@@ -118,11 +193,12 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     }
 
     /** Ticket, ảnh và timeline là một thao tác ghi. Lỗi ảnh hoặc lỗi CSDL làm rollback toàn bộ. */
-    @Transactional
-    @Override()
-    public Response createMaintenanceRequest(Create input, List<MultipartFile> files) {
+    private Response createMaintenanceRequest(Save input, List<MultipartFile> files) {
         guard.requirePermission(Permission.MAINTENANCE_CREATE);
         guard.requireRole(Role.STUDENT, Role.STAFF);
+        requireNonBlank(input.category(), "category");
+        requireNonBlank(input.severity(), "severity");
+        requireNonBlank(input.description(), "description");
         var actor = current.get();
         var request = new MaintenanceRequest();
         if (actor.is(Role.STUDENT)) {
@@ -164,7 +240,12 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         photos.savePhotos(request.getId(), files);
         photoRows.flush();
         history.record(
-                "MAINTENANCE", request.getId(), null, MaintenanceStatus.OPEN, actor.id(), null);
+                EntityType.MAINTENANCE,
+                request.getId(),
+                null,
+                MaintenanceStatus.OPEN,
+                actor.id(),
+                null);
         return toMaintenanceResponse(request, true);
     }
 
@@ -252,6 +333,9 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                     id);
         }
         var request = requests.findById(id).orElseThrow(BusinessException::notFound);
+        if (writing) {
+            entityManager.refresh(request);
+        }
         var actor = current.get();
         if (actor.is(Role.STUDENT)
                 && !actor.id().equals(request.getRequesterId())
@@ -279,6 +363,12 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                 : rooms.getBuildingManagementUnitId(r.getBuildingId());
     }
 
+    private static void requireNonBlank(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw BusinessException.invalid(field, ValidationMessage.REQUIRED);
+        }
+    }
+
     private boolean staffCanAcceptRequest(MaintenanceRequest r) {
         var actor = current.get();
         return actor.is(Role.STAFF)
@@ -293,7 +383,8 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         String previous = r.getStatus();
         r.setStatus(next);
         requests.saveAndFlush(r);
-        history.record("MAINTENANCE", r.getId(), previous, next, current.get().id(), reason);
+        history.record(
+                EntityType.MAINTENANCE, r.getId(), previous, next, current.get().id(), reason);
     }
 
     private Response toMaintenanceResponse(MaintenanceRequest r, boolean detail) {
@@ -341,6 +432,6 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                                                                 .MAINTENANCE_UPDATE))
                                         .toList())
                         : null,
-                detail ? history.list("MAINTENANCE", r.getId()) : null);
+                detail ? history.list(EntityType.MAINTENANCE, r.getId()) : null);
     }
 }

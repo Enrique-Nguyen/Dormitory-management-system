@@ -3,20 +3,24 @@ package vn.edu.tlu.dms.registration.service.impl;
 import jakarta.persistence.criteria.Predicate;
 
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SemesterType;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
+import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.registration.api.RegistrationPeriodDtos.Input;
 import vn.edu.tlu.dms.registration.api.RegistrationPeriodDtos.Quota;
 import vn.edu.tlu.dms.registration.api.RegistrationPeriodDtos.Response;
@@ -34,6 +38,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -79,49 +84,66 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         this.events = events;
     }
 
-    /**
-     * Lọc phạm vi trong truy vấn trước khi trả danh sách, không nhận đơn vị từ client để mở rộng
-     * quyền.
-     */
-    @Override()
-    public List<Response> getRegistrationPeriods(Long semesterId, String kind, Boolean open) {
+    /** Lọc phạm vi và từ khóa tại CSDL trước cả truy vấn dữ liệu và truy vấn đếm. */
+    @Override
+    public PageResponse<Response> searchByPage(SearchRequest search, boolean openForStudent) {
         guard.requirePermission(Permission.REGISTRATION_PERIOD_READ);
-        guard.requireRole(Role.STAFF);
+        guard.requireRole(openForStudent ? new String[] {Role.STUDENT} : new String[] {Role.STAFF});
         var actor = current.get();
+        var pageable =
+                PageQuery.of(
+                        search.page(),
+                        search.size(),
+                        search.sort(),
+                        Set.of("id", "semesterId", "kind", "name", "openAt", "closeAt"),
+                        "openAt,asc");
         OffsetDateTime now = OffsetDateTime.now();
-        return periods
-                .findAll(
-                        (r, q, b) -> {
-                            var filters = new ArrayList<Predicate>();
-                            if (!actor.canReadAllUnits()) {
-                                var sub = q.subquery(Long.class);
-                                var unit = sub.from(RegistrationPeriodUnit.class);
-                                sub.select(unit.get("periodId"))
-                                        .where(
-                                                b.equal(
-                                                        unit.get("managementUnitId"),
-                                                        actor.unitId()));
-                                filters.add(r.get("id").in(sub));
-                            }
-                            if (semesterId != null) {
-                                filters.add(b.equal(r.get("semesterId"), semesterId));
-                            }
-                            if (kind != null) {
-                                filters.add(b.equal(r.get("kind"), kind));
-                            }
-                            if (open != null) {
-                                var isOpen =
-                                        b.and(
-                                                b.lessThanOrEqualTo(r.get("openAt"), now),
-                                                b.greaterThan(r.get("closeAt"), now));
-                                filters.add(open ? isOpen : b.not(isOpen));
-                            }
-                            return b.and(filters.toArray(Predicate[]::new));
-                        },
-                        Sort.by("openAt", "id"))
-                .stream()
-                .map(this::toPeriodResponse)
-                .toList();
+        return PageResponse.from(
+                periods.findAll(
+                                (r, q, b) -> {
+                                    var filters = new ArrayList<Predicate>();
+                                    if (!openForStudent && !actor.canReadAllUnits()) {
+                                        var sub = q.subquery(Long.class);
+                                        var unit = sub.from(RegistrationPeriodUnit.class);
+                                        sub.select(unit.get("periodId"))
+                                                .where(
+                                                        b.equal(
+                                                                unit.get("managementUnitId"),
+                                                                actor.unitId()));
+                                        filters.add(r.get("id").in(sub));
+                                    }
+                                    if (search.semesterId() != null) {
+                                        filters.add(
+                                                b.equal(r.get("semesterId"), search.semesterId()));
+                                    }
+                                    if (search.kind() != null) {
+                                        filters.add(b.equal(r.get("kind"), search.kind()));
+                                    }
+                                    if (!search.q().isBlank()) {
+                                        filters.add(
+                                                b.like(
+                                                        b.lower(r.get("name")),
+                                                        "%"
+                                                                + search.q()
+                                                                        .trim()
+                                                                        .toLowerCase(Locale.ROOT)
+                                                                + "%"));
+                                    }
+                                    var isOpen =
+                                            b.and(
+                                                    b.lessThanOrEqualTo(r.get("openAt"), now),
+                                                    b.greaterThan(r.get("closeAt"), now));
+                                    if (openForStudent) {
+                                        // Lookup cá nhân không thể mở rộng bằng open=false do
+                                        // client gửi.
+                                        filters.add(isOpen);
+                                    } else if (search.open() != null) {
+                                        filters.add(search.open() ? isOpen : b.not(isOpen));
+                                    }
+                                    return b.and(filters.toArray(Predicate[]::new));
+                                },
+                                pageable)
+                        .map(this::toPeriodResponse));
     }
 
     @Override()
@@ -133,10 +155,18 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         return toPeriodResponse(period);
     }
 
-    /** Ghi đợt, đơn vị áp dụng và chỉ tiêu trong cùng transaction. */
+    @Override
     @Transactional
-    @Override()
-    public Response createRegistrationPeriod(Input input) {
+    public Response saveOrUpdate(Input input) {
+        Long id = input.id();
+        if (id != null && id <= 0) {
+            throw BusinessException.invalid(ApiField.ID, ValidationMessage.ID_POSITIVE);
+        }
+        return id == null ? createRegistrationPeriod(input) : updateRegistrationPeriod(id, input);
+    }
+
+    /** Ghi đợt, đơn vị áp dụng và chỉ tiêu trong cùng transaction. */
+    private Response createRegistrationPeriod(Input input) {
         guard.requirePermission(Permission.REGISTRATION_PERIOD_CREATE);
         var period = new RegistrationPeriod();
         period.setCreatedBy(current.get().id());
@@ -157,9 +187,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
      * Đợt đã mở chỉ được gia hạn closeAt; khóa bản ghi rồi kiểm tra lại để tránh hai request ghi
      * đè.
      */
-    @Transactional
-    @Override()
-    public Response updateRegistrationPeriod(Long id, Input input) {
+    private Response updateRegistrationPeriod(Long id, Input input) {
         guard.requirePermission(Permission.REGISTRATION_PERIOD_UPDATE);
         jdbc.query(
                 "SELECT id FROM registration_period WHERE id=? FOR UPDATE",
@@ -210,22 +238,6 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         units.flush();
         periods.deleteById(id);
         periods.flush();
-    }
-
-    @Override()
-    public List<Response> getOpenPeriodsForStudent() {
-        guard.requirePermission(Permission.REGISTRATION_PERIOD_READ);
-        guard.requireRole(Role.STUDENT);
-        var now = OffsetDateTime.now();
-        return periods
-                .findAll(
-                        (r, q, b) ->
-                                b.and(
-                                        b.lessThanOrEqualTo(r.get("openAt"), now),
-                                        b.greaterThan(r.get("closeAt"), now)))
-                .stream()
-                .map(this::toPeriodResponse)
-                .toList();
     }
 
     private void applyPeriodInput(RegistrationPeriod p, Input input, boolean creating) {

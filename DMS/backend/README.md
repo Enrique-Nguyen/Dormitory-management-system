@@ -14,29 +14,52 @@ Các lớp nền dùng chung nằm trong `common/service/impl`: `AbstractCrudSer
 
 `domain` là tên package, không có ý nghĩa đặc biệt với Spring. Các annotation `@Entity`, `@Table`, `@Id` mới quyết định mapping. Có entity và Repository cho cả 33 bảng nghiệp vụ, gồm khóa kép bằng `@IdClass`, JSONB, CHAR(1), NUMERIC và cột tiêu thụ điện nước do CSDL sinh. Tham chiếu chéo module lưu bằng ID, không dựng quan hệ JPA xuyên module.
 
-Tên hàm dùng tiếng Anh rõ nghĩa; JavaDoc và ghi chú quan trọng dùng tiếng Việt. Ví dụ: `searchRooms`, `getRoomById`, `createRoom`, `updateRoom`, `changeRoomStatus`, `assignRoomLeader`, `createApplication`, `submitApplication`, `assignTechnician`, `confirmInvoicePayment`.
+Tên hàm dùng tiếng Anh rõ nghĩa; JavaDoc và ghi chú quan trọng dùng tiếng Việt. Danh sách dùng `searchByPage`, tạo/sửa dùng một hàm `saveOrUpdate`; giữ tên hành động rõ nghĩa như `getRoomById`, `changeRoomStatus`, `assignRoomLeader`, `submitApplication`, `assignTechnician`, `confirmInvoicePayment`.
 
 ## API đã có
 
 - Xác thực mặc định: Keycloak OIDC/PKCE, Spring Security JWT Resource Server; /me trả hồ sơ DMS, logout thu hồi version. Mật khẩu/khóa tạm/đổi mật khẩu thuộc Keycloak. Subject, role, version và scope vẫn kiểm tra tại DMS.
 - Tài khoản: Admin quản lý tài khoản và sinh viên; sinh viên được thêm từng hồ sơ bằng form CRUD, trả mật khẩu tạm một lần. Staff tìm kiếm/đọc/sửa và reset mật khẩu sinh viên trong phạm vi mình. Import Excel chưa triển khai. Tài khoản cán bộ dùng khóa thay cho xóa; sinh viên chỉ xóa khi chưa có dữ liệu liên quan.
+- Sinh viên: POST `/api/(admin/)students/save-or-update` với ID trong body giữ nguyên trường không gửi (chỉ cần gửi trường muốn đổi).
 - Hồ sơ: đọc và sửa các trường được phép của chính mình. Cấu hình hệ thống: Admin đọc và cập nhật các khóa hiện có.
-- Danh mục: đơn vị quản lý, tòa nhà, loại phòng, học kỳ, diện ưu tiên có tạo/đọc/PATCH/xóa. Request PATCH giữ nguyên trường không gửi hoặc gửi null; khung chưa hỗ trợ dùng null để xóa giá trị tùy chọn.
-- Phòng/giường: phân trang và lọc phòng; đọc chi tiết có giường/người ở; tạo phòng tự sinh giường; sửa, đổi trạng thái có lý do, thêm giường, xóa phòng/giường chưa từng có phân phòng; chỉ định/gỡ trưởng phòng và ghi nhật ký.
-- Đợt đăng ký: tạo, tìm kiếm, đọc, sửa, lưu đơn vị áp dụng và chỉ tiêu; xóa đợt chưa mở và chưa có đơn. Đợt đã mở chỉ được gia hạn ngày đóng.
-- Đơn đăng ký: tạo/sửa DRAFT, nộp, duyệt, từ chối có lý do, hủy khi còn DRAFT/SUBMITTED/APPROVED; đọc danh sách/chi tiết theo quyền và timeline.
+- Danh mục: đơn vị quản lý, tòa nhà, loại phòng, học kỳ, diện ưu tiên có tìm kiếm phân trang/chi tiết/lưu chung/xóa. Request sửa qua save-or-update giữ nguyên trường không gửi hoặc gửi null; khung chưa hỗ trợ dùng null để xóa giá trị tùy chọn.
+- Phòng/giường: phân trang và lọc phòng; đọc chi tiết có giường/người ở; tạo phòng tự sinh giường; sửa (đổi loại phòng trống đồng bộ số giường theo loại mới, đổi bedCount của loại phòng đang dùng trả 409 RESOURCE_IN_USE), đổi trạng thái có lý do, thêm giường, xóa phòng/giường chưa từng có phân phòng; chỉ định/gỡ trưởng phòng và ghi nhật ký.
+- Đợt đăng ký: tạo, tìm kiếm, đọc, sửa, lưu đơn vị áp dụng và chỉ tiêu; xóa đợt chưa mở và chưa có đơn. Đợt đã mở chỉ được gia hạn ngày đóng. Staff chỉ ghi đợt mà đơn vị mình là đơn vị duy nhất; đợt dùng chung ngoài phạm vi ghi trả 404.
+- Đơn đăng ký: tạo/sửa DRAFT, nộp, duyệt, từ chối có lý do, hủy khi còn DRAFT/SUBMITTED/APPROVED (APPROVED đã có hợp đồng PENDING/ACTIVE trả 409 APPLICATION_HAS_CONTRACT); đọc danh sách/chi tiết theo quyền và timeline.
 - Sửa chữa: tạo ticket và ảnh, danh sách/chi tiết, giao kỹ thuật viên cùng đơn vị, bắt đầu, ghi chú tiến độ, hoàn thành, nghiệm thu, mở lại, từ chối và hủy theo Policy.
 - Điện nước: CRUD chỉ số từng phòng/tháng, tiêu thụ do CSDL tính. Chỉ số đã được dùng trong hóa đơn không được sửa/xóa. Đơn giá đã có hiệu lực giữ lịch sử; chỉ sửa/xóa bản giá tương lai do mình tạo.
 - Hóa đơn: tìm kiếm/chi tiết và CRUD hồ sơ UNPAID chưa có dòng chi tiết hoặc lịch sử. Form nhập tổng tiền và hạn đóng, chưa tự phát hành/tính tiền. Endpoint xác nhận thanh toán có sẵn được giữ lại.
 - Hợp đồng: tìm kiếm/chi tiết và CRUD hồ sơ PENDING từ đơn đã duyệt, chưa có phân giường/tiền cọc/lịch sử. Form chỉ lưu ngày bắt đầu/kết thúc; không kích hoạt hợp đồng.
 - Yêu cầu gia hạn, chuyển phòng và lựa chọn hè: sinh viên CRUD hồ sơ PENDING của mình; Staff tra cứu theo phạm vi. Chưa xét duyệt hay thay đổi hợp đồng/chỗ ở.
-- Sửa chữa bổ sung PATCH nội dung khi OPEN và DELETE chuyển sang CANCELLED cho người tạo; giữ ảnh và lịch sử.
+- Sửa chữa dùng save-or-update để lưu nội dung khi OPEN và DELETE chuyển sang CANCELLED cho người tạo; giữ ảnh và lịch sử.
 - Thông báo: CRUD thông báo thủ công của người tạo; sửa tiêu đề/nội dung giữ nguyên phạm vi. Hộp thư có tìm kiếm. Những endpoint đọc/đánh dấu đã đọc và listener có sẵn được giữ lại.
 - Tổng quan: tra cứu sổ cọc, giao dịch cọc, phiếu gửi đồ, phòng của sinh viên và audit log. Các trang này chỉ đọc.
 
-Các danh sách nghiệp vụ nhận `q`, `page`, `size` và lọc phạm vi trước khi phân trang. Danh mục nhỏ trả mảng; React tìm kiếm và phân trang trên mảng này. Giường có PATCH mã giường. Màn React dùng API thật, hướng dẫn chạy được gom vào [README chung](../../README.md).
+Lỗi framework trả 400/404/405/415 đúng loại; ràng buộc CSDL ngoài danh sách tên được ánh xạ theo SQLState (`DUPLICATE_VALUE`, `RESOURCE_IN_USE`, `VALIDATION_FAILED`). Chỉ lỗi đồng thời trả `CONCURRENT_UPDATE`. Tìm kiếm escape `%`, `_`, `\` bằng `LikePattern`; `CurrentUser.get()` chỉ truy vấn tài khoản một lần mỗi request.
 
-API giữ tiền tố `/api` và đường dẫn của API Spec; không sao chép `/save`, `/page`, UUID hoặc Keycloak của HR-V5.
+Tất cả danh sách, danh mục và lookup ô chọn dùng POST `.../search-by-page` nhận body `SearchRequest`, lọc phạm vi trước khi đếm/phân trang tại CSDL và trả `PageResponse`. Giường dùng POST `/api/beds/save-or-update` với ID trong body để tạo/sửa mã giường. Màn React dùng API thật, hướng dẫn chạy được gom vào [README chung](../../README.md).
+
+API giữ tiền tố `/api`, dùng `/search-by-page` và `/save-or-update` theo cách tổ chức V5, giữ ID số nguyên và phân trang từ 0 của DMS. Path khai trực tiếp trong annotation Controller giống V5 theo yêu cầu người phụ trách; không tạo Constants cho URL API. Constants vẫn dùng cho role/quyền/trạng thái/mã lỗi.
+
+### Contract CRUD thống nhất — 15/10/2026
+
+- Danh sách: POST `<readBase>/search-by-page`, JSON body `{ "page": 0, "size": 20, "q": "nguyen", "sort": ["id,desc"], "managementUnitId": 1, "locked": false }`. Bộ lọc nằm cùng cấp, có kiểu JSON đúng và chỉ dùng cho resource hỗ trợ. Trang từ 0; size 1–100. Kết quả HTTP 200 gồm `{content,page,size,totalElements,totalPages}`; danh sách rỗng có content rỗng.
+- Lưu: POST `<writeBase>/save-or-update`, body phẳng `{ "id": null, ...các trường tạo mới }` để thêm; `{ "id": 15, ...các trường cần sửa }` để cập nhật. Không dùng URL `/{id}` hay PATCH cho lưu CRUD. HTTP **200 cho cả tạo và sửa**; ID không dương trả 400, ID không tồn tại/ngoài phạm vi trả 404, không tự tạo thay cho bản ghi sửa bị mất.
+- Các nhóm units/buildings/priority-categories đọc từ `/api/<resource>/search-by-page` nhưng ghi `/api/admin/<resource>/save-or-update`. Users đọc/ghi `/api/admin/users/...`. Sinh viên đọc `/api/students/...` hoặc `/api/admin/students/...`; Admin tạo/sửa tại `/api/admin/students/save-or-update`, Staff chỉ sửa tại `/api/students/save-or-update` trong phạm vi được cấp.
+- `saveOrUpdate` là một hàm public trong Service interface/Impl cho mỗi luồng CRUD. Controller khai OR CREATE/UPDATE; Impl kiểm tra chính xác quyền CREATE nếu ID trống hoặc UPDATE nếu có ID, rồi giữ scope/trạng thái/transaction/audit. Giao diện vẫn kiểm quyền Thêm/Sửa riêng.
+- Tạo tài khoản/sinh viên trả `{userId,temporaryPassword}` một lần như trước; sửa trả Profile/StudentMap. Không đưa mật khẩu tạm vào cache hồ sơ hay audit. Các resource khác trả dữ liệu sau khi lưu.
+- Sửa chữa giữ multipart: POST `/api/maintenance-requests/save-or-update`, phần JSON `data` chứa `id` và nội dung, phần `photos` cho ảnh khi tạo. Khi sửa chỉ đổi nội dung ticket OPEN, giữ ảnh/vị trí; không làm mất ảnh cũ.
+- Giường: POST `/api/beds/save-or-update` với `{id,roomId,code}`; tạo cần roomId, sửa không đổi phòng nguồn. DELETE và POST đổi trạng thái giữ endpoint riêng.
+- Hồ sơ cá nhân vẫn GET `/api/me/profile`, lưu qua POST `/api/me/profile/save-or-update` và chỉ sửa người đăng nhập. Cấu hình dùng `/api/admin/configs/search-by-page` và `/api/admin/configs/save-or-update` với `{key,value}`, chỉ sửa khóa đã có. `/api/me/room/search-by-page` là danh sách phòng cá nhân, không có chỗ ở trả trang rỗng.
+- GET chi tiết, DELETE, hành động trạng thái, reset/khóa tài khoản, hộp thư đã đọc/chưa đọc và GET/PUT ma trận role giữ chuyên biệt. API `/auth/me` và `/notifications/unread-count` không đổi thành search. Không gộp trạng thái/tài chính/phân phòng vào lệnh lưu dữ liệu.
+- Đây là thay đổi contract cần cập nhật frontend/caller đồng thời. Không duy trì cặp API tạo/sửa cũ hoặc danh sách GET để làm đường vòng. Đặc tả đầy đủ và ví dụ ở [API Spec](../../Docs/02%20External%20Design/API%20Specification/API-Spec-DMS.md), mục 1.1, 2.5, 2.9 và 3.
+
+### Kiểm chứng refactor API (cập nhật 16/10/2026)
+
+- Backend `clean verify` trên Java 17.0.17 và PostgreSQL 16 kiểm thử riêng: **102/102 test đạt**, gồm quyền CREATE/UPDATE riêng, scope và alias `/me`, ID mất/không hợp lệ, partial update, multipart/ảnh, sort/count, đầu vào null và 10 test hồi quy từ bản sửa code review đã tích hợp. Các migration đã áp dụng giữ nguyên.
+- React build và lint đạt; **37/37 kiểm tra hợp đồng frontend** chạy helper/hàm tìm kiếm/lưu thật với HTTP stub. Đây không thay cho kiểm thử trình duyệt với Keycloak đang chạy.
+- Quy tắc nghiệp vụ chung và ngoại lệ URL API literal nằm tại [CLAUDE.md](../../CLAUDE.md), được [AGENTS.md](../../AGENTS.md) yêu cầu áp dụng. `ValidationMessage`, `ApiField` và `EntityType` gom message/field/mã audit dùng chung; thông số vận hành vẫn đọc cấu hình.
+- Khởi động lại backend/frontend cùng phiên bản khi sử dụng contract mới; caller cũ dùng GET danh sách hoặc POST/PATCH tạo/sửa phải chuyển sang POST `search-by-page`/`save-or-update`.
 
 ## Giới hạn của khung
 
@@ -101,7 +124,7 @@ Khung tham khảo RolePrivilege của HR-V5: `ScopeGuard` kiểm tra quyền hi�
 - TECHNICIAN: đọc/cập nhật tiến độ ticket được giao, không CRUD dữ liệu phòng/hợp đồng/hóa đơn.
 - STUDENT: dữ liệu cá nhân và phòng đang ở; đơn/yêu cầu của mình, không sửa role hoặc ID người sở hữu.
 
-Đổi role của tài khoản Staff/KTV/Admin qua PATCH `/api/admin/users/{id}` hỗ trợ trường `role`, đồng bộ Keycloak và thu hồi token cũ. Staff/KTV phải có đơn vị; chuyển sang ADMIN xóa đơn vị và cờ tổng hợp; không chuyển hồ sơ STUDENT thành tài khoản cán bộ, không tự đổi role tài khoản đang sử dụng. ADMIN tạo đơn đăng ký hộ sinh viên bằng `studentId` rõ ràng; STUDENT không được gửi ID của người khác.
+Đổi role của tài khoản Staff/KTV/Admin qua POST `/api/admin/users/save-or-update` với `id` trong body hỗ trợ trường `role`, đồng bộ Keycloak và thu hồi token cũ. Staff/KTV phải có đơn vị; chuyển sang ADMIN xóa đơn vị và cờ tổng hợp; không chuyển hồ sơ STUDENT thành tài khoản cán bộ, không tự đổi role tài khoản đang sử dụng. ADMIN tạo đơn đăng ký hộ sinh viên bằng `studentId` rõ ràng; STUDENT không được gửi ID của người khác.
 
 Cập nhật 15/10/2026: ADMIN quản lý ma trận động tại `/admin/role-permissions`, lưu quyền của STAFF/STUDENT/TECHNICIAN trong `role_permission_matrix` qua Flyway V5. ADMIN giữ mọi quyền đã đăng ký và không có bản ghi để thu hồi quyền ADMIN. Mã quyền vẫn cố định trong Constants; quyền đang được cấp đọc từ CSDL. Sổ cọc/audit vẫn giữ chỉ đọc, hồ sơ có lịch sử và trạng thái vẫn chịu ràng buộc xóa/hủy như trước.
 
@@ -109,7 +132,7 @@ Kiểm chứng: **44/44 test backend** đạt trên PostgreSQL kiểm thử riê
 
 ### Khai quyền API bằng @RequirePrivilege — 14/10/2026
 
-Mọi hàm REST mapped trong ứng dụng khai `@RequirePrivilege(Permission.ROOM_CREATE)` hoặc một danh sách như `@RequirePrivilege({Permission.ROOM_TYPE_READ, Permission.ROOM_CREATE, Permission.ROOM_UPDATE})`. Nhiều mã dùng OR: có ít nhất một quyền mới được chạy API. Danh sách OR phù hợp API tra cứu cho form; thao tác ghi phải khai riêng CREATE/UPDATE/DELETE, không ghép quyền thêm/sửa để mở cả hai.
+Mọi hàm REST mapped trong ứng dụng khai `@RequirePrivilege(Permission.ROOM_CREATE)` hoặc một danh sách như `@RequirePrivilege({Permission.ROOM_TYPE_READ, Permission.ROOM_CREATE, Permission.ROOM_UPDATE})`. Nhiều mã dùng OR: có ít nhất một quyền mới được chạy API. Danh sách OR phù hợp API tra cứu cho form; save-or-update khai OR CREATE/UPDATE ở Controller, Impl phải kiểm tra đúng quyền theo ID. DELETE và hành động chuyên biệt dùng mã quyền riêng.
 
 `common/security/RequirePrivilege.java` chỉ khai annotation; `ScopeGuard.hasDeclaredPrivilege` đọc khai báo trên hàm thật, dùng khai báo lớp nếu hàm chưa khai, và kiểm role với dữ liệu tài khoản hiện tại. `SecurityConfig` bật Spring Security Method Security và đăng ký AuthorizationManagerBeforeMethodInterceptor: thiếu annotation, mảng rỗng hoặc không có quyền thì trả 403 trước thân Controller. Chưa đăng nhập/token không hợp lệ vẫn bị filter chain trả 401. Annotation ở hàm thay thế annotation lớp; Admin không vượt qua mã quyền chưa đăng ký.
 
@@ -130,9 +153,9 @@ Kiểm chứng: **55/55 test backend** đạt, gồm baseline giữ nguyên toà
 ### Hoàn thiện các luồng dùng chung — 15/10/2026
 
 - Đăng nhập và truy cập URL trực tiếp: trang gốc Admin kiểm USER_READ, Staff kiểm DASHBOARD_READ, Student kiểm PROFILE_READ, Technician kiểm MAINTENANCE_READ. Chuẩn hóa dấu gạch chéo/query/hash; cổng/màn không có trong khai báo bị từ chối. Chuyển hướng sau đăng nhập dùng quyền thực tế từ /auth/me.
-- Hồ sơ của tôi có ở cả bốn cổng, dùng lại CrudPage và GET/PATCH /api/me/profile. Sinh viên sửa điện thoại/ quê quán/liên hệ khẩn cấp; cán bộ chỉ sửa điện thoại. Mã sinh viên, họ tên, role và đơn vị không được sửa từ hồ sơ cá nhân.
+- Hồ sơ của tôi có ở cả bốn cổng, dùng lại CrudPage và GET /api/me/profile và POST /api/me/profile/save-or-update. Sinh viên sửa điện thoại/ quê quán/liên hệ khẩn cấp; cán bộ chỉ sửa điện thoại. Mã sinh viên, họ tên, role và đơn vị không được sửa từ hồ sơ cá nhân.
 - CRUD dùng chung lưu từ khóa, bộ lọc, số trang và cỡ trang trên URL theo từng resource, ví dụ users.q/users.role/users.page. Refresh, quay lại hoặc các tab ghép không làm lẫn điều kiện; đổi bộ lọc/cỡ trang trở về trang đầu, xóa hết trang tự về trang hợp lệ. Cỡ trang 10/20/50/100, mặc định 20; chỉ gửi bộ lọc được khai báo trong CrudResource.filters.
-- Control nhập liệu được đặt trực tiếp trong Form.Item để nhận value/onChange. Form hiển thị lỗi trường do API trả về; lỗi 409 tải lại dữ liệu qua handler chung. Chuỗi rỗng có thể xóa nội dung text tùy chọn, null vẫn giữ nghĩa PATCH cũ. Không đóng modal đang gửi request; thao tác xóa, khóa, reset, mở khóa và đổi phạm vi đọc có xác nhận.
+- Control nhập liệu được đặt trực tiếp trong Form.Item để nhận value/onChange. Form hiển thị lỗi trường do API trả về; lỗi 409 tải lại dữ liệu qua handler chung. Chuỗi rỗng có thể xóa nội dung text tùy chọn, null vẫn giữ nghĩa cập nhật từng phần cũ. Không đóng modal đang gửi request; thao tác xóa, khóa, reset, mở khóa và đổi phạm vi đọc có xác nhận.
 - Tài khoản lọc role, managementUnitId và locked; UI xác nhận đổi vai trò/đơn vị và giải thích việc thu hồi phiên. Staff có thể được Admin cấp/thu hồi đọc liên đơn vị qua API cross-unit-access đã có; quyền ghi trong đơn vị vẫn giữ nguyên.
 - Nhật ký lọc actorId, action, entityType, from và to, kết hợp q. Action/type là mã chính xác; khoảng thời gian ISO có múi giờ, hai biên đều bao gồm. Bộ lọc sai trả 400; chỉ Admin được đọc. Khung hiện phân trang theo id giảm dần; xem chi tiết từ bản ghi đã trả về, không gọi endpoint chi tiết chưa có. Truy vấn nằm trong AuditServiceImpl, Controller chỉ nhận tham số và gọi Service.
 

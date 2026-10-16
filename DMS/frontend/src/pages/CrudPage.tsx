@@ -40,7 +40,7 @@ import {
   Tooltip,
   Typography,
 } from 'antd'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   useLocation,
   useNavigate,
@@ -51,7 +51,10 @@ import PageHeader from '../components/layout/PageHeader'
 import { useMe } from '../features/account/useMe'
 import {
   getLookupRecords,
-  crudRequestParams,
+  getRecordFormValues,
+  createSearchRequest,
+  searchByPage,
+  saveOrUpdate,
   CRUD_PAGE_SIZES,
   normalizePage,
   readCrudQuery,
@@ -62,48 +65,13 @@ import {
   writeCrudRecord,
 } from '../features/crud/api'
 import { resources } from '../features/crud/resources'
+import { crudValueLabels } from '../constants/statusConfig'
 import type { CrudField, CrudRecord } from '../features/crud/types'
 import { api } from '../services/api/client'
 import { hasPermission } from '../services/api/auth'
 import { errorMessage } from '../utils/errorMessages'
 import { formatDate, formatDateTime } from '../utils/format'
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler'
-
-const labels: Record<string, string> = {
-  ACTIVE: 'Hoạt động',
-  BROKEN: 'Hỏng',
-  RETIRED: 'Ngừng dùng',
-  CLOSED: 'Đã đóng',
-  MAINTENANCE: 'Bảo trì',
-  DRAFT: 'Nháp',
-  SUBMITTED: 'Đã nộp',
-  APPROVED: 'Đã duyệt',
-  REJECTED: 'Từ chối',
-  CANCELLED: 'Đã hủy',
-  PENDING: 'Chờ xử lý',
-  UNPAID: 'Chưa thanh toán',
-  PAID: 'Đã thanh toán',
-  M: 'Nam',
-  F: 'Nữ',
-  [Role.STAFF]: 'Quản lý',
-  [Role.ADMIN]: 'Quản trị',
-  [Role.STUDENT]: 'Sinh viên',
-  [Role.TECHNICIAN]: 'Kỹ thuật viên',
-  ROOM_FEE: 'Phí phòng',
-  UTILITY: 'Điện nước',
-  ELECTRIC: 'Điện',
-  WATER: 'Nước',
-  LOW: 'Thấp',
-  MEDIUM: 'Vừa',
-  HIGH: 'Cao',
-  OPEN: 'Mở',
-  FURNITURE: 'Nội thất',
-  DOOR_LOCK: 'Cửa/khóa',
-  OTHER: 'Khác',
-  STAY: 'Ở hè',
-  TEMP_LEAVE: 'Tạm rời hè',
-  LEAVE: 'Rời KTX',
-}
 
 function display(value: unknown): string {
   if (value == null || value === '') return '—'
@@ -119,7 +87,7 @@ function display(value: unknown): string {
     return formatDateTime(value)
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value))
     return formatDate(value)
-  return labels[String(value)] ?? String(value)
+  return crudValueLabels[String(value)] ?? String(value)
 }
 
 function hasPeriodOpened(value: unknown) {
@@ -137,6 +105,8 @@ function LookupInput({
     queryKey: ['crud-lookup', field.lookup],
     queryFn: () => getLookupRecords(field.lookup!),
     enabled: !!field.lookup,
+    // Danh mục tham chiếu ít đổi; refresh() vẫn invalidate sau mỗi lần ghi.
+    staleTime: 5 * 60 * 1000,
   })
   const options = field.lookup
     ? data?.map((row) => ({
@@ -145,7 +115,7 @@ function LookupInput({
       }))
     : field.options?.map((option) => ({
         ...option,
-        label: labels[option.label] ?? option.label,
+        label: crudValueLabels[option.label] ?? option.label,
       }))
   // Form.Item truyền value/onChange qua wrapper nên Select phải nằm trực tiếp trong component này.
   return (
@@ -210,9 +180,9 @@ export default function CrudPage({ resource }: { resource: string }) {
   const query = readCrudQuery(searchParams, resource, config)
   const { search, page, size, filters: activeFilters } = query
   const handleApiError = useApiErrorHandler()
-  const [modalMode, setModalMode] = useState<
-    'create' | 'edit' | 'view' | null
-  >(null)
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view' | null>(
+    null,
+  )
   const [activeRecord, setActiveRecord] = useState<CrudRecord | null>(null)
   const isViewMode = modalMode === 'view'
   const editing =
@@ -250,7 +220,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     !config.readOnly &&
     hasPermission(me, permissionFor(config.permission, Action.CREATE)) &&
     !config.singleton &&
-    resource !== 'configs'
+    !config.noCreate
   const canWrite = canCreate || canUpdate || canDelete
   const idKey = config.idKey ?? 'id'
   const writeEndpoint =
@@ -278,33 +248,14 @@ export default function CrudPage({ resource }: { resource: string }) {
     filterForm.setFieldsValue(initial)
   }, [filterSignature, filterForm, config, resource])
   const { data, error, isLoading, isFetching, refetch } = useQuery({
-    queryKey: [
-      'crud',
-      me?.id,
-      resource,
-      page,
-      size,
-      config.localSearch ? '' : search,
-      activeFilters,
-    ],
+    queryKey: ['crud', me?.id, resource, page, size, search, activeFilters],
     enabled: canRead,
     queryFn: async () =>
-      normalizePage(
-        (
-          await api.get(config.endpoint, {
-            params: crudRequestParams(query, config),
-          })
-        ).data,
-      ),
+      config.singleton
+        ? normalizePage((await api.get(config.endpoint)).data)
+        : searchByPage(config.endpoint, createSearchRequest(query, config)),
   })
-  const rows =
-    config.localSearch && search
-      ? data?.content.filter((row) =>
-          JSON.stringify(row)
-            .toLocaleLowerCase()
-            .includes(search.toLocaleLowerCase()),
-        )
-      : data?.content
+  const rows = data?.content
   useEffect(() => {
     if (error) {
       filterForm.setFields(
@@ -316,7 +267,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     }
   }, [error, filterForm])
   // Xóa bản ghi cuối trang hoặc mở link quá trang hiện có thì quay về trang cuối hợp lệ.
-  const total = config.localSearch ? rows?.length : data?.totalElements
+  const total = data?.totalElements
   useEffect(() => {
     if (total === undefined || isFetching || error || config.singleton) return
     const lastPage = Math.max(1, Math.ceil(total / size))
@@ -332,8 +283,14 @@ export default function CrudPage({ resource }: { resource: string }) {
   }, [total, size, page, resource, config, isFetching, error, setSearchParams])
   const baseFields =
     modalMode === 'create'
-      ? (config.createFields ?? config.fields).filter((field) => !field.editOnly)
-      : (config.editFields ?? config.fields).filter((field) => !field.createOnly)
+      ? (config.createFields ?? config.fields).filter(
+          (field) => !field.editOnly,
+        )
+      : modalMode === 'edit'
+        ? (config.editFields ?? config.fields).filter(
+            (field) => !field.createOnly,
+          )
+        : config.fields
   const fields = baseFields
     .filter(
       (field) =>
@@ -378,52 +335,45 @@ export default function CrudPage({ resource }: { resource: string }) {
     (field.visibleWhen.field === 'scope' ? scopeValue : typeValue) ===
       field.visibleWhen.value
 
+  const createDefaults = useMemo(
+    () => ({
+      ...config.createDefaults,
+      unitId: me?.managementUnit?.id,
+    }),
+    [config.createDefaults, me?.managementUnit?.id],
+  )
+
+  const formInitialValues = useMemo(() => {
+    if (modalMode === 'edit' || modalMode === 'view') {
+      return activeRecord
+        ? getRecordFormValues(activeRecord, config, resource)
+        : undefined
+    }
+    if (modalMode === 'create') {
+      return createDefaults
+    }
+    return undefined
+  }, [modalMode, activeRecord, config, resource, createDefaults])
+
   const populateForm = useCallback(
     (selected: CrudRecord) => {
-      const initial = { ...selected }
-      for (const field of config.fields) {
-        let val = initial[field.name]
-        if (val == null && field.name.endsWith('Id')) {
-          const objKey = field.name.slice(0, -2)
-          const objVal = initial[objKey]
-          if (
-            objVal &&
-            typeof objVal === 'object' &&
-            'id' in (objVal as Record<string, unknown>)
-          ) {
-            val = (objVal as Record<string, unknown>).id
-            initial[field.name] = val
-          }
-        }
-        if (val != null) {
-          if (field.kind === 'datetime') {
-            initial[field.name] = toLocalDateTime(val)
-          } else if (field.kind === 'date') {
-            if (typeof val === 'string' && val.includes('T')) {
-              initial[field.name] = val.slice(0, 10)
-            }
-          } else if (
-            field.kind === 'select' &&
-            typeof val === 'object' &&
-            !Array.isArray(val) &&
-            'id' in (val as Record<string, unknown>)
-          ) {
-            initial[field.name] = (val as Record<string, unknown>).id
-          }
-        }
-      }
-      if (
-        ['myApplications', 'applications'].includes(resource) &&
-        Array.isArray(selected.priorities)
-      ) {
-        initial.priorityCategoryIds = selected.priorities.map(
-          (p) => (p as CrudRecord).categoryId,
-        )
-      }
+      const initial = getRecordFormValues(selected, config, resource)
       form.setFieldsValue(initial)
     },
-    [config.fields, resource, form],
+    [config, resource, form],
   )
+
+  // Đồng bộ dữ liệu form khi modal/record mở, đóng hoặc chuyển chế độ xem sang sửa
+  useEffect(() => {
+    if (modalMode === 'edit' || modalMode === 'view') {
+      if (activeRecord) {
+        populateForm(activeRecord)
+      }
+    } else if (modalMode === 'create') {
+      form.resetFields()
+      form.setFieldsValue(createDefaults)
+    }
+  }, [modalMode, activeRecord, populateForm, form, createDefaults])
 
   function closeModal() {
     setModalMode(null)
@@ -447,7 +397,6 @@ export default function CrudPage({ resource }: { resource: string }) {
           const item = response.data as CrudRecord
           setActiveRecord(item)
           setModalMode('view')
-          populateForm(item)
         }
       })
       .catch((e) => {
@@ -561,28 +510,21 @@ export default function CrudPage({ resource }: { resource: string }) {
   }
   async function openEditor(row?: CrudRecord) {
     if (row ? !canEditRow(row) : !canCreate) return
-    form.resetFields()
     if (!row) {
       setActiveRecord(null)
       setModalMode('create')
-      form.setFieldsValue({
-        active: true,
-        role: Role.STAFF,
-        type: 'ROOM_FEE',
-        scope: 'UNIT',
-        unitId: me?.managementUnit?.id,
-      })
       return
     }
     try {
       const selected =
-        config.singleton || config.localSearch || resource === 'configs'
+        config.singleton ||
+        config.useListRecordForEdit ||
+        config.inlineDetail
           ? row
           : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
               .data as CrudRecord)
       setActiveRecord(selected)
       setModalMode('edit')
-      populateForm(selected)
     } catch (e) {
       handleApiError(e)
     }
@@ -594,7 +536,7 @@ export default function CrudPage({ resource }: { resource: string }) {
       const payload: Record<string, unknown> = {}
       for (const field of fields.filter(visible)) {
         const value = values[field.name]
-        // Chuỗi rỗng xóa nội dung tùy chọn; không gửi null để đổi nghĩa PATCH của backend.
+        // Chuỗi rỗng xóa nội dung tùy chọn; trường bỏ qua giữ nguyên giá trị khi sửa.
         if (
           value == null ||
           (value === '' &&
@@ -608,20 +550,22 @@ export default function CrudPage({ resource }: { resource: string }) {
             : value
       }
       // Các DTO sửa chỉ số/thông báo cần giữ lại định danh/phạm vi đã chọn khi tạo.
-      if (editing && ['readings', 'notifications'].includes(resource))
+      if (editing && config.keepCreateOnlyOnEdit)
         for (const field of config.fields.filter((f) => f.createOnly))
           if (editing[field.name] != null)
             payload[field.name] = editing[field.name]
       if (
-        resource === 'periods' &&
+        config.closeAtOnlyAfterOpen &&
         editing &&
         hasPeriodOpened(editing.openAt)
       ) {
         for (const key of Object.keys(payload))
           if (key !== 'closeAt') delete payload[key]
       }
+      // ID nằm trong body lưu chung; hồ sơ cá nhân luôn lấy chủ sở hữu từ phiên đăng nhập.
+      if (editing && !config.singleton) payload[idKey] = editing[idKey]
       let body: unknown = payload
-      if (!editing && config.createFormat === 'multipart') {
+      if (config.createFormat === 'multipart') {
         const multipart = new FormData()
         multipart.append(
           'data',
@@ -629,16 +573,7 @@ export default function CrudPage({ resource }: { resource: string }) {
         )
         body = multipart
       }
-      const endpoint = config.singleton
-        ? writeEndpoint
-        : editing
-          ? `${writeEndpoint}/${editing[idKey]}`
-          : writeEndpoint
-      const result = await writeCrudRecord(
-        endpoint,
-        resource === 'configs' ? 'put' : editing ? 'patch' : 'post',
-        body,
-      )
+      const result = await saveOrUpdate(writeEndpoint, body)
       if (
         !showTemporaryPassword(result, payload.username ?? payload.studentCode)
       )
@@ -774,12 +709,8 @@ export default function CrudPage({ resource }: { resource: string }) {
     try {
       const selected =
         config.singleton ||
-        config.localSearch ||
-        resource === 'configs' ||
-        resource === 'inbox' ||
-        resource === 'storage' ||
-        resource === 'myRoom' ||
-        resource === 'audit'
+        config.useListRecordForEdit ||
+        config.inlineDetail
           ? row
           : resource === 'deposits'
             ? ((await api.get(`/contracts/${row.id}/deposit`))
@@ -788,7 +719,6 @@ export default function CrudPage({ resource }: { resource: string }) {
                 .data as CrudRecord)
       setActiveRecord(selected)
       setModalMode('view')
-      populateForm(selected)
     } catch (e) {
       handleApiError(e)
     }
@@ -980,9 +910,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                 : {
                     current: page,
                     pageSize: size,
-                    total: config.localSearch
-                      ? rows?.length
-                      : data?.totalElements,
+                    total: data?.totalElements,
                     showSizeChanger: true,
                     pageSizeOptions: CRUD_PAGE_SIZES,
                     showTotal: (count) => `Tổng ${count} bản ghi`,
@@ -1159,8 +1087,16 @@ export default function CrudPage({ resource }: { resource: string }) {
       >
         <Form
           form={form}
+          key={
+            modalMode && activeRecord
+              ? `${resource}-${modalMode}-${String(activeRecord[idKey] ?? activeRecord.id ?? 'record')}`
+              : modalMode === 'create'
+                ? `${resource}-create`
+                : `${resource}-idle`
+          }
           layout="vertical"
           disabled={isViewMode}
+          initialValues={formInitialValues}
           onFinish={(values) => {
             submitRecord(values)
           }}
@@ -1221,9 +1157,12 @@ export default function CrudPage({ resource }: { resource: string }) {
                               required: field.required,
                               whitespace:
                                 field.required &&
-                                !['number', 'boolean', 'date', 'datetime'].includes(
-                                  field.kind ?? '',
-                                ),
+                                ![
+                                  'number',
+                                  'boolean',
+                                  'date',
+                                  'datetime',
+                                ].includes(field.kind ?? ''),
                               message: `Nhập ${field.label.toLowerCase()}`,
                             },
                             ...(field.maxLength
@@ -1251,7 +1190,9 @@ export default function CrudPage({ resource }: { resource: string }) {
                 <Space wrap style={{ marginTop: 16 }}>
                   {['start', 'add-note', 'resolve']
                     .filter((action) =>
-                      (activeRecord.allowedActions as string[]).includes(action),
+                      (activeRecord.allowedActions as string[]).includes(
+                        action,
+                      ),
                     )
                     .map((action) => (
                       <Button
@@ -1274,9 +1215,8 @@ export default function CrudPage({ resource }: { resource: string }) {
                 roomId={Number(activeRecord.id)}
                 beds={activeRecord.beds as CrudRecord[]}
                 reload={async () => {
-                  const updated = (
-                    await api.get(`/rooms/${activeRecord.id}`)
-                  ).data as CrudRecord
+                  const updated = (await api.get(`/rooms/${activeRecord.id}`))
+                    .data as CrudRecord
                   setActiveRecord(updated)
                   populateForm(updated)
                   await refresh()
@@ -1332,16 +1272,27 @@ function BedCrudPanel({
   const [form] = Form.useForm()
   const [editing, setEditing] = useState<CrudRecord | null | undefined>()
   const [busy, setBusy] = useState(false)
+
+  // Khởi tạo mã giường cho modal con khi mở hoặc đổi giường
+  useEffect(() => {
+    if (editing) {
+      form.setFieldsValue({ code: editing.code ?? '' })
+    } else if (editing === null) {
+      form.resetFields()
+    }
+  }, [editing, form])
+
   async function save(values: Record<string, unknown>) {
     if (editing ? !canUpdate : !canCreate) return
     setBusy(true)
     try {
-      await writeCrudRecord(
-        editing ? `/beds/${editing.id}` : `/rooms/${roomId}/beds`,
-        editing ? 'patch' : 'post',
-        values,
-      )
+      await saveOrUpdate('/beds', {
+        code: values.code,
+        roomId,
+        ...(editing ? { id: editing.id } : {}),
+      })
       setEditing(undefined)
+      form.resetFields()
       await reload()
     } catch (e) {
       form.setFields(
@@ -1397,7 +1348,6 @@ function BedCrudPanel({
                       size="small"
                       icon={<EditOutlined />}
                       onClick={() => {
-                        form.setFieldsValue({ code: bed.code })
                         setEditing(bed)
                       }}
                       aria-label="Sửa mã giường"
@@ -1436,7 +1386,11 @@ function BedCrudPanel({
       <Modal
         title={editing ? 'Sửa giường' : 'Thêm giường'}
         open={editing !== undefined}
-        onCancel={() => setEditing(undefined)}
+        destroyOnHidden
+        onCancel={() => {
+          setEditing(undefined)
+          form.resetFields()
+        }}
         onOk={() => form.submit()}
         confirmLoading={busy}
         okText="Lưu"
@@ -1444,6 +1398,9 @@ function BedCrudPanel({
       >
         <Form
           form={form}
+          key={editing?.id != null ? `bed-${editing.id}` : 'bed-new'}
+          initialValues={{ code: editing?.code ?? '' }}
+          preserve={false}
           onFinish={(values) => {
             void save(values)
           }}

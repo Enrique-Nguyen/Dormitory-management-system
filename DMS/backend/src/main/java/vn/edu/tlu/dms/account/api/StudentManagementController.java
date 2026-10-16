@@ -1,24 +1,23 @@
 package vn.edu.tlu.dms.account.api;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.account.service.StudentManagementService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Gender;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 
 import java.time.LocalDate;
@@ -33,10 +32,11 @@ public class StudentManagementController {
         this.service = service;
     }
 
-    public record StudentInput(
-            @NotBlank @Size(max = 20) String studentCode,
-            @NotBlank @Size(max = 100) String fullName,
-            @NotBlank @Pattern(regexp = Gender.PATTERN) String gender,
+    public record Save(
+            @Positive Long id,
+            @Size(max = 20) String studentCode,
+            @Size(max = 100) String fullName,
+            @Pattern(regexp = Gender.PATTERN) String gender,
             LocalDate dateOfBirth,
             @Size(max = 100) String faculty,
             @Size(max = 10) String cohort,
@@ -45,12 +45,9 @@ public class StudentManagementController {
             @Size(max = 200) String emergencyContact) {}
 
     @RequirePrivilege(Permission.STUDENT_READ)
-    @GetMapping({"/api/students", "/api/admin/students"})
-    public PageResponse<Map<String, Object>> searchStudents(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "") String q) {
-        return service.searchStudents(page, size, q);
+    @PostMapping({"/api/students/search-by-page", "/api/admin/students/search-by-page"})
+    public PageResponse<Map<String, Object>> searchByPage(@Valid @RequestBody SearchRequest input) {
+        return service.searchByPage(input);
     }
 
     @RequirePrivilege(Permission.STUDENT_READ)
@@ -59,17 +56,10 @@ public class StudentManagementController {
         return service.getStudentById(id);
     }
 
-    @RequirePrivilege(Permission.STUDENT_CREATE)
-    @PostMapping("/api/admin/students")
-    public AccountDtos.TemporaryPassword createStudent(@Valid @RequestBody StudentInput input) {
-        return service.createStudent(input);
-    }
-
-    @RequirePrivilege(Permission.STUDENT_UPDATE)
-    @PatchMapping({"/api/students/{id}", "/api/admin/students/{id}"})
-    public Map<String, Object> updateStudent(
-            @PathVariable Long id, @Valid @RequestBody StudentInput input) {
-        return service.updateStudent(id, input);
+    @RequirePrivilege({Permission.STUDENT_CREATE, Permission.STUDENT_UPDATE})
+    @PostMapping({"/api/admin/students/save-or-update", "/api/students/save-or-update"})
+    public Object saveOrUpdate(@Valid @RequestBody Save input) {
+        return service.saveOrUpdate(input);
     }
 
     @RequirePrivilege(Permission.STUDENT_DELETE)
@@ -86,8 +76,9 @@ public class StudentManagementController {
     }
 
     @RequirePrivilege(Permission.MAINTENANCE_UPDATE)
-    @GetMapping("/api/technicians")
-    public Object getTechnicians() {
-        return service.getTechnicians();
+    @PostMapping("/api/technicians/search-by-page")
+    public PageResponse<Map<String, Object>> searchTechniciansByPage(
+            @Valid @RequestBody SearchRequest input) {
+        return service.searchTechniciansByPage(input);
     }
 }

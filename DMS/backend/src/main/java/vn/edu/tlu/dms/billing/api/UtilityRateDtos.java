@@ -1,6 +1,5 @@
 package vn.edu.tlu.dms.billing.api;
 
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 
@@ -12,10 +11,16 @@ public final class UtilityRateDtos {
 
     private UtilityRateDtos() {}
 
-    public record Create(
-            @NotNull @Pattern(regexp = MeterType.PATTERN) String meterType,
-            @NotNull @Positive Long unitPrice,
-            @NotNull LocalDate effectiveFrom) {}
+    public record Save(
+            @Positive Long id,
+            @Pattern(regexp = MeterType.PATTERN) String meterType,
+            @Positive Long unitPrice,
+            LocalDate effectiveFrom) {
+
+        public Save(String meterType, Long unitPrice, LocalDate effectiveFrom) {
+            this(null, meterType, unitPrice, effectiveFrom);
+        }
+    }
 
     public record Response(Long id, String meterType, Long unitPrice, LocalDate effectiveFrom) {}
 }

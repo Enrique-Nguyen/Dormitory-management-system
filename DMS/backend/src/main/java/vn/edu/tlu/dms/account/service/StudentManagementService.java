@@ -1,10 +1,10 @@
 package vn.edu.tlu.dms.account.service;
 
 import vn.edu.tlu.dms.account.api.AccountDtos.TemporaryPassword;
-import vn.edu.tlu.dms.account.api.StudentManagementController.StudentInput;
+import vn.edu.tlu.dms.account.api.StudentManagementController.Save;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,22 +16,17 @@ public interface StudentManagementService {
      * Tìm kiếm theo mã sinh viên/họ tên và phân trang sau khi lọc phạm vi; Admin xem toàn bộ, Staff
      * xem phạm vi được cấp.
      */
-    PageResponse<Map<String, Object>> searchStudents(int page, int size, String q);
+    PageResponse<Map<String, Object>> searchByPage(SearchRequest input);
 
     /** Đọc hồ sơ sinh viên theo ID tài khoản; trả NOT_FOUND khi không có hoặc ngoài phạm vi. */
     Map<String, Object> getStudentById(Long id);
 
     /**
-     * Admin tạo tài khoản và hồ sơ sinh viên trong một transaction; trả mật khẩu tạm một lần và bắt
-     * đổi khi đăng nhập.
+     * Không có ID: Admin tạo tài khoản/hồ sơ và nhận mật khẩu tạm một lần. Có ID: kiểm quyền sửa,
+     * phạm vi và lịch sử; chỉ cập nhật trường được gửi. Sửa mã sinh viên thu hồi phiên chứa tên
+     * đăng nhập cũ, không cấp lại mật khẩu.
      */
-    TemporaryPassword createStudent(StudentInput in);
-
-    /**
-     * Sửa các trường hồ sơ được phép, kiểm tra vai trò và phạm vi; thu hồi phiên khi mã sinh viên
-     * làm thay đổi tên đăng nhập. Dữ liệu bỏ trống không dùng để xóa tùy tiện lịch sử.
-     */
-    Map<String, Object> updateStudent(Long id, StudentInput in);
+    Object saveOrUpdate(Save input);
 
     /**
      * Admin xóa sinh viên chưa có dữ liệu liên quan; từ chối nếu hồ sơ đã phát sinh lịch sử hoặc
@@ -47,6 +42,6 @@ public interface StudentManagementService {
      */
     TemporaryPassword resetStudentPassword(Long id);
 
-    /** Đọc danh sách kỹ thuật viên trong phạm vi được phép để dùng làm dữ liệu chọn trên form. */
-    List<Map<String, Object>> getTechnicians();
+    /** Tìm và phân trang kỹ thuật viên đang hoạt động trong phạm vi để chọn trên form. */
+    PageResponse<Map<String, Object>> searchTechniciansByPage(SearchRequest input);
 }

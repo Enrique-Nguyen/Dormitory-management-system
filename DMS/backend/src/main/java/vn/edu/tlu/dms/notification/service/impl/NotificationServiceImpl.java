@@ -10,19 +10,21 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.NotificationSource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.notification.api.NotificationDtos;
 import vn.edu.tlu.dms.notification.domain.Notification;
 import vn.edu.tlu.dms.notification.repository.NotificationRepository;
 import vn.edu.tlu.dms.notification.service.NotificationService;
-import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -36,37 +38,52 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final ScopeGuard scopeGuard;
 
-    private final RoomReferenceService rooms;
-
     public NotificationServiceImpl(
             NotificationRepository repository,
             JdbcTemplate jdbc,
             CurrentUser currentUser,
-            ScopeGuard scopeGuard,
-            RoomReferenceService rooms) {
+            ScopeGuard scopeGuard) {
         this.repository = repository;
         this.jdbc = jdbc;
         this.currentUser = currentUser;
         this.scopeGuard = scopeGuard;
-        this.rooms = rooms;
     }
 
-    /** View áp dụng cả quyền đơn vị lẫn khoảng thời gian sinh viên thực sự ở trong phòng. */
-    @Override()
-    public PageResponse<NotificationDtos.Response> getMyNotifications(
-            int page, int size, Boolean unread) {
-        return getMyNotifications(page, size, unread, "");
-    }
-
-    @Override()
-    public PageResponse<NotificationDtos.Response> getMyNotifications(
-            int page, int size, Boolean unread, String keyword) {
+    /** Phạm vi hộp thư và trạng thái đọc được lọc trước phân trang; chỉ sắp xếp cột đã cho phép. */
+    @Override
+    public PageResponse<NotificationDtos.Response> searchByPage(SearchRequest request) {
         scopeGuard.requirePermission(Permission.NOTIFICATION_READ);
-        PageQuery.of(page, size, null, Set.of("id"), "id,desc");
+        int page = request.page();
+        int size = request.size();
+        Boolean unread = request.unread();
+        String keyword = request.q();
+        var pageable =
+                PageQuery.of(
+                        page,
+                        size,
+                        request.sort(),
+                        Set.of("id", "createdAt", "title", "scope", "isRead"),
+                        "createdAt,desc");
+        String ordering =
+                pageable.getSort().stream()
+                        .map(
+                                order -> {
+                                    String column =
+                                            switch (order.getProperty()) {
+                                                case "id" -> "notification_id";
+                                                case "createdAt" -> "created_at";
+                                                case "isRead" -> "is_read";
+                                                default -> order.getProperty();
+                                            };
+                                    return column + " " + order.getDirection().name();
+                                })
+                        .collect(Collectors.joining(", "));
         Long userId = currentUser.get().id();
+        var actor = currentUser.get();
+        String portal = actor.is(Role.STUDENT) ? "/student" : actor.isAdmin() ? "/admin" : "/staff";
         String filter = unread == null ? "" : unread ? " AND NOT is_read" : " AND is_read";
         filter += " AND (title ILIKE ? OR body ILIKE ?)";
-        String pattern = "%" + keyword.trim() + "%";
+        String pattern = LikePattern.contains(keyword.trim());
         Long total =
                 jdbc.queryForObject(
                         "SELECT count(*) FROM " + inboxSource() + filter,
@@ -79,8 +96,9 @@ public class NotificationServiceImpl implements NotificationService {
                         "SELECT * FROM "
                                 + inboxSource()
                                 + filter
-                                + " ORDER BY created_at DESC, notification_id DESC LIMIT ? OFFSET"
-                                + " ?",
+                                + " ORDER BY "
+                                + ordering
+                                + " LIMIT ? OFFSET ?",
                         (row, index) ->
                                 new NotificationDtos.Response(
                                         row.getLong("notification_id"),
@@ -91,6 +109,7 @@ public class NotificationServiceImpl implements NotificationService {
                                                 ? NotificationSource.MANUAL
                                                 : row.getString("source_type"),
                                         notificationLink(
+                                                portal,
                                                 row.getString("source_type"),
                                                 row.getObject("source_id", Long.class)),
                                         row.getObject("created_at", OffsetDateTime.class),
@@ -166,78 +185,6 @@ public class NotificationServiceImpl implements NotificationService {
                 userId);
     }
 
-    @Transactional
-    @Override()
-    public NotificationDtos.Response createManualNotification(NotificationDtos.Create input) {
-        scopeGuard.requirePermission(Permission.NOTIFICATION_CREATE);
-        scopeGuard.requireRole(Role.STAFF);
-        validateNotificationScope(input);
-        Notification notification = new Notification();
-        notification.setScope(input.scope());
-        notification.setManagementUnitId(input.unitId());
-        notification.setBuildingId(input.buildingId());
-        notification.setFloor(input.floor());
-        notification.setRoomId(input.roomId());
-        notification.setTitle(input.title().trim());
-        notification.setBody(input.body().trim());
-        notification.setCreatedBy(currentUser.get().id());
-        notification.setCreatedAt(OffsetDateTime.now());
-        repository.saveAndFlush(notification);
-        return new NotificationDtos.Response(
-                notification.getId(),
-                notification.getScope(),
-                notification.getTitle(),
-                notification.getBody(),
-                NotificationSource.MANUAL,
-                null,
-                notification.getCreatedAt(),
-                false);
-    }
-
-    private void validateNotificationScope(NotificationDtos.Create input) {
-        int fields =
-                (input.unitId() == null ? 0 : 1)
-                        + (input.buildingId() == null ? 0 : 1)
-                        + (input.floor() == null ? 0 : 1)
-                        + (input.roomId() == null ? 0 : 1);
-        boolean valid =
-                switch (input.scope()) {
-                    case NotificationScope.ALL -> fields == 0;
-                    case NotificationScope.UNIT -> fields == 1 && input.unitId() != null;
-                    case NotificationScope.BUILDING -> fields == 1 && input.buildingId() != null;
-                    case NotificationScope.FLOOR ->
-                            fields == 2 && input.buildingId() != null && input.floor() != null;
-                    case NotificationScope.ROOM -> fields == 1 && input.roomId() != null;
-                    default -> false;
-                };
-        if (!valid) {
-            throw BusinessException.invalid(
-                    "scope", "Các trường vị trí không khớp phạm vi thông báo");
-        }
-        switch (input.scope()) {
-            case NotificationScope.ALL -> {
-                if (!currentUser.get().canReadAllUnits()) {
-                    throw BusinessException.forbidden();
-                }
-            }
-            case NotificationScope.UNIT -> {
-                if (!Boolean.TRUE.equals(
-                        jdbc.queryForObject(
-                                "SELECT EXISTS(SELECT 1 FROM management_unit WHERE id=?)",
-                                Boolean.class,
-                                input.unitId()))) {
-                    throw BusinessException.notFound();
-                }
-                scopeGuard.requireUnit(input.unitId());
-            }
-            case NotificationScope.BUILDING, NotificationScope.FLOOR ->
-                    scopeGuard.requireUnit(rooms.getBuildingManagementUnitId(input.buildingId()));
-            case NotificationScope.ROOM ->
-                    scopeGuard.requireUnit(rooms.getRoomLocation(input.roomId()).unitId());
-            default -> throw BusinessException.invalid("scope", "Phạm vi không hỗ trợ");
-        }
-    }
-
     /**
      * Thông báo tự động dùng transaction mới sau commit nghiệp vụ; lỗi gửi thông báo không làm mất
      * đợt đăng ký đã lưu. Listener chịu trách nhiệm bắt và ghi log lỗi.
@@ -246,42 +193,42 @@ public class NotificationServiceImpl implements NotificationService {
     @Override()
     public void notifyActiveStudentsOfSummerPeriod(
             Long periodId, String periodName, List<Long> unitIds, Long actorId) {
-        for (Long unitId : unitIds) {
-            List<Long> studentIds =
-                    jdbc.query(
-                            """
-                            SELECT DISTINCT c.student_id FROM dormitory_contract c
-                            JOIN room_assignment_history a ON a.contract_id = c.id
-                            JOIN bed b ON b.id = a.bed_id JOIN room r ON r.id = b.room_id
-                            JOIN building bd ON bd.id = r.building_id
-                            WHERE c.status = 'ACTIVE' AND bd.management_unit_id = ?
-                            """,
-                            (row, index) -> row.getLong(1),
-                            unitId);
-            for (Long studentId : studentIds) {
-                Notification notification = new Notification();
-                notification.setScope(NotificationScope.USER);
-                notification.setUserId(studentId);
-                notification.setTitle("Mở đợt đăng ký hè");
-                notification.setBody(periodName);
-                notification.setSourceType(NotificationSource.SUMMER_PERIOD_OPENED);
-                notification.setSourceId(periodId);
-                notification.setCreatedBy(actorId);
-                notification.setCreatedAt(OffsetDateTime.now());
-                repository.save(notification);
-            }
+        if (unitIds == null || unitIds.isEmpty()) {
+            return;
+        }
+        // Chỉ xét chỗ ở hiện hành (ended_at IS NULL) và gộp các đơn vị trong một truy vấn để mỗi
+        // sinh viên chỉ nhận một thông báo.
+        List<Long> studentIds =
+                jdbc.query(
+                        """
+                        SELECT DISTINCT c.student_id FROM dormitory_contract c
+                        JOIN room_assignment_history a ON a.contract_id = c.id
+                        JOIN bed b ON b.id = a.bed_id JOIN room r ON r.id = b.room_id
+                        JOIN building bd ON bd.id = r.building_id
+                        WHERE c.status = 'ACTIVE' AND a.ended_at IS NULL
+                          AND bd.management_unit_id = ANY (?)
+                        """,
+                        (row, index) -> row.getLong(1),
+                        (Object) unitIds.toArray(new Long[0]));
+        for (Long studentId : studentIds) {
+            Notification notification = new Notification();
+            notification.setScope(NotificationScope.USER);
+            notification.setUserId(studentId);
+            notification.setTitle("Mở đợt đăng ký hè");
+            notification.setBody(periodName);
+            notification.setSourceType(NotificationSource.SUMMER_PERIOD_OPENED);
+            notification.setSourceId(periodId);
+            notification.setCreatedBy(actorId);
+            notification.setCreatedAt(OffsetDateTime.now());
+            repository.save(notification);
         }
         repository.flush();
     }
 
-    private String notificationLink(String source, Long id) {
+    private String notificationLink(String portal, String source, Long id) {
         if (source == null || id == null) {
             return null;
         }
-        String portal =
-                currentUser.get().is(Role.STUDENT)
-                        ? "/student"
-                        : currentUser.get().isAdmin() ? "/admin" : "/staff";
         return switch (source) {
             case NotificationSource.SUMMER_PERIOD_OPENED -> portal + "/summer";
             case NotificationSource.APPLICATION_APPROVED, NotificationSource.BED_HELD ->

@@ -1,11 +1,13 @@
 package vn.edu.tlu.dms.room.service.impl;
 
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -16,6 +18,8 @@ import vn.edu.tlu.dms.room.api.SemesterResponse;
 import vn.edu.tlu.dms.room.domain.Semester;
 import vn.edu.tlu.dms.room.repository.SemesterRepository;
 import vn.edu.tlu.dms.room.service.SemesterService;
+
+import java.util.Set;
 
 @Service
 public class SemesterServiceImpl
@@ -49,6 +53,29 @@ public class SemesterServiceImpl
     @Override
     protected void checkPermission(String action) {
         guard.requirePermission(Resource.SEMESTER + DmsConstants.PERMISSION_SEPARATOR + action);
+    }
+
+    @Override
+    protected Long getInputId(SemesterRequest input) {
+        return input.id();
+    }
+
+    @Override
+    protected Set<String> searchableFields() {
+        return Set.of("name", "academicYear");
+    }
+
+    @Override
+    protected Set<String> sortableFields() {
+        return Set.of("id", "name", "academicYear", "type", "startDate", "endDate");
+    }
+
+    @Override
+    protected Specification<Semester> searchScope(SearchRequest search) {
+        return (root, query, builder) ->
+                search.type() == null || search.type().isBlank()
+                        ? builder.conjunction()
+                        : builder.equal(root.get("type"), search.type());
     }
 
     @Override

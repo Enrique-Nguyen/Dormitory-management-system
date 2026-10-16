@@ -19,14 +19,29 @@ public final class RegistrationPeriodDtos {
     public record Quota(
             @NotNull @Positive Long buildingId, @NotNull @PositiveOrZero Integer quota) {}
 
+    /** Body lưu phẳng: ID trống tạo mới, ID dương sửa bản ghi đã có. */
     public record Input(
+            @Positive Long id,
             @Positive Long semesterId,
             @Pattern(regexp = RegistrationKind.PATTERN) String kind,
             @Size(max = 100) String name,
             OffsetDateTime openAt,
             OffsetDateTime closeAt,
-            List<@Positive Long> unitIds,
-            List<@Valid Quota> quotas) {}
+            List<@NotNull @Positive Long> unitIds,
+            List<@NotNull @Valid Quota> quotas) {
+
+        /** Giữ tương thích các lời gọi tạo mới trong mã Java hiện có. */
+        public Input(
+                Long semesterId,
+                String kind,
+                String name,
+                OffsetDateTime openAt,
+                OffsetDateTime closeAt,
+                List<Long> unitIds,
+                List<Quota> quotas) {
+            this(null, semesterId, kind, name, openAt, closeAt, unitIds, quotas);
+        }
+    }
 
     public record Response(
             Long id,

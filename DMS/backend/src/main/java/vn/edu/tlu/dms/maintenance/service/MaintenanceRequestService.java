@@ -3,8 +3,9 @@ package vn.edu.tlu.dms.maintenance.service;
 import org.springframework.web.multipart.MultipartFile;
 
 import vn.edu.tlu.dms.common.dto.PageResponse;
-import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Create;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Response;
+import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Save;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -13,27 +14,24 @@ import java.util.List;
 public interface MaintenanceRequestService {
 
     /**
-     * Tìm và phân trang yêu cầu theo trạng thái, loại và mức độ trong phạm vi được phép xem. Phiên
-     * bản này không lọc từ khóa.
+     * Tìm kiếm và phân trang yêu cầu sửa chữa theo yêu cầu tìm kiếm chuẩn hóa.
+     *
+     * @param request trang, kích thước, từ khóa, danh sách trạng thái, phân loại, mức độ và thứ tự
+     * @return trang kết quả yêu cầu sửa chữa
      */
-    PageResponse<Response> searchMaintenanceRequests(
-            int page, int size, String status, String category, String severity);
+    PageResponse<Response> searchByPage(SearchRequest request);
 
     /**
-     * Tìm và phân trang yêu cầu theo từ khóa, trạng thái, loại và mức độ. Quyền xem của sinh viên,
-     * cán bộ và kỹ thuật viên được áp dụng trước khi phân trang.
+     * Thêm mới hoặc cập nhật yêu cầu sửa chữa theo mã định danh (id).
+     *
+     * @param input khi không có id phải đủ loại/mức độ/mô tả/vị trí; có id chỉ sửa trường đã gửi
+     * @param files ảnh khi tạo mới; khi sửa giữ ảnh hiện có và từ chối gửi thêm ảnh mới
+     * @return thông tin yêu cầu sửa chữa sau khi lưu
      */
-    PageResponse<Response> searchMaintenanceRequests(
-            int page, int size, String status, String category, String severity, String q);
+    Response saveOrUpdate(Save input, List<MultipartFile> files);
 
     /** Lấy chi tiết yêu cầu sửa chữa theo mã sau khi kiểm tra quyền xem. */
     Response getMaintenanceRequestById(Long id);
-
-    /**
-     * Tạo yêu cầu sửa chữa cùng ảnh và lịch sử trong một giao dịch. Lỗi kiểm tra ảnh hoặc lỗi lưu
-     * dữ liệu làm hoàn tác toàn bộ thao tác.
-     */
-    Response createMaintenanceRequest(Create input, List<MultipartFile> files);
 
     /** Giao yêu cầu cho kỹ thuật viên hợp lệ cùng đơn vị và ghi lịch sử phân công. */
     Response assignTechnician(Long id, Long technicianId);

@@ -4,12 +4,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.billing.api.InvoiceDtos;
 import vn.edu.tlu.dms.billing.service.InvoiceCrudService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -66,7 +69,45 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
 
     @Transactional
     @Override
-    public Object createInvoiceRecord(Map<String, Object> input) {
+    public Object saveOrUpdate(InvoiceDtos.Save input) {
+        if (input == null) {
+            throw BusinessException.invalid("input", "Dữ liệu hóa đơn không được để trống");
+        }
+        if (input.id() == null) {
+            guard.requirePermission(Permission.INVOICE_CREATE);
+            Map<String, Object> map = new HashMap<>();
+            if (input.type() != null) map.put("type", input.type());
+            if (input.studentId() != null) map.put("studentId", input.studentId());
+            if (input.semesterId() != null) map.put("semesterId", input.semesterId());
+            if (input.roomId() != null) map.put("roomId", input.roomId());
+            if (input.billingMonth() != null) map.put("billingMonth", input.billingMonth());
+            if (input.totalAmount() != null) map.put("totalAmount", input.totalAmount());
+            if (input.dueDate() != null) map.put("dueDate", input.dueDate());
+            return createInvoiceRecord(map);
+        } else {
+            guard.requirePermission(Permission.INVOICE_UPDATE);
+            if (input.id() <= 0) {
+                throw BusinessException.invalid(ApiField.ID, ValidationMessage.ID_POSITIVE);
+            }
+            if (input.type() != null
+                    || input.studentId() != null
+                    || input.semesterId() != null
+                    || input.roomId() != null
+                    || input.billingMonth() != null) {
+                throw BusinessException.invalid(
+                        ApiField.FORM, "Chỉ sửa tổng tiền/hạn đóng của hồ sơ chưa phát hành");
+            }
+            Map<String, Object> map = new HashMap<>();
+            if (input.totalAmount() != null) map.put("totalAmount", input.totalAmount());
+            if (input.dueDate() != null) map.put("dueDate", input.dueDate());
+            if (map.isEmpty()) {
+                throw BusinessException.invalid(ApiField.FORM, "Thiếu thông tin cập nhật");
+            }
+            return updateUnpaidInvoiceRecord(input.id(), map);
+        }
+    }
+
+    private Object createInvoiceRecord(Map<String, Object> input) {
         guard.requirePermission(Permission.INVOICE_CREATE);
         guard.requireRole(Role.STAFF);
         validate(input);
@@ -89,15 +130,13 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
                         InvoiceStatus.UNPAID));
     }
 
-    @Transactional
-    @Override
-    public Object updateUnpaidInvoiceRecord(Long id, Map<String, Object> input) {
+    private Object updateUnpaidInvoiceRecord(Long id, Map<String, Object> input) {
         guard.requirePermission(Permission.INVOICE_UPDATE);
         guard.requireRole(Role.STAFF);
         var row = loadEditable(id);
         if (input.keySet().stream().anyMatch(k -> !Set.of("totalAmount", "dueDate").contains(k))) {
             throw BusinessException.invalid(
-                    "form", "Chỉ sửa tổng tiền/hạn đóng của hồ sơ chưa phát hành");
+                    ApiField.FORM, "Chỉ sửa tổng tiền/hạn đóng của hồ sơ chưa phát hành");
         }
         var merged = new HashMap<>(row);
         merged.putAll(input);

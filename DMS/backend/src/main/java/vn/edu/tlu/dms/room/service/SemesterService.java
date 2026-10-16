@@ -1,34 +1,36 @@
 package vn.edu.tlu.dms.room.service;
 
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.service.CrudService;
 import vn.edu.tlu.dms.room.api.SemesterRequest;
 import vn.edu.tlu.dms.room.api.SemesterResponse;
 
 import java.util.List;
 
-/** Khai báo thao tác CRUD học kỳ; logic xử lý nằm trong SemesterServiceImpl. */
+/** Hợp đồng CRUD học kỳ; logic kiểm tra quyền và dữ liệu nằm trong SemesterServiceImpl. */
 public interface SemesterService extends CrudService<SemesterRequest, SemesterResponse> {
 
-    /** Đọc danh sách học kỳ sau khi kiểm tra vai trò và phạm vi được cấp. */
+    /** Tìm kiếm, sắp xếp và phân trang học kỳ trong phạm vi được phép; trang bắt đầu từ 0. */
+    @Override
+    PageResponse<SemesterResponse> searchByPage(SearchRequest search);
+
+    /** Đọc danh mục cho lời gọi nội bộ; API danh sách sử dụng searchByPage để phân trang. */
     @Override
     List<SemesterResponse> getAll();
 
-    /** Đọc chi tiết học kỳ theo ID; không tồn tại hoặc ngoài phạm vi trả NOT_FOUND. */
+    /** Đọc chi tiết theo ID; trả NOT_FOUND nếu không tồn tại hoặc nằm ngoài phạm vi truy cập. */
     @Override
     SemesterResponse getById(Long id);
 
     /**
-     * Tạo học kỳ, kiểm tra trường bắt buộc và ràng buộc; ghi dữ liệu và audit trong một
-     * transaction.
+     * Lưu học kỳ: ID trống tạo mới, có ID cập nhật từng phần và giữ trường không gửi. Kiểm tra đúng
+     * quyền CREATE/UPDATE và ghi nhật ký cùng transaction; ID không tồn tại không tạo mới.
      */
     @Override
-    SemesterResponse create(SemesterRequest input);
+    SemesterResponse saveOrUpdate(SemesterRequest input);
 
-    /** Sửa từng phần học kỳ; trường không gửi hoặc null giữ nguyên giá trị hiện tại. */
-    @Override
-    SemesterResponse update(Long id, SemesterRequest input);
-
-    /** Xóa học kỳ chưa được sử dụng; ràng buộc FK ngăn xóa dữ liệu đang bị tham chiếu. */
+    /** Xóa học kỳ chưa được sử dụng; ràng buộc tham chiếu tiếp tục bảo vệ dữ liệu lịch sử. */
     @Override
     void deleteById(Long id);
 }
