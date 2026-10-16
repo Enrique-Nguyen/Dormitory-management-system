@@ -18,6 +18,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 import vn.edu.tlu.dms.notification.api.NotificationDtos;
 import vn.edu.tlu.dms.notification.domain.Notification;
@@ -74,8 +75,8 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
         var args = new ArrayList<Object>();
         String owner = current.get().isAdmin() ? "TRUE" : "n.created_by=?";
         if (!current.get().isAdmin()) args.add(current.get().id());
-        args.add("%" + request.q().trim() + "%");
-        args.add("%" + request.q().trim() + "%");
+        args.add(LikePattern.contains(request.q().trim()));
+        args.add(LikePattern.contains(request.q().trim()));
         return queries.search(
                 "SELECT n.id,n.scope,n.title,n.body,n.created_at,n.created_by,n.management_unit_id"
                         + " AS unit_id,n.building_id,n.floor,n.room_id FROM notification n WHERE "

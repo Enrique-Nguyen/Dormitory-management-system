@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms.room.service.impl;
 
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Predicate;
 
 import org.springframework.data.domain.Sort;
@@ -24,6 +25,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedInput;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedResponse;
@@ -73,6 +75,8 @@ public class RoomServiceImpl implements RoomService {
 
     private final AuditService audit;
 
+    private final EntityManager entityManager;
+
     public RoomServiceImpl(
             RoomRepository rooms,
             BedRepository beds,
@@ -83,7 +87,8 @@ public class RoomServiceImpl implements RoomService {
             CurrentUser current,
             RoomReferenceService references,
             AccountReferenceService accounts,
-            AuditService audit) {
+            AuditService audit,
+            EntityManager entityManager) {
         this.rooms = rooms;
         this.beds = beds;
         this.types = types;
@@ -94,6 +99,7 @@ public class RoomServiceImpl implements RoomService {
         this.references = references;
         this.accounts = accounts;
         this.audit = audit;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -138,7 +144,9 @@ public class RoomServiceImpl implements RoomService {
                         filters.add(
                                 b.like(
                                         b.lower(r.get("code")),
-                                        "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%"));
+                                        LikePattern.contains(
+                                                keyword.trim().toLowerCase(Locale.ROOT)),
+                                        '\\'));
                     }
                     var building = q.subquery(Long.class);
                     var bd = building.from(Building.class);
@@ -187,7 +195,11 @@ public class RoomServiceImpl implements RoomService {
                     }
                     return b.and(filters.toArray(Predicate[]::new));
                 };
-        return PageResponse.from(rooms.findAll(spec, pageable).map(r -> toRoomResponse(r, false)));
+        var found = rooms.findAll(spec, pageable);
+        // Nạp số liệu công suất của cả trang bằng một truy vấn thay vì mỗi phòng một truy vấn.
+        var occupancy = loadOccupancy(found.getContent().stream().map(Room::getId).toList());
+        return PageResponse.from(
+                found.map(r -> toRoomResponse(r, false, occupancy.get(r.getId()))));
     }
 
     @Override
@@ -195,7 +207,7 @@ public class RoomServiceImpl implements RoomService {
         guard.requirePermission(Permission.ROOM_READ);
         guard.requireRole(Role.STAFF);
         var r = findAccessibleRoom(id, false);
-        return toRoomResponse(r, true);
+        return toRoomResponse(r, true, null);
     }
 
     @Override
@@ -224,14 +236,7 @@ public class RoomServiceImpl implements RoomService {
         r.setGender(requireValue(input.gender(), "gender"));
         r.setStatus(RoomStatus.ACTIVE);
         rooms.saveAndFlush(r);
-        for (int i = 1; i <= type.getBedCount(); i++) {
-            var bed = new Bed();
-            bed.setRoomId(r.getId());
-            bed.setCode(String.format("%02d", i));
-            bed.setStatus(BedOperationStatus.ACTIVE);
-            beds.save(bed);
-        }
-        beds.flush();
+        syncBeds(r, type.getBedCount());
         audit.record(
                 current.get().id(),
                 AuditAction.ROOM_CREATE,
@@ -240,7 +245,7 @@ public class RoomServiceImpl implements RoomService {
                 null,
                 input,
                 null);
-        return toRoomResponse(r, true);
+        return toRoomResponse(r, true, null);
     }
 
     private Response updateRoomInternal(Long id, Input input) {
@@ -265,11 +270,21 @@ public class RoomServiceImpl implements RoomService {
         if (input.gender() != null) {
             r.setGender(input.gender());
         }
+        boolean typeChanged =
+                input.roomTypeId() != null && !input.roomTypeId().equals(r.getRoomTypeId());
         if (input.roomTypeId() != null) {
             references.requireActiveRoomType(input.roomTypeId());
             r.setRoomTypeId(input.roomTypeId());
         }
         rooms.saveAndFlush(r);
+        if (typeChanged) {
+            // Số giường phải khớp loại phòng mới, nếu không công suất hiển thị và giá sẽ lệch nhau.
+            syncBeds(
+                    r,
+                    types.findById(r.getRoomTypeId())
+                            .orElseThrow(BusinessException::notFound)
+                            .getBedCount());
+        }
         audit.record(
                 current.get().id(),
                 AuditAction.ROOM_UPDATE,
@@ -278,7 +293,7 @@ public class RoomServiceImpl implements RoomService {
                 null,
                 input,
                 null);
-        return toRoomResponse(r, true);
+        return toRoomResponse(r, true, null);
     }
 
     @Override
@@ -301,7 +316,7 @@ public class RoomServiceImpl implements RoomService {
                 before,
                 input.status(),
                 trimRequiredText(input.reason(), "reason"));
-        return toRoomResponse(r, true);
+        return toRoomResponse(r, true, null);
     }
 
     @Override
@@ -456,7 +471,7 @@ public class RoomServiceImpl implements RoomService {
                 before,
                 studentId,
                 null);
-        return toRoomResponse(r, true);
+        return toRoomResponse(r, true, null);
     }
 
     @Override
@@ -478,9 +493,53 @@ public class RoomServiceImpl implements RoomService {
                 trimRequiredText(reason, "reason"));
     }
 
+    /**
+     * Đưa số giường của phòng về đúng sức chứa của loại phòng. Thêm giường mang mã hai chữ số còn
+     * thiếu; bớt giường từ mã lớn nhất và chỉ bớt giường chưa từng có phân phòng (lịch sử không bị
+     * xóa). Gọi sau khi đã khóa các giường của phòng.
+     */
+    private void syncBeds(Room r, int target) {
+        var existing =
+                new ArrayList<>(beds.findAll((b, q, cb) -> cb.equal(b.get("roomId"), r.getId())));
+        existing.forEach(entityManager::refresh);
+        existing.sort(java.util.Comparator.comparing(Bed::getCode));
+        Set<String> used = new java.util.HashSet<>();
+        existing.forEach(b -> used.add(b.getCode()));
+        for (int number = 1; existing.size() < target; number++) {
+            String code = String.format("%02d", number);
+            if (used.add(code)) {
+                var bed = new Bed();
+                bed.setRoomId(r.getId());
+                bed.setCode(code);
+                bed.setStatus(BedOperationStatus.ACTIVE);
+                existing.add(beds.save(bed));
+            }
+        }
+        for (int i = existing.size() - 1; i >= 0 && existing.size() > target; i--) {
+            var bed = existing.get(i);
+            Long bedId = bed.getId();
+            if (!assignments.exists((a, q, cb) -> cb.equal(a.get("bedId"), bedId))) {
+                beds.delete(bed);
+                existing.remove(i);
+            }
+        }
+        beds.flush();
+        if (existing.size() > target) {
+            throw BusinessException.conflict(ErrorCode.BED_OCCUPIED);
+        }
+    }
+
     private Room findAccessibleRoom(Long id, boolean writing) {
+        if (writing) {
+            // Các giường đã được khóa trước nếu thao tác cần chúng; khóa phòng rồi đọc lại dữ liệu.
+            jdbc.query(
+                    "SELECT id FROM room WHERE id=? FOR UPDATE",
+                    (row, index) -> row.getLong(1),
+                    id);
+        }
         var r = rooms.findById(id).orElseThrow(BusinessException::notFound);
         if (writing) {
+            entityManager.refresh(r);
             guard.requireUnit(references.getBuildingManagementUnitId(r.getBuildingId()));
         } else {
             guard.requireReadableUnit(references.getBuildingManagementUnitId(r.getBuildingId()));
@@ -501,7 +560,9 @@ public class RoomServiceImpl implements RoomService {
 
     private Bed lockAndFindBed(Long id) {
         jdbc.query("SELECT id FROM bed WHERE id=? FOR UPDATE", (r, i) -> r.getLong(1), id);
-        return beds.findById(id).orElseThrow(BusinessException::notFound);
+        var bed = beds.findById(id).orElseThrow(BusinessException::notFound);
+        entityManager.refresh(bed);
+        return bed;
     }
 
     private boolean hasOpenBedAssignment(Long id) {
@@ -523,22 +584,33 @@ public class RoomServiceImpl implements RoomService {
         }
     }
 
-    private Response toRoomResponse(Room r, boolean detail) {
-        var counts =
-                jdbc.queryForMap(
-                        "SELECT active_beds,held_beds,occupied_beds,free_beds FROM v_room_occupancy"
-                                + " WHERE room_id=?",
-                        r.getId());
-        List<BedResponse> children =
-                detail
-                        ? beds
-                                .findAll(
-                                        (b, q, cb) -> cb.equal(b.get("roomId"), r.getId()),
-                                        Sort.by("code"))
-                                .stream()
-                                .map(this::toBedResponse)
-                                .toList()
-                        : null;
+    private Map<Long, Map<String, Object>> loadOccupancy(List<Long> roomIds) {
+        Map<Long, Map<String, Object>> result = new java.util.HashMap<>();
+        if (roomIds.isEmpty()) {
+            return result;
+        }
+        jdbc.query(
+                "SELECT room_id,active_beds,held_beds,occupied_beds,free_beds FROM"
+                        + " v_room_occupancy WHERE room_id = ANY (?)",
+                row -> {
+                    result.put(
+                            row.getLong("room_id"),
+                            Map.of(
+                                    "active_beds", row.getLong("active_beds"),
+                                    "held_beds", row.getLong("held_beds"),
+                                    "occupied_beds", row.getLong("occupied_beds"),
+                                    "free_beds", row.getLong("free_beds")));
+                },
+                (Object) roomIds.toArray(new Long[0]));
+        return result;
+    }
+
+    /** {@code counts} đã nạp theo lô cho danh sách; null thì tự truy vấn (API chi tiết). */
+    private Response toRoomResponse(Room r, boolean detail, Map<String, Object> counts) {
+        if (counts == null) {
+            counts = loadOccupancy(List.of(r.getId())).get(r.getId());
+        }
+        List<BedResponse> children = detail ? toBedResponses(r.getId()) : null;
         return new Response(
                 r.getId(),
                 r.getCode(),
@@ -555,6 +627,23 @@ public class RoomServiceImpl implements RoomService {
                 children);
     }
 
+    /** Giường của phòng cùng phân phòng hiệu lực, nạp bằng một truy vấn cho cả phòng. */
+    private List<BedResponse> toBedResponses(Long roomId) {
+        var roomBeds =
+                beds.findAll((b, q, cb) -> cb.equal(b.get("roomId"), roomId), Sort.by("code"));
+        if (roomBeds.isEmpty()) {
+            return List.of();
+        }
+        var bedIds = roomBeds.stream().map(Bed::getId).toList();
+        Map<Long, RoomAssignmentHistory> openByBed = new java.util.HashMap<>();
+        assignments
+                .findAll(
+                        (r, q, cb) ->
+                                cb.and(r.get("bedId").in(bedIds), cb.isNull(r.get("endedAt"))))
+                .forEach(a -> openByBed.put(a.getBedId(), a));
+        return roomBeds.stream().map(b -> toBedResponse(b, openByBed.get(b.getId()))).toList();
+    }
+
     private BedResponse toBedResponse(Bed b) {
         var a =
                 assignments
@@ -566,6 +655,10 @@ public class RoomServiceImpl implements RoomService {
                         .stream()
                         .findFirst()
                         .orElse(null);
+        return toBedResponse(b, a);
+    }
+
+    private BedResponse toBedResponse(Bed b, RoomAssignmentHistory a) {
         Occupant occupant = null;
         if (a != null) {
             var u = accounts.user(a.getStudentId());

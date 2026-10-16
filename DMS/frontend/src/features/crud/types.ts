@@ -49,4 +49,12 @@ export interface CrudResource {
   rowOwned?: string
   createFields?: CrudField[]
   editFields?: CrudField[]
+  /** Khi sửa, gửi lại các trường createOnly đã chọn lúc tạo (DTO sửa cần định danh/phạm vi). */
+  keepCreateOnlyOnEdit?: boolean
+  /** Sau thời điểm openAt chỉ được sửa closeAt (gia hạn). */
+  closeAtOnlyAfterOpen?: boolean
+  /** Không có nút tạo mới (bản ghi tồn tại sẵn, chỉ sửa). */
+  noCreate?: boolean
+  /** Dòng đã có đủ dữ liệu: không gọi API chi tiết khi mở xem/sửa. */
+  inlineDetail?: boolean
 }

@@ -745,6 +745,265 @@ class CrudApiIntegrationTest {
                 .andExpect(status().isNoContent());
     }
 
+    // ------------------------------------------------------------------
+    // Hồi quy cho các lỗi từ code review nhánh develop-quyennnv
+    // ------------------------------------------------------------------
+
+    @Test
+    void floorNotificationCanBeRetitledWithoutChangingScope() throws Exception {
+        String body =
+                """
+                {"scope":"FLOOR","buildingId":%d,"floor":1,"title":"%s","body":"Nội dung"}
+                """;
+        String created =
+                mvc.perform(
+                                post("/api/notifications/save-or-update")
+                                        .with(asUser(staffId, "STAFF"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(body.formatted(firstBuildingId, "Cũ")))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long id = mapper.readTree(created).get("id").asLong();
+        mvc.perform(
+                        post("/api/notifications/save-or-update")
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(withId(id, body.formatted(firstBuildingId, "Mới"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Mới"));
+    }
+
+    @Test
+    void maintenancePatchReturnsTheUpdatedTicket() throws Exception {
+        Long ticketId =
+                jdbc.queryForObject(
+                        """
+                        INSERT INTO maintenance_request(code,requester_id,building_id,floor,category,severity,description)
+                        VALUES (?,?,?,1,'ELECTRIC','LOW','Đèn hỏng') RETURNING id
+                        """,
+                        Long.class,
+                        "TK-" + suffix,
+                        studentId,
+                        firstBuildingId);
+        mvc.perform(
+                        multipart("/api/maintenance-requests/save-or-update")
+                                .file(
+                                        new MockMultipartFile(
+                                                "data",
+                                                "data.json",
+                                                MediaType.APPLICATION_JSON_VALUE,
+                                                withId(
+                                                                ticketId,
+                                                                """
+                                                                {"category":"WATER","severity":"HIGH","description":"Vòi nước hỏng"}
+                                                                """)
+                                                        .getBytes(StandardCharsets.UTF_8)))
+                                .with(asUser(studentId, "STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.severity").value("HIGH"))
+                .andExpect(jsonPath("$.category").value("WATER"));
+    }
+
+    @Test
+    void approvedApplicationWithLiveContractCannotBeCancelled() throws Exception {
+        Long periodId = createOpenPeriod();
+        Long id = createDraftApplication(periodId);
+        for (String action : List.of("submit")) {
+            mvc.perform(
+                            post("/api/applications/" + id + "/" + action)
+                                    .with(asUser(studentId, "STUDENT")))
+                    .andExpect(status().isOk());
+        }
+        mvc.perform(post("/api/applications/" + id + "/approve").with(asUser(staffId, "STAFF")))
+                .andExpect(status().isOk());
+        Long contractId =
+                jdbc.queryForObject(
+                        """
+                        INSERT INTO dormitory_contract(code,student_id,application_id,start_date,end_date,activation_deadline)
+                        VALUES (?,?,?,current_date,current_date+30,now()+interval '7 days') RETURNING id
+                        """,
+                        Long.class,
+                        "HD-" + suffix,
+                        studentId,
+                        id);
+        mvc.perform(post("/api/applications/" + id + "/cancel").with(asUser(studentId, "STUDENT")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("APPLICATION_HAS_CONTRACT"));
+        mvc.perform(get("/api/applications/" + id).with(asUser(studentId, "STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowedActions").isEmpty());
+        jdbc.update("UPDATE dormitory_contract SET status='CANCELLED' WHERE id=?", contractId);
+        mvc.perform(post("/api/applications/" + id + "/cancel").with(asUser(studentId, "STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+    }
+
+    @Test
+    void sharedRegistrationPeriodCannotBeRewrittenBySingleUnitStaff() throws Exception {
+        Long semesterId = createSemester();
+        Long periodId =
+                jdbc.queryForObject(
+                        """
+                        INSERT INTO registration_period(semester_id,kind,name,open_at,close_at,created_by)
+                        VALUES(?,'REGULAR','Đợt chung',now()+interval '10 days',now()+interval '20 days',?) RETURNING id
+                        """,
+                        Long.class,
+                        semesterId,
+                        staffId);
+        for (Long unit : List.of(firstUnitId, otherUnitId)) {
+            jdbc.update(
+                    "INSERT INTO registration_period_unit(period_id,management_unit_id) VALUES"
+                        + " (?,?)",
+                    periodId,
+                    unit);
+        }
+        mvc.perform(
+                        post("/api/registration-periods/save-or-update")
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(withId(periodId, "{\"unitIds\":[" + firstUnitId + "]}")))
+                .andExpect(status().isNotFound());
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM registration_period_unit WHERE period_id=?",
+                                Long.class,
+                                periodId))
+                .isEqualTo(2);
+    }
+
+    @Test
+    void studentPatchKeepsFieldsThatAreNotSent() throws Exception {
+        String result =
+                mvc.perform(
+                                post("/api/admin/students/save-or-update")
+                                        .with(asUser(adminId, "ADMIN"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                mapper.writeValueAsString(
+                                                        Map.of(
+                                                                "studentCode", "PT" + suffix,
+                                                                "fullName", "Tên cũ",
+                                                                "gender", "M",
+                                                                "faculty", "CNTT",
+                                                                "phone", "0900000000"))))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long id = mapper.readTree(result).get("userId").asLong();
+        mvc.perform(
+                        post("/api/admin/students/save-or-update")
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(withId(id, "{\"fullName\":\"Tên mới\"}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fullName").value("Tên mới"))
+                .andExpect(jsonPath("$.faculty").value("CNTT"))
+                .andExpect(jsonPath("$.phone").value("0900000000"))
+                .andExpect(jsonPath("$.studentCode").value("PT" + suffix));
+    }
+
+    @Test
+    void readingCannotBeInsertedBeforeAnExistingLaterMonth() throws Exception {
+        for (String month : List.of("2026-10-01", "2026-09-01")) {
+            mvc.perform(
+                            post("/api/utility-readings/save-or-update")
+                                    .with(asUser(staffId, "STAFF"))
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(
+                                            mapper.writeValueAsString(
+                                                    Map.of(
+                                                            "roomId",
+                                                            firstRoomId,
+                                                            "meterType",
+                                                            "ELECTRIC",
+                                                            "billingMonth",
+                                                            month,
+                                                            "startReading",
+                                                            100,
+                                                            "endReading",
+                                                            120))))
+                    .andExpect(
+                            month.equals("2026-10-01") ? status().isOk() : status().isConflict());
+        }
+    }
+
+    @Test
+    void frameworkErrorsAreNotReportedAsServerErrors() throws Exception {
+        mvc.perform(get("/api/applications/1/submit").with(asUser(studentId, "STUDENT")))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.errorCode").value("METHOD_NOT_ALLOWED"));
+        mvc.perform(get("/api/does-not-exist").with(asUser(studentId, "STUDENT")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("NOT_FOUND"));
+    }
+
+    @Test
+    void duplicateBedCodeIsMappedInsteadOfConcurrentUpdate() throws Exception {
+        Long roomId = createRoomWithBeds("A301");
+        mvc.perform(
+                        post("/api/beds/save-or-update")
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        mapper.writeValueAsString(
+                                                Map.of("roomId", roomId, "code", "01"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("BED_CODE_EXISTS"));
+    }
+
+    @Test
+    void changingRoomTypeSynchronizesBedsAndRoomTypeCapacityIsGuarded() throws Exception {
+        Long roomId = createRoomWithBeds("A302");
+        Long biggerType =
+                jdbc.queryForObject(
+                        "INSERT INTO room_type(name,bed_count,price_main,price_summer) VALUES"
+                                + " (?,3,1000000,500000) RETURNING id",
+                        Long.class,
+                        "Lớn " + suffix);
+        mvc.perform(
+                        post("/api/rooms/save-or-update")
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(withId(roomId, "{\"roomTypeId\":" + biggerType + "}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.beds.length()").value(3));
+        mvc.perform(
+                        post("/api/room-types/save-or-update")
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(withId(biggerType, "{\"bedCount\":5}")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("RESOURCE_IN_USE"));
+    }
+
+    @Test
+    void likeWildcardsInSearchAreTreatedAsPlainText() throws Exception {
+        mvc.perform(searchByPage("/api/students", "q", "%").with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    private Long createRoomWithBeds(String code) throws Exception {
+        String response =
+                mvc.perform(
+                                post("/api/rooms/save-or-update")
+                                        .with(asUser(staffId, "STAFF"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                """
+                                                {"buildingId":%d,"roomTypeId":%d,"floor":3,"code":"%s","gender":"M"}
+                                                """
+                                                        .formatted(
+                                                                firstBuildingId, roomTypeId, code)))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        return mapper.readTree(response).get("id").asLong();
+    }
+
     @Test
     void adminWithoutUnitCanManageRoomsInEveryUnit() throws Exception {
         // ADMIN không cần giả vai STAFF hoặc gắn đơn vị để dùng CRUD nghiệp vụ.

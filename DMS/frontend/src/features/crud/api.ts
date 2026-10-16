@@ -281,6 +281,8 @@ export async function getLookupRecords(
     const result = await searchByPage(endpoint, { page, size: 100 })
     all.push(...result.content)
     if (all.length >= result.totalElements || result.content.length === 0) break
+    if (page === 99)
+      console.warn(`Lookup ${endpoint} chạm trần 100 trang, danh sách bị cắt.`)
   }
   return all
 }

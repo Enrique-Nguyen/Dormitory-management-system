@@ -9,6 +9,7 @@ import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 import vn.edu.tlu.dms.notification.service.OverviewService;
 
@@ -70,7 +71,7 @@ public class OverviewServiceImpl implements OverviewService {
         guard.requireRole(Role.STAFF, Role.STUDENT);
         var args = new ArrayList<Object>();
         String filter = contractScope(args, mine);
-        args.add("%" + input.q() + "%");
+        args.add(LikePattern.contains(input.q()));
         String sql =
                 "SELECT c.id,c.code,c.student_id,c.status,c.deposit_required,u.full_name,"
                     + " coalesce(v.balance,0) AS balance,coalesce(v.topup_needed,0) AS topup_needed"
@@ -114,7 +115,7 @@ public class OverviewServiceImpl implements OverviewService {
         guard.requireRole(Role.STAFF, Role.STUDENT);
         var args = new ArrayList<Object>();
         String filter = contractScope(args, mine);
-        args.add("%" + input.q() + "%");
+        args.add(LikePattern.contains(input.q()));
         String sql =
                 "SELECT s.*,c.code AS contract_code,u.full_name FROM storage_record s JOIN"
                         + " dormitory_contract c ON c.id=s.contract_id JOIN room_application ap ON"
@@ -128,7 +129,7 @@ public class OverviewServiceImpl implements OverviewService {
     public PageResponse<Map<String, Object>> searchMyRoomByPage(SearchRequest input) {
         guard.requirePermission(Permission.ROOM_READ);
         guard.requireRole(Role.STUDENT);
-        String keyword = "%" + input.q() + "%";
+        String keyword = LikePattern.contains(input.q());
         String sql =
                 "SELECT room_id AS id,room_code,bed_code,building_code,assignment_kind,"
                         + " price_main,price_summer FROM v_current_stay WHERE student_id=?"

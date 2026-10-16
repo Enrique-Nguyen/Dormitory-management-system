@@ -27,6 +27,7 @@ import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Photo;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Response;
@@ -135,7 +136,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                 statuses == null || statuses.isEmpty() ? List.of("") : statuses,
                                 request.category(),
                                 request.severity(),
-                                "%" + request.q().trim() + "%",
+                                LikePattern.contains(request.q()),
                                 PageRequest.of(request.page(), request.size(), sort))
                         .map(row -> toMaintenanceResponse(row, false)));
     }

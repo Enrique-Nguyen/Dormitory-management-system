@@ -290,6 +290,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Phòng từng có phân phòng không được xóa. Xem chi tiết để quản lý giường.',
   },
   periods: {
+    closeAtOnlyAfterOpen: true,
     permission: Resource.REGISTRATION_PERIOD,
     title: 'Đợt đăng ký',
     endpoint: '/registration-periods',
@@ -486,6 +487,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'CRUD lựa chọn chờ; chưa tự gia hạn hay thay đổi chỗ ở.',
   },
   storage: {
+    inlineDetail: true,
     permission: Resource.STORAGE,
     title: 'Kho gửi đồ',
     endpoint: '/storage-records',
@@ -502,6 +504,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Khung tra cứu. Gửi/nhận đồ gắn với luồng tạm rời hè nên chưa triển khai thao tác chi tiết.',
   },
   readings: {
+    keepCreateOnlyOnEdit: true,
     permission: Resource.UTILITY_READING,
     title: 'Chỉ số điện nước',
     endpoint: '/utility-readings',
@@ -634,6 +637,7 @@ export const resources: Record<string, CrudResource> = {
   },
   notifications: {
     createDefaults: { scope: 'UNIT' },
+    keepCreateOnlyOnEdit: true,
     permission: Resource.NOTIFICATION,
     title: 'Thông báo đã đăng',
     endpoint: '/notifications/published',
@@ -669,6 +673,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Quản lý thông báo thủ công; Admin quản lý toàn hệ thống, Staff quản lý thông báo của mình trong đơn vị.',
   },
   inbox: {
+    inlineDetail: true,
     permission: Resource.NOTIFICATION,
     title: 'Hộp thư thông báo',
     endpoint: '/notifications',
@@ -701,6 +706,7 @@ export const resources: Record<string, CrudResource> = {
   },
   audit: {
     permission: Resource.AUDIT,
+    inlineDetail: true,
     title: 'Nhật ký hệ thống',
     endpoint: '/admin/audit-logs',
     filters: [
@@ -727,6 +733,8 @@ export const resources: Record<string, CrudResource> = {
     note: 'Nhật ký chỉ đọc, hệ thống tự ghi khi thêm/sửa/xóa.',
   },
   configs: {
+    noCreate: true,
+    inlineDetail: true,
     permission: Resource.CONFIG,
     title: 'Cấu hình hệ thống',
     endpoint: '/admin/configs',
@@ -742,6 +750,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Chỉ sửa các khóa cấu hình đã có.',
   },
   myRoom: {
+    inlineDetail: true,
     permission: Resource.ROOM,
     title: 'Phòng của tôi',
     endpoint: '/me/room',

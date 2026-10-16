@@ -5,6 +5,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.KeycloakClaim;
@@ -18,6 +20,9 @@ import java.util.Map;
 @Service
 public class CurrentUserImpl implements CurrentUser {
 
+    /** Actor đã nạp trong request hiện tại, tránh SELECT app_user lặp lại nhiều lần mỗi request. */
+    private static final String ACTOR_ATTRIBUTE = CurrentUserImpl.class.getName() + ".ACTOR";
+
     private final JdbcTemplate jdbc;
 
     public CurrentUserImpl(JdbcTemplate jdbc) {
@@ -30,8 +35,25 @@ public class CurrentUserImpl implements CurrentUser {
         if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
             throw new BusinessException(ErrorCode.UNAUTHENTICATED, HttpStatus.UNAUTHORIZED);
         }
-        return getKeycloakActor(jwt);
+        var attributes = RequestContextHolder.getRequestAttributes();
+        if (attributes != null
+                && attributes.getAttribute(ACTOR_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST)
+                        instanceof CachedActor cached
+                && cached.subject().equals(jwt.getSubject())) {
+            return cached.actor();
+        }
+        var actor = getKeycloakActor(jwt);
+        if (attributes != null) {
+            attributes.setAttribute(
+                    ACTOR_ATTRIBUTE,
+                    new CachedActor(jwt.getSubject(), actor),
+                    RequestAttributes.SCOPE_REQUEST);
+        }
+        return actor;
     }
+
+    /** Actor kèm subject của token đã dùng để nạp, để không dùng nhầm cho token khác. */
+    private record CachedActor(String subject, Actor actor) {}
 
     /** Subject liên kết duy nhất; role và phiên bản token phải khớp dữ liệu mới nhất trong DMS. */
     private Actor getKeycloakActor(Jwt jwt) {

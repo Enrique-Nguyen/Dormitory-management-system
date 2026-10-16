@@ -1,8 +1,8 @@
 # Tài liệu kiến trúc phần mềm (SAD) — DMS
 
-> **Phiên bản 1.3**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.10 (mục 2, 4, 6, 7, 10), `DB-Design-DMS.md` v0.6, `DMS-UI-UX-Design.md` (mục 27), đề xuất đề tài (mục 4, 10, 13)
-> Trạng thái: bản 1.0 được duyệt ngày 10/10/2026; bản 1.1 đồng bộ cấu trúc Service/Impl và luồng xác thực đã triển khai ngày 13/10/2026.
+> **Phiên bản 1.4**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.11 (mục 2, 4, 6, 7, 10), `DB-Design-DMS.md` v0.7, `DMS-UI-UX-Design.md` (mục 27), đề xuất đề tài (mục 4, 10, 13)
+> Trạng thái: bản 1.0 được duyệt ngày 10/10/2026; bản 1.1 đồng bộ cấu trúc Service/Impl và luồng xác thực đã triển khai ngày 13/10/2026; bản 1.4 đồng bộ kết quả sửa lỗi từ code review.
 
 ### Lịch sử thay đổi
 
@@ -14,6 +14,7 @@
 | 1.1 | 13/10/2026 | Đồng bộ Service interface/Impl; xác thực bằng AuthenticationManager/Provider/filter Spring Security, thu hồi phiên bằng security_version và dọn sau commit; CSRF/logout, reset theo BR-07 và bỏ demo/mock |
 | 1.2 | 14/10/2026 | Keycloak OIDC/PKCE và resource server JWT; subject/version/role liên kết DMS; service account quản lý tài khoản và migration V4 |
 | 1.3 | 15/10/2026 | Ma trận quyền động V5; quyền CSDL có hiệu lực tại mỗi kiểm tra, khóa dòng/version/audit cùng transaction; ADMIN bất biến |
+| 1.4 | 15/10/2026 | Đồng bộ theo kết quả code review và quyết định kỹ thuật: cập nhật mục 4.3 cơ chế truyền ngữ cảnh liên module vào Policy tính `allowedActions`; cập nhật mục 7.2 mô tả quy tắc lọc scope hóa đơn tiền phòng của Staff theo học kỳ của hóa đơn (`InvoiceRepository.STAFF_UNIT_SCOPE`) cho cả truy vấn danh sách và chi tiết, bảo đảm không lộ hóa đơn khi sinh viên chuyển đơn vị quản lý giữa các học kỳ; quyền ghi xác nhận thanh toán qua `isInStaffUnit`; cập nhật mục 8.1 cơ chế ánh xạ lỗi ràng buộc CSDL theo SQLState. |
 
 ---
 
@@ -161,7 +162,7 @@ Controller gọi Service interface qua constructor injection. Mỗi Service có 
 | Service | `@Transactional`; kiểm tra quyền + phạm vi + trạng thái; khóa; ghi lịch sử; phát sự kiện; tính `allowedActions` | Trả entity ra ngoài; phụ thuộc HTTP (`HttpServletRequest`) |
 | Repository | Truy vấn, khóa (`@Lock(PESSIMISTIC_WRITE)` hoặc `FOR UPDATE` native) | Chứa quy tắc nghiệp vụ |
 
-**Policy chuyển trạng thái:** mỗi đối tượng có trạng thái (đơn, hợp đồng, ticket, hóa đơn, yêu cầu gia hạn / chuyển phòng) có một lớp `<Entity>Policy` cài bảng chuyển trạng thái của SRS mục 10. Policy được dùng ở hai chỗ: kiểm tra khi thực hiện hành động, và tính `allowedActions` cho API chi tiết. Nhờ vậy bảng chuyển trạng thái chỉ viết một lần ở backend; frontend không viết lại (UI 27.2).
+**Policy chuyển trạng thái:** mỗi đối tượng có trạng thái (đơn, hợp đồng, ticket, hóa đơn, yêu cầu gia hạn / chuyển phòng) có một lớp `<Entity>Policy` cài bảng chuyển trạng thái của SRS mục 10. Policy được dùng ở hai chỗ: kiểm tra khi thực hiện hành động, và tính `allowedActions` cho API chi tiết. Với các điều kiện chuyển trạng thái phụ thuộc ngữ cảnh liên module (ví dụ đơn `APPROVED` chỉ cho phép `cancel` khi chưa sinh hợp đồng liên kết), Service nạp trạng thái liên quan và truyền vào Policy để tính `allowedActions` và kiểm tra hành động. Nhờ vậy bảng chuyển trạng thái chỉ viết một lần ở backend; frontend không viết lại (UI 27.2).
 
 ---
 
@@ -253,10 +254,17 @@ Quy tắc chung: **khóa xong mới kiểm tra lại điều kiện**, vì đi�
 | 2. Phạm vi đối tượng | Đối tượng thuộc đơn vị của Staff / KTV; sinh viên chỉ thấy đối tượng của mình | Service, qua `ScopeGuard` của `account` | **404** (không lộ sự tồn tại, SRS 6.2) |
 | 3. Trạng thái | Hành động hợp lệ ở trạng thái hiện tại | Policy của đối tượng | 409 + `errorCode` |
 
-- `ScopeGuard` dùng cho **API chi tiết và hành động trên một đối tượng** (`GET /api/contracts/{id}`, `POST …/{id}/activate`): tải đối tượng, kiểm tra phạm vi, sai thì 404.
-- **API danh sách và tìm kiếm lọc phạm vi ngay trong câu truy vấn** (điều kiện `management_unit_id = :unitId` trong JPA Specification / JPQL / native query), rồi mới phân trang. Không tải dữ liệu lên rồi lọc trong Java: làm sai `Page<T>` (tổng số, số trang) và tốn bộ nhớ khi dữ liệu tăng.
-- Đơn vị lọc lấy từ `CurrentUser`, **không** nhận từ tham số request. Staff có quyền tổng hợp (FR-ACC-08) bỏ điều kiện này.
-- ADMIN có mọi quyền nghiệp vụ ở mọi đơn vị theo quyết định cập nhật 14/10/2026. ADMIN không gắn đơn vị; nhánh truy vấn ADMIN bỏ giới hạn đơn vị/chủ sở hữu nhưng không bỏ kiểm tra trạng thái và ràng buộc dữ liệu.
+- `ScopeGuard` dùng cho **API chi tiết và hành động trên một đối tượng** (`GET /api/contracts/{id}`, `POST …/{id}/activate`): tải đối tượng, kiểm tra phạm vi, sai thì 404. Riêng với hóa đơn (`Invoice`), API chi tiết (`GET /api/invoices/{id}`) áp dụng truy vấn kiểm tra phạm vi CSDL (`findAccessibleInvoice`) chứa `STAFF_UNIT_SCOPE` để đảm bảo nhất quán với quy tắc theo học kỳ.
+- **API danh sách và tìm kiếm lọc phạm vi ngay trong câu truy vấn** (Repository Scope Filter: điều kiện `management_unit_id = :unitId` trong JPA Specification / JPQL / native query), rồi mới phân trang. Không tải dữ liệu lên rồi lọc trong Java: làm sai `Page<T>` (tổng số, số trang) và tốn bộ nhớ khi dữ liệu tăng.
+- Đơn vị lọc lấy từ `CurrentUser`, **không** nhận từ tham số request. Staff có quyền tổng hợp (FR-ACC-08) bỏ điều kiện này khi truy vấn danh sách và chi tiết chỉ đọc.
+- **Kiểm soát phạm vi hóa đơn của Staff (`InvoiceRepository.STAFF_UNIT_SCOPE`):**
+  - *Hóa đơn điện nước (`type = 'UTILITY'`):* Lọc theo đơn vị quản lý của phòng gắn với hóa đơn (`building.management_unit_id = :unitId`).
+  - *Hóa đơn phí phòng (`type = 'ROOM_FEE'`):* Phạm vi được xác định chặt chẽ theo **học kỳ của hóa đơn (`i.semester_id`)**. Staff chỉ có quyền truy cập nếu:
+    1. Sinh viên có lịch sử lưu trú (`room_assignment_history`) tại tòa thuộc đơn vị của Staff trong khoảng thời gian diễn ra học kỳ của hóa đơn (`a.started_at < s.end_date + 1 AND (a.ended_at IS NULL OR a.ended_at >= s.start_date)`); HOẶC
+    2. Sinh viên đã nộp đơn đăng ký (`room_application`) vào đơn vị của Staff (`preferred_unit_id = :unitId`) trong đợt đăng ký thuộc học kỳ của hóa đơn (`registration_period.semester_id = i.semester_id`).
+  - *Ý nghĩa kiến trúc:* Không lấy mọi lịch sử ở từng đơn vị để tránh trường hợp sinh viên chuyển đơn vị quản lý giữa các học kỳ làm lộ hóa đơn của các kỳ khác cho đơn vị không phụ trách.
+  - *Quyền ghi (xác nhận thanh toán):* Staff chỉ được xác nhận thanh toán khi hóa đơn thuộc đúng đơn vị phụ trách thông qua truy vấn `isInStaffUnit(id, unitId)` dựa trên `STAFF_UNIT_SCOPE` (không áp dụng cờ `crossUnit` cho thao tác ghi tài chính).
+- ADMIN có mọi quyền nghiệp vụ ở mọi đơn vị theo quyết định cập nhật 14/10/2026. ADMIN không gắn đơn vị; nhánh truy vấn ADMIN bỏ giới hạn đơn vị/chủ sở hữu nhưng không bỏ kiểm tra trạng thái và ràng buộc dữ liệu. Với hóa đơn, ADMIN không bị giới hạn bởi `isInStaffUnit` khi xác nhận thanh toán.
 
 ### 7.3. Bảo vệ khác
 
@@ -272,7 +280,7 @@ Quy tắc chung: **khóa xong mới kiểm tra lại điều kiện**, vì đi�
 ### 8.1. Mô hình lỗi
 
 - Service ném `BusinessException(errorCode, details)`; một `@RestControllerAdvice` chuyển thành JSON `{ errorCode, message, details }` với mã HTTP theo SRS 6.2 (400, 401, 403, 404, 409).
-- Lỗi ràng buộc CSDL (`DataIntegrityViolationException`): đọc tên ràng buộc, tra bảng ánh xạ ở CSDL mục 4 (`ux_assignment_open_bed` → `BED_TAKEN`…) để trả cùng định dạng. Đây là trường hợp hai request đồng thời vượt qua kiểm tra của Service.
+- Lỗi ràng buộc CSDL (`DataIntegrityViolationException`): đọc tên ràng buộc, tra bảng ánh xạ ở CSDL mục 4 (`ux_assignment_open_bed` → `BED_TAKEN`…); các ràng buộc ngoài danh sách được ánh xạ theo SQLState (khóa ngoại 23503 → `RESOURCE_IN_USE`, UNIQUE / EXCLUDE 23505 / 23P01 → `DUPLICATE_VALUE`, NOT NULL / CHECK 23502 / 23514 → `VALIDATION_FAILED`; còn lại → `CONCURRENT_UPDATE`). Đây là trường hợp hai request đồng thời vượt qua kiểm tra của Service.
 - Lỗi không lường trước: 500 với `errorCode = INTERNAL_ERROR` và `requestId`, không trả stack trace.
 - Danh mục `errorCode` đầy đủ thuộc tài liệu Đặc tả API.
 

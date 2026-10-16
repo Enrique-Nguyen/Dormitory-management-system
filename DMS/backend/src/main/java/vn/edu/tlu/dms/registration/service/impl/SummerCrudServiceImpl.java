@@ -20,6 +20,7 @@ import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.impl.AbstractSqlCrudServiceImpl;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 import vn.edu.tlu.dms.registration.api.SummerCrudController.Input;
 import vn.edu.tlu.dms.registration.service.SummerCrudService;
@@ -71,7 +72,7 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
             scope = "a.preferred_unit_id=?";
             args.add(current.get().unitId());
         }
-        args.add("%" + search.q().trim() + "%");
+        args.add(LikePattern.contains(search.q()));
         return queries.search(
                 "SELECT sc.*,c.code AS contract_code,u.full_name FROM summer_choice sc JOIN"
                         + " dormitory_contract c ON c.id=sc.contract_id JOIN room_application a ON"

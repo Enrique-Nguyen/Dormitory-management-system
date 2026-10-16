@@ -20,11 +20,12 @@ Tên hàm dùng tiếng Anh rõ nghĩa; JavaDoc và ghi chú quan trọng dùng 
 
 - Xác thực mặc định: Keycloak OIDC/PKCE, Spring Security JWT Resource Server; /me trả hồ sơ DMS, logout thu hồi version. Mật khẩu/khóa tạm/đổi mật khẩu thuộc Keycloak. Subject, role, version và scope vẫn kiểm tra tại DMS.
 - Tài khoản: Admin quản lý tài khoản và sinh viên; sinh viên được thêm từng hồ sơ bằng form CRUD, trả mật khẩu tạm một lần. Staff tìm kiếm/đọc/sửa và reset mật khẩu sinh viên trong phạm vi mình. Import Excel chưa triển khai. Tài khoản cán bộ dùng khóa thay cho xóa; sinh viên chỉ xóa khi chưa có dữ liệu liên quan.
+- Sinh viên: POST `/api/(admin/)students/save-or-update` với ID trong body giữ nguyên trường không gửi (chỉ cần gửi trường muốn đổi).
 - Hồ sơ: đọc và sửa các trường được phép của chính mình. Cấu hình hệ thống: Admin đọc và cập nhật các khóa hiện có.
 - Danh mục: đơn vị quản lý, tòa nhà, loại phòng, học kỳ, diện ưu tiên có tìm kiếm phân trang/chi tiết/lưu chung/xóa. Request sửa qua save-or-update giữ nguyên trường không gửi hoặc gửi null; khung chưa hỗ trợ dùng null để xóa giá trị tùy chọn.
-- Phòng/giường: phân trang và lọc phòng; đọc chi tiết có giường/người ở; tạo phòng tự sinh giường; sửa, đổi trạng thái có lý do, thêm giường, xóa phòng/giường chưa từng có phân phòng; chỉ định/gỡ trưởng phòng và ghi nhật ký.
-- Đợt đăng ký: tạo, tìm kiếm, đọc, sửa, lưu đơn vị áp dụng và chỉ tiêu; xóa đợt chưa mở và chưa có đơn. Đợt đã mở chỉ được gia hạn ngày đóng.
-- Đơn đăng ký: tạo/sửa DRAFT, nộp, duyệt, từ chối có lý do, hủy khi còn DRAFT/SUBMITTED/APPROVED; đọc danh sách/chi tiết theo quyền và timeline.
+- Phòng/giường: phân trang và lọc phòng; đọc chi tiết có giường/người ở; tạo phòng tự sinh giường; sửa (đổi loại phòng trống đồng bộ số giường theo loại mới, đổi bedCount của loại phòng đang dùng trả 409 RESOURCE_IN_USE), đổi trạng thái có lý do, thêm giường, xóa phòng/giường chưa từng có phân phòng; chỉ định/gỡ trưởng phòng và ghi nhật ký.
+- Đợt đăng ký: tạo, tìm kiếm, đọc, sửa, lưu đơn vị áp dụng và chỉ tiêu; xóa đợt chưa mở và chưa có đơn. Đợt đã mở chỉ được gia hạn ngày đóng. Staff chỉ ghi đợt mà đơn vị mình là đơn vị duy nhất; đợt dùng chung ngoài phạm vi ghi trả 404.
+- Đơn đăng ký: tạo/sửa DRAFT, nộp, duyệt, từ chối có lý do, hủy khi còn DRAFT/SUBMITTED/APPROVED (APPROVED đã có hợp đồng PENDING/ACTIVE trả 409 APPLICATION_HAS_CONTRACT); đọc danh sách/chi tiết theo quyền và timeline.
 - Sửa chữa: tạo ticket và ảnh, danh sách/chi tiết, giao kỹ thuật viên cùng đơn vị, bắt đầu, ghi chú tiến độ, hoàn thành, nghiệm thu, mở lại, từ chối và hủy theo Policy.
 - Điện nước: CRUD chỉ số từng phòng/tháng, tiêu thụ do CSDL tính. Chỉ số đã được dùng trong hóa đơn không được sửa/xóa. Đơn giá đã có hiệu lực giữ lịch sử; chỉ sửa/xóa bản giá tương lai do mình tạo.
 - Hóa đơn: tìm kiếm/chi tiết và CRUD hồ sơ UNPAID chưa có dòng chi tiết hoặc lịch sử. Form nhập tổng tiền và hạn đóng, chưa tự phát hành/tính tiền. Endpoint xác nhận thanh toán có sẵn được giữ lại.
@@ -33,6 +34,8 @@ Tên hàm dùng tiếng Anh rõ nghĩa; JavaDoc và ghi chú quan trọng dùng 
 - Sửa chữa dùng save-or-update để lưu nội dung khi OPEN và DELETE chuyển sang CANCELLED cho người tạo; giữ ảnh và lịch sử.
 - Thông báo: CRUD thông báo thủ công của người tạo; sửa tiêu đề/nội dung giữ nguyên phạm vi. Hộp thư có tìm kiếm. Những endpoint đọc/đánh dấu đã đọc và listener có sẵn được giữ lại.
 - Tổng quan: tra cứu sổ cọc, giao dịch cọc, phiếu gửi đồ, phòng của sinh viên và audit log. Các trang này chỉ đọc.
+
+Lỗi framework trả 400/404/405/415 đúng loại; ràng buộc CSDL ngoài danh sách tên được ánh xạ theo SQLState (`DUPLICATE_VALUE`, `RESOURCE_IN_USE`, `VALIDATION_FAILED`). Chỉ lỗi đồng thời trả `CONCURRENT_UPDATE`. Tìm kiếm escape `%`, `_`, `\` bằng `LikePattern`; `CurrentUser.get()` chỉ truy vấn tài khoản một lần mỗi request.
 
 Tất cả danh sách, danh mục và lookup ô chọn dùng POST `.../search-by-page` nhận body `SearchRequest`, lọc phạm vi trước khi đếm/phân trang tại CSDL và trả `PageResponse`. Giường dùng POST `/api/beds/save-or-update` với ID trong body để tạo/sửa mã giường. Màn React dùng API thật, hướng dẫn chạy được gom vào [README chung](../../README.md).
 
@@ -51,9 +54,9 @@ API giữ tiền tố `/api`, dùng `/search-by-page` và `/save-or-update` theo
 - GET chi tiết, DELETE, hành động trạng thái, reset/khóa tài khoản, hộp thư đã đọc/chưa đọc và GET/PUT ma trận role giữ chuyên biệt. API `/auth/me` và `/notifications/unread-count` không đổi thành search. Không gộp trạng thái/tài chính/phân phòng vào lệnh lưu dữ liệu.
 - Đây là thay đổi contract cần cập nhật frontend/caller đồng thời. Không duy trì cặp API tạo/sửa cũ hoặc danh sách GET để làm đường vòng. Đặc tả đầy đủ và ví dụ ở [API Spec](../../Docs/02%20External%20Design/API%20Specification/API-Spec-DMS.md), mục 1.1, 2.5, 2.9 và 3.
 
-### Kiểm chứng refactor API (15/10/2026)
+### Kiểm chứng refactor API (cập nhật 16/10/2026)
 
-- Backend `clean verify` trên Java 17.0.17 và PostgreSQL 16 kiểm thử riêng: **92/92 test đạt**, gồm quyền CREATE/UPDATE riêng, scope và alias `/me`, ID mất/không hợp lệ, partial update, multipart/ảnh, sort/count và đầu vào null. Các migration đã áp dụng giữ nguyên.
+- Backend `clean verify` trên Java 17.0.17 và PostgreSQL 16 kiểm thử riêng: **102/102 test đạt**, gồm quyền CREATE/UPDATE riêng, scope và alias `/me`, ID mất/không hợp lệ, partial update, multipart/ảnh, sort/count, đầu vào null và 10 test hồi quy từ bản sửa code review đã tích hợp. Các migration đã áp dụng giữ nguyên.
 - React build và lint đạt; **37/37 kiểm tra hợp đồng frontend** chạy helper/hàm tìm kiếm/lưu thật với HTTP stub. Đây không thay cho kiểm thử trình duyệt với Keycloak đang chạy.
 - Quy tắc nghiệp vụ chung và ngoại lệ URL API literal nằm tại [CLAUDE.md](../../CLAUDE.md), được [AGENTS.md](../../AGENTS.md) yêu cầu áp dụng. `ValidationMessage`, `ApiField` và `EntityType` gom message/field/mã audit dùng chung; thông số vận hành vẫn đọc cấu hình.
 - Khởi động lại backend/frontend cùng phiên bản khi sử dụng contract mới; caller cũ dùng GET danh sách hoặc POST/PATCH tạo/sửa phải chuyển sang POST `search-by-page`/`save-or-update`.

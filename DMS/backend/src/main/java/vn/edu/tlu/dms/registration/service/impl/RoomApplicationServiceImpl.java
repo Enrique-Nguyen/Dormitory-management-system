@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms.registration.service.impl;
 
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Predicate;
 
 import org.springframework.http.HttpStatus;
@@ -23,7 +24,9 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
+import vn.edu.tlu.dms.contract.service.ContractService;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Input;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Priority;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Response;
@@ -72,6 +75,10 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
 
     private final JdbcTemplate jdbc;
 
+    private final ContractService contracts;
+
+    private final EntityManager entityManager;
+
     public RoomApplicationServiceImpl(
             RoomApplicationRepository applications,
             RegistrationPeriodRepository periods,
@@ -83,7 +90,9 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
             CurrentUser current,
             ScopeGuard guard,
             StatusHistoryService history,
-            JdbcTemplate jdbc) {
+            JdbcTemplate jdbc,
+            ContractService contracts,
+            EntityManager entityManager) {
         this.applications = applications;
         this.periods = periods;
         this.periodUnits = periodUnits;
@@ -95,6 +104,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         this.guard = guard;
         this.history = history;
         this.jdbc = jdbc;
+        this.contracts = contracts;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -126,8 +137,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                                                         "SELECT id FROM app_user WHERE full_name"
                                                                 + " ILIKE ? OR username ILIKE ?",
                                                         (row, index) -> row.getLong(1),
-                                                        "%" + keyword.trim() + "%",
-                                                        "%" + keyword.trim() + "%");
+                                                        LikePattern.contains(keyword.trim()),
+                                                        LikePattern.contains(keyword.trim()));
                                         filters.add(
                                                 ids.isEmpty()
                                                         ? b.disjunction()
@@ -210,7 +221,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         guard.requirePermission(Permission.ROOM_APPLICATION_UPDATE);
         guard.requireRole(Role.STUDENT);
         var a = loadAccessibleApplication(id, true);
-        RoomApplicationPolicy.requireAction(a, current.get(), BusinessAction.EDIT);
+        RoomApplicationPolicy.requireAction(a, current.get(), BusinessAction.EDIT, false);
         if (input.studentId() != null && !input.studentId().equals(a.getStudentId())) {
             throw BusinessException.invalid("studentId", "Không đổi sinh viên của đơn đã tạo");
         }
@@ -243,7 +254,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                         ? Permission.ROOM_APPLICATION_DELETE
                         : Permission.ROOM_APPLICATION_UPDATE);
         var a = loadAccessibleApplication(id, true);
-        RoomApplicationPolicy.requireAction(a, current.get(), action);
+        RoomApplicationPolicy.requireAction(a, current.get(), action, hasLiveContract(a));
         if (action.equals(BusinessAction.SUBMIT)) {
             validateApplicationPeriod(a);
             if (rooms.hasPendingOrActiveContract(a.getStudentId())) {
@@ -281,6 +292,11 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         return toApplicationResponse(a, true);
     }
 
+    private boolean hasLiveContract(RoomApplication a) {
+        return a.getStatus().equals(ApplicationStatus.APPROVED)
+                && contracts.hasLiveContractForApplication(a.getId());
+    }
+
     private RoomApplication loadAccessibleApplication(Long id, boolean writing) {
         guard.requireRole(Role.STUDENT, Role.STAFF);
         if (writing) {
@@ -290,6 +306,9 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                     id);
         }
         var a = applications.findById(id).orElseThrow(BusinessException::notFound);
+        if (writing) {
+            entityManager.refresh(a);
+        }
         var actor = current.get();
         if (actor.is(Role.STUDENT) && !actor.id().equals(a.getStudentId())) {
             throw BusinessException.notFound();
@@ -397,7 +416,9 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                 a.getStatusReason(),
                 a.getSubmittedAt(),
                 priorityRows,
-                detail ? RoomApplicationPolicy.allowedActions(a, current.get()) : null,
+                detail
+                        ? RoomApplicationPolicy.allowedActions(a, current.get(), hasLiveContract(a))
+                        : null,
                 detail ? history.list(EntityType.APPLICATION, a.getId()) : null);
     }
 }

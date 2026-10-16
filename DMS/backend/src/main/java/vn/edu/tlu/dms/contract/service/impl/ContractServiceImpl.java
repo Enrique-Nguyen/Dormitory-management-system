@@ -15,6 +15,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
+import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.contract.api.ContractDtos;
 import vn.edu.tlu.dms.contract.domain.DormitoryContract;
@@ -88,7 +89,7 @@ public class ContractServiceImpl implements ContractService {
                                 mine,
                                 statuses == null || statuses.isEmpty(),
                                 statuses == null || statuses.isEmpty() ? List.of("") : statuses,
-                                "%" + input.q().trim() + "%",
+                                LikePattern.contains(input.q()),
                                 PageRequest.of(input.page(), input.size(), Sort.by(orders)))
                         .map(contract -> toContractResponse(contract, false)));
     }
@@ -126,6 +127,16 @@ public class ContractServiceImpl implements ContractService {
                 .findFirst()
                 .map(contract -> toContractResponse(contract, true))
                 .orElse(null);
+    }
+
+    @Override
+    public boolean hasLiveContractForApplication(Long applicationId) {
+        return repository.exists(
+                (root, query, builder) ->
+                        builder.and(
+                                builder.equal(root.get("applicationId"), applicationId),
+                                root.get("status")
+                                        .in(ContractStatus.PENDING, ContractStatus.ACTIVE)));
     }
 
     private ContractDtos.Response toContractResponse(DormitoryContract contract, boolean detail) {
