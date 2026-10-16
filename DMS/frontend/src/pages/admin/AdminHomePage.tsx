@@ -1,6 +1,5 @@
-import PlaceholderPage from '../PlaceholderPage'
+import CrudPage from '../CrudPage'
 
-// TODO(TV1): thay bằng màn thật
 export default function AdminHomePage() {
-  return <PlaceholderPage title="Tài khoản" owner="TV1" spec="UI mục 23; FR-ACC" />
+  return <CrudPage resource="users" />
 }

@@ -14,28 +14,49 @@ interface Props {
 /** Một dòng thông báo (UI mục 24). Chưa đọc: chấm ● + chữ ẩn "Chưa đọc" cho trình đọc màn hình. */
 export default function NotificationItem({ title, body, createdAt, isRead, link, onClick }: Props) {
   const content = (
-    <div style={{ display: 'flex', gap: 12, padding: '12px 0' }} className="dms-wrap">
-      <span aria-hidden="true" style={{ color: isRead ? '#9CA3AF' : '#1D4ED8' }}>
-        {isRead ? '○' : '●'}
-      </span>
-      <div>
+    <div
+      className={`dms-notification-item dms-wrap ${!isRead ? 'dms-notification-item--unread' : ''}`}
+      style={{ borderBottom: '1px solid var(--color-border-light)' }}
+    >
+      <span
+        aria-hidden="true"
+        className={`dms-notification-dot ${isRead ? 'dms-notification-dot--read' : 'dms-notification-dot--unread'}`}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
         {!isRead && <span className="sr-only">Chưa đọc: </span>}
-        <div style={{ fontWeight: isRead ? 400 : 600 }}>{title}</div>
-        <div>{body}</div>
-        <div style={{ color: '#6B7280', fontSize: 12 }}>{formatRelative(createdAt)}</div>
+        <div style={{ fontWeight: isRead ? 500 : 700, fontSize: 14, color: isRead ? 'var(--color-text)' : 'var(--color-heading)' }}>
+          {title}
+        </div>
+        <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: 2 }}>{body}</div>
+        <div style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 4 }}>
+          {formatRelative(createdAt)}
+        </div>
       </div>
     </div>
   )
 
   if (link) {
     return (
-      <Link to={link} onClick={onClick} style={{ display: 'block', color: 'inherit' }}>
+      <Link to={link} onClick={onClick} style={{ display: 'block', color: 'inherit', textDecoration: 'none' }}>
         {content}
       </Link>
     )
   }
   return onClick ? (
-    <button type="button" onClick={onClick} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 0, font: 'inherit', cursor: 'pointer' }}>
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: 'block',
+        width: '100%',
+        textAlign: 'left',
+        background: 'none',
+        border: 0,
+        padding: 0,
+        font: 'inherit',
+        cursor: 'pointer',
+      }}
+    >
       {content}
     </button>
   ) : (

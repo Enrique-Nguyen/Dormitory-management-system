@@ -1,4 +1,6 @@
-import { Button, Card, Flex, Typography } from 'antd'
+import { Button, Card } from '../ui/Surface'
+import { CalendarOutlined } from '@ant-design/icons'
+import { Flex, Typography } from 'antd'
 import type { ReactNode } from 'react'
 import { formatDate, formatMoney } from '../../utils/format'
 import InvoiceStatus from './InvoiceStatus'
@@ -15,21 +17,41 @@ interface Props {
 }
 
 /** Thẻ hóa đơn cho sinh viên (UI mục 10). */
-export default function InvoiceCard({ title, amount, dueDate, status, children, onView }: Props) {
+export default function InvoiceCard({
+  title,
+  amount,
+  dueDate,
+  status,
+  children,
+  onView,
+}: Props) {
   return (
-    <Card size="small">
-      <Flex vertical gap={8}>
-        <Typography.Text strong className="dms-wrap">
+    <Card size="small" className="dms-invoice-card">
+      <Flex vertical gap={10}>
+        <Typography.Text strong className="dms-wrap" style={{ fontSize: 14 }}>
           {title}
         </Typography.Text>
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          {formatMoney(amount)}
-        </Typography.Title>
-        <div>Hạn thanh toán: {formatDate(dueDate)}</div>
+        <div className="dms-invoice-amount">{formatMoney(amount)}</div>
+        <div
+          style={{
+            fontSize: 13,
+            color: 'var(--color-text-secondary)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <CalendarOutlined style={{ color: 'var(--color-text-muted)' }} />
+          <span>
+            Hạn thanh toán: <strong>{formatDate(dueDate)}</strong>
+          </span>
+        </div>
         {children}
-        <InvoiceStatus status={status} dueDate={dueDate} />
+        <div>
+          <InvoiceStatus status={status} dueDate={dueDate} />
+        </div>
         {onView && (
-          <Button onClick={onView} block>
+          <Button onClick={onView} block style={{ marginTop: 4 }}>
             Xem chi tiết
           </Button>
         )}

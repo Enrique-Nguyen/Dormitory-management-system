@@ -1,5 +1,6 @@
 /**
- * Module {@code common}: xử lý lỗi, cấu hình, lịch sử trạng thái, nhật ký, sinh mã, lớp cơ sở cho job định kỳ.
+ * Module {@code common}: xử lý lỗi, cấu hình, lịch sử trạng thái, nhật ký, sinh mã, lớp cơ sở cho
+ * job định kỳ.
  *
  * <p>Phụ trách: TV1. Sở hữu bảng (ghi): system_config, status_history, audit_log.
  *

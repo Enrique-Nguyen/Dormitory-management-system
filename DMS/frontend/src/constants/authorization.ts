@@ -1,0 +1,183 @@
+/** Mã vai trò khớp với backend/Keycloak; đổi nhãn giao diện không được đổi các mã này. */
+export const Role = {
+  ADMIN: 'ADMIN',
+  STAFF: 'STAFF',
+  TECHNICIAN: 'TECHNICIAN',
+  STUDENT: 'STUDENT',
+} as const
+
+export type Role = (typeof Role)[keyof typeof Role]
+
+/** READ dùng cho cả tìm kiếm và xem chi tiết; từng thao tác ghi có quyền riêng. */
+export const Action = {
+  READ: 'READ',
+  CREATE: 'CREATE',
+  UPDATE: 'UPDATE',
+  DELETE: 'DELETE',
+  LOCK: 'LOCK',
+  UNLOCK: 'UNLOCK',
+  RESET_PASSWORD: 'RESET_PASSWORD',
+  CROSS_UNIT_ACCESS: 'CROSS_UNIT_ACCESS',
+} as const
+
+export type Action = (typeof Action)[keyof typeof Action]
+
+/** Mã nghiệp vụ thống nhất với DmsConstants.Resource ở backend. */
+export const Resource = {
+  USER: 'USER',
+  STUDENT: 'STUDENT',
+  MANAGEMENT_UNIT: 'MANAGEMENT_UNIT',
+  BUILDING: 'BUILDING',
+  PRIORITY_CATEGORY: 'PRIORITY_CATEGORY',
+  ROOM_TYPE: 'ROOM_TYPE',
+  SEMESTER: 'SEMESTER',
+  ROOM: 'ROOM',
+  BED: 'BED',
+  REGISTRATION_PERIOD: 'REGISTRATION_PERIOD',
+  ROOM_APPLICATION: 'ROOM_APPLICATION',
+  CONTRACT: 'CONTRACT',
+  CONTRACT_EXTENSION: 'CONTRACT_EXTENSION',
+  ROOM_TRANSFER: 'ROOM_TRANSFER',
+  MOVE_OUT: 'MOVE_OUT',
+  SUMMER_REGISTRATION: 'SUMMER_REGISTRATION',
+  STORAGE: 'STORAGE',
+  UTILITY_RATE: 'UTILITY_RATE',
+  UTILITY_READING: 'UTILITY_READING',
+  INVOICE: 'INVOICE',
+  DEPOSIT: 'DEPOSIT',
+  MAINTENANCE: 'MAINTENANCE',
+  NOTIFICATION: 'NOTIFICATION',
+  PROFILE: 'PROFILE',
+  CONFIG: 'CONFIG',
+  AUDIT: 'AUDIT',
+  DASHBOARD: 'DASHBOARD',
+  ROLE_PERMISSION: 'ROLE_PERMISSION',
+} as const
+
+export type Resource = (typeof Resource)[keyof typeof Resource]
+
+/**
+ * Danh mục 105 mã quyền khớp DmsConstants.Permission; không phải mọi nghiệp vụ đều có đủ CRUD.
+ * Đây chỉ là tên quyền để gọi/hiển thị, không tự cấp quyền cho bất kỳ vai trò nào.
+ * Nguồn quyền được cấp vẫn là Me.permissions do /api/auth/me trả về.
+ */
+export const Permission = {
+  USER_READ: `${Resource.USER}_${Action.READ}`,
+  USER_CREATE: `${Resource.USER}_${Action.CREATE}`,
+  USER_UPDATE: `${Resource.USER}_${Action.UPDATE}`,
+  USER_DELETE: `${Resource.USER}_${Action.DELETE}`,
+  STUDENT_READ: `${Resource.STUDENT}_${Action.READ}`,
+  STUDENT_CREATE: `${Resource.STUDENT}_${Action.CREATE}`,
+  STUDENT_UPDATE: `${Resource.STUDENT}_${Action.UPDATE}`,
+  STUDENT_DELETE: `${Resource.STUDENT}_${Action.DELETE}`,
+  MANAGEMENT_UNIT_READ: `${Resource.MANAGEMENT_UNIT}_${Action.READ}`,
+  MANAGEMENT_UNIT_CREATE: `${Resource.MANAGEMENT_UNIT}_${Action.CREATE}`,
+  MANAGEMENT_UNIT_UPDATE: `${Resource.MANAGEMENT_UNIT}_${Action.UPDATE}`,
+  MANAGEMENT_UNIT_DELETE: `${Resource.MANAGEMENT_UNIT}_${Action.DELETE}`,
+  BUILDING_READ: `${Resource.BUILDING}_${Action.READ}`,
+  BUILDING_CREATE: `${Resource.BUILDING}_${Action.CREATE}`,
+  BUILDING_UPDATE: `${Resource.BUILDING}_${Action.UPDATE}`,
+  BUILDING_DELETE: `${Resource.BUILDING}_${Action.DELETE}`,
+  PRIORITY_CATEGORY_READ: `${Resource.PRIORITY_CATEGORY}_${Action.READ}`,
+  PRIORITY_CATEGORY_CREATE: `${Resource.PRIORITY_CATEGORY}_${Action.CREATE}`,
+  PRIORITY_CATEGORY_UPDATE: `${Resource.PRIORITY_CATEGORY}_${Action.UPDATE}`,
+  PRIORITY_CATEGORY_DELETE: `${Resource.PRIORITY_CATEGORY}_${Action.DELETE}`,
+  ROOM_TYPE_READ: `${Resource.ROOM_TYPE}_${Action.READ}`,
+  ROOM_TYPE_CREATE: `${Resource.ROOM_TYPE}_${Action.CREATE}`,
+  ROOM_TYPE_UPDATE: `${Resource.ROOM_TYPE}_${Action.UPDATE}`,
+  ROOM_TYPE_DELETE: `${Resource.ROOM_TYPE}_${Action.DELETE}`,
+  SEMESTER_READ: `${Resource.SEMESTER}_${Action.READ}`,
+  SEMESTER_CREATE: `${Resource.SEMESTER}_${Action.CREATE}`,
+  SEMESTER_UPDATE: `${Resource.SEMESTER}_${Action.UPDATE}`,
+  SEMESTER_DELETE: `${Resource.SEMESTER}_${Action.DELETE}`,
+  ROOM_READ: `${Resource.ROOM}_${Action.READ}`,
+  ROOM_CREATE: `${Resource.ROOM}_${Action.CREATE}`,
+  ROOM_UPDATE: `${Resource.ROOM}_${Action.UPDATE}`,
+  ROOM_DELETE: `${Resource.ROOM}_${Action.DELETE}`,
+  BED_READ: `${Resource.BED}_${Action.READ}`,
+  BED_CREATE: `${Resource.BED}_${Action.CREATE}`,
+  BED_UPDATE: `${Resource.BED}_${Action.UPDATE}`,
+  BED_DELETE: `${Resource.BED}_${Action.DELETE}`,
+  REGISTRATION_PERIOD_READ: `${Resource.REGISTRATION_PERIOD}_${Action.READ}`,
+  REGISTRATION_PERIOD_CREATE: `${Resource.REGISTRATION_PERIOD}_${Action.CREATE}`,
+  REGISTRATION_PERIOD_UPDATE: `${Resource.REGISTRATION_PERIOD}_${Action.UPDATE}`,
+  REGISTRATION_PERIOD_DELETE: `${Resource.REGISTRATION_PERIOD}_${Action.DELETE}`,
+  ROOM_APPLICATION_READ: `${Resource.ROOM_APPLICATION}_${Action.READ}`,
+  ROOM_APPLICATION_CREATE: `${Resource.ROOM_APPLICATION}_${Action.CREATE}`,
+  ROOM_APPLICATION_UPDATE: `${Resource.ROOM_APPLICATION}_${Action.UPDATE}`,
+  ROOM_APPLICATION_DELETE: `${Resource.ROOM_APPLICATION}_${Action.DELETE}`,
+  CONTRACT_READ: `${Resource.CONTRACT}_${Action.READ}`,
+  CONTRACT_CREATE: `${Resource.CONTRACT}_${Action.CREATE}`,
+  CONTRACT_UPDATE: `${Resource.CONTRACT}_${Action.UPDATE}`,
+  CONTRACT_DELETE: `${Resource.CONTRACT}_${Action.DELETE}`,
+  CONTRACT_EXTENSION_READ: `${Resource.CONTRACT_EXTENSION}_${Action.READ}`,
+  CONTRACT_EXTENSION_CREATE: `${Resource.CONTRACT_EXTENSION}_${Action.CREATE}`,
+  CONTRACT_EXTENSION_UPDATE: `${Resource.CONTRACT_EXTENSION}_${Action.UPDATE}`,
+  CONTRACT_EXTENSION_DELETE: `${Resource.CONTRACT_EXTENSION}_${Action.DELETE}`,
+  ROOM_TRANSFER_READ: `${Resource.ROOM_TRANSFER}_${Action.READ}`,
+  ROOM_TRANSFER_CREATE: `${Resource.ROOM_TRANSFER}_${Action.CREATE}`,
+  ROOM_TRANSFER_UPDATE: `${Resource.ROOM_TRANSFER}_${Action.UPDATE}`,
+  ROOM_TRANSFER_DELETE: `${Resource.ROOM_TRANSFER}_${Action.DELETE}`,
+  MOVE_OUT_READ: `${Resource.MOVE_OUT}_${Action.READ}`,
+  MOVE_OUT_CREATE: `${Resource.MOVE_OUT}_${Action.CREATE}`,
+  MOVE_OUT_UPDATE: `${Resource.MOVE_OUT}_${Action.UPDATE}`,
+  MOVE_OUT_DELETE: `${Resource.MOVE_OUT}_${Action.DELETE}`,
+  SUMMER_REGISTRATION_READ: `${Resource.SUMMER_REGISTRATION}_${Action.READ}`,
+  SUMMER_REGISTRATION_CREATE: `${Resource.SUMMER_REGISTRATION}_${Action.CREATE}`,
+  SUMMER_REGISTRATION_UPDATE: `${Resource.SUMMER_REGISTRATION}_${Action.UPDATE}`,
+  SUMMER_REGISTRATION_DELETE: `${Resource.SUMMER_REGISTRATION}_${Action.DELETE}`,
+  STORAGE_READ: `${Resource.STORAGE}_${Action.READ}`,
+  STORAGE_CREATE: `${Resource.STORAGE}_${Action.CREATE}`,
+  STORAGE_UPDATE: `${Resource.STORAGE}_${Action.UPDATE}`,
+  STORAGE_DELETE: `${Resource.STORAGE}_${Action.DELETE}`,
+  UTILITY_RATE_READ: `${Resource.UTILITY_RATE}_${Action.READ}`,
+  UTILITY_RATE_CREATE: `${Resource.UTILITY_RATE}_${Action.CREATE}`,
+  UTILITY_RATE_UPDATE: `${Resource.UTILITY_RATE}_${Action.UPDATE}`,
+  UTILITY_RATE_DELETE: `${Resource.UTILITY_RATE}_${Action.DELETE}`,
+  UTILITY_READING_READ: `${Resource.UTILITY_READING}_${Action.READ}`,
+  UTILITY_READING_CREATE: `${Resource.UTILITY_READING}_${Action.CREATE}`,
+  UTILITY_READING_UPDATE: `${Resource.UTILITY_READING}_${Action.UPDATE}`,
+  UTILITY_READING_DELETE: `${Resource.UTILITY_READING}_${Action.DELETE}`,
+  INVOICE_READ: `${Resource.INVOICE}_${Action.READ}`,
+  INVOICE_CREATE: `${Resource.INVOICE}_${Action.CREATE}`,
+  INVOICE_UPDATE: `${Resource.INVOICE}_${Action.UPDATE}`,
+  INVOICE_DELETE: `${Resource.INVOICE}_${Action.DELETE}`,
+  DEPOSIT_READ: `${Resource.DEPOSIT}_${Action.READ}`,
+  DEPOSIT_CREATE: `${Resource.DEPOSIT}_${Action.CREATE}`,
+  DEPOSIT_UPDATE: `${Resource.DEPOSIT}_${Action.UPDATE}`,
+  DEPOSIT_DELETE: `${Resource.DEPOSIT}_${Action.DELETE}`,
+  MAINTENANCE_READ: `${Resource.MAINTENANCE}_${Action.READ}`,
+  MAINTENANCE_CREATE: `${Resource.MAINTENANCE}_${Action.CREATE}`,
+  MAINTENANCE_UPDATE: `${Resource.MAINTENANCE}_${Action.UPDATE}`,
+  MAINTENANCE_DELETE: `${Resource.MAINTENANCE}_${Action.DELETE}`,
+  NOTIFICATION_READ: `${Resource.NOTIFICATION}_${Action.READ}`,
+  NOTIFICATION_CREATE: `${Resource.NOTIFICATION}_${Action.CREATE}`,
+  NOTIFICATION_UPDATE: `${Resource.NOTIFICATION}_${Action.UPDATE}`,
+  NOTIFICATION_DELETE: `${Resource.NOTIFICATION}_${Action.DELETE}`,
+  PROFILE_READ: `${Resource.PROFILE}_${Action.READ}`,
+  PROFILE_UPDATE: `${Resource.PROFILE}_${Action.UPDATE}`,
+  CONFIG_READ: `${Resource.CONFIG}_${Action.READ}`,
+  CONFIG_UPDATE: `${Resource.CONFIG}_${Action.UPDATE}`,
+  AUDIT_READ: `${Resource.AUDIT}_${Action.READ}`,
+  DASHBOARD_READ: `${Resource.DASHBOARD}_${Action.READ}`,
+  STUDENT_RESET_PASSWORD: `${Resource.STUDENT}_${Action.RESET_PASSWORD}`,
+  USER_LOCK: `${Resource.USER}_${Action.LOCK}`,
+  USER_UNLOCK: `${Resource.USER}_${Action.UNLOCK}`,
+  USER_RESET_PASSWORD: `${Resource.USER}_${Action.RESET_PASSWORD}`,
+  USER_CROSS_UNIT_ACCESS: `${Resource.USER}_${Action.CROSS_UNIT_ACCESS}`,
+  ROLE_PERMISSION_READ: `${Resource.ROLE_PERMISSION}_${Action.READ}`,
+  ROLE_PERMISSION_UPDATE: `${Resource.ROLE_PERMISSION}_${Action.UPDATE}`,
+} as const
+
+export type Permission = (typeof Permission)[keyof typeof Permission]
+
+/** Lấy đúng mã đã đăng ký; tổ hợp không tồn tại (ví dụ PROFILE_CREATE) không có quyền. */
+export function permissionFor(
+  resource: Resource,
+  action: Action,
+): Permission | undefined {
+  const code = `${resource}_${action}`
+  return Object.hasOwn(Permission, code)
+    ? Permission[code as keyof typeof Permission]
+    : undefined
+}

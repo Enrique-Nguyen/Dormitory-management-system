@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router'
 import ChangePasswordPage from '../../pages/ChangePasswordPage'
-import LoginPage from '../../pages/LoginPage'
+import LoginPage, { ForgotPasswordPage } from '../../pages/LoginPage'
 import HomeRedirect from '../guards/HomeRedirect'
 import RequireRole from '../guards/RequireRole'
 import { adminRoutes } from './adminRoutes'
@@ -12,6 +12,7 @@ import { technicianRoutes } from './technicianRoutes'
 // sửa song song, ít xung đột merge: thay `element` của route bằng trang thật khi làm xong màn.
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
   {
     // Đổi mật khẩu: mọi vai trò, kể cả tài khoản đang bị bắt buộc đổi (FR-ACC-03)
     element: <RequireRole allowMustChangePassword />,

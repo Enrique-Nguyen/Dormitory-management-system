@@ -1,0 +1,75 @@
+package vn.edu.tlu.dms.billing.service.impl;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import vn.edu.tlu.dms.billing.service.UtilityRateCrudService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.exception.BusinessException;
+import vn.edu.tlu.dms.common.security.CurrentUser;
+import vn.edu.tlu.dms.common.security.ScopeGuard;
+import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.support.SqlPage;
+
+import java.time.LocalDate;
+
+/** CRUD giá tương lai chưa dùng; giá đã có hiệu lực phải thêm phiên bản mới để giữ lịch sử. */
+@Service
+@Transactional
+public class UtilityRateCrudServiceImpl implements UtilityRateCrudService {
+
+    private final JdbcTemplate jdbc;
+
+    private final SqlPage queries;
+
+    private final CurrentUser current;
+
+    private final ScopeGuard guard;
+
+    private final AuditService audit;
+
+    public UtilityRateCrudServiceImpl(
+            JdbcTemplate jdbc,
+            SqlPage queries,
+            CurrentUser current,
+            ScopeGuard guard,
+            AuditService audit) {
+        this.jdbc = jdbc;
+        this.queries = queries;
+        this.current = current;
+        this.guard = guard;
+        this.audit = audit;
+    }
+
+    private Object requireUnusedRate(Long id) {
+        guard.requireRole(Role.STAFF);
+        var row = queries.one("SELECT * FROM utility_rate WHERE id=? FOR UPDATE", id);
+        if (!current.get().isAdmin() && !current.get().id().equals(row.get("createdBy"))) {
+            throw BusinessException.notFound();
+        }
+        if (!((LocalDate) row.get("effectiveFrom")).isAfter(LocalDate.now())) {
+            throw BusinessException.conflict(ErrorCode.RATE_ALREADY_EFFECTIVE);
+        }
+        return row;
+    }
+
+    @Override
+    public void deleteRate(Long id) {
+        guard.requirePermission(Permission.UTILITY_RATE_DELETE);
+        var before = requireUnusedRate(id);
+        jdbc.update("DELETE FROM utility_rate WHERE id=?", id);
+        audit.record(
+                current.get().id(),
+                AuditAction.RATE_DELETE,
+                EntityType.UTILITY_RATE,
+                id,
+                before,
+                null,
+                null);
+    }
+}

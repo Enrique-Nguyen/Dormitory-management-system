@@ -1,25 +1,40 @@
+import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
 import { Navigate } from 'react-router'
-import PlaceholderPage from '../../pages/PlaceholderPage'
-import AdminHomePage from '../../pages/admin/AdminHomePage'
+import CrudPage from '../../pages/CrudPage'
+import RolePermissionsPage from '../../pages/admin/RolePermissionsPage'
 import RequireRole from '../guards/RequireRole'
 import AdminLayout from '../layouts/AdminLayout'
+import { staffRoutes } from './staffRoutes'
 
 // UI mục 23, 26. Toàn bộ cổng Admin do TV1 phụ trách (UI 27.3).
 export const adminRoutes: RouteObject = {
   path: '/admin',
-  element: <RequireRole role="ADMIN" />,
+  element: <RequireRole role={Role.ADMIN} />,
   children: [
     {
       element: <AdminLayout />,
       children: [
         { index: true, element: <Navigate to="users" replace /> },
-        { path: 'users', element: <AdminHomePage /> },
-        { path: 'units', element: <PlaceholderPage title="Đơn vị quản lý" owner="TV1" spec="UI mục 23" /> },
-        { path: 'buildings', element: <PlaceholderPage title="Tòa nhà & mức cọc" owner="TV1" spec="UI mục 23; BR-10" /> },
-        { path: 'import', element: <PlaceholderPage title="Import sinh viên" owner="TV1" spec="UI mục 23; FR-ACC-05" /> },
-        { path: 'aggregate-permissions', element: <PlaceholderPage title="Quyền tổng hợp liên đơn vị" owner="TV1" spec="FR-ACC-08" /> },
-        { path: 'audit-logs', element: <PlaceholderPage title="Nhật ký hệ thống" owner="TV1" spec="UI mục 23" /> },
+        { path: 'users', element: <CrudPage resource="users" /> },
+        { path: 'units', element: <CrudPage resource="units" /> },
+        { path: 'buildings', element: <CrudPage resource="buildings" /> },
+        { path: 'import', element: <CrudPage resource="adminStudents" /> },
+        {
+          path: 'aggregate-permissions',
+          element: <CrudPage resource="users" />,
+        },
+        { path: 'role-permissions', element: <RolePermissionsPage /> },
+        {
+          path: 'priority-categories',
+          element: <CrudPage resource="priorities" />,
+        },
+        { path: 'configs', element: <CrudPage resource="configs" /> },
+        { path: 'audit-logs', element: <CrudPage resource="audit" /> },
+        // Admin dùng lại các màn nghiệp vụ; backend vẫn kiểm tra trạng thái và lịch sử.
+        ...(staffRoutes.children?.[0].children ?? []).filter(
+          (route) => !route.index && route.path !== 'students',
+        ),
       ],
     },
   ],

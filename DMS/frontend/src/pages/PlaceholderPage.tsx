@@ -1,4 +1,5 @@
-import { Card, Descriptions } from 'antd'
+import { Card } from '../components/ui/Surface'
+import { Descriptions } from 'antd'
 import { useLocation } from 'react-router'
 import EmptyState from '../components/ui/EmptyState'
 import PageHeader from '../components/layout/PageHeader'
@@ -21,7 +22,10 @@ export default function PlaceholderPage({ title, owner, spec }: Props) {
     <>
       <PageHeader title={title} />
       <Card>
-        <EmptyState title="Màn hình này chưa được dựng" description="Khung layout, guard và route đã sẵn sàng." />
+        <EmptyState
+          title="Màn hình này chưa được dựng"
+          description="Khung layout, guard và route đã sẵn sàng."
+        />
         <Descriptions column={1} size="small" style={{ marginTop: 16 }}>
           <Descriptions.Item label="Phụ trách">{owner}</Descriptions.Item>
           <Descriptions.Item label="Tham chiếu">{spec}</Descriptions.Item>

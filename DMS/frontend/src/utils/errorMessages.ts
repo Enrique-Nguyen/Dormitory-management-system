@@ -9,13 +9,55 @@ type Details = Record<string, unknown>
 
 const messages: Record<string, (d: Details) => string> = {
   // 5.1 Chung
+  IDENTITY_NOT_LINKED: () =>
+    'Tài khoản đăng nhập chưa được cấp hồ sơ DMS. Liên hệ quản trị viên.',
+  IDENTITY_NOT_CONFIGURED: () =>
+    'Máy chủ chưa cấu hình kết nối quản lý tài khoản.',
+  IDENTITY_UNAVAILABLE: () =>
+    'Máy chủ quản lý tài khoản chưa sẵn sàng. Vui lòng thử lại.',
+  DUPLICATE_USERNAME: () => 'Tên đăng nhập đã tồn tại.',
   UNAUTHENTICATED: () => 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+  SESSION_REVOKED: () =>
+    'Phiên đã mất hiệu lực do thông tin bảo mật thay đổi. Vui lòng đăng nhập lại.',
+  CSRF_TOKEN_INVALID: () =>
+    'Phiên xác nhận thao tác đã thay đổi. Hãy tải lại trang rồi chủ động thử lại.',
   FORBIDDEN: () => 'Bạn không có quyền thực hiện thao tác này.',
+  PERMISSION_MATRIX_STALE: () =>
+    'Quyền của vai trò vừa được người khác cập nhật. Bảng đã được tải lại; hãy chọn lại các quyền cần sửa.',
+  ADMIN_PERMISSIONS_IMMUTABLE: () =>
+    'Quản trị viên luôn có toàn quyền, không thể thay đổi quyền của vai trò này.',
+  PERMISSION_MATRIX_UNAVAILABLE: () =>
+    'Chưa có bảng quyền của vai trò này. Liên hệ quản trị viên để kiểm tra dữ liệu phân quyền.',
   NOT_FOUND: () => 'Không tìm thấy dữ liệu hoặc bạn không có quyền xem.',
-  INVALID_STATE_TRANSITION: () => 'Thao tác không còn hợp lệ vì trạng thái đã thay đổi. Trang đã được tải lại.',
-  CONCURRENT_UPDATE: () => 'Dữ liệu vừa được người khác thay đổi. Vui lòng thử lại.',
-  FILE_TOO_LARGE: (d) => `File vượt quá ${d.maxMb ?? ''} MB. Vui lòng chọn file nhỏ hơn.`,
-  INTERNAL_ERROR: (d) => `Hệ thống gặp lỗi. Vui lòng thử lại sau (mã yêu cầu: ${d.requestId ?? 'không có'}).`,
+  VALIDATION_FAILED: () =>
+    'Dữ liệu chưa hợp lệ. Kiểm tra các trường trong biểu mẫu.',
+  RESOURCE_IN_USE: () =>
+    'Dữ liệu đã có lịch sử hoặc đang được sử dụng, không thể sửa/xóa trực tiếp.',
+  ROOM_OCCUPIED: () =>
+    'Phòng đang có người ở hoặc giữ chỗ, không thể thực hiện thao tác này.',
+  BED_OCCUPIED: () => 'Giường đang được sử dụng hoặc giữ chỗ.',
+  ROOM_CODE_EXISTS: () => 'Mã phòng đã tồn tại trong tòa nhà.',
+  SEMESTER_OVERLAP: () => 'Thời gian học kỳ trùng với học kỳ đã có.',
+  RATE_ALREADY_EFFECTIVE: () => 'Đơn giá đã có hiệu lực. Hãy thêm bản giá mới.',
+  READING_LOCKED: () => 'Chỉ số đã được đưa vào hóa đơn, không thể sửa/xóa.',
+  READING_HAS_FOLLOWING_MONTH: () =>
+    'Tháng sau đã có chỉ số, không thể thay đổi tháng trước.',
+  READING_INVALID: () => 'Chỉ số cuối phải lớn hơn hoặc bằng chỉ số đầu.',
+  DUPLICATE_INVOICE: () => 'Sinh viên/phòng đã có hóa đơn của kỳ này.',
+  CONTRACT_EXISTS: () => 'Sinh viên đã có hợp đồng đang chờ hoặc đang ở.',
+  INVALID_STATE_TRANSITION: () =>
+    'Thao tác không còn hợp lệ vì trạng thái đã thay đổi. Trang đã được tải lại.',
+  CONCURRENT_UPDATE: () =>
+    'Dữ liệu vừa được người khác thay đổi. Vui lòng thử lại.',
+  FILE_TOO_LARGE: (d) =>
+    `File vượt quá ${d.maxMb ?? ''} MB. Vui lòng chọn file nhỏ hơn.`,
+  DUPLICATE_VALUE: () => 'Giá trị này đã tồn tại. Vui lòng nhập giá trị khác.',
+  METHOD_NOT_ALLOWED: () =>
+    'Thao tác không được hỗ trợ. Hãy tải lại trang rồi thử lại.',
+  UNSUPPORTED_MEDIA_TYPE: () =>
+    'Định dạng dữ liệu gửi lên không được hỗ trợ. Hãy tải lại trang rồi thử lại.',
+  INTERNAL_ERROR: (d) =>
+    `Hệ thống gặp lỗi. Vui lòng thử lại sau (mã yêu cầu: ${d.requestId ?? 'không có'}).`,
 
   // 5.2 Tài khoản
   INVALID_CREDENTIALS: (d) =>
@@ -24,15 +66,53 @@ const messages: Record<string, (d: Details) => string> = {
       : 'Tên đăng nhập hoặc mật khẩu không đúng.',
   ACCOUNT_TEMP_LOCKED: (d) =>
     `Tài khoản tạm khóa${d.lockedUntil ? ` đến ${formatDateTime(String(d.lockedUntil))}` : ' 15 phút'} do nhập sai nhiều lần. Vui lòng thử lại sau.`,
-  ACCOUNT_LOCKED: () => 'Tài khoản đã bị khóa. Liên hệ quản trị viên để được mở khóa.',
+  ACCOUNT_LOCKED: () =>
+    'Tài khoản đã bị khóa. Liên hệ quản trị viên để được mở khóa.',
   PASSWORD_CHANGE_REQUIRED: () => 'Bạn cần đổi mật khẩu trước khi tiếp tục.',
-  WRONG_CURRENT_PASSWORD: () => 'Mật khẩu hiện tại không đúng. Vui lòng nhập lại.',
-  PASSWORD_POLICY: () => 'Mật khẩu mới phải có 8–64 ký tự, gồm cả chữ và số, và khác mật khẩu cũ.',
-  USERNAME_EXISTS: (d) => `Tên đăng nhập ${d.username ?? ''} đã tồn tại. Vui lòng chọn tên khác.`,
+  WRONG_CURRENT_PASSWORD: () =>
+    'Mật khẩu hiện tại không đúng. Vui lòng nhập lại.',
+  PASSWORD_POLICY: () =>
+    'Mật khẩu mới phải có 8–64 ký tự, gồm cả chữ và số, và khác mật khẩu cũ.',
+  USERNAME_EXISTS: (d) =>
+    `Tên đăng nhập ${d.username ?? ''} đã tồn tại. Vui lòng chọn tên khác.`,
+
+  STUDENT_CODE_EXISTS: () =>
+    'Mã sinh viên đã tồn tại. Kiểm tra lại mã hoặc tìm hồ sơ đã có.',
+  STUDENT_HAS_ACTIVE_CONTRACT: () =>
+    'Sinh viên đang có chỗ ở hoặc giữ chỗ nên không đổi được giới tính. Hãy trả phòng trước.',
+  CROSS_UNIT_ONLY_STAFF: () =>
+    'Quyền tổng hợp chỉ cấp được cho tài khoản Staff.',
+  CONFIG_VALUE_INVALID: (d) =>
+    `Giá trị không hợp lệ${d.key ? ` cho ${String(d.key)}` : ''}. Kiểm tra lại rồi lưu.`,
 
   // 5.3 Phòng, giường
-  BED_TAKEN: (d) => `Giường ${d.bedCode ?? ''} vừa được phân cho sinh viên khác. Vui lòng chọn giường khác.`,
-  BED_NOT_AVAILABLE: (d) => `Giường ${d.bedCode ?? ''} hoặc phòng đang không hoạt động. Vui lòng chọn giường khác.`,
+  BED_CODE_EXISTS: () => 'Mã giường đã có trong phòng này.',
+  LEADER_ALREADY_ASSIGNED: () =>
+    'Sinh viên đang là trưởng phòng của phòng khác. Gỡ vai trò đó trước.',
+  LEADER_NOT_STAYING: (d) =>
+    `Sinh viên này không đang ở trong phòng${d.roomCode ? ` ${String(d.roomCode)}` : ''}. Chọn sinh viên đang ở phòng.`,
+  NOT_STAYING: () =>
+    'Bạn hiện không ở trong ký túc xá nên không dùng được chức năng này.',
+  BED_TAKEN: (d) =>
+    `Giường ${d.bedCode ?? ''} vừa được phân cho sinh viên khác. Vui lòng chọn giường khác.`,
+  BED_NOT_AVAILABLE: (d) =>
+    `Giường ${d.bedCode ?? ''} hoặc phòng đang không hoạt động. Vui lòng chọn giường khác.`,
+
+  // 5.4+ Đăng ký, kỳ hè, bảo trì, hóa đơn
+  PERIOD_NOT_OPEN: () =>
+    'Đợt đăng ký chưa mở hoặc đã đóng. Hãy chờ đợt tiếp theo hoặc liên hệ Ban quản lý.',
+  UNIT_NOT_IN_PERIOD: () =>
+    'Đợt này không áp dụng cho đơn vị đã chọn. Hãy chọn đơn vị khác.',
+  APPLICATION_HAS_CONTRACT: () =>
+    'Đơn đã sinh hợp đồng nên không thể hủy. Hãy liên hệ Ban quản lý để xử lý hợp đồng.',
+  PHOTO_INVALID: () =>
+    'Ảnh không hợp lệ. Chỉ nhận tối đa 3 ảnh JPEG, PNG hoặc WebP, mỗi ảnh không quá 5 MB.',
+  PHOTO_UPLOAD_FAILED: () => 'Không lưu được ảnh. Vui lòng thử lại.',
+  TICKET_LOCATION_INVALID: () =>
+    'Chọn một phòng hoặc một khu vực chung (tòa và tầng), không chọn cả hai.',
+  TECHNICIAN_OUT_OF_UNIT: () =>
+    'Kỹ thuật viên không thuộc đơn vị của ticket. Chọn kỹ thuật viên khác.',
+  INVOICE_ALREADY_PAID: () => 'Hóa đơn đã được xác nhận thanh toán trước đó.',
 }
 
 export function errorMessage(error: unknown): string {
@@ -40,7 +120,8 @@ export function errorMessage(error: unknown): string {
     const { errorCode, details, requestId } = error.response.data
     const build = messages[errorCode]
     if (build) return build({ ...details, requestId })
-    return error.response.data.message
+    // Mã chưa có câu tiếng Việt: không hiện chuỗi mã thô (backend đặt message = errorCode).
+    return `Không thực hiện được thao tác (mã: ${errorCode}). Vui lòng thử lại hoặc liên hệ Ban quản lý.`
   }
   if (axios.isAxiosError(error)) {
     // Có phản hồi nhưng không theo khuôn { errorCode }: CSRF bị từ chối, proxy 502/504...
@@ -54,5 +135,7 @@ export function errorMessage(error: unknown): string {
 
 /** Mã lỗi của response (nếu có), để rẽ nhánh xử lý ngoài việc hiện câu thông báo. */
 export function errorCodeOf(error: unknown): string | undefined {
-  return axios.isAxiosError<ApiError>(error) ? error.response?.data?.errorCode : undefined
+  return axios.isAxiosError<ApiError>(error)
+    ? error.response?.data?.errorCode
+    : undefined
 }

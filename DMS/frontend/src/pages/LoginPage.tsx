@@ -1,106 +1,143 @@
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Card, Input, Typography } from 'antd'
+import { Button } from '../components/ui/Surface'
+import { Alert, Spin, Typography } from 'antd'
 import { useState } from 'react'
-import { Controller, useForm } from 'react-hook-form'
 import { Link, Navigate, useSearchParams } from 'react-router'
-import { z } from 'zod'
-import FormField from '../components/ui/FormField'
-import { CHANGE_PASSWORD_PATH, roleHome } from '../constants/navigation'
-import { meQueryKey, useMe } from '../features/account/useMe'
-import { login } from '../services/api/auth'
-import { getMockMe, mockRole } from '../services/api/mock'
-import type { Me } from '../types/auth'
+import { useMe } from '../features/account/useMe'
+import {
+  keycloak,
+  loginWithKeycloak,
+  logout,
+  loginLandingPath,
+} from '../services/api/auth'
 import { errorMessage } from '../utils/errorMessages'
 
-const schema = z.object({
-  username: z.string().trim().min(1, 'Vui lòng nhập tên đăng nhập (mã sinh viên).'),
-  password: z.string().min(1, 'Vui lòng nhập mật khẩu.'),
-})
-type LoginForm = z.infer<typeof schema>
-
-/** Chỉ chấp nhận đường dẫn nội bộ để tránh chuyển hướng ra ngoài. */
-function safeRedirect(value: string | null): string | null {
-  return value && value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/login') ? value : null
-}
-
-/** Tài khoản bắt buộc đổi mật khẩu (sinh viên mới import) không vào được trang nào khác (FR-ACC-03). */
-function landingPath(me: Me, redirect: string | null): string {
-  return me.mustChangePassword ? CHANGE_PASSWORD_PATH : (redirect ?? roleHome[me.role])
-}
-
+/** Mật khẩu chỉ nhập tại Keycloak; DMS không nhận mật khẩu qua form/API đăng nhập. */
 export default function LoginPage() {
   const [params] = useSearchParams()
-  const { data: me } = useMe()
-  const queryClient = useQueryClient()
-  const [error, setError] = useState<string | null>(null)
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginForm>({ resolver: zodResolver(schema), defaultValues: { username: '', password: '' } })
+  const { data: me, error, isPending } = useMe()
+  const [busy, setBusy] = useState(false)
+  const [loginError, setLoginError] = useState<string | null>(null)
+  const redirect = params.get('redirect')
 
-  const redirect = safeRedirect(params.get('redirect'))
-  const expired = params.get('reason') === 'expired'
+  if (me && !error)
+    return <Navigate to={loginLandingPath(me, redirect)} replace />
 
-  const onSubmit = handleSubmit(async ({ username, password }) => {
-    setError(null)
+  async function signIn() {
+    setBusy(true)
     try {
-      // Có `me` trong cache thì <Navigate> bên dưới chuyển trang; cùng một đường cho đăng nhập mới và phiên còn hiệu lực
-      queryClient.setQueryData(meQueryKey, await login(username.trim(), password))
-    } catch (e) {
-      // Không phân biệt sai tên hay sai mật khẩu; thông báo khóa tạm lấy theo errorCode
-      setError(errorMessage(e))
+      const next =
+        redirect &&
+        /^\/(student|staff|technician|admin)(\/|\?|$)/.test(redirect)
+          ? `/login?redirect=${encodeURIComponent(redirect)}`
+          : '/login'
+      await loginWithKeycloak(next)
+    } catch (failure) {
+      setLoginError(errorMessage(failure))
+      setBusy(false)
     }
-  })
-
-  // Đã có phiên (mở /login khi còn đăng nhập) thì vào thẳng. Chế độ mock luôn có `me` nên giữ trang để xem được form.
-  if (me && !mockRole) return <Navigate to={landingPath(me, redirect)} replace />
+  }
 
   return (
     <main className="dms-auth-page dms-touch">
-      <Card>
-        <Typography.Title level={3} style={{ marginTop: 0, color: '#1D4ED8' }}>
-          DMS
-        </Typography.Title>
-        <Typography.Paragraph type="secondary">Hệ thống quản lý ký túc xá Đại học Thủy Lợi</Typography.Paragraph>
-
-        {expired && <Alert type="warning" showIcon title="Phiên đã hết hạn. Vui lòng đăng nhập lại." style={{ marginBottom: 16 }} />}
-        {mockRole && (
+      <div className="dms-auth-card">
+        <div className="dms-auth-header">
+          <div className="dms-auth-logo-badge">DMS</div>
+          <h1 className="dms-auth-title">Đăng nhập hệ thống</h1>
+          <p className="dms-auth-subtitle">
+            Hệ thống Quản lý Ký túc xá · Đại học Thủy Lợi
+          </p>
+        </div>
+        <p>Bấm đăng nhập để tiếp tục tới trang xác thực của hệ thống.</p>
+        {isPending && <Spin style={{ display: 'block', marginBottom: 16 }} />}
+        {(loginError || (error && keycloak.authenticated)) && (
           <Alert
-            type="info"
             showIcon
+            type="error"
             style={{ marginBottom: 16 }}
-            title={`Chế độ mock (VITE_MOCK_ROLE=${mockRole})`}
-            description={<Link to={roleHome[getMockMe().role]}>Vào cổng của vai trò này</Link>}
+            title={loginError || errorMessage(error)}
           />
         )}
-        {error && <Alert type="error" showIcon title={error} role="alert" style={{ marginBottom: 16 }} />}
-
-        <form onSubmit={onSubmit} noValidate>
-          <FormField label="Tên đăng nhập" required error={errors.username?.message}>
-            {(control_) => (
-              <Controller
-                name="username"
-                control={control}
-                render={({ field }) => <Input {...field} {...control_} autoComplete="username" autoFocus placeholder="Mã sinh viên" />}
-              />
-            )}
-          </FormField>
-          <FormField label="Mật khẩu" required error={errors.password?.message}>
-            {(control_) => (
-              <Controller
-                name="password"
-                control={control}
-                render={({ field }) => <Input.Password {...field} {...control_} autoComplete="current-password" />}
-              />
-            )}
-          </FormField>
-          <Button type="primary" htmlType="submit" block loading={isSubmitting}>
-            Đăng nhập
+        {params.get('reason') === 'expired' && (
+          <Alert
+            showIcon
+            type="warning"
+            title="Phiên đã hết hạn. Vui lòng đăng nhập lại."
+            style={{ marginBottom: 16 }}
+          />
+        )}
+        <Button
+          type="primary"
+          block
+          loading={busy}
+          onClick={() => void signIn()}
+        >
+          Đăng nhập
+        </Button>
+        {keycloak.authenticated && error && (
+          <Button block style={{ marginTop: 12 }} onClick={() => void logout()}>
+            Đăng xuất để dùng tài khoản khác
           </Button>
-        </form>
-      </Card>
+        )}
+        <div style={{ marginTop: 16, textAlign: 'center' }}>
+          <Link to="/forgot-password">Quên mật khẩu?</Link>
+        </div>
+        <div className="dms-auth-footer">
+          Ký túc xá Đại học Thủy Lợi · Hỗ trợ kỹ thuật
+        </div>
+      </div>
+    </main>
+  )
+}
+
+/** Quên mật khẩu: người quản lý xác minh và reset; đặt cùng trang đăng nhập để giảm file. */
+export function ForgotPasswordPage() {
+  return (
+    <main className="dms-auth-page dms-touch">
+      <div className="dms-auth-card">
+        <div className="dms-auth-header">
+          <div className="dms-auth-logo-badge">DMS</div>
+          <h1 className="dms-auth-title">Quên mật khẩu</h1>
+          <p className="dms-auth-subtitle">
+            Hệ thống Quản lý Ký túc xá · Đại học Thủy Lợi
+          </p>
+        </div>
+        <Typography.Paragraph
+          style={{
+            color: 'var(--color-text-secondary)',
+            fontSize: 13,
+            marginBottom: 12,
+          }}
+        >
+          Liên hệ Ban quản lý ký túc xá hoặc quản trị viên để xác minh tài khoản
+          và nhận mật khẩu tạm thời.
+        </Typography.Paragraph>
+        <Typography.Paragraph
+          style={{
+            color: 'var(--color-text-secondary)',
+            fontSize: 13,
+            marginBottom: 16,
+          }}
+        >
+          Sinh viên vui lòng cung cấp mã sinh viên cho cán bộ quản lý tòa
+          nhà/đơn vị. Tài khoản cán bộ, kỹ thuật viên và quản trị viên liên hệ
+          ban quản trị.
+        </Typography.Paragraph>
+        <Alert
+          type="info"
+          showIcon
+          title="Quy trình cấp lại mật khẩu"
+          description="Mật khẩu tạm sẽ được cấp sau khi xác minh nhân thân. Khi đăng nhập bằng mật khẩu tạm, hệ thống sẽ yêu cầu bạn đổi mật khẩu mới."
+          style={{ marginBottom: 20 }}
+        />
+        <Link to="/login">
+          <Button type="primary" block>
+            Quay lại đăng nhập
+          </Button>
+        </Link>
+        <div className="dms-auth-footer">
+          <span>Ký túc xá Đại học Thủy Lợi · Hỗ trợ kỹ thuật</span>
+        </div>
+      </div>
     </main>
   )
 }

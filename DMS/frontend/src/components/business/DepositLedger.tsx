@@ -18,23 +18,79 @@ interface Props {
 export default function DepositLedger({ entries, balance }: Props) {
   return (
     <div>
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }} aria-label="Lịch sử giao dịch tiền cọc">
+      <ul
+        style={{ listStyle: 'none', margin: 0, padding: 0 }}
+        aria-label="Lịch sử giao dịch tiền cọc"
+      >
         {entries.map((entry) => (
-          <li key={entry.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
-            <Flex justify="space-between" gap={12} className="dms-wrap">
-              <Typography.Text strong style={{ color: entry.amount < 0 ? '#B91C1C' : '#15803D' }}>
+          <li
+            key={entry.id}
+            className="dms-ledger-item"
+            style={{ borderBottom: '1px solid var(--color-border-light)' }}
+          >
+            <Flex
+              justify="space-between"
+              align="center"
+              gap={12}
+              className="dms-wrap"
+            >
+              <Typography.Text
+                strong
+                style={{
+                  fontSize: 15,
+                  color:
+                    entry.amount < 0
+                      ? 'var(--color-danger)'
+                      : 'var(--color-success)',
+                }}
+              >
                 {formatSignedMoney(entry.amount)}
               </Typography.Text>
-              <span style={{ textAlign: 'right' }}>{entry.description}</span>
+              <span style={{ textAlign: 'right', fontWeight: 500 }}>
+                {entry.description}
+              </span>
             </Flex>
-            <Typography.Text type="secondary">{formatDate(entry.date)}</Typography.Text>
+            <div
+              style={{
+                color: 'var(--color-text-muted)',
+                fontSize: 12,
+                marginTop: 2,
+              }}
+            >
+              {formatDate(entry.date)}
+            </div>
           </li>
         ))}
       </ul>
-      <Flex justify="space-between" style={{ paddingTop: 12 }}>
-        <Typography.Text strong>Số dư</Typography.Text>
-        <Typography.Text strong>{formatMoney(balance)}</Typography.Text>
-      </Flex>
+      <div className="dms-balance-callout">
+        <div>
+          <span
+            style={{
+              fontSize: 13,
+              color: 'var(--color-text-secondary)',
+              display: 'block',
+            }}
+          >
+            Số dư hiện tại
+          </span>
+          <strong style={{ fontSize: 18, color: 'var(--color-heading)' }}>
+            {formatMoney(balance)}
+          </strong>
+        </div>
+        <span
+          style={{
+            fontSize: 12,
+            color: 'var(--color-primary)',
+            fontWeight: 500,
+            background: 'var(--color-surface)',
+            padding: '4px 10px',
+            borderRadius: 'var(--radius-full)',
+            border: '1px solid var(--color-primary-border)',
+          }}
+        >
+          Đã bảo đảm
+        </span>
+      </div>
     </div>
   )
 }
