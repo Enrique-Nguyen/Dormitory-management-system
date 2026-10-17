@@ -2,6 +2,7 @@ package vn.edu.tlu.dms.maintenance.domain;
 
 import org.springframework.http.HttpStatus;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceStatus;
@@ -68,7 +69,7 @@ public final class MaintenanceRequestPolicy {
             throw new BusinessException(
                     ErrorCode.INVALID_STATE_TRANSITION,
                     HttpStatus.CONFLICT,
-                    Map.of("currentStatus", request.getStatus()));
+                    Map.of(ApiField.CURRENT_STATUS, request.getStatus()));
         }
     }
 }

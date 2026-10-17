@@ -158,9 +158,11 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         // Khóa trước, nạp lại dữ liệu thật rồi mới kiểm tra OPEN/chủ sở hữu, tránh ghi theo dữ liệu
         // cũ.
         var req = loadAccessibleRequest(input.id(), true);
-        if ((!current.get().isAdmin() && !current.get().id().equals(req.getRequesterId()))
-                || !MaintenanceStatus.OPEN.equals(req.getStatus())) {
-            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
+        if (!current.get().isAdmin() && !current.get().id().equals(req.getRequesterId())) {
+            throw BusinessException.notFound();
+        }
+        if (!MaintenanceStatus.OPEN.equals(req.getStatus())) {
+            throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
         if (input.roomId() != null || input.buildingId() != null || input.floor() != null) {
             throw BusinessException.invalid("roomId", "Không đổi vị trí của yêu cầu đã tạo");

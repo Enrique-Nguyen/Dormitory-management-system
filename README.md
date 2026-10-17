@@ -160,7 +160,17 @@ Lỗi `Connection to localhost:5432 refused` nghĩa là PostgreSQL chưa chạy.
 
 Đã kiểm chứng ngày 15/10/2026 bằng Java 17.0.17, classpath và thư mục chạy giống log IntelliJ: backend khởi động thành công, kết nối PostgreSQL/Flyway và health UP. Sau kiểm chứng đã trả cổng 8080 cho IDE; PostgreSQL và Keycloak tiếp tục chạy.
 
-### Chạy bằng Docker trên máy khác
+### Chạy bằng Docker trên máy Windows (một lệnh)
+
+Cần Docker Desktop đang chạy, JDK 17 trở lên và Node.js. Từ thư mục gốc repository:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\DMS\scripts\start-docker.ps1
+```
+
+Script tự làm theo thứ tự: tạo `DMS\.env` với secret ngẫu nhiên (lần đầu), `docker compose up -d`, chờ Keycloak, build JAR và `npm ci` nếu chưa có, để backend chạy Flyway, nạp `sample-data.sql` và `sample-accounts.sql`, cấp tài khoản Keycloak (admin và các tài khoản mẫu) bằng mật khẩu tạm ngẫu nhiên rồi khởi động backend và frontend. Mật khẩu tạm nằm trong `backend\data\local-run\keycloak-docker-accounts.local` (Git bỏ qua), mật khẩu quản trị Keycloak là `KC_BOOTSTRAP_ADMIN_PASSWORD` trong `DMS\.env`. Chạy lại script là an toàn. Dừng: `stop-local.ps1`, rồi `docker compose stop` trong `DMS`. Xóa sạch dữ liệu: `docker compose down -v` và xóa `DMS\.env`, tệp cấp mật khẩu.
+
+### Chạy bằng Docker trên máy khác (thủ công)
 
 Sao chép `.env.example` thành `.env` trong `DMS`, tự đặt mật khẩu DB Keycloak, mật khẩu quản trị Keycloak và secret client quản trị. Sau đó:
 
@@ -293,7 +303,42 @@ Bộ mẫu gồm 12 sinh viên, 3 tòa, 2 loại phòng, 9 phòng, 42 giường,
 
 Script chạy trong transaction, giữ constraint và trigger, không xóa dữ liệu. Marker `DMS-SAMPLE-V1` trong audit giúp lần chạy sau bỏ qua toàn bộ phần nạp: không tạo bản ghi trùng và không ghi đè những gì đã sửa/xóa trên màn CRUD. Nếu phát hiện mã `MAU-*`/`mau.*` trùng hoặc lịch học kỳ chồng nhau, script báo lỗi và rollback; không tự sửa dữ liệu của nhóm.
 
-**Tài khoản mẫu dùng để hiển thị và liên kết dữ liệu, đều bị khóa và chưa liên kết Keycloak; không có mật khẩu demo.** Tiếp tục đăng nhập bằng tài khoản thật đang có. Muốn thử đăng nhập và thao tác theo đúng chủ sở hữu Student/Technician, tạo tài khoản qua luồng quản lý tài khoản/Keycloak của ứng dụng và chuẩn bị dữ liệu cho tài khoản đó. SQL không thay mật khẩu, subject, phiên đăng nhập hay ma trận quyền hiện tại.
+**Tài khoản `mau.*` do `sample-data.sql` tạo ra đều bị khóa và chưa liên kết Keycloak; không có mật khẩu demo.** Muốn đăng nhập thử đủ bốn vai trò, làm theo mục dưới. SQL không thay mật khẩu, subject, phiên đăng nhập hay ma trận quyền.
+
+### Tài khoản mẫu đăng nhập thử — 15/10/2026
+
+Nếu chạy bằng `DMS\scripts\start-docker.ps1`, script đã tự nạp `sample-accounts.sql` và cấp tài khoản Keycloak; Đường A/Đường B dưới đây chỉ dành cho luồng PostgreSQL local (`start-local.ps1`). Hai luồng cùng dùng cổng 5432 nên không chạy đồng thời.
+
+File **`DMS/scripts/sample-accounts.sql`** (chạy sau `sample-data.sql`, idempotent, không đưa vào thư mục migration) mở khóa 10 tài khoản mẫu và thêm ticket `MAU-TK-04` đã giao cho `mau.kt.1`. Các tài khoản `mau.*` còn lại vẫn bị khóa. Cuối script in bảng `locked`/`linked` để biết nên đi đường A hay B.
+
+| Vai trò | Username | Đơn vị | Dùng để thử |
+|---|---|---|---|
+| ADMIN | `admin` (đã có) | — | phân quyền động, tài khoản, audit, toàn quyền nghiệp vụ |
+| STAFF | `mau.ql.1` | K1, đọc liên đơn vị | duyệt chuyển phòng của SV 02, giao ticket MAU-TK-01 cho `mau.kt.1`, duyệt đơn SV 10 |
+| STAFF | `mau.ql.2` | N2+N3 | tạo hợp đồng từ đơn đã duyệt của SV 11; thử chặn cross-scope (404) với dữ liệu K1 |
+| TECHNICIAN | `mau.kt.1` | K1 | xử lý MAU-TK-04 (ASSIGNED) |
+| TECHNICIAN | `mau.kt.2` | N2+N3 | xử lý MAU-TK-02 (ASSIGNED) |
+| STUDENT | `mau.sv.01` | K1 | đang ở, trưởng phòng, gia hạn chờ duyệt, ticket MAU-TK-01 |
+| STUDENT | `mau.sv.02` | K1 | đang ở, có yêu cầu chuyển phòng chờ duyệt |
+| STUDENT | `mau.sv.07` | K1 | hợp đồng PENDING + giữ giường: thu cọc/kích hoạt |
+| STUDENT | `mau.sv.10` | K1 | đơn SUBMITTED chờ duyệt |
+| STUDENT | `mau.sv.11` | N2+N3 | đơn APPROVED, chưa có hợp đồng |
+| STUDENT | `mau.sv.12` | N2+N3 | đơn DRAFT: sửa/nộp/hủy |
+
+Tên đăng nhập là `mau.sv.01`…; mã sinh viên trong hồ sơ là `MAU-SV-01`.
+
+**Đường A — tài khoản mẫu chưa liên kết Keycloak** (cột `linked` = `chưa`). Từ thư mục gốc repository:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\DMS\scripts\stop-local.ps1
+psql -h localhost -p 5432 -U dms -d dms -v ON_ERROR_STOP=1 -f "DMS/scripts/sample-accounts.sql"
+$env:DMS_KEYCLOAK_CREDENTIAL_FILE = '.\data\local-run\keycloak-sample-accounts.local'
+powershell -NoProfile -ExecutionPolicy Bypass -File .\DMS\scripts\start-local.ps1 -ProvisionAccounts
+```
+
+Bootstrap từ chối ghi đè tệp credential cũ nên phải dùng tên tệp mới (đường dẫn tính từ `DMS\backend`). Bước này cấp Keycloak cho **mọi** tài khoản chưa liên kết, kể cả `mau.*` còn khóa (bị disabled nên không đăng nhập được). Mật khẩu tạm ngẫu nhiên của từng username nằm trong `DMS/backend/data/local-run/keycloak-sample-accounts.local` (Git bỏ qua). Đăng nhập tại `http://localhost:5173/login`, Keycloak bắt đổi mật khẩu lần đầu. Sau đó khởi động lại bình thường, không có `-ProvisionAccounts`, và xóa tệp credential bằng `Remove-Item -LiteralPath` tới đúng tệp khi đã bàn giao.
+
+**Đường B — tài khoản mẫu đã được cấp Keycloak từ trước** (cột `linked` = `rồi`, Keycloak đang disabled): đăng nhập `admin`, vào quản lý tài khoản, bấm **Mở khóa** rồi **Đặt lại mật khẩu** cho từng username trong bảng. Chỉ cần chạy `sample-accounts.sql` nếu muốn có thêm ticket `MAU-TK-04`; việc mở khóa trong DB khi đó trùng với thao tác trên UI.
 
 ### Màn tick quyền động theo role — 15/10/2026
 

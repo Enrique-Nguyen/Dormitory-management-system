@@ -25,6 +25,7 @@ public final class DmsConstants {
         public static final String APPLICATION_EXISTS = "APPLICATION_EXISTS";
         public static final String APPLICATION_HAS_CONTRACT = "APPLICATION_HAS_CONTRACT";
         public static final String BED_CODE_EXISTS = "BED_CODE_EXISTS";
+        public static final String BED_NOT_AVAILABLE = "BED_NOT_AVAILABLE";
         public static final String BED_OCCUPIED = "BED_OCCUPIED";
         public static final String BED_TAKEN = "BED_TAKEN";
         public static final String BOOTSTRAP_USERNAME_IN_USE = "BOOTSTRAP_USERNAME_IN_USE";
@@ -38,6 +39,7 @@ public final class DmsConstants {
         public static final String DUPLICATE_VALUE = "DUPLICATE_VALUE";
         public static final String FILE_TOO_LARGE = "FILE_TOO_LARGE";
         public static final String FORBIDDEN = "FORBIDDEN";
+        public static final String GENDER_MISMATCH = "GENDER_MISMATCH";
         public static final String IDENTITY_ALREADY_LINKED = "IDENTITY_ALREADY_LINKED";
         public static final String IDENTITY_NOT_CONFIGURED = "IDENTITY_NOT_CONFIGURED";
         public static final String IDENTITY_NOT_LINKED = "IDENTITY_NOT_LINKED";
@@ -64,6 +66,7 @@ public final class DmsConstants {
         public static final String RESOURCE_IN_USE = "RESOURCE_IN_USE";
         public static final String ROOM_CODE_EXISTS = "ROOM_CODE_EXISTS";
         public static final String ROOM_OCCUPIED = "ROOM_OCCUPIED";
+        public static final String SAME_BED = "SAME_BED";
         public static final String SEMESTER_OVERLAP = "SEMESTER_OVERLAP";
         public static final String SESSION_REVOKED = "SESSION_REVOKED";
         public static final String STORAGE_RECORD_EXISTS = "STORAGE_RECORD_EXISTS";
@@ -73,6 +76,7 @@ public final class DmsConstants {
         public static final String SUMMER_CHOICE_EXISTS = "SUMMER_CHOICE_EXISTS";
         public static final String TECHNICIAN_OUT_OF_UNIT = "TECHNICIAN_OUT_OF_UNIT";
         public static final String TICKET_LOCATION_INVALID = "TICKET_LOCATION_INVALID";
+        public static final String TRANSFER_CROSS_UNIT = "TRANSFER_CROSS_UNIT";
         public static final String UNAUTHENTICATED = "UNAUTHENTICATED";
         public static final String UNIT_NOT_IN_PERIOD = "UNIT_NOT_IN_PERIOD";
         public static final String UNSUPPORTED_MEDIA_TYPE = "UNSUPPORTED_MEDIA_TYPE";
@@ -94,6 +98,15 @@ public final class DmsConstants {
         public static final String ROLE = "role";
         public static final String VERSION = "version";
         public static final String PERMISSIONS = "permissions";
+        public static final String REASON = "reason";
+        public static final String END_REASON = "endReason";
+        public static final String TARGET_BED_ID = "targetBedId";
+        public static final String BED_ID = "bedId";
+        public static final String BED_CODE = "bedCode";
+        public static final String ROOM_CODE = "roomCode";
+        public static final String ROOM_GENDER = "roomGender";
+        public static final String COUNT = "count";
+        public static final String CURRENT_STATUS = "currentStatus";
 
         private ApiField() {}
     }
@@ -165,18 +178,20 @@ public final class DmsConstants {
                         Action.LOCK,
                         Action.UNLOCK,
                         Action.RESET_PASSWORD,
-                        Action.CROSS_UNIT_ACCESS);
+                        Action.CROSS_UNIT_ACCESS,
+                        Action.APPROVE);
 
         public static final Map<String, String> ACTION_LABELS =
-                Map.of(
-                        Action.READ, "Tìm kiếm / xem",
-                        Action.CREATE, "Thêm",
-                        Action.UPDATE, "Sửa / xử lý",
-                        Action.DELETE, "Xóa",
-                        Action.LOCK, "Khóa tài khoản",
-                        Action.UNLOCK, "Mở khóa tài khoản",
-                        Action.RESET_PASSWORD, "Đặt lại mật khẩu",
-                        Action.CROSS_UNIT_ACCESS, "Cấp quyền tổng hợp");
+                Map.ofEntries(
+                        Map.entry(Action.READ, "Tìm kiếm / xem"),
+                        Map.entry(Action.CREATE, "Thêm"),
+                        Map.entry(Action.UPDATE, "Sửa / xử lý"),
+                        Map.entry(Action.DELETE, "Xóa"),
+                        Map.entry(Action.LOCK, "Khóa tài khoản"),
+                        Map.entry(Action.UNLOCK, "Mở khóa tài khoản"),
+                        Map.entry(Action.RESET_PASSWORD, "Đặt lại mật khẩu"),
+                        Map.entry(Action.CROSS_UNIT_ACCESS, "Cấp quyền tổng hợp"),
+                        Map.entry(Action.APPROVE, "Duyệt / từ chối"));
 
         /** Chỉ tạo ô cho mã có trong Permission.ALL; không tạo quyền theo dữ liệu client gửi. */
         public static final List<ScreenDefinition> SCREENS =
@@ -258,6 +273,7 @@ public final class DmsConstants {
         public static final String UNLOCK = "UNLOCK";
         public static final String RESET_PASSWORD = "RESET_PASSWORD";
         public static final String CROSS_UNIT_ACCESS = "CROSS_UNIT_ACCESS";
+        public static final String APPROVE = "APPROVE";
 
         public static final List<String> CRUD = List.of(READ, CREATE, UPDATE, DELETE);
 
@@ -406,6 +422,8 @@ public final class DmsConstants {
                 Resource.ROOM_TRANSFER + PERMISSION_SEPARATOR + Action.UPDATE;
         public static final String ROOM_TRANSFER_DELETE =
                 Resource.ROOM_TRANSFER + PERMISSION_SEPARATOR + Action.DELETE;
+        public static final String ROOM_TRANSFER_APPROVE =
+                Resource.ROOM_TRANSFER + PERMISSION_SEPARATOR + Action.APPROVE;
         public static final String MOVE_OUT_READ =
                 Resource.MOVE_OUT + PERMISSION_SEPARATOR + Action.READ;
         public static final String MOVE_OUT_CREATE =
@@ -562,6 +580,7 @@ public final class DmsConstants {
                         ROOM_TRANSFER_CREATE,
                         ROOM_TRANSFER_UPDATE,
                         ROOM_TRANSFER_DELETE,
+                        ROOM_TRANSFER_APPROVE,
                         MOVE_OUT_READ,
                         MOVE_OUT_CREATE,
                         MOVE_OUT_UPDATE,
@@ -653,6 +672,45 @@ public final class DmsConstants {
         private BedOperationStatus() {}
     }
 
+    /** Loại phân phòng: giữ chỗ (HOLD) hoặc đang ở (STAY); giá trị khớp CHECK của CSDL. */
+    public static final class AssignmentKind {
+        public static final String HOLD = "HOLD";
+        public static final String STAY = "STAY";
+
+        private AssignmentKind() {}
+    }
+
+    /** Lý do đóng phân phòng; giá trị khớp CHECK end_reason của room_assignment_history. */
+    public static final class AssignmentEndReason {
+        public static final String HOLD_CANCELLED = "HOLD_CANCELLED";
+        public static final String HOLD_EXPIRED = "HOLD_EXPIRED";
+        public static final String TRANSFER = "TRANSFER";
+        public static final String MOVE_OUT = "MOVE_OUT";
+        public static final String SUMMER_LEAVE = "SUMMER_LEAVE";
+
+        /** Lý do được trả giường trực tiếp; TRANSFER chỉ do nghiệp vụ chuyển phòng ghi. */
+        public static final Set<String> RELEASE =
+                Set.of(HOLD_CANCELLED, HOLD_EXPIRED, MOVE_OUT, SUMMER_LEAVE);
+
+        private AssignmentEndReason() {}
+    }
+
+    /** Nguồn yêu cầu chọn giường cho split view (API 4.4); tên khớp tham số truy vấn. */
+    public static final class PlacementSource {
+        public static final String APPLICATION = "applicationId";
+        public static final String TRANSFER_REQUEST = "transferRequestId";
+
+        private PlacementSource() {}
+    }
+
+    /** Lý do hệ thống tự ghi khi thao tác không do người dùng nhập. */
+    public static final class AuditReason {
+        public static final String LEADER_AUTO_REMOVED =
+                "Tự gỡ trưởng phòng do phân phòng của sinh viên đã đóng";
+
+        private AuditReason() {}
+    }
+
     /** Trạng thái đơn đăng ký; policy quyết định chuyển trạng thái hợp lệ. */
     public static final class ApplicationStatus {
         public static final String DRAFT = "DRAFT";
@@ -688,6 +746,9 @@ public final class DmsConstants {
     /** Gia hạn/chuyển phòng chỉ được sửa/xóa khi yêu cầu còn chờ xử lý. */
     public static final class StayRequestStatus {
         public static final String PENDING = "PENDING";
+        public static final String APPROVED = "APPROVED";
+        public static final String REJECTED = "REJECTED";
+        public static final String CANCELLED = "CANCELLED";
 
         private StayRequestStatus() {}
     }
@@ -791,6 +852,7 @@ public final class DmsConstants {
         public static final String BUILDING = "BUILDING";
         public static final String FLOOR = "FLOOR";
         public static final String ROOM = "ROOM";
+        public static final String TRANSFER = "TRANSFER";
         public static final String USER = "USER";
 
         public static final String MANUAL_PATTERN =
@@ -845,6 +907,9 @@ public final class DmsConstants {
     public static final class AuditAction {
         public static final String BED_CREATE = "BED_CREATE";
         public static final String BED_DELETE = "BED_DELETE";
+        public static final String BED_OCCUPY = "BED_OCCUPY";
+        public static final String BED_RELEASE = "BED_RELEASE";
+        public static final String BED_STAY = "BED_STAY";
         public static final String BED_STATUS = "BED_STATUS";
         public static final String BED_UPDATE = "BED_UPDATE";
         public static final String CATALOG_PREFIX = "CATALOG_";
@@ -866,6 +931,7 @@ public final class DmsConstants {
         public static final String ROOM_DELETE = "ROOM_DELETE";
         public static final String ROOM_LEADER_CHANGE = "ROOM_LEADER_CHANGE";
         public static final String ROOM_STATUS = "ROOM_STATUS";
+        public static final String ROOM_TRANSFER = "ROOM_TRANSFER";
         public static final String ROOM_UPDATE = "ROOM_UPDATE";
         public static final String STUDENT_CREATE = "STUDENT_CREATE";
         public static final String STUDENT_DELETE = "STUDENT_DELETE";
@@ -884,12 +950,14 @@ public final class DmsConstants {
     /** Mã đối tượng audit/timeline tách khỏi mã quyền để giữ nguyên dữ liệu lịch sử. */
     public static final class EntityType {
         public static final String APPLICATION = "APPLICATION";
+        public static final String ASSIGNMENT = "ASSIGNMENT";
         public static final String BED = "BED";
         public static final String CONTRACT = "CONTRACT";
         public static final String INVOICE = "INVOICE";
         public static final String MAINTENANCE = "MAINTENANCE";
         public static final String NOTIFICATION = "NOTIFICATION";
         public static final String ROOM = "ROOM";
+        public static final String TRANSFER = "TRANSFER";
         public static final String USER = "USER";
         public static final String UTILITY_RATE = "UTILITY_RATE";
 

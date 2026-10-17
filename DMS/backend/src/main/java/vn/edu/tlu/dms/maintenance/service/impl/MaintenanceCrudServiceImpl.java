@@ -80,9 +80,12 @@ public class MaintenanceCrudServiceImpl implements MaintenanceCrudService {
         if (current.get().is(Role.TECHNICIAN) && !current.get().id().equals(row.assignedTo())) {
             throw BusinessException.notFound();
         }
-        if ((!current.get().isAdmin() && !current.get().id().equals(row.requesterId()))
-                || !MaintenanceStatus.OPEN.equals(row.status())) {
-            throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
+        // Ticket của người khác trả 404 để không lộ sự tồn tại của id; ticket đã rời OPEN trả 409.
+        if (!current.get().isAdmin() && !current.get().id().equals(row.requesterId())) {
+            throw BusinessException.notFound();
+        }
+        if (!MaintenanceStatus.OPEN.equals(row.status())) {
+            throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
     }
 

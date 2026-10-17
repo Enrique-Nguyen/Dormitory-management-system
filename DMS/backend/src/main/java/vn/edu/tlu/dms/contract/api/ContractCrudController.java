@@ -65,13 +65,7 @@ public class ContractCrudController {
     @RequirePrivilege(Permission.CONTRACT_EXTENSION_READ)
     @GetMapping("/api/extension-requests/{id}")
     public Object getExtension(@PathVariable Long id) {
-        return service.getStayRequest(true, id);
-    }
-
-    @RequirePrivilege(Permission.ROOM_TRANSFER_READ)
-    @GetMapping("/api/transfer-requests/{id}")
-    public Object getTransfer(@PathVariable Long id) {
-        return service.getStayRequest(false, id);
+        return service.getExtensionRequest(id);
     }
 
     @RequirePrivilege({Permission.CONTRACT_EXTENSION_CREATE, Permission.CONTRACT_EXTENSION_UPDATE})

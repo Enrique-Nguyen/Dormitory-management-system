@@ -1,4 +1,4 @@
-import type { Resource } from '../../constants/authorization'
+import type { Resource, Role } from '../../constants/authorization'
 
 export type CrudRecord = Record<string, unknown> & { id?: number | string }
 export interface CrudField {
@@ -57,4 +57,6 @@ export interface CrudResource {
   noCreate?: boolean
   /** Dòng đã có đủ dữ liệu: không gọi API chi tiết khi mở xem/sửa. */
   inlineDetail?: boolean
+  /** Màn nghiệp vụ riêng theo vai trò: nút Xem điều hướng tới `${đường dẫn}/${id}` thay vì mở modal. */
+  detailRoutes?: Partial<Record<Role, string>>
 }

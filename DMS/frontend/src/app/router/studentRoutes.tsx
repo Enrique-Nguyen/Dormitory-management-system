@@ -3,6 +3,7 @@ import type { RouteObject } from 'react-router'
 import CrudPage from '../../pages/CrudPage'
 import CrudTabsPage from '../../pages/CrudTabsPage'
 import StudentHomePage from '../../pages/student/StudentHomePage'
+import TransferRequestPage from '../../pages/student/TransferRequestPage'
 import RequireRole from '../guards/RequireRole'
 import StudentLayout from '../layouts/StudentLayout'
 
@@ -41,6 +42,7 @@ export const studentRoutes: RouteObject = {
             />
           ),
         },
+        { path: 'requests/transfers/:id', element: <TransferRequestPage /> },
         { path: 'invoices', element: <CrudPage resource="myInvoices" /> },
         { path: 'deposit', element: <CrudPage resource="deposits" /> },
         { path: 'maintenance', element: <CrudPage resource="maintenance" /> },

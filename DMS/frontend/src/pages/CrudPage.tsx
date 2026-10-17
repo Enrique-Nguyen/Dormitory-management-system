@@ -36,7 +36,6 @@ import {
   Form,
   Result,
   Space,
-  Tag,
   Tooltip,
   Typography,
 } from 'antd'
@@ -925,7 +924,6 @@ export default function CrudPage({ resource }: { resource: string }) {
               ...config.columns.map((column) => ({
                 title: column.label,
                 key: column.key,
-                minWidth: 150,
                 render: (_: unknown, row: CrudRecord) => (
                   <span>{display(readValue(row, column.key))}</span>
                 ),
@@ -941,7 +939,9 @@ export default function CrudPage({ resource }: { resource: string }) {
                         size="small"
                         icon={<EyeOutlined />}
                         onClick={() => {
-                          void showDetail(row)
+                          const route = role && config.detailRoutes?.[role]
+                          if (route) navigate(`${route}/${String(row[idKey])}`)
+                          else void showDetail(row)
                         }}
                         aria-label="Xem chi tiết"
                       />
@@ -1210,19 +1210,6 @@ export default function CrudPage({ resource }: { resource: string }) {
                     ))}
                 </Space>
               )}
-            {resource === 'rooms' && Array.isArray(activeRecord.beds) && (
-              <BedCrudPanel
-                roomId={Number(activeRecord.id)}
-                beds={activeRecord.beds as CrudRecord[]}
-                reload={async () => {
-                  const updated = (await api.get(`/rooms/${activeRecord.id}`))
-                    .data as CrudRecord
-                  setActiveRecord(updated)
-                  populateForm(updated)
-                  await refresh()
-                }}
-              />
-            )}
             {['items', 'transactions', 'timeline'].map(
               (key) =>
                 Array.isArray(activeRecord[key]) && (
@@ -1249,174 +1236,5 @@ export default function CrudPage({ resource }: { resource: string }) {
         )}
       </Modal>
     </>
-  )
-}
-
-/** Bảng giường con của phòng: thêm, sửa mã và xóa giường chưa từng được phân. */
-function BedCrudPanel({
-  roomId,
-  beds,
-  reload,
-}: {
-  roomId: number
-  beds: CrudRecord[]
-  reload: () => Promise<void>
-}) {
-  const { modal } = App.useApp()
-  const handleApiError = useApiErrorHandler()
-  const { data: me } = useMe()
-  const canRead = hasPermission(me, Permission.BED_READ)
-  const canCreate = hasPermission(me, Permission.BED_CREATE)
-  const canUpdate = hasPermission(me, Permission.BED_UPDATE)
-  const canDelete = hasPermission(me, Permission.BED_DELETE)
-  const [form] = Form.useForm()
-  const [editing, setEditing] = useState<CrudRecord | null | undefined>()
-  const [busy, setBusy] = useState(false)
-
-  // Khởi tạo mã giường cho modal con khi mở hoặc đổi giường
-  useEffect(() => {
-    if (editing) {
-      form.setFieldsValue({ code: editing.code ?? '' })
-    } else if (editing === null) {
-      form.resetFields()
-    }
-  }, [editing, form])
-
-  async function save(values: Record<string, unknown>) {
-    if (editing ? !canUpdate : !canCreate) return
-    setBusy(true)
-    try {
-      await saveOrUpdate('/beds', {
-        code: values.code,
-        roomId,
-        ...(editing ? { id: editing.id } : {}),
-      })
-      setEditing(undefined)
-      form.resetFields()
-      await reload()
-    } catch (e) {
-      form.setFields(
-        validationFieldErrors(e).map((item) => ({
-          name: item.field,
-          errors: [item.message],
-        })),
-      )
-      handleApiError(e)
-    } finally {
-      setBusy(false)
-    }
-  }
-  if (!canRead) return null
-  return (
-    <Card
-      title="Giường trong phòng"
-      style={{ marginTop: 16 }}
-      extra={
-        canCreate && (
-          <Button
-            onClick={() => {
-              form.resetFields()
-              setEditing(null)
-            }}
-          >
-            Thêm giường
-          </Button>
-        )
-      }
-    >
-      <Table<CrudRecord>
-        rowKey="id"
-        pagination={false}
-        dataSource={beds}
-        columns={[
-          { title: 'Mã', dataIndex: 'code' },
-          {
-            title: 'Trạng thái',
-            dataIndex: 'status',
-            render: (value) => <Tag>{display(value)}</Tag>,
-          },
-          { title: 'Người ở', dataIndex: 'occupant', render: display },
-          {
-            title: 'Thao tác',
-            key: 'actions',
-            width: 100,
-            render: (_, bed) => (
-              <Space size={4} wrap={false}>
-                {canUpdate && (
-                  <Tooltip title="Sửa mã giường">
-                    <Button
-                      size="small"
-                      icon={<EditOutlined />}
-                      onClick={() => {
-                        setEditing(bed)
-                      }}
-                      aria-label="Sửa mã giường"
-                    />
-                  </Tooltip>
-                )}
-                {canDelete && (
-                  <Tooltip title="Xóa giường">
-                    <Button
-                      size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() =>
-                        modal.confirm({
-                          title: 'Xóa giường chưa có lịch sử?',
-                          onOk: async () => {
-                            try {
-                              await writeCrudRecord(`/beds/${bed.id}`, 'delete')
-                              await reload()
-                            } catch (e) {
-                              handleApiError(e)
-                              throw e
-                            }
-                          },
-                        })
-                      }
-                      aria-label="Xóa giường"
-                    />
-                  </Tooltip>
-                )}
-              </Space>
-            ),
-          },
-        ]}
-      />
-      <Modal
-        title={editing ? 'Sửa giường' : 'Thêm giường'}
-        open={editing !== undefined}
-        destroyOnHidden
-        onCancel={() => {
-          setEditing(undefined)
-          form.resetFields()
-        }}
-        onOk={() => form.submit()}
-        confirmLoading={busy}
-        okText="Lưu"
-        cancelText="Đóng"
-      >
-        <Form
-          form={form}
-          key={editing?.id != null ? `bed-${editing.id}` : 'bed-new'}
-          initialValues={{ code: editing?.code ?? '' }}
-          preserve={false}
-          onFinish={(values) => {
-            void save(values)
-          }}
-        >
-          <Form.Item
-            name="code"
-            label="Mã giường"
-            rules={[
-              { required: true, message: 'Nhập mã giường' },
-              { max: 10, message: 'Tối đa 10 ký tự' },
-            ]}
-          >
-            <Input />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </Card>
   )
 }

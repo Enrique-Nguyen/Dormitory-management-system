@@ -4,7 +4,7 @@ Nhánh triển khai: `develop-quyennnv`. Backend giữ Spring Boot 3.5, Java 17+
 
 ## Cấu trúc và cách đọc mã
 
-Quy tắc không hardcode được ghi tại `../../AGENTS.md` và mục tương ứng trong `../../CLAUDE.md`. `DmsConstants.ErrorCode` là nguồn 51 mã lỗi hiện dùng; HTTP status dùng `HttpStatus`/factory `BusinessException`. `PermissionCatalog`, `PermissionMessage` và `ApiField` giữ danh mục/nhãn/thông báo/tên trường của ma trận; Service Impl xử lý logic và đọc quyền động từ CSDL. Refactor ngày 15/10/2026 đã kiểm chứng bằng clean verify **74/74 test**, gồm kiểm tra registry đủ 105 quyền và giữ nguyên hợp đồng lỗi/HTTP hiện có.
+Quy tắc không hardcode được ghi tại `../../AGENTS.md` và mục tương ứng trong `../../CLAUDE.md`. `DmsConstants.ErrorCode` là nguồn mã lỗi hiện dùng; HTTP status dùng `HttpStatus`/factory `BusinessException`. `PermissionCatalog`, `PermissionMessage` và `ApiField` giữ danh mục/nhãn/thông báo/tên trường của ma trận; Service Impl xử lý logic và đọc quyền động từ CSDL. Clean verify đạt **108/108 test**, gồm kiểm tra registry đủ 106 quyền và giữ nguyên hợp đồng lỗi/HTTP hiện có.
 
 Mỗi module có `domain` (entity), `repository`, `service` và `api` (Controller, request/response DTO). Toàn bộ `service/<Tên>Service.java` là interface, chỉ khai báo chữ ký hàm và JavaDoc tiếng Việt. Logic nằm trong `service/impl/<Tên>ServiceImpl.java`, dùng `implements <Tên>Service`, constructor injection và `@Service`. Transaction đặt trên Impl; Controller và các module khác gọi qua interface. Các hàm overload cũng được triển khai trong Impl, không dùng `default` chứa thân hàm ở interface.
 
@@ -23,14 +23,15 @@ Tên hàm dùng tiếng Anh rõ nghĩa; JavaDoc và ghi chú quan trọng dùng 
 - Sinh viên: POST `/api/(admin/)students/save-or-update` với ID trong body giữ nguyên trường không gửi (chỉ cần gửi trường muốn đổi).
 - Hồ sơ: đọc và sửa các trường được phép của chính mình. Cấu hình hệ thống: Admin đọc và cập nhật các khóa hiện có.
 - Danh mục: đơn vị quản lý, tòa nhà, loại phòng, học kỳ, diện ưu tiên có tìm kiếm phân trang/chi tiết/lưu chung/xóa. Request sửa qua save-or-update giữ nguyên trường không gửi hoặc gửi null; khung chưa hỗ trợ dùng null để xóa giá trị tùy chọn.
-- Phòng/giường: phân trang và lọc phòng; đọc chi tiết có giường/người ở; tạo phòng tự sinh giường; sửa (đổi loại phòng trống đồng bộ số giường theo loại mới, đổi bedCount của loại phòng đang dùng trả 409 RESOURCE_IN_USE), đổi trạng thái có lý do, thêm giường, xóa phòng/giường chưa từng có phân phòng; chỉ định/gỡ trưởng phòng và ghi nhật ký.
+- Phòng/giường: phân trang và lọc phòng; đọc chi tiết có giường/người ở, cờ cảnh báo thiếu trưởng phòng (`missingLeader`), thông tin trưởng phòng (`leader`) và lịch sử thay đổi trưởng phòng (`leaderHistory`) từ `audit_log`; tạo phòng tự sinh giường; sửa (đổi loại phòng trống thì số giường đồng bộ theo loại mới; đổi `bedCount` của loại phòng đang dùng trả 409), đổi trạng thái có lý do, thêm/sửa giường qua save-or-update, xóa phòng/giường chưa từng có phân phòng; chỉ định/gỡ trưởng phòng (idempotent, không ghi audit thừa); cung cấp API giường trống `GET /api/beds/available` cho split view phân giường và duyệt chuyển phòng.
+- Dịch vụ chỗ ở (`BedOccupancyService` & `OccupancyQuery`): quản lý vòng đời phân phòng/chỗ ở tập trung trong module room: chiếm giữ chỗ (`occupyHold`), kích hoạt ở (`occupyStay`), chuyển giữ chỗ sang ở (`convertHoldToStay`), trả phòng (`release`), chuyển phòng (`transfer`); khóa giường theo `bed_id` tăng dần chống deadlock, khóa sinh viên và kiểm tra lại trạng thái sau khi khóa; chụp đơn giá loại phòng vào lịch sử.
 - Đợt đăng ký: tạo, tìm kiếm, đọc, sửa, lưu đơn vị áp dụng và chỉ tiêu; xóa đợt chưa mở và chưa có đơn. Đợt đã mở chỉ được gia hạn ngày đóng. Staff chỉ ghi đợt mà đơn vị mình là đơn vị duy nhất; đợt dùng chung ngoài phạm vi ghi trả 404.
 - Đơn đăng ký: tạo/sửa DRAFT, nộp, duyệt, từ chối có lý do, hủy khi còn DRAFT/SUBMITTED/APPROVED (APPROVED đã có hợp đồng PENDING/ACTIVE trả 409 APPLICATION_HAS_CONTRACT); đọc danh sách/chi tiết theo quyền và timeline.
 - Sửa chữa: tạo ticket và ảnh, danh sách/chi tiết, giao kỹ thuật viên cùng đơn vị, bắt đầu, ghi chú tiến độ, hoàn thành, nghiệm thu, mở lại, từ chối và hủy theo Policy.
 - Điện nước: CRUD chỉ số từng phòng/tháng, tiêu thụ do CSDL tính. Chỉ số đã được dùng trong hóa đơn không được sửa/xóa. Đơn giá đã có hiệu lực giữ lịch sử; chỉ sửa/xóa bản giá tương lai do mình tạo.
 - Hóa đơn: tìm kiếm/chi tiết và CRUD hồ sơ UNPAID chưa có dòng chi tiết hoặc lịch sử. Form nhập tổng tiền và hạn đóng, chưa tự phát hành/tính tiền. Endpoint xác nhận thanh toán có sẵn được giữ lại.
 - Hợp đồng: tìm kiếm/chi tiết và CRUD hồ sơ PENDING từ đơn đã duyệt, chưa có phân giường/tiền cọc/lịch sử. Form chỉ lưu ngày bắt đầu/kết thúc; không kích hoạt hợp đồng.
-- Yêu cầu gia hạn, chuyển phòng và lựa chọn hè: sinh viên CRUD hồ sơ PENDING của mình; Staff tra cứu theo phạm vi. Chưa xét duyệt hay thay đổi hợp đồng/chỗ ở.
+- Yêu cầu gia hạn, chuyển phòng và lựa chọn hè: sinh viên CRUD hồ sơ PENDING của mình; Staff tra cứu theo phạm vi. Riêng yêu cầu chuyển phòng đã có đầy đủ luồng duyệt (`approve`), từ chối (`reject`) và hủy (`cancel`) qua `RoomTransferService` và `BedOccupancyService`; kiểm tra quyền `ROOM_TRANSFER_APPROVE`, `ROOM_TRANSFER_DELETE` và trả `TransferDetail` kèm `currentBed`, timeline và `allowedActions`.
 - Sửa chữa dùng save-or-update để lưu nội dung khi OPEN và DELETE chuyển sang CANCELLED cho người tạo; giữ ảnh và lịch sử.
 - Thông báo: CRUD thông báo thủ công của người tạo; sửa tiêu đề/nội dung giữ nguyên phạm vi. Hộp thư có tìm kiếm. Những endpoint đọc/đánh dấu đã đọc và listener có sẵn được giữ lại.
 - Tổng quan: tra cứu sổ cọc, giao dịch cọc, phiếu gửi đồ, phòng của sinh viên và audit log. Các trang này chỉ đọc.
@@ -63,7 +64,12 @@ API giữ tiền tố `/api`, dùng `/search-by-page` và `/save-or-update` theo
 
 ## Giới hạn của khung
 
-Phạm vi hiện tại được chốt là **khung CRUD BE và React đơn giản**, chưa phải toàn bộ MVP. Các chức năng chi tiết để làm sau: import/export, xác minh ưu tiên, phân giường/hủy giữ chỗ, kích hoạt/gia hạn/chuyển/trả phòng, xét duyệt hè/gửi nhận đồ, tự phát hành/điều chỉnh hóa đơn, thu/trừ/bù/hoàn cọc, kết luận chi phí sửa chữa, dashboard/công nợ và job định kỳ.
+Phạm vi hiện tại được chốt là **khung CRUD BE và React đơn giản**, chưa phải toàn bộ MVP. Các chức năng chi tiết để làm sau: import/export, xác minh ưu tiên, phân giường/hủy giữ chỗ, kích hoạt/gia hạn/trả phòng, xét duyệt hè/gửi nhận đồ, tự phát hành/điều chỉnh hóa đơn, thu/trừ/bù/hoàn cọc, kết luận chi phí sửa chữa, dashboard/công nợ và job định kỳ.
+
+Các giới hạn cụ thể liên quan đến chỗ ở và chuyển phòng:
+- Chưa phân lại giường đầu HK1 (`storageRecordId` trong API giường trống chưa triển khai, FR-CON-12 ngoài phạm vi hiện tại).
+- `GET /api/me/room` (nằm trong `OverviewController`, module notification) hiện chỉ trả phòng và giường cơ bản của sinh viên, chưa trả danh sách bạn cùng phòng và trưởng phòng theo FR-ROOM-08.
+- TV3 cần gọi `occupyHold` / `convertHoldToStay` / `release` từ `BedOccupancyService` khi triển khai các luồng phân giường cho đơn đăng ký, kích hoạt hợp đồng và làm thủ tục trả phòng.
 
 Hợp đồng và hóa đơn chỉ sửa/xóa hồ sơ còn đủ điều kiện nêu trên. Lịch sử, audit và sổ cọc chỉ đọc. Xóa đơn đăng ký/ticket trên giao diện là hủy để giữ lịch sử. React không đưa các luồng xử lý chi tiết vào màn CRUD. Những endpoint xử lý đã có từ bước dựng backend được giữ lại, không mở rộng thêm.
 
@@ -104,7 +110,7 @@ Test tích hợp mặc định dùng PostgreSQL Testcontainers và cần Docker.
 .\mvnw.cmd '-Ddms.test.external-db=true' '-Dspring.datasource.url=jdbc:postgresql://localhost:55432/postgres' '-Dspring.datasource.username=dms_test' '-Dspring.datasource.password=test' verify
 ```
 
-Không trỏ test vào CSDL đang sử dụng: test khởi động chạy migration và tạo dữ liệu mẫu. Các case CRUD thông thường có transaction rollback. Kiểm tra xóa/khóa, constraint, quyền, trạng thái và session nằm trong `CrudApiIntegrationTest`; mapping/schema trong `DmsApplicationTests`; phụ thuộc module trong `ModuleDependencyTest`.
+Không trỏ test vào CSDL đang sử dụng: test khởi động chạy migration và tạo dữ liệu mẫu. Các case CRUD thông thường có transaction rollback. Kiểm tra xóa/khóa, constraint, quyền, trạng thái và session nằm trong `CrudApiIntegrationTest`; mapping/schema trong `DmsApplicationTests`; phụ thuộc module trong `ModuleDependencyTest`; kiểm tra chiếm/trả/chuyển giường và ca đồng thời (AT-02, AT-03, chuyển chéo, duyệt kép) trong `BedOccupancyIntegrationTest`; kiểm tra trưởng phòng và lịch sử audit trong `RoomLeaderIntegrationTest`; kiểm tra ma trận chuyển trạng thái chuyển phòng trong `RoomTransferPolicyTest`. Tổng số test backend hiện tại: **108/108 test** đạt.
 
 Kiểm chứng đăng nhập ngày 13/10/2026: `clean verify` đạt 38/38 test trên PostgreSQL kiểm thử riêng, gồm 14 case `AuthenticationSecurityIntegrationTest` cho CSRF/session thật, khóa đồng thời, đổi/reset mật khẩu, thu hồi phiên sau commit và phạm vi Staff. Frontend lint/build đạt. Chưa xác nhận thao tác UI trực tiếp vì công cụ trình duyệt báo `Unable to load browser request-header policy`.
 
@@ -174,3 +180,16 @@ Quyền áp dụng cho mọi tài khoản cùng role trên cùng backend/databas
 Kiểm chứng phần ma trận: backend clean verify đạt **73/73 test**, gồm 13 test mới (thu hồi/khôi phục với token cũ, role không được quản trị, danh sách sai, dữ liệu thiếu/hỏng, version 409, no-op và audit). Backend clean package đạt; React build/lint đạt và 128 kiểm tra runtime helper (27 matrix/fallback, 53 auth/navigation/profile, 48 CRUD query/validation) đạt. Danh mục Role/Action/Resource/Permission của React khớp chính xác class backend đã biên dịch.
 
 Bản local đã chạy migration V5 và health UP. JWT Keycloak thật xác minh /me và GET ma trận bốn role; trình duyệt kiểm tra tick/bỏ READ, tự chọn READ khi tick Sửa, Hủy, cảnh báo đổi role và ADMIN chỉ xem. Không lưu thay đổi quyền trên database local khi thử giao diện; toàn bộ test ghi ma trận dùng PostgreSQL kiểm thử riêng. Danh tính/mật khẩu kiểm thử đã dọn, hồ sơ có audit được khóa và giữ lịch sử. Phần này chỉ thêm 3 Java source, 1 migration và 1 trang React; Service interface/Impl có ghi chú tiếng Việt.
+
+### Phân quyền duyệt chuyển phòng & Migration V6 — 15/10/2026
+
+Bổ sung hành động `APPROVE` và mã quyền `ROOM_TRANSFER_APPROVE` vào catalogue phân quyền trong `DmsConstants.Permission`, nâng tổng số mã quyền của hệ thống từ 105 lên **106** mã.
+
+Flyway `V6__room_transfer_approve_permission.sql` bổ sung mã `ROOM_TRANSFER_APPROVE` vào mảng JSONB của vai trò `STAFF` trong bảng `role_permission_matrix` nếu chưa có:
+- Migration V6 không tăng trường `version` trong bảng và không thay đổi cấu trúc bảng (schema giữ nguyên).
+- Sau migration V6: vai trò `STAFF` mặc định có **73** quyền, `ADMIN` có **106** quyền (toàn bộ catalogue), `STUDENT` giữ 35 quyền và `TECHNICIAN` giữ 11 quyền.
+
+Các test mới cho phần chiếm/trả giường, duyệt chuyển phòng và phân quyền gồm:
+- `BedOccupancyIntegrationTest`: kiểm tra toàn bộ luồng chiếm giữ chỗ (`occupyHold`), kích hoạt (`occupyStay`), chuyển sang ở (`convertHoldToStay`), trả phòng (`release`), chuyển phòng (`transfer`), kiểm tra đơn giá chụp theo loại phòng, và các ca đồng thời AT-02, AT-03, chuyển phòng chéo nhau, hai lượt duyệt đồng thời.
+- `RoomLeaderIntegrationTest`: kiểm tra chỉ định/gỡ trưởng phòng, các ràng buộc `LEADER_ALREADY_ASSIGNED` (kèm `roomCode`), `LEADER_NOT_STAYING`, tự động gỡ trưởng phòng khi phân phòng đóng và đọc lịch sử từ `audit_log`.
+- `RoomTransferPolicyTest`: kiểm tra chuyển trạng thái và `allowedActions` cho yêu cầu chuyển phòng theo vai trò và quyền.

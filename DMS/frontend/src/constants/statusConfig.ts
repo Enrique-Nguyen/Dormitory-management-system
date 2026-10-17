@@ -89,6 +89,7 @@ export const statusConfig: Record<StatusEntity, Record<string, StatusStyle>> = {
     PENDING: s('Chờ duyệt', 'orange', ClockCircleOutlined),
     APPROVED: s('Đã duyệt', 'green', CheckCircleOutlined),
     REJECTED: s('Bị từ chối', 'red', CloseCircleOutlined),
+    CANCELLED: s('Đã hủy', 'gray', StopOutlined),
   },
 }
 
@@ -156,11 +157,19 @@ export const roomOperation: Record<
   ACTIVE: { label: 'Hoạt động', color: 'green' },
   MAINTENANCE: { label: 'Bảo trì', color: 'orange' },
   INACTIVE: { label: 'Ngừng sử dụng', color: 'gray' },
+  CLOSED: { label: 'Đóng', color: 'gray' },
+}
+
+/** Giới tính của phòng (room.gender). */
+export const roomGender: Record<string, string> = {
+  M: 'Nam',
+  F: 'Nữ',
 }
 
 export const bedOperation: Record<string, { label: string }> = {
   ACTIVE: { label: 'Hoạt động' },
   BROKEN: { label: 'Hỏng' },
+  RETIRED: { label: 'Ngừng dùng' },
 }
 
 /** Chiếm dụng giường (tính ra, không lưu): màu nền ô giường trắng / vàng nhạt / xanh. */
@@ -174,6 +183,30 @@ export const bedOccupancy: Record<
   HELD: { label: 'Đang giữ', background: '#FEF3C7', border: '#B45309' },
   OCCUPIED: { label: 'Đang ở', background: '#DCFCE7', border: '#15803D' },
 }
+
+/** Loại phân phòng mở → chiếm dụng giường: giữ chỗ (HOLD) hoặc đang ở (STAY). */
+export const assignmentOccupancy: Record<'HOLD' | 'STAY', BedOccupancy> = {
+  HOLD: 'HELD',
+  STAY: 'OCCUPIED',
+}
+
+/** Loại phân phòng mở của lịch sử phân giường (khớp `room_assignment_history.kind`). */
+export type AssignmentKind = keyof typeof assignmentOccupancy
+
+/** Nhãn chiếm dụng giường (Đang giữ / Đang ở) theo loại phân phòng mở. */
+export function assignmentLabel(kind: AssignmentKind) {
+  return bedOccupancy[assignmentOccupancy[kind]].label
+}
+
+/** Trạng thái vận hành giường dùng ngoài bảng nhãn (khớp `bed.status`). */
+export const BED_STATUS = { BROKEN: 'BROKEN' } as const
+
+/** Mã hành động của yêu cầu chuyển phòng trong `allowedActions` (khớp API-Spec mục 4.7). */
+export const TRANSFER_ACTION = {
+  APPROVE: 'approve',
+  REJECT: 'reject',
+  CANCEL: 'cancel',
+} as const
 
 /** Nhãn giá trị dùng chung cho bảng/form CRUD; trang nghiệp vụ không tạo bản sao riêng. */
 export const crudValueLabels: Record<string, string> = {

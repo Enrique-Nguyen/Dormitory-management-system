@@ -3,6 +3,8 @@ package vn.edu.tlu.dms.common.service;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 
 public interface AuditService {
@@ -27,4 +29,20 @@ public interface AuditService {
             Object before,
             Object after,
             String reason);
+
+    /**
+     * Đọc nhật ký của một đối tượng theo mã thao tác, sắp xếp theo thời điểm tăng dần; dùng hiển
+     * thị lịch sử nghiệp vụ (ví dụ đổi trưởng phòng). Không kiểm tra quyền AUDIT_READ: nơi gọi phải
+     * kiểm tra quyền đọc và phạm vi của đối tượng trước.
+     */
+    List<EntityLogEntry> listEntityLog(String entityType, Long entityId, String action);
+
+    /** Một dòng nhật ký; giá trị trước/sau giữ dạng JSON đã lưu, actorId null nghĩa là SYSTEM. */
+    public record EntityLogEntry(
+            Long actorId,
+            String actorName,
+            String oldValue,
+            String newValue,
+            String reason,
+            OffsetDateTime at) {}
 }

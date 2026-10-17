@@ -38,3 +38,8 @@ export function daysLeft(value: DateInput): number | null {
   if (!value) return null
   return dayjs(value).startOf('day').diff(dayjs().startOf('day'), 'day')
 }
+
+/** Mã đầy đủ của giường: tòa-phòng-giường ("A1-101-03"). */
+export function formatBedCode(buildingCode: string, roomCode: string, bedCode: string) {
+  return `${buildingCode}-${roomCode}-${bedCode}`
+}

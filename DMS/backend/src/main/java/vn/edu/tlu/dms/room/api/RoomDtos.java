@@ -11,6 +11,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Gender;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RoomStatus;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 public final class RoomDtos {
@@ -82,5 +83,48 @@ public final class RoomDtos {
             long heldBeds,
             long occupiedBeds,
             long freeBeds,
-            List<BedResponse> beds) {}
+            boolean missingLeader,
+            StudentRef leader,
+            List<BedResponse> beds,
+            List<LeaderChange> leaderHistory) {}
+
+    /**
+     * Sinh viên tham chiếu trong thông tin phòng; studentCode là tên đăng nhập (mã sinh viên).
+     */
+    public record StudentRef(Long id, String fullName, String studentCode) {}
+
+    /**
+     * Một lần đổi trưởng phòng đọc từ audit_log (FR-ROOM-09); actor null là hệ thống tự gỡ khi
+     * phân phòng của trưởng phòng đóng (FR-ROOM-10).
+     */
+    public record LeaderChange(
+            StudentRef from,
+            StudentRef to,
+            Long actorId,
+            String actorName,
+            String reason,
+            OffsetDateTime at) {}
+
+    /** Phòng còn giường trống cho split view chọn giường (API 4.4); số liệu tính từ view. */
+    public record AvailableRoom(
+            RoomRef room,
+            boolean matchesPreferredType,
+            List<FreeBed> freeBeds,
+            long activeBeds,
+            long occupiedCount,
+            long heldCount) {}
+
+    public record RoomRef(
+            Long id,
+            String code,
+            Long buildingId,
+            String buildingCode,
+            Short floor,
+            RoomTypeRef roomType,
+            String gender,
+            Long priceMain) {}
+
+    public record RoomTypeRef(Long id, String name) {}
+
+    public record FreeBed(Long id, String code) {}
 }

@@ -95,6 +95,7 @@ export function permissionsForPath(path: string): Permission[] {
     rooms: [Permission.ROOM_READ],
     room: [Permission.ROOM_READ],
     contracts: [Permission.CONTRACT_READ],
+    transfers: [Permission.ROOM_TRANSFER_READ],
     requests: [
       Permission.CONTRACT_EXTENSION_READ,
       Permission.ROOM_TRANSFER_READ,
@@ -153,6 +154,20 @@ export const roleLabel: Record<Role, string> = {
 /** Mục "Yêu cầu chờ xử lý" mang badge số lượng (UI 4.2). */
 export const STAFF_REQUESTS_PATH = '/staff/requests'
 
+/** Màn nghiệp vụ chi tiết (TV2): route, link từ danh sách CRUD và breadcrumb dùng chung. */
+export const STAFF_ROOMS_PATH = '/staff/rooms'
+export const STAFF_TRANSFERS_PATH = '/staff/transfers'
+
+/** Admin dùng lại màn quản lý của Staff dưới cổng `/admin`; Staff giữ nguyên đường dẫn. */
+export function portalPath(role: Role | undefined, staffPath: string) {
+  return role === Role.ADMIN
+    ? staffPath.replace(rolePortal[Role.STAFF], rolePortal[Role.ADMIN])
+    : staffPath
+}
+
+export const STUDENT_REQUESTS_PATH = '/student/requests'
+export const STUDENT_TRANSFERS_PATH = `${STUDENT_REQUESTS_PATH}/transfers`
+
 /** Danh mục phục vụ nghiệp vụ, dùng chung giữa cổng quản lý và cổng quản trị. */
 const catalogNav: NavGroup = {
   title: 'Danh mục',
@@ -174,7 +189,7 @@ export const staffNav: NavGroup[] = [
     title: 'Quản lý',
     items: [
       item('Đơn đăng ký', '/staff/applications', FileTextOutlined),
-      item('Phòng & Giường', '/staff/rooms', HomeOutlined),
+      item('Phòng & Giường', STAFF_ROOMS_PATH, HomeOutlined),
       item('Sinh viên', '/staff/students', TeamOutlined),
       item('Hợp đồng', '/staff/contracts', SolutionOutlined),
       item('Kỳ hè', '/staff/summer', InboxOutlined),
@@ -257,7 +272,7 @@ export const studentMoreNav: NavItem[] = [
   item('Hợp đồng', '/student/contracts', SolutionOutlined),
   item(
     'Yêu cầu gia hạn / chuyển phòng',
-    '/student/requests',
+    STUDENT_REQUESTS_PATH,
     ClockCircleOutlined,
   ),
   item('Tiền cọc', '/student/deposit', WalletOutlined),

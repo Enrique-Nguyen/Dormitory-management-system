@@ -13,14 +13,18 @@ import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.contract.service.ContractService;
+import vn.edu.tlu.dms.contract.service.RoomTransferService;
 
 @RestController
 public class ContractController {
 
     private final ContractService service;
 
-    public ContractController(ContractService service) {
+    private final RoomTransferService transfers;
+
+    public ContractController(ContractService service, RoomTransferService transfers) {
         this.service = service;
+        this.transfers = transfers;
     }
 
     @RequirePrivilege(Permission.CONTRACT_READ)
@@ -47,5 +51,31 @@ public class ContractController {
     @GetMapping("/api/me/contract")
     public ContractDtos.Response getMyCurrentContract() {
         return service.getMyCurrentContract();
+    }
+
+    @RequirePrivilege(Permission.ROOM_TRANSFER_READ)
+    @GetMapping("/api/transfer-requests/{id}")
+    public ContractDtos.TransferDetail getTransfer(@PathVariable Long id) {
+        return transfers.getTransferRequest(id);
+    }
+
+    @RequirePrivilege(Permission.ROOM_TRANSFER_APPROVE)
+    @PostMapping("/api/transfer-requests/{id}/approve")
+    public ContractDtos.TransferDetail approveTransfer(
+            @PathVariable Long id, @RequestBody ContractDtos.TransferApproveRequest body) {
+        return transfers.approve(id, body.targetBedId());
+    }
+
+    @RequirePrivilege(Permission.ROOM_TRANSFER_APPROVE)
+    @PostMapping("/api/transfer-requests/{id}/reject")
+    public ContractDtos.TransferDetail rejectTransfer(
+            @PathVariable Long id, @RequestBody ContractDtos.TransferRejectRequest body) {
+        return transfers.reject(id, body.reason());
+    }
+
+    @RequirePrivilege(Permission.ROOM_TRANSFER_DELETE)
+    @PostMapping("/api/transfer-requests/{id}/cancel")
+    public ContractDtos.TransferDetail cancelTransfer(@PathVariable Long id) {
+        return transfers.cancel(id);
     }
 }

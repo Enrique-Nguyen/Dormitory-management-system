@@ -449,7 +449,7 @@ class KeycloakAccountIntegrationTest {
         }
         mvc.perform(get("/api/auth/me").with(token(subject, Role.ADMIN, 0)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.permissions.length()").value(105))
+                .andExpect(jsonPath("$.permissions.length()").value(Permission.ALL.size()))
                 .andExpect(
                         jsonPath("$.permissions").value(hasItem(Permission.ROLE_PERMISSION_READ)))
                 .andExpect(
@@ -462,7 +462,7 @@ class KeycloakAccountIntegrationTest {
     void adminReadsCompleteMatrixWithEligibilityAndRequiredProfileMetadata() throws Exception {
         JsonNode adminMatrix = readMatrix(Role.ADMIN);
         assertThat(adminMatrix.path("readOnly").asBoolean()).isTrue();
-        assertThat(matrixPrivileges(adminMatrix)).hasSize(105);
+        assertThat(matrixPrivileges(adminMatrix)).hasSize(Permission.ALL.size());
         for (JsonNode privilege : matrixPrivileges(adminMatrix)) {
             assertThat(privilege.path("granted").asBoolean()).isTrue();
             assertThat(privilege.path("assignable").asBoolean()).isFalse();
@@ -631,7 +631,7 @@ class KeycloakAccountIntegrationTest {
                                                     + " role_permission_matrix WHERE role='STAFF'",
                                                 String.class))
                                 .size())
-                .isEqualTo(72);
+                .isEqualTo(ScopeGuard.permissionsForRole(Role.STAFF).size());
         assertThat(matrixAuditCount()).isZero();
     }
 
@@ -690,10 +690,12 @@ class KeycloakAccountIntegrationTest {
         JsonNode after = mapper.readTree((String) audit.get("new_value"));
         assertThat(before.path("role").asText()).isEqualTo(Role.STAFF);
         assertThat(before.path("version").asLong()).isZero();
-        assertThat(before.path("permissions").size()).isEqualTo(72);
+        assertThat(before.path("permissions").size())
+                .isEqualTo(ScopeGuard.permissionsForRole(Role.STAFF).size());
         assertThat(after.path("role").asText()).isEqualTo(Role.STAFF);
         assertThat(after.path("version").asLong()).isEqualTo(1);
-        assertThat(after.path("permissions").size()).isEqualTo(71);
+        assertThat(after.path("permissions").size())
+                .isEqualTo(ScopeGuard.permissionsForRole(Role.STAFF).size() - 1);
         var afterCodes = new ArrayList<String>();
         after.path("permissions").forEach(value -> afterCodes.add(value.asText()));
         assertThat(afterCodes).doesNotContain(Permission.ROOM_DELETE);
@@ -720,7 +722,7 @@ class KeycloakAccountIntegrationTest {
         assertThat(matrixAuditCount()).isZero();
         mvc.perform(get("/api/auth/me").with(token(subject, Role.ADMIN, 0)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.permissions.length()").value(105));
+                .andExpect(jsonPath("$.permissions.length()").value(Permission.ALL.size()));
     }
 
     /** Mất cấu hình không tự hồi sinh quyền mặc định; ADMIN vẫn truy cập để chẩn đoán. */
@@ -743,7 +745,7 @@ class KeycloakAccountIntegrationTest {
                 .andExpect(status().isConflict());
         mvc.perform(get("/api/auth/me").with(token(subject, Role.ADMIN, 0)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.permissions.length()").value(105));
+                .andExpect(jsonPath("$.permissions.length()").value(Permission.ALL.size()));
     }
 
     /** Dữ liệu quyền hỏng hoặc tự chèn quyền ngoài vai trò phải khóa cả bộ quyền của vai trò đó. */

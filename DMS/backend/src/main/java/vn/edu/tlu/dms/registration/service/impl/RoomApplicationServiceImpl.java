@@ -292,9 +292,13 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         return toApplicationResponse(a, true);
     }
 
+    /**
+     * Kiểm tra mọi trạng thái đơn (kể cả ASSIGNED). Không cần khóa hợp đồng: đơn đã bị khóa
+     * FOR UPDATE ở {@code loadAccessibleApplication}, còn tạo hợp đồng cũng khóa cùng hàng đơn rồi
+     * kiểm tra trạng thái nên hai thao tác luôn tuần tự.
+     */
     private boolean hasLiveContract(RoomApplication a) {
-        return a.getStatus().equals(ApplicationStatus.APPROVED)
-                && contracts.hasLiveContractForApplication(a.getId());
+        return contracts.hasLiveContractForApplication(a.getId());
     }
 
     private RoomApplication loadAccessibleApplication(Long id, boolean writing) {

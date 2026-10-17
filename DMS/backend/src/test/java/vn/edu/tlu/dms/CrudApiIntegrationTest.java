@@ -34,6 +34,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -803,6 +804,139 @@ class CrudApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.severity").value("HIGH"))
                 .andExpect(jsonPath("$.category").value("WATER"));
+    }
+
+    @Test
+    void maintenanceEditHidesForeignTicketsAndRejectsNonOpenOnes() throws Exception {
+        Long otherStudentId =
+                jdbc.queryForObject(
+                        "INSERT INTO app_user(username,role,full_name,must_change_password,"
+                                + "keycloak_user_id) VALUES(?,'STUDENT','Sinh viên khác',false,?)"
+                                + " RETURNING id",
+                        Long.class,
+                        "other" + suffix,
+                        UUID.randomUUID().toString());
+        Long ticketId =
+                jdbc.queryForObject(
+                        """
+                        INSERT INTO maintenance_request(code,requester_id,building_id,floor,category,severity,description)
+                        VALUES (?,?,?,1,'ELECTRIC','LOW','Đèn hỏng') RETURNING id
+                        """,
+                        Long.class,
+                        "TK-" + suffix,
+                        studentId,
+                        firstBuildingId);
+        String body =
+                """
+                {"category":"WATER","severity":"HIGH","description":"Vòi nước hỏng"}
+                """;
+        mvc.perform(
+                        ticketEdit(ticketId, body)
+                                .with(asUser(otherStudentId, "STUDENT")))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        ticketEdit(ticketId + 100000, body)
+                                .with(asUser(studentId, "STUDENT")))
+                .andExpect(status().isNotFound());
+        jdbc.update(
+                "UPDATE maintenance_request SET status='ASSIGNED', assigned_to=? WHERE id=?",
+                technicianId,
+                ticketId);
+        mvc.perform(
+                        ticketEdit(ticketId, body)
+                                .with(asUser(studentId, "STUDENT")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_STATE_TRANSITION"));
+    }
+
+    @Test
+    void savingRoomWithUnknownRoomTypeIsNotFoundAndNotReportedAsInUse() throws Exception {
+        mvc.perform(
+                        post("/api/rooms/save-or-update")
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {"buildingId":%d,"roomTypeId":%d,"floor":1,"code":"Z999","gender":"M"}
+                                        """
+                                                .formatted(firstBuildingId, roomTypeId + 100000)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value(org.hamcrest.Matchers.not("RESOURCE_IN_USE")));
+    }
+
+    @Test
+    void shrinkingRoomTypeRetiresBedsWithHistoryAndGrowingReactivatesThem() throws Exception {
+        Long fourBeds =
+                jdbc.queryForObject(
+                        "INSERT INTO room_type(name,bed_count,price_main,price_summer) VALUES"
+                                + " (?,4,1000000,500000) RETURNING id",
+                        Long.class,
+                        "Bốn " + suffix);
+        String response =
+                mvc.perform(
+                                post("/api/rooms/save-or-update")
+                                        .with(asUser(staffId, "STAFF"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                """
+                                                {"buildingId":%d,"roomTypeId":%d,"floor":2,"code":"A104","gender":"M"}
+                                                """
+                                                        .formatted(firstBuildingId, fourBeds)))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.beds.length()").value(4))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long roomId = mapper.readTree(response).get("id").asLong();
+        Long bed04 =
+                jdbc.queryForObject(
+                        "SELECT id FROM bed WHERE room_id=? AND code='04'", Long.class, roomId);
+        Long applicationId = createDraftApplication(createOpenPeriod());
+        Long contractId =
+                jdbc.queryForObject(
+                        """
+                        INSERT INTO dormitory_contract(code,student_id,application_id,start_date,end_date,activation_deadline,status)
+                        VALUES (?,?,?,current_date,current_date+30,now()+interval '7 days','CANCELLED') RETURNING id
+                        """,
+                        Long.class,
+                        "HD-" + suffix,
+                        studentId,
+                        applicationId);
+        jdbc.update(
+                """
+                INSERT INTO room_assignment_history(student_id,contract_id,bed_id,kind,started_at,ended_at,end_reason,price_main,price_summer,created_by)
+                VALUES(?,?,?,'HOLD',now()-interval '2 days',now()-interval '1 day','HOLD_CANCELLED',1000000,500000,?)
+                """,
+                studentId,
+                contractId,
+                bed04,
+                staffId);
+        mvc.perform(
+                        post("/api/rooms/save-or-update")
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(withId(roomId, "{\"roomTypeId\":" + roomTypeId + "}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activeBeds").value(2));
+        assertThat(jdbc.queryForObject("SELECT status FROM bed WHERE id=?", String.class, bed04))
+                .isEqualTo("RETIRED");
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM bed WHERE room_id=?", Long.class, roomId))
+                .isEqualTo(3L);
+        mvc.perform(
+                        post("/api/rooms/save-or-update")
+                                .with(asUser(staffId, "STAFF"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(withId(roomId, "{\"roomTypeId\":" + fourBeds + "}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activeBeds").value(4));
+        assertThat(jdbc.queryForObject("SELECT status FROM bed WHERE id=?", String.class, bed04))
+                .isEqualTo("ACTIVE");
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM bed WHERE room_id=?", Long.class, roomId))
+                .isEqualTo(4L);
     }
 
     @Test
@@ -2575,6 +2709,17 @@ class CrudApiIntegrationTest {
     }
 
     /** Giữ nguyên payload cập nhật từng phần; id chỉ chọn bản ghi, không cho phép tạo ngầm. */
+    private MockMultipartHttpServletRequestBuilder ticketEdit(Long ticketId, String payload)
+            throws Exception {
+        return multipart("/api/maintenance-requests/save-or-update")
+                .file(
+                        new MockMultipartFile(
+                                "data",
+                                "data.json",
+                                MediaType.APPLICATION_JSON_VALUE,
+                                withId(ticketId, payload).getBytes(StandardCharsets.UTF_8)));
+    }
+
     private String withId(Long targetId, String payload) throws Exception {
         ObjectNode body = (ObjectNode) mapper.readTree(payload);
         body.put("id", targetId);

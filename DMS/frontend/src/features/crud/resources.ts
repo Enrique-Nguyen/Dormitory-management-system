@@ -1,4 +1,10 @@
 import { Resource, Role } from '../../constants/authorization'
+import {
+  portalPath,
+  STAFF_ROOMS_PATH,
+  STAFF_TRANSFERS_PATH,
+  STUDENT_TRANSFERS_PATH,
+} from '../../constants/navigation'
 import type { CrudField, CrudResource } from './types'
 
 const text = (
@@ -287,7 +293,11 @@ export const resources: Record<string, CrudResource> = {
       ['status', 'Trạng thái'],
       ['freeBeds', 'Giường trống'],
     ),
-    note: 'Phòng từng có phân phòng không được xóa. Xem chi tiết để quản lý giường.',
+    note: 'Phòng từng có phân phòng không được xóa. Xem chi tiết để quản lý giường và trưởng phòng.',
+    detailRoutes: {
+      [Role.STAFF]: STAFF_ROOMS_PATH,
+      [Role.ADMIN]: portalPath(Role.ADMIN, STAFF_ROOMS_PATH),
+    },
   },
   periods: {
     closeAtOnlyAfterOpen: true,
@@ -464,6 +474,14 @@ export const resources: Record<string, CrudResource> = {
       ['status', 'Trạng thái'],
     ),
     editStates: ['PENDING'],
+    // Hủy giữ lại yêu cầu và lịch sử (POST /cancel), không xóa cứng.
+    deleteLabel: 'Hủy',
+    deleteAction: 'cancel',
+    detailRoutes: {
+      [Role.STAFF]: STAFF_TRANSFERS_PATH,
+      [Role.ADMIN]: portalPath(Role.ADMIN, STAFF_TRANSFERS_PATH),
+      [Role.STUDENT]: STUDENT_TRANSFERS_PATH,
+    },
   },
   summer: {
     permission: Resource.SUMMER_REGISTRATION,
