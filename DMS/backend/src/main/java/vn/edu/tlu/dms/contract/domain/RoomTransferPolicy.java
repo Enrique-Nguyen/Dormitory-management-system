@@ -2,6 +2,7 @@ package vn.edu.tlu.dms.contract.domain;
 
 import org.springframework.http.HttpStatus;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
@@ -53,6 +54,6 @@ public final class RoomTransferPolicy {
         throw new BusinessException(
                 ErrorCode.INVALID_STATE_TRANSITION,
                 HttpStatus.CONFLICT,
-                Map.of("currentStatus", status));
+                Map.of(ApiField.CURRENT_STATUS, status));
     }
 }

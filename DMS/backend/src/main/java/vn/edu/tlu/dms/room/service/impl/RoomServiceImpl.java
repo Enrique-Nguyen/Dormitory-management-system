@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
@@ -220,9 +221,9 @@ public class RoomServiceImpl implements RoomService {
                 };
         var found = rooms.findAll(spec, pageable);
         // Nạp số liệu công suất của cả trang bằng một truy vấn thay vì mỗi phòng một truy vấn.
-        var occupancy = loadOccupancy(found.getContent().stream().map(Room::getId).toList());
+        var occupancyByRoom = loadOccupancy(found.getContent().stream().map(Room::getId).toList());
         return PageResponse.from(
-                found.map(r -> toRoomResponse(r, false, occupancy.get(r.getId()))));
+                found.map(r -> toRoomResponse(r, false, occupancyByRoom.get(r.getId()))));
     }
 
     @Override
@@ -277,10 +278,10 @@ public class RoomServiceImpl implements RoomService {
         if (input.buildingId() != null && !input.buildingId().equals(r.getBuildingId())) {
             throw BusinessException.invalid("buildingId", "Không chuyển phòng sang tòa khác");
         }
+        boolean typeChanged =
+                input.roomTypeId() != null && !input.roomTypeId().equals(r.getRoomTypeId());
         boolean sensitive =
-                input.gender() != null && !input.gender().equals(r.getGender())
-                        || input.roomTypeId() != null
-                                && !input.roomTypeId().equals(r.getRoomTypeId());
+                input.gender() != null && !input.gender().equals(r.getGender()) || typeChanged;
         if (sensitive) {
             requireRoomWithoutOpenAssignments(r);
         }
@@ -293,8 +294,6 @@ public class RoomServiceImpl implements RoomService {
         if (input.gender() != null) {
             r.setGender(input.gender());
         }
-        boolean typeChanged =
-                input.roomTypeId() != null && !input.roomTypeId().equals(r.getRoomTypeId());
         if (input.roomTypeId() != null) {
             references.requireActiveRoomType(input.roomTypeId());
             r.setRoomTypeId(input.roomTypeId());
@@ -338,7 +337,7 @@ public class RoomServiceImpl implements RoomService {
                 id,
                 before,
                 input.status(),
-                trimRequiredText(input.reason(), "reason"));
+                trimRequiredText(input.reason(), ApiField.REASON));
         return toRoomResponse(r, true, null);
     }
 
@@ -414,7 +413,7 @@ public class RoomServiceImpl implements RoomService {
                 id,
                 before,
                 input.status(),
-                trimRequiredText(input.reason(), "reason"));
+                trimRequiredText(input.reason(), ApiField.REASON));
         return toBedResponse(bed);
     }
 
@@ -484,7 +483,7 @@ public class RoomServiceImpl implements RoomService {
             throw new BusinessException(
                     ErrorCode.LEADER_NOT_STAYING,
                     HttpStatus.CONFLICT,
-                    Map.of("roomCode", r.getCode()));
+                    Map.of(ApiField.ROOM_CODE, r.getCode()));
         }
         Long before = r.getLeaderStudentId();
         if (studentId.equals(before)) {
@@ -501,7 +500,7 @@ public class RoomServiceImpl implements RoomService {
             throw new BusinessException(
                     ErrorCode.LEADER_ALREADY_ASSIGNED,
                     HttpStatus.CONFLICT,
-                    Map.of("roomCode", leading.get(0)));
+                    Map.of(ApiField.ROOM_CODE, leading.get(0)));
         }
         r.setLeaderStudentId(studentId);
         rooms.saveAndFlush(r);
@@ -522,7 +521,7 @@ public class RoomServiceImpl implements RoomService {
         guard.requirePermission(Permission.ROOM_UPDATE);
         lockRoomBedsInAscendingOrder(id);
         var r = findAccessibleRoom(id, true);
-        String trimmedReason = trimRequiredText(reason, "reason");
+        String trimmedReason = trimRequiredText(reason, ApiField.REASON);
         Long before = r.getLeaderStudentId();
         if (before == null) {
             // Đã không có trưởng phòng (gỡ trùng hoặc vừa tự gỡ): không ghi thêm lịch sử.
@@ -739,7 +738,7 @@ public class RoomServiceImpl implements RoomService {
             throw new BusinessException(
                     ErrorCode.ROOM_OCCUPIED,
                     HttpStatus.CONFLICT,
-                    Map.of("roomCode", r.getCode(), "count", count));
+                    Map.of(ApiField.ROOM_CODE, r.getCode(), ApiField.COUNT, count));
         }
     }
 
@@ -792,7 +791,7 @@ public class RoomServiceImpl implements RoomService {
 
     /** Lịch sử đổi trưởng phòng từ audit_log, gồm cả lần hệ thống tự gỡ (FR-ROOM-09, 10). */
     private List<LeaderChange> leaderHistory(Long roomId) {
-        Map<Long, StudentRef> names = new java.util.HashMap<>();
+        Map<Long, StudentRef> names = new HashMap<>();
         return audit
                 .listEntityLog(EntityType.ROOM, roomId, AuditAction.ROOM_LEADER_CHANGE)
                 .stream()
@@ -880,31 +879,5 @@ public class RoomServiceImpl implements RoomService {
             throw BusinessException.invalid(field, ValidationMessage.REQUIRED);
         }
         return value.trim();
-    }
-
-    @Override()
-    public PageResponse<Response> searchRooms(
-            int page,
-            int size,
-            List<String> sort,
-            Long buildingId,
-            Short floor,
-            Long roomTypeId,
-            String gender,
-            String status,
-            Boolean hasFreeBed,
-            Boolean noLeader) {
-        return searchRooms(
-                page,
-                size,
-                sort,
-                buildingId,
-                floor,
-                roomTypeId,
-                gender,
-                status,
-                hasFreeBed,
-                noLeader,
-                "");
     }
 }

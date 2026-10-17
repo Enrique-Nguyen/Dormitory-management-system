@@ -98,6 +98,15 @@ public final class DmsConstants {
         public static final String ROLE = "role";
         public static final String VERSION = "version";
         public static final String PERMISSIONS = "permissions";
+        public static final String REASON = "reason";
+        public static final String END_REASON = "endReason";
+        public static final String TARGET_BED_ID = "targetBedId";
+        public static final String BED_ID = "bedId";
+        public static final String BED_CODE = "bedCode";
+        public static final String ROOM_CODE = "roomCode";
+        public static final String ROOM_GENDER = "roomGender";
+        public static final String COUNT = "count";
+        public static final String CURRENT_STATUS = "currentStatus";
 
         private ApiField() {}
     }

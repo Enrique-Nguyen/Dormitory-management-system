@@ -264,10 +264,9 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
     }
 
     @Override
-    public Object getStayRequest(boolean extension, Long id) {
-        guard.requirePermission(
-                extension ? Permission.CONTRACT_EXTENSION_READ : Permission.ROOM_TRANSFER_READ);
-        var row = queries.one("SELECT * FROM " + table(extension) + " WHERE id=?", id);
+    public Object getExtensionRequest(Long id) {
+        guard.requirePermission(Permission.CONTRACT_EXTENSION_READ);
+        var row = queries.one("SELECT * FROM " + table(true) + " WHERE id=?", id);
         requireContract(((Number) row.get("contractId")).longValue(), false);
         return row;
     }

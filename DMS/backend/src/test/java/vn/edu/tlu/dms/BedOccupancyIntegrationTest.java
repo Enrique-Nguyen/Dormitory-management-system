@@ -43,6 +43,8 @@ import vn.edu.tlu.dms.room.service.BedOccupancyService;
 import vn.edu.tlu.dms.room.service.OccupancyQuery;
 import vn.edu.tlu.dms.room.service.RoomService;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -197,10 +199,9 @@ class BedOccupancyIntegrationTest {
         Long student = createStudent("M");
         Long contract = createContract(student, "PENDING");
 
-        assertThatThrownBy(() -> occupancy.occupyHold(beds.get(5), student, contract, null))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+        assertConflict(
+                () -> occupancy.occupyHold(beds.get(5), student, contract, null),
+                ErrorCode.NOT_FOUND);
     }
 
     @Test
@@ -282,11 +283,9 @@ class BedOccupancyIntegrationTest {
                         isNull(),
                         eq(AuditReason.LEADER_AUTO_REMOVED));
         assertThat(occupancy.release(contract, AssignmentEndReason.MOVE_OUT, null, null)).isEmpty();
-        assertThatThrownBy(
-                        () -> occupancy.release(contract, AssignmentEndReason.TRANSFER, null, null))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.VALIDATION_FAILED));
+        assertConflict(
+                () -> occupancy.release(contract, AssignmentEndReason.TRANSFER, null, null),
+                ErrorCode.VALIDATION_FAILED);
     }
 
     @Test
@@ -359,10 +358,7 @@ class BedOccupancyIntegrationTest {
         Long otherStaff = createUser(Role.STAFF, otherUnitId);
         actAs(otherStaff, Role.STAFF, otherUnitId);
 
-        assertThatThrownBy(() -> occupancy.transfer(contract, beds.get(2), null))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+        assertConflict(() -> occupancy.transfer(contract, beds.get(2), null), ErrorCode.NOT_FOUND);
     }
 
     @Test
@@ -428,16 +424,14 @@ class BedOccupancyIntegrationTest {
         assertConflict(
                 () -> roomService.findAvailableBeds(submitted, null, null, null),
                 ErrorCode.INVALID_STATE_TRANSITION);
-        assertThatThrownBy(() -> roomService.findAvailableBeds(submitted, 1L, null, null))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.VALIDATION_FAILED));
+        assertConflict(
+                () -> roomService.findAvailableBeds(submitted, 1L, null, null),
+                ErrorCode.VALIDATION_FAILED);
         Long otherStaff = createUser(Role.STAFF, otherUnitId);
         actAs(otherStaff, Role.STAFF, otherUnitId);
-        assertThatThrownBy(() -> roomService.findAvailableBeds(submitted, null, null, null))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+        assertConflict(
+                () -> roomService.findAvailableBeds(submitted, null, null, null),
+                ErrorCode.NOT_FOUND);
     }
 
     @Test
@@ -548,20 +542,11 @@ class BedOccupancyIntegrationTest {
 
         Long otherStaff = createUser(Role.STAFF, otherUnitId);
         actAs(otherStaff, Role.STAFF, otherUnitId);
-        assertThatThrownBy(() -> transfers.approve(request, beds.get(1)))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
-        assertThatThrownBy(() -> transfers.getTransferRequest(request))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+        assertConflict(() -> transfers.approve(request, beds.get(1)), ErrorCode.NOT_FOUND);
+        assertConflict(() -> transfers.getTransferRequest(request), ErrorCode.NOT_FOUND);
 
         actAs(student, Role.STUDENT, null);
-        assertThatThrownBy(() -> transfers.approve(request, beds.get(1)))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN));
+        assertConflict(() -> transfers.approve(request, beds.get(1)), ErrorCode.FORBIDDEN);
     }
 
     @Test
@@ -571,10 +556,7 @@ class BedOccupancyIntegrationTest {
         occupancy.occupyStay(beds.get(0), student, contract, null);
         Long rejected = createTransferRequest(contract);
 
-        assertThatThrownBy(() -> transfers.reject(rejected, " "))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.VALIDATION_FAILED));
+        assertConflict(() -> transfers.reject(rejected, " "), ErrorCode.VALIDATION_FAILED);
         TransferDetail detail = transfers.reject(rejected, "Hết phòng phù hợp");
         assertThat(detail.status()).isEqualTo(StayRequestStatus.REJECTED);
         assertThat(detail.decisionReason()).isEqualTo("Hết phòng phù hợp");
@@ -583,17 +565,11 @@ class BedOccupancyIntegrationTest {
                 () -> transfers.approve(rejected, beds.get(1)), ErrorCode.INVALID_STATE_TRANSITION);
 
         Long cancelled = createTransferRequest(contract);
-        assertThatThrownBy(() -> transfers.cancel(cancelled))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN));
+        assertConflict(() -> transfers.cancel(cancelled), ErrorCode.FORBIDDEN);
 
         Long stranger = createStudent("M");
         actAs(stranger, Role.STUDENT, null);
-        assertThatThrownBy(() -> transfers.cancel(cancelled))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+        assertConflict(() -> transfers.cancel(cancelled), ErrorCode.NOT_FOUND);
 
         actAs(student, Role.STUDENT, null);
         assertThat(transfers.getTransferRequest(cancelled).allowedActions())
@@ -612,7 +588,9 @@ class BedOccupancyIntegrationTest {
         actAs(student, Role.STUDENT, null);
         var input = new ContractDtos.StaySave(null, contract, null, "Muốn đổi phòng");
 
-        assertConflict(() -> contractCrud.saveOrUpdateStayRequest(false, input), ErrorCode.NOT_STAYING);
+        assertConflict(
+                () -> contractCrud.saveOrUpdateStayRequest(false, input),
+                ErrorCode.NOT_STAYING);
 
         actAs(staffId, Role.STAFF, firstUnitId);
         occupancy.convertHoldToStay(contract, staffId);
@@ -768,7 +746,7 @@ class BedOccupancyIntegrationTest {
                 application,
                 status,
                 active ? 1000000L : null,
-                active ? java.sql.Timestamp.from(java.time.Instant.now()) : null);
+                active ? Timestamp.from(Instant.now()) : null);
     }
 
     private Long createUser(String role, Long unitId) {

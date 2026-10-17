@@ -4,12 +4,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.StayRequestStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -140,7 +142,7 @@ public class RoomTransferServiceImpl implements RoomTransferService {
     public TransferDetail reject(Long id, String reason) {
         guard.requirePermission(Permission.ROOM_TRANSFER_APPROVE);
         if (reason == null || reason.isBlank()) {
-            throw BusinessException.invalid("reason", "Trường bắt buộc");
+            throw BusinessException.invalid(ApiField.REASON, ValidationMessage.REQUIRED);
         }
         Context context = load(id, true);
         requireAction(context, BusinessAction.REJECT);

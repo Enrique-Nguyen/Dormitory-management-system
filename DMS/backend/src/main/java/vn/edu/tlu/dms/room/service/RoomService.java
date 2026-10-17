@@ -31,19 +31,6 @@ public interface RoomService {
             Boolean noLeader,
             String q);
 
-    /** Tra cứu phòng theo bộ lọc và phân trang, không dùng từ khóa q; logic gọi nằm trong Impl. */
-    PageResponse<Response> searchRooms(
-            int page,
-            int size,
-            List<String> sort,
-            Long buildingId,
-            Short floor,
-            Long roomTypeId,
-            String gender,
-            String status,
-            Boolean hasFreeBed,
-            Boolean noLeader);
-
     /** Đọc phòng kèm giường và người đang ở/giữ chỗ, kiểm tra quyền trên đối tượng. */
     Response getRoomById(Long id);
 

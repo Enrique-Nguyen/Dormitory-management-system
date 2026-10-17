@@ -36,13 +36,13 @@ public interface ContractCrudService {
     Object searchStayRequestsByPage(boolean extension, SearchRequest input, boolean mine);
 
     /**
-     * Lấy chi tiết yêu cầu gia hạn hoặc chuyển phòng sau khi kiểm tra quyền xem hợp đồng.
+     * Lấy chi tiết yêu cầu gia hạn sau khi kiểm tra quyền xem hợp đồng. Chi tiết yêu cầu chuyển
+     * phòng do {@code RoomTransferService} trả vì kèm giường hiện tại, lịch sử và allowedActions.
      *
-     * @param extension true cho yêu cầu gia hạn; false cho yêu cầu chuyển phòng
-     * @param id mã định danh yêu cầu gia hạn hoặc chuyển phòng
+     * @param id mã định danh yêu cầu gia hạn
      * @return thông tin yêu cầu được phép truy cập
      */
-    Object getStayRequest(boolean extension, Long id);
+    Object getExtensionRequest(Long id);
 
     /**
      * Lưu chung yêu cầu: không có id tạo PENDING trên hợp đồng ACTIVE; có id sửa yêu cầu PENDING.

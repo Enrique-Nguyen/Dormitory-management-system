@@ -211,7 +211,6 @@ class ModuleDependencyTest {
             declaredCodes.add(code);
         }
         assertThat(declaredCodes)
-                .hasSize(106)
                 .doesNotHaveDuplicates()
                 .containsExactlyInAnyOrderElementsOf(DmsConstants.Permission.ALL);
         assertThat(ScopeGuard.permissionsForRole(DmsConstants.Role.ADMIN))

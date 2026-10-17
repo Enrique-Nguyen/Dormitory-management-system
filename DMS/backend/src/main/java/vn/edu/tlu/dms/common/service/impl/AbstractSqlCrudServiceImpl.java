@@ -3,6 +3,7 @@ package vn.edu.tlu.dms.common.service.impl;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.service.AuditService;
@@ -52,7 +53,7 @@ public abstract class AbstractSqlCrudServiceImpl {
             if (!input.containsKey(field)
                     || input.get(field) == null
                     || input.get(field) instanceof String text && text.isBlank()) {
-                throw BusinessException.invalid(field, "Trường bắt buộc");
+                throw BusinessException.invalid(field, ValidationMessage.REQUIRED);
             }
         }
         columns.putAll(defaults);

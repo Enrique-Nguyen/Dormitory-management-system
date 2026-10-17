@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentEndReason;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
@@ -15,6 +16,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RoomStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -134,7 +136,8 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
     public Optional<Assignment> release(
             Long contractId, String endReason, Long actorId, String note) {
         if (!AssignmentEndReason.RELEASE.contains(endReason)) {
-            throw BusinessException.invalid("endReason", "Lý do đóng phân phòng không hợp lệ");
+            throw BusinessException.invalid(
+                    ApiField.END_REASON, "Lý do đóng phân phòng không hợp lệ");
         }
         var open = findOpenRow(contractId);
         if (open.isEmpty()) {
@@ -157,7 +160,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
                 EntityType.ASSIGNMENT,
                 row.getId(),
                 null,
-                Map.of("bedId", row.getBedId(), "endReason", endReason),
+                Map.of(ApiField.BED_ID, row.getBedId(), ApiField.END_REASON, endReason),
                 note);
         return Optional.of(toAssignment(row, bed));
     }
@@ -166,7 +169,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
     @Transactional
     public Assignment transfer(Long contractId, Long targetBedId, String note) {
         if (targetBedId == null) {
-            throw BusinessException.invalid("targetBedId", "Trường bắt buộc");
+            throw BusinessException.invalid(ApiField.TARGET_BED_ID, ValidationMessage.REQUIRED);
         }
         var open =
                 findOpenRow(contractId)
@@ -211,7 +214,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
                 AuditAction.ROOM_TRANSFER,
                 EntityType.ASSIGNMENT,
                 next.getId(),
-                Map.of("bedId", source.id()),
+                Map.of(ApiField.BED_ID, source.id()),
                 change,
                 note);
         return toAssignment(next, target);
@@ -220,7 +223,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
     private Assignment occupy(
             Long bedId, Long studentId, Long contractId, String kind, String note) {
         if (bedId == null) {
-            throw BusinessException.invalid("bedId", "Trường bắt buộc");
+            throw BusinessException.invalid(ApiField.BED_ID, ValidationMessage.REQUIRED);
         }
         if (studentId == null || contractId == null) {
             throw BusinessException.notFound();
@@ -249,7 +252,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
         }
         assignments.saveAndFlush(row);
         var change = new LinkedHashMap<String, Object>();
-        change.put("bedId", bedId);
+        change.put(ApiField.BED_ID, bedId);
         change.put("studentId", studentId);
         change.put("contractId", contractId);
         change.put("kind", kind);
@@ -269,7 +272,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
         if (!BedOperationStatus.ACTIVE.equals(bed.bedStatus())
                 || !RoomStatus.ACTIVE.equals(bed.roomStatus())) {
             var details = new LinkedHashMap<String, Object>();
-            details.put("bedCode", bed.fullCode());
+            details.put(ApiField.BED_CODE, bed.fullCode());
             details.put("bedStatus", bed.bedStatus());
             details.put("roomStatus", bed.roomStatus());
             throw new BusinessException(ErrorCode.BED_NOT_AVAILABLE, HttpStatus.CONFLICT, details);
@@ -281,7 +284,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
             throw new BusinessException(
                     ErrorCode.BED_TAKEN,
                     HttpStatus.CONFLICT,
-                    Map.of("bedId", bed.id(), "bedCode", bed.fullCode()));
+                    Map.of(ApiField.BED_ID, bed.id(), ApiField.BED_CODE, bed.fullCode()));
         }
     }
 
@@ -295,7 +298,11 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
             throw new BusinessException(
                     ErrorCode.GENDER_MISMATCH,
                     HttpStatus.CONFLICT,
-                    Map.of("roomCode", bed.roomCode(), "roomGender", bed.roomGender()));
+                    Map.of(
+                            ApiField.ROOM_CODE,
+                            bed.roomCode(),
+                            ApiField.ROOM_GENDER,
+                            bed.roomGender()));
         }
     }
 
