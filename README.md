@@ -307,6 +307,8 @@ Script chạy trong transaction, giữ constraint và trigger, không xóa dữ 
 
 ### Tài khoản mẫu đăng nhập thử — 15/10/2026
 
+Nếu chạy bằng `DMS\scripts\start-docker.ps1`, script đã tự nạp `sample-accounts.sql` và cấp tài khoản Keycloak; Đường A/Đường B dưới đây chỉ dành cho luồng PostgreSQL local (`start-local.ps1`). Hai luồng cùng dùng cổng 5432 nên không chạy đồng thời.
+
 File **`DMS/scripts/sample-accounts.sql`** (chạy sau `sample-data.sql`, idempotent, không đưa vào thư mục migration) mở khóa 10 tài khoản mẫu và thêm ticket `MAU-TK-04` đã giao cho `mau.kt.1`. Các tài khoản `mau.*` còn lại vẫn bị khóa. Cuối script in bảng `locked`/`linked` để biết nên đi đường A hay B.
 
 | Vai trò | Username | Đơn vị | Dùng để thử |

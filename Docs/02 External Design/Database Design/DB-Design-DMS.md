@@ -456,6 +456,6 @@ Mục 4 bổ sung ánh xạ `ux_room_leader` → `LEADER_ALREADY_ASSIGNED`, `stu
 ### Bổ sung cấp quyền duyệt chuyển phòng V6 v0.8 — 15/10/2026
 
 Flyway `V6__room_transfer_approve_permission.sql` bổ sung quyền duyệt chuyển phòng cho vai trò STAFF:
-- Script chỉ thực hiện `UPDATE role_permission_matrix SET permissions = permissions || '["ROOM_TRANSFER_APPROVE"]'::jsonb WHERE role = 'STAFF' AND NOT (permissions @> '["ROOM_TRANSFER_APPROVE"]'::jsonb)`.
+- Script chỉ thực hiện `UPDATE role_permission_matrix SET permissions = permissions || '["ROOM_TRANSFER_APPROVE"]'::jsonb WHERE role = 'STAFF' AND NOT permissions ? 'ROOM_TRANSFER_APPROVE'`.
 - Không tăng `version` của dòng cấu hình (để tránh xung đột lạc quan với màn quản trị ma trận quyền của ADMIN), không thay đổi cấu trúc bảng hay schema CSDL.
 - Sau khi áp dụng V6: vai trò STAFF mặc định có **73** quyền, ADMIN có **106** quyền (toàn bộ danh mục 106 mã).
