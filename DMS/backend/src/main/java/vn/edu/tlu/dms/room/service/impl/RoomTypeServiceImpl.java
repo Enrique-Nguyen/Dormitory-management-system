@@ -19,6 +19,8 @@ import vn.edu.tlu.dms.room.repository.RoomRepository;
 import vn.edu.tlu.dms.room.repository.RoomTypeRepository;
 import vn.edu.tlu.dms.room.service.RoomTypeService;
 
+import java.util.Set;
+
 @Service
 public class RoomTypeServiceImpl
         extends AbstractCrudServiceImpl<RoomType, RoomTypeRequest, RoomTypeResponse>
@@ -55,6 +57,29 @@ public class RoomTypeServiceImpl
     @Override
     protected void checkPermission(String action) {
         guard.requirePermission(Resource.ROOM_TYPE + DmsConstants.PERMISSION_SEPARATOR + action);
+    }
+
+    @Override
+    protected Long getInputId(RoomTypeRequest input) {
+        return input.id();
+    }
+
+    @Override
+    protected Set<String> searchableFields() {
+        return Set.of("name");
+    }
+
+    @Override
+    protected Set<String> sortableFields() {
+        return Set.of(
+                "id",
+                "name",
+                "bedCount",
+                "priceMain",
+                "priceSummer",
+                "areaM2",
+                "amenities",
+                "active");
     }
 
     @Override

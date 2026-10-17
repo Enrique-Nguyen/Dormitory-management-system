@@ -15,6 +15,8 @@ import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.impl.AbstractCrudServiceImpl;
 
+import java.util.Set;
+
 @Service
 public class ManagementUnitServiceImpl
         extends AbstractCrudServiceImpl<
@@ -49,6 +51,21 @@ public class ManagementUnitServiceImpl
     protected void checkPermission(String action) {
         guard.requirePermission(
                 Resource.MANAGEMENT_UNIT + DmsConstants.PERMISSION_SEPARATOR + action);
+    }
+
+    @Override
+    protected Long getInputId(ManagementUnitRequest input) {
+        return input.id();
+    }
+
+    @Override
+    protected Set<String> searchableFields() {
+        return Set.of("code", "name");
+    }
+
+    @Override
+    protected Set<String> sortableFields() {
+        return Set.of("id", "code", "name");
     }
 
     @Override

@@ -10,9 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentEndReason;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
-import vn.edu.tlu.dms.common.constants.DmsConstants.AuditEntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditReason;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RoomStatus;
 import vn.edu.tlu.dms.common.exception.BusinessException;
@@ -121,7 +121,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
         audit.record(
                 actorId,
                 AuditAction.BED_STAY,
-                AuditEntityType.ASSIGNMENT,
+                EntityType.ASSIGNMENT,
                 row.getId(),
                 AssignmentKind.HOLD,
                 AssignmentKind.STAY,
@@ -154,7 +154,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
         audit.record(
                 actorId,
                 AuditAction.BED_RELEASE,
-                AuditEntityType.ASSIGNMENT,
+                EntityType.ASSIGNMENT,
                 row.getId(),
                 null,
                 Map.of("bedId", row.getBedId(), "endReason", endReason),
@@ -209,7 +209,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
         audit.record(
                 actorId,
                 AuditAction.ROOM_TRANSFER,
-                AuditEntityType.ASSIGNMENT,
+                EntityType.ASSIGNMENT,
                 next.getId(),
                 Map.of("bedId", source.id()),
                 change,
@@ -256,7 +256,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
         audit.record(
                 row.getCreatedBy(),
                 AuditAction.BED_OCCUPY,
-                AuditEntityType.ASSIGNMENT,
+                EntityType.ASSIGNMENT,
                 row.getId(),
                 null,
                 change,
@@ -389,7 +389,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
         audit.record(
                 actorId,
                 AuditAction.ROOM_LEADER_CHANGE,
-                AuditEntityType.ROOM,
+                EntityType.ROOM,
                 roomId,
                 studentId,
                 null,

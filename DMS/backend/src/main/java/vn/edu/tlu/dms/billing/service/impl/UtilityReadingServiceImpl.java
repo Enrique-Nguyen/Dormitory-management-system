@@ -6,11 +6,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.billing.api.UtilityReadingController.Input;
 import vn.edu.tlu.dms.billing.service.UtilityReadingService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.MeterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -23,6 +28,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 @Service
@@ -57,28 +64,53 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
     }
 
     @Override
-    public Object searchReadings(int page, int size, String q, LocalDate month) {
+    public PageResponse<Map<String, Object>> searchByPage(SearchRequest input) {
         guard.requirePermission(Permission.UTILITY_READING_READ);
         guard.requireRole(Role.STAFF);
+        if (input.meterType() != null && !input.meterType().matches(MeterType.PATTERN)) {
+            throw BusinessException.invalid("meterType", "Loại đồng hồ không hợp lệ");
+        }
         var args = new ArrayList<Object>();
         String scope = current.get().canReadAllUnits() ? "TRUE" : "bd.management_unit_id=?";
         if (!current.get().canReadAllUnits()) {
             args.add(current.get().unitId());
         }
-        args.add(LikePattern.contains(q));
-        if (month != null) {
-            args.add(month.withDayOfMonth(1));
-        }
-        return queries.search(
+        args.add(LikePattern.contains(input.q()));
+        String sql =
                 "SELECT ur.*,r.code AS room_code,EXISTS(SELECT 1 FROM invoice_item ii WHERE"
                     + " ii.utility_reading_id=ur.id) AS invoiced FROM utility_reading ur JOIN room"
                     + " r ON r.id=ur.room_id JOIN building bd ON bd.id=r.building_id WHERE "
                         + scope
-                        + " AND r.code ILIKE ?"
-                        + (month == null ? "" : " AND ur.billing_month=?"),
+                        + " AND r.code ILIKE ?";
+        if (input.billingMonth() != null) {
+            sql += " AND ur.billing_month=?";
+            args.add(input.billingMonth().withDayOfMonth(1));
+        }
+        if (input.meterType() != null) {
+            sql += " AND ur.meter_type=?";
+            args.add(input.meterType());
+        }
+        if (input.buildingId() != null) {
+            sql += " AND bd.id=?";
+            args.add(input.buildingId());
+        }
+        return queries.search(
+                sql,
                 args,
-                page,
-                size);
+                input,
+                Set.of(
+                        "id",
+                        "roomId",
+                        "roomCode",
+                        "meterType",
+                        "billingMonth",
+                        "startReading",
+                        "endReading",
+                        "consumption",
+                        "recordedAt",
+                        "recordedBy",
+                        "invoiced"),
+                "id,desc");
     }
 
     @Override
@@ -137,28 +169,45 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
 
     @Transactional
     @Override
-    public Object saveReading(Long id, Input input) {
+    public Object saveOrUpdate(Input input) {
+        if (input == null) {
+            throw BusinessException.invalid("input", "Phải nhập thông tin chỉ số");
+        }
+        Long id = input.id();
         guard.requirePermission(
                 id == null ? Permission.UTILITY_READING_CREATE : Permission.UTILITY_READING_UPDATE);
         guard.requireRole(Role.STAFF);
-        guard.requireUnit(rooms.getRoomLocation(input.roomId()).unitId());
-        jdbc.queryForObject(
-                "SELECT id FROM room WHERE id=? FOR UPDATE", Long.class, input.roomId());
-        if (input.billingMonth().getDayOfMonth() != 1) {
-            throw BusinessException.invalid("billingMonth", "Dùng ngày đầu tháng");
-        }
         Map<String, Object> before = null;
-        if (id != null) {
+        if (id == null) {
+            validateRequiredInput(input);
+            guard.requireUnit(rooms.getRoomLocation(input.roomId()).unitId());
             jdbc.queryForObject(
-                    "SELECT id FROM utility_reading WHERE id=? FOR UPDATE", Long.class, id);
+                    "SELECT id FROM room WHERE id=? FOR UPDATE", Long.class, input.roomId());
+        } else {
+            if (id <= 0) {
+                throw BusinessException.invalid(ApiField.ID, ValidationMessage.ID_POSITIVE);
+            }
+            // Đọc phạm vi trước, nhưng phải tải lại dữ liệu sau khi lấy khóa để tránh bản cũ.
+            before = getReading(id);
+            Long roomId = ((Number) before.get("roomId")).longValue();
+            guard.requireUnit(rooms.getRoomLocation(roomId).unitId());
+            jdbc.queryForObject("SELECT id FROM room WHERE id=? FOR UPDATE", Long.class, roomId);
+            lockReading(id);
             before = getReading(id);
             requireEditable(before);
-            if (!before.get("roomId").equals(input.roomId())
-                    || !before.get("meterType").equals(input.meterType())
-                    || !before.get("billingMonth").equals(input.billingMonth())) {
+            if (input.roomId() != null && !Objects.equals(input.roomId(), roomId)
+                    || input.meterType() != null
+                            && !Objects.equals(input.meterType(), before.get("meterType"))
+                    || input.billingMonth() != null
+                            && !Objects.equals(input.billingMonth(), before.get("billingMonth"))) {
                 throw BusinessException.invalid(
                         "roomId", "Không đổi phòng, loại đồng hồ hoặc kỳ của bản ghi");
             }
+            input = mergeInput(input, before);
+            validateRequiredInput(input);
+        }
+        if (input.billingMonth().getDayOfMonth() != 1) {
+            throw BusinessException.invalid("billingMonth", "Dùng ngày đầu tháng");
         }
         if (id == null) {
             requireNoFollowingMonth(input.roomId(), input.meterType(), input.billingMonth());
@@ -237,7 +286,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
     public void deleteUnusedReading(Long id) {
         guard.requirePermission(Permission.UTILITY_READING_DELETE);
         guard.requireRole(Role.STAFF);
-        jdbc.queryForObject("SELECT id FROM utility_reading WHERE id=? FOR UPDATE", Long.class, id);
+        lockReading(id);
         var row = getReading(id);
         requireEditable(row);
         jdbc.update("DELETE FROM utility_reading WHERE id=?", id);
@@ -249,5 +298,67 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
                 row,
                 null,
                 null);
+    }
+
+    /** Kiểm tra bản ghi còn tồn tại sau khi chờ khóa, tránh biến bản ghi không có thành lỗi SQL. */
+    private void lockReading(Long id) {
+        if (jdbc.query(
+                        "SELECT id FROM utility_reading WHERE id=? FOR UPDATE",
+                        (row, index) -> row.getLong(1),
+                        id)
+                .isEmpty()) {
+            throw BusinessException.notFound();
+        }
+    }
+
+    private Input mergeInput(Input input, Map<String, Object> row) {
+        return new Input(
+                input.id(),
+                ((Number) row.get("roomId")).longValue(),
+                (String) row.get("meterType"),
+                (LocalDate) row.get("billingMonth"),
+                input.startReading() == null
+                        ? integer(row.get("startReading"))
+                        : input.startReading(),
+                input.endReading() == null ? integer(row.get("endReading")) : input.endReading(),
+                input.oldMeterFinal() == null
+                        ? integer(row.get("oldMeterFinal"))
+                        : input.oldMeterFinal(),
+                input.newMeterStart() == null
+                        ? integer(row.get("newMeterStart"))
+                        : input.newMeterStart(),
+                input.replacementReason() == null
+                        ? (String) row.get("replacementReason")
+                        : input.replacementReason());
+    }
+
+    private Integer integer(Object value) {
+        return value == null ? null : ((Number) value).intValue();
+    }
+
+    /** Nhánh tạo và dữ liệu sửa sau merge đều phải đủ trường và đúng giới hạn. */
+    private void validateRequiredInput(Input input) {
+        if (input.roomId() == null || input.roomId() <= 0) {
+            throw BusinessException.invalid("roomId", "Phải chọn phòng hợp lệ");
+        }
+        if (input.meterType() == null || !input.meterType().matches(MeterType.PATTERN)) {
+            throw BusinessException.invalid("meterType", "Phải chọn loại đồng hồ hợp lệ");
+        }
+        if (input.billingMonth() == null) {
+            throw BusinessException.invalid("billingMonth", "Phải chọn kỳ ghi chỉ số");
+        }
+        if (input.endReading() == null) {
+            throw BusinessException.invalid("endReading", "Phải nhập chỉ số cuối");
+        }
+        nonNegative("startReading", input.startReading());
+        nonNegative("endReading", input.endReading());
+        nonNegative("oldMeterFinal", input.oldMeterFinal());
+        nonNegative("newMeterStart", input.newMeterStart());
+    }
+
+    private void nonNegative(String field, Integer value) {
+        if (value != null && value < 0) {
+            throw BusinessException.invalid(field, "Chỉ số không được âm");
+        }
     }
 }

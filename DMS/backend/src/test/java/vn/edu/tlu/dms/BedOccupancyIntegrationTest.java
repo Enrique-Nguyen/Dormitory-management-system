@@ -24,9 +24,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentEndReason;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
-import vn.edu.tlu.dms.common.constants.DmsConstants.AuditEntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditReason;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.StayRequestStatus;
@@ -34,18 +34,18 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.contract.api.ContractDtos;
 import vn.edu.tlu.dms.contract.api.ContractDtos.TransferDetail;
 import vn.edu.tlu.dms.contract.service.ContractCrudService;
 import vn.edu.tlu.dms.contract.service.RoomTransferService;
-import vn.edu.tlu.dms.room.service.BedOccupancyService;
 import vn.edu.tlu.dms.room.api.RoomDtos.AvailableRoom;
+import vn.edu.tlu.dms.room.service.BedOccupancyService;
 import vn.edu.tlu.dms.room.service.OccupancyQuery;
 import vn.edu.tlu.dms.room.service.RoomService;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -276,7 +276,7 @@ class BedOccupancyIntegrationTest {
                 .record(
                         eq(staffId),
                         eq(AuditAction.ROOM_LEADER_CHANGE),
-                        eq(AuditEntityType.ROOM),
+                        eq(EntityType.ROOM),
                         eq(roomA),
                         eq(student),
                         isNull(),
@@ -319,7 +319,7 @@ class BedOccupancyIntegrationTest {
                 .record(
                         eq(staffId),
                         eq(AuditAction.ROOM_TRANSFER),
-                        eq(AuditEntityType.ASSIGNMENT),
+                        eq(EntityType.ASSIGNMENT),
                         eq(after.id()),
                         any(),
                         any(),
@@ -610,15 +610,15 @@ class BedOccupancyIntegrationTest {
         Long contract = createContract(student, "ACTIVE");
         occupancy.occupyHold(beds.get(0), student, contract, null);
         actAs(student, Role.STUDENT, null);
-        Map<String, Object> input = Map.of("contractId", contract, "reason", "Muốn đổi phòng");
+        var input = new ContractDtos.StaySave(null, contract, null, "Muốn đổi phòng");
 
-        assertConflict(() -> contractCrud.createStayRequest(false, input), ErrorCode.NOT_STAYING);
+        assertConflict(() -> contractCrud.saveOrUpdateStayRequest(false, input), ErrorCode.NOT_STAYING);
 
         actAs(staffId, Role.STAFF, firstUnitId);
         occupancy.convertHoldToStay(contract, staffId);
         actAs(student, Role.STUDENT, null);
-        contractCrud.createStayRequest(false, input);
-        assertThatThrownBy(() -> contractCrud.createStayRequest(false, input))
+        contractCrud.saveOrUpdateStayRequest(false, input);
+        assertThatThrownBy(() -> contractCrud.saveOrUpdateStayRequest(false, input))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("ux_transfer_pending");
     }

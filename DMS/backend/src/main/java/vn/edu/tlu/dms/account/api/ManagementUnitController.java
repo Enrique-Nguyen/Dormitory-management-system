@@ -5,7 +5,6 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,10 +12,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.account.service.ManagementUnitService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
-
-import java.net.URI;
-import java.util.List;
 
 @RestController
 public class ManagementUnitController {
@@ -35,9 +33,10 @@ public class ManagementUnitController {
         Permission.REGISTRATION_PERIOD_CREATE,
         Permission.REGISTRATION_PERIOD_UPDATE
     })
-    @GetMapping("/api/management-units")
-    public List<ManagementUnitResponse> getManagementUnitList() {
-        return service.getAll();
+    @PostMapping("/api/management-units/search-by-page")
+    public PageResponse<ManagementUnitResponse> searchByPage(
+            @Valid @RequestBody SearchRequest search) {
+        return service.searchByPage(search);
     }
 
     @RequirePrivilege(Permission.MANAGEMENT_UNIT_READ)
@@ -46,20 +45,10 @@ public class ManagementUnitController {
         return service.getById(id);
     }
 
-    @RequirePrivilege(Permission.MANAGEMENT_UNIT_CREATE)
-    @PostMapping("/api/admin/management-units")
-    public ResponseEntity<ManagementUnitResponse> createManagementUnit(
-            @Valid @RequestBody ManagementUnitRequest input) {
-        var result = service.create(input);
-        return ResponseEntity.created(URI.create("/api/management-units/" + result.id()))
-                .body(result);
-    }
-
-    @RequirePrivilege(Permission.MANAGEMENT_UNIT_UPDATE)
-    @PatchMapping("/api/admin/management-units/{id}")
-    public ManagementUnitResponse updateManagementUnit(
-            @PathVariable Long id, @Valid @RequestBody ManagementUnitRequest input) {
-        return service.update(id, input);
+    @RequirePrivilege({Permission.MANAGEMENT_UNIT_CREATE, Permission.MANAGEMENT_UNIT_UPDATE})
+    @PostMapping("/api/admin/management-units/save-or-update")
+    public ManagementUnitResponse saveOrUpdate(@Valid @RequestBody ManagementUnitRequest input) {
+        return service.saveOrUpdate(input);
     }
 
     @RequirePrivilege(Permission.MANAGEMENT_UNIT_DELETE)

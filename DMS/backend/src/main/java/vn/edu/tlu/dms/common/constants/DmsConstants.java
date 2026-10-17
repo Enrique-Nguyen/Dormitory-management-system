@@ -88,6 +88,10 @@ public final class DmsConstants {
 
     /** Tên field của hợp đồng validation, audit và ma trận quyền; không dùng làm tên cột SQL. */
     public static final class ApiField {
+        public static final String ID = "id";
+        public static final String FORM = "form";
+        public static final String SORT = "sort";
+        public static final String PAGE = "page";
         public static final String FIELD_ERRORS = "fieldErrors";
         public static final String FIELD = "field";
         public static final String MESSAGE = "message";
@@ -96,6 +100,21 @@ public final class DmsConstants {
         public static final String PERMISSIONS = "permissions";
 
         private ApiField() {}
+    }
+
+    /** Thông báo validation dùng chung; giữ nguyên từng chuỗi đã trả về qua API. */
+    public static final class ValidationMessage {
+        public static final String ID_POSITIVE = "ID phải lớn hơn 0";
+        public static final String ID_POSITIVE_INTEGER = "ID phải là số nguyên dương";
+        public static final String REQUIRED = "Trường bắt buộc";
+        public static final String NOTHING_TO_UPDATE = "Chưa có trường để cập nhật";
+        public static final String NO_CONTENT_TO_UPDATE = "Chưa có nội dung để cập nhật";
+        public static final String SORT_FIELD_INVALID = "Trường sắp xếp không hợp lệ";
+        public static final String SORT_DIRECTION_INVALID = "Chỉ dùng asc hoặc desc";
+        public static final String SORT_REQUIRED = "Trường sắp xếp không được rỗng";
+        public static final String PAGE_RANGE = "page >= 0, size 1–100";
+
+        private ValidationMessage() {}
     }
 
     /** Thông báo kiểm tra đầu vào của ma trận quyền; template giữ nguyên hợp đồng lỗi hiện tại. */
@@ -675,22 +694,6 @@ public final class DmsConstants {
         private PlacementSource() {}
     }
 
-    /** Loại đối tượng của status_history; giá trị khớp CHECK entity_type của CSDL. */
-    public static final class StatusEntityType {
-        public static final String TRANSFER = "TRANSFER";
-
-        private StatusEntityType() {}
-    }
-
-    /** Loại đối tượng ghi vào audit_log của module phòng; không phải tên bảng SQL. */
-    public static final class AuditEntityType {
-        public static final String ROOM = "ROOM";
-        public static final String BED = "BED";
-        public static final String ASSIGNMENT = "ASSIGNMENT";
-
-        private AuditEntityType() {}
-    }
-
     /** Lý do hệ thống tự ghi khi thao tác không do người dùng nhập. */
     public static final class AuditReason {
         public static final String LEADER_AUTO_REMOVED =
@@ -840,6 +843,7 @@ public final class DmsConstants {
         public static final String BUILDING = "BUILDING";
         public static final String FLOOR = "FLOOR";
         public static final String ROOM = "ROOM";
+        public static final String TRANSFER = "TRANSFER";
         public static final String USER = "USER";
 
         public static final String MANUAL_PATTERN =
@@ -892,6 +896,7 @@ public final class DmsConstants {
      * đồng riêng; không đổi mã audit khi đổi cách đặt tên hoặc cấp quyền.
      */
     public static final class AuditAction {
+        public static final String BED_CREATE = "BED_CREATE";
         public static final String BED_DELETE = "BED_DELETE";
         public static final String BED_OCCUPY = "BED_OCCUPY";
         public static final String BED_RELEASE = "BED_RELEASE";
@@ -904,8 +909,10 @@ public final class DmsConstants {
         public static final String CRUD_DELETE = "CRUD_DELETE";
         public static final String CRUD_UPDATE = "CRUD_UPDATE";
         public static final String MAINTENANCE_UPDATE = "MAINTENANCE_UPDATE";
+        public static final String NOTIFICATION_CREATE = "NOTIFICATION_CREATE";
         public static final String NOTIFICATION_DELETE = "NOTIFICATION_DELETE";
         public static final String NOTIFICATION_UPDATE = "NOTIFICATION_UPDATE";
+        public static final String RATE_CREATE = "RATE_CREATE";
         public static final String RATE_DELETE = "RATE_DELETE";
         public static final String RATE_UPDATE = "RATE_UPDATE";
         public static final String READING_CREATE = "READING_CREATE";
@@ -929,5 +936,22 @@ public final class DmsConstants {
         public static final String ROLE_PERMISSION_UPDATE = "ROLE_PERMISSION_UPDATE";
 
         private AuditAction() {}
+    }
+
+    /** Mã đối tượng audit/timeline tách khỏi mã quyền để giữ nguyên dữ liệu lịch sử. */
+    public static final class EntityType {
+        public static final String APPLICATION = "APPLICATION";
+        public static final String ASSIGNMENT = "ASSIGNMENT";
+        public static final String BED = "BED";
+        public static final String CONTRACT = "CONTRACT";
+        public static final String INVOICE = "INVOICE";
+        public static final String MAINTENANCE = "MAINTENANCE";
+        public static final String NOTIFICATION = "NOTIFICATION";
+        public static final String ROOM = "ROOM";
+        public static final String TRANSFER = "TRANSFER";
+        public static final String USER = "USER";
+        public static final String UTILITY_RATE = "UTILITY_RATE";
+
+        private EntityType() {}
     }
 }

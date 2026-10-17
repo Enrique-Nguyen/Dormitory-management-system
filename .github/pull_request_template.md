@@ -8,6 +8,7 @@
 
 ## Kiểm tra
 
+- [ ] Nhánh đặt theo `<loai>/<module>-<viec>`, tách từ `develop` (hotfix tách từ `main`), tiêu đề PR dạng `<loai>(<module>): <mô tả>`
 - [ ] `./mvnw verify` (backend) hoặc `npm run lint && npm run build` (frontend) chạy đạt
 - [ ] Đổi lược đồ CSDL bằng file migration mới, không sửa file cũ
 - [ ] Đổi API, CSDL hoặc quy tắc nghiệp vụ thì đã sửa tài liệu trong `Docs/` cùng PR

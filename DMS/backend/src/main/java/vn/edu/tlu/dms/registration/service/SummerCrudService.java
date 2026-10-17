@@ -1,22 +1,26 @@
 package vn.edu.tlu.dms.registration.service;
 
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
+import vn.edu.tlu.dms.registration.api.SummerCrudController.Input;
+
 import java.util.Map;
 
-/** Khai báo CRUD lựa chọn hè đang chờ; phần xử lý nằm trong SummerCrudServiceImpl. */
+/** Hợp đồng CRUD lựa chọn hè chờ xử lý; logic nằm trong SummerCrudServiceImpl. */
 public interface SummerCrudService {
 
-    /** Tìm lựa chọn hè theo từ khóa và phân trang trong phạm vi dữ liệu được phép xem. */
-    Object searchChoices(int page, int size, String q);
+    /** Tìm kiếm/phân trang trong phạm vi; mine do server chỉ định để ép chủ sở hữu hiện tại. */
+    PageResponse<Map<String, Object>> searchByPage(SearchRequest search, boolean mine);
 
-    /** Lấy chi tiết lựa chọn hè theo mã sau khi kiểm tra chủ sở hữu hoặc phạm vi của cán bộ. */
+    /** Đọc chi tiết lựa chọn hè sau khi kiểm tra chủ sở hữu hoặc phạm vi cán bộ. */
     Object getChoice(Long id);
 
-    /** Tạo lựa chọn hè đang chờ cho hợp đồng của mình; ADMIN được tạo hộ ở mọi đơn vị. */
-    Object createChoice(Map<String, Object> input);
+    /**
+     * ID trống tạo hồ sơ chờ, có ID sửa lựa chọn đang chờ; kiểm CREATE/UPDATE riêng. Không đổi hợp
+     * đồng/học kỳ nguồn, không tự xét duyệt hoặc thay đổi chỗ ở.
+     */
+    Object saveOrUpdate(Input input);
 
-    /** Sửa lựa chọn hè còn đang chờ của mình; ADMIN được sửa hộ ở mọi đơn vị. */
-    Object updateChoice(Long id, Map<String, Object> input);
-
-    /** Xóa lựa chọn hè đang chờ của mình hoặc bởi ADMIN; chặn dữ liệu đã được xử lý. */
+    /** Xóa lựa chọn hè đang chờ thuộc phạm vi; chặn dữ liệu đã được xử lý. */
     void deleteChoice(Long id);
 }

@@ -6,12 +6,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.billing.service.InvoiceService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 
 @RestController
@@ -24,25 +24,17 @@ public class InvoiceController {
     }
 
     @RequirePrivilege(Permission.INVOICE_READ)
-    @GetMapping("/api/invoices")
-    public PageResponse<InvoiceDtos.Response> searchInvoices(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status,
-            @RequestParam(defaultValue = "") String q) {
-        return service.searchInvoices(page, size, type, status, false, q);
+    @PostMapping("/api/invoices/search-by-page")
+    public PageResponse<InvoiceDtos.Response> searchByPage(
+            @Valid @RequestBody SearchRequest request) {
+        return service.searchByPage(request, false);
     }
 
     @RequirePrivilege(Permission.INVOICE_READ)
-    @GetMapping("/api/me/invoices")
-    public PageResponse<InvoiceDtos.Response> getMyInvoices(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status,
-            @RequestParam(defaultValue = "") String q) {
-        return service.searchInvoices(page, size, type, status, true, q);
+    @PostMapping("/api/me/invoices/search-by-page")
+    public PageResponse<InvoiceDtos.Response> searchMyInvoicesByPage(
+            @Valid @RequestBody SearchRequest request) {
+        return service.searchByPage(request, true);
     }
 
     @RequirePrivilege(Permission.INVOICE_READ)

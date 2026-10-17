@@ -5,10 +5,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
-import vn.edu.tlu.dms.common.constants.DmsConstants.StatusEntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.StayRequestStatus;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
@@ -19,8 +19,8 @@ import vn.edu.tlu.dms.contract.api.ContractDtos.TransferDetail;
 import vn.edu.tlu.dms.contract.domain.RoomTransferPolicy;
 import vn.edu.tlu.dms.contract.service.RoomTransferService;
 import vn.edu.tlu.dms.room.service.BedOccupancyService;
-import vn.edu.tlu.dms.room.service.OccupancyQuery;
 import vn.edu.tlu.dms.room.service.OccupancyQuery.CurrentBed;
+import vn.edu.tlu.dms.room.service.OccupancyQuery;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -126,7 +126,7 @@ public class RoomTransferServiceImpl implements RoomTransferService {
                         StayRequestStatus.PENDING);
         requireUpdated(updated);
         history.record(
-                StatusEntityType.TRANSFER,
+                EntityType.TRANSFER,
                 id,
                 StayRequestStatus.PENDING,
                 StayRequestStatus.APPROVED,
@@ -157,7 +157,7 @@ public class RoomTransferServiceImpl implements RoomTransferService {
                         StayRequestStatus.PENDING);
         requireUpdated(updated);
         history.record(
-                StatusEntityType.TRANSFER,
+                EntityType.TRANSFER,
                 id,
                 StayRequestStatus.PENDING,
                 StayRequestStatus.REJECTED,
@@ -181,7 +181,7 @@ public class RoomTransferServiceImpl implements RoomTransferService {
                         StayRequestStatus.PENDING);
         requireUpdated(updated);
         history.record(
-                StatusEntityType.TRANSFER,
+                EntityType.TRANSFER,
                 id,
                 StayRequestStatus.PENDING,
                 StayRequestStatus.CANCELLED,
@@ -275,6 +275,6 @@ public class RoomTransferServiceImpl implements RoomTransferService {
                 row.createdAt(),
                 context.currentBed(),
                 actions,
-                history.list(StatusEntityType.TRANSFER, row.id()));
+                history.list(EntityType.TRANSFER, row.id()));
     }
 }

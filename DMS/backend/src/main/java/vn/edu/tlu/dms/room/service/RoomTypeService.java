@@ -1,34 +1,36 @@
 package vn.edu.tlu.dms.room.service;
 
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.service.CrudService;
 import vn.edu.tlu.dms.room.api.RoomTypeRequest;
 import vn.edu.tlu.dms.room.api.RoomTypeResponse;
 
 import java.util.List;
 
-/** Khai báo thao tác CRUD loại phòng; logic xử lý nằm trong RoomTypeServiceImpl. */
+/** Hợp đồng CRUD loại phòng; logic kiểm tra quyền và dữ liệu nằm trong RoomTypeServiceImpl. */
 public interface RoomTypeService extends CrudService<RoomTypeRequest, RoomTypeResponse> {
 
-    /** Đọc danh sách loại phòng sau khi kiểm tra vai trò và phạm vi được cấp. */
+    /** Tìm kiếm, sắp xếp và phân trang loại phòng trong phạm vi được phép; trang bắt đầu từ 0. */
+    @Override
+    PageResponse<RoomTypeResponse> searchByPage(SearchRequest search);
+
+    /** Đọc danh mục cho lời gọi nội bộ; API danh sách sử dụng searchByPage để phân trang. */
     @Override
     List<RoomTypeResponse> getAll();
 
-    /** Đọc chi tiết loại phòng theo ID; không tồn tại hoặc ngoài phạm vi trả NOT_FOUND. */
+    /** Đọc chi tiết theo ID; trả NOT_FOUND nếu không tồn tại hoặc nằm ngoài phạm vi truy cập. */
     @Override
     RoomTypeResponse getById(Long id);
 
     /**
-     * Tạo loại phòng, kiểm tra trường bắt buộc và ràng buộc; ghi dữ liệu và audit trong một
-     * transaction.
+     * Lưu loại phòng: ID trống tạo mới, có ID cập nhật từng phần và giữ trường không gửi. Kiểm tra
+     * đúng quyền CREATE/UPDATE và ghi nhật ký cùng transaction; ID không tồn tại không tạo mới.
      */
     @Override
-    RoomTypeResponse create(RoomTypeRequest input);
+    RoomTypeResponse saveOrUpdate(RoomTypeRequest input);
 
-    /** Sửa từng phần loại phòng; trường không gửi hoặc null giữ nguyên giá trị hiện tại. */
-    @Override
-    RoomTypeResponse update(Long id, RoomTypeRequest input);
-
-    /** Xóa loại phòng chưa được sử dụng; ràng buộc FK ngăn xóa dữ liệu đang bị tham chiếu. */
+    /** Xóa loại phòng chưa được sử dụng; ràng buộc tham chiếu tiếp tục bảo vệ dữ liệu lịch sử. */
     @Override
     void deleteById(Long id);
 }

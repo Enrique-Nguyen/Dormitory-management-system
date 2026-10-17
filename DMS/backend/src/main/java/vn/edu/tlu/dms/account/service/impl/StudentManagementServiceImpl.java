@@ -5,17 +5,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.api.AccountDtos.TemporaryPassword;
-import vn.edu.tlu.dms.account.api.StudentManagementController.StudentInput;
-import vn.edu.tlu.dms.account.api.StudentManagementController.StudentPatch;
+import vn.edu.tlu.dms.account.api.StudentManagementController.Save;
 import vn.edu.tlu.dms.account.repository.AppUserRepository;
 import vn.edu.tlu.dms.account.service.AuthService;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
 import vn.edu.tlu.dms.account.service.StudentManagementService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -27,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -93,7 +98,8 @@ public class StudentManagementServiceImpl implements StudentManagementService {
     }
 
     @Override()
-    public PageResponse<Map<String, Object>> searchStudents(int page, int size, String q) {
+    public PageResponse<Map<String, Object>> searchByPage(SearchRequest input) {
+        String q = input.q();
         guard.requirePermission(Permission.STUDENT_READ);
         var args = scopeParameters();
         args.add(LikePattern.contains(q.trim()));
@@ -104,8 +110,21 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                         + scope()
                         + " AND (u.full_name ILIKE ? OR p.student_code ILIKE ?)",
                 args,
-                page,
-                size);
+                input,
+                Set.of(
+                        "id",
+                        "username",
+                        "fullName",
+                        "phone",
+                        "locked",
+                        "studentCode",
+                        "gender",
+                        "dateOfBirth",
+                        "faculty",
+                        "cohort",
+                        "hometown",
+                        "emergencyContact"),
+                "id,desc");
     }
 
     @Override()
@@ -117,17 +136,37 @@ public class StudentManagementServiceImpl implements StudentManagementService {
     }
 
     @Transactional
-    @Override()
-    public TemporaryPassword createStudent(StudentInput in) {
+    @Override
+    public Object saveOrUpdate(Save input) {
+        if (input.id() == null) {
+            guard.requirePermission(Permission.STUDENT_CREATE);
+            // Chỉ Admin được tạo; quyền sửa hồ sơ của Staff không mở nhánh tạo.
+            if (!current.get().isAdmin()) {
+                throw BusinessException.forbidden();
+            }
+            requiredText(input.studentCode(), "studentCode");
+            requiredText(input.fullName(), "fullName");
+            requiredText(input.gender(), "gender");
+            return createStudent(input);
+        }
+        guard.requirePermission(Permission.STUDENT_UPDATE);
+        if (input.id() <= 0) {
+            throw BusinessException.invalid(ApiField.ID, ValidationMessage.ID_POSITIVE);
+        }
+        return updateStudent(input.id(), input);
+    }
+
+    private TemporaryPassword createStudent(Save in) {
         guard.requirePermission(Permission.STUDENT_CREATE);
         String temporary = "Kt7" + UUID.randomUUID().toString().replace("-", "").substring(0, 13);
         Long id =
                 jdbc.queryForObject(
                         "INSERT INTO app_user(username,password_hash,role,full_name,phone) VALUES"
-                                + " (?,?,'STUDENT',?,?) RETURNING id",
+                                + " (?,?,?,?,?) RETURNING id",
                         Long.class,
                         in.studentCode().trim(),
                         null,
+                        Role.STUDENT,
                         in.fullName().trim(),
                         in.phone());
         jdbc.update(
@@ -148,7 +187,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
         audit.record(
                 current.get().id(),
                 AuditAction.STUDENT_CREATE,
-                "USER",
+                EntityType.USER,
                 id,
                 null,
                 Map.of("studentCode", in.studentCode()),
@@ -156,9 +195,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
         return new TemporaryPassword(id, temporary);
     }
 
-    @Transactional
-    @Override()
-    public Map<String, Object> updateStudent(Long id, StudentPatch in) {
+    private Map<String, Object> updateStudent(Long id, Save in) {
         guard.requirePermission(Permission.STUDENT_UPDATE);
         var user = authService.lockAccount(id);
         var before = getStudentById(id);
@@ -194,7 +231,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                     + " WHERE user_id=?",
                 studentCode,
                 gender,
-                in.dateOfBirthPresent() ? in.dateOfBirth() : before.get("dateOfBirth"),
+                keep(in.dateOfBirth(), before.get("dateOfBirth")),
                 keep(in.faculty(), before.get("faculty")),
                 keep(in.cohort(), before.get("cohort")),
                 keep(in.hometown(), before.get("hometown")),
@@ -202,7 +239,13 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                 id);
         var after = getStudentById(id);
         audit.record(
-                current.get().id(), AuditAction.STUDENT_UPDATE, "USER", id, before, after, null);
+                current.get().id(),
+                AuditAction.STUDENT_UPDATE,
+                EntityType.USER,
+                id,
+                before,
+                after,
+                null);
         return after;
     }
 
@@ -221,18 +264,20 @@ public class StudentManagementServiceImpl implements StudentManagementService {
         return requested != null ? requested : stored;
     }
 
-    /** Ghi cần ít nhất một hồ sơ/nguyện vọng thuộc đúng đơn vị của Staff, không tính quyền tổng hợp. */
+    /**
+     * Ghi cần ít nhất một hồ sơ/nguyện vọng thuộc đúng đơn vị của Staff, không tính quyền tổng hợp.
+     */
     private void requireOwnStudent(Long id) {
         Long unit = current.get().unitId();
         boolean own =
                 Boolean.TRUE.equals(
                         jdbc.queryForObject(
                                 "SELECT EXISTS(SELECT 1 FROM room_application WHERE"
-                                    + " student_id=? AND preferred_unit_id=?) OR EXISTS(SELECT"
-                                    + " 1 FROM room_assignment_history a JOIN bed b ON"
-                                    + " b.id=a.bed_id JOIN room r ON r.id=b.room_id JOIN"
-                                    + " building bd ON bd.id=r.building_id WHERE a.student_id=?"
-                                    + " AND bd.management_unit_id=?)",
+                                        + " student_id=? AND preferred_unit_id=?) OR EXISTS(SELECT"
+                                        + " 1 FROM room_assignment_history a JOIN bed b ON"
+                                        + " b.id=a.bed_id JOIN room r ON r.id=b.room_id JOIN"
+                                        + " building bd ON bd.id=r.building_id WHERE a.student_id=?"
+                                        + " AND bd.management_unit_id=?)",
                                 Boolean.class,
                                 id,
                                 unit,
@@ -275,7 +320,13 @@ public class StudentManagementServiceImpl implements StudentManagementService {
         jdbc.update("DELETE FROM student_profile WHERE user_id=?", id);
         jdbc.update("DELETE FROM app_user WHERE id=?", id);
         audit.record(
-                current.get().id(), AuditAction.STUDENT_DELETE, "USER", id, before, null, null);
+                current.get().id(),
+                AuditAction.STUDENT_DELETE,
+                EntityType.USER,
+                id,
+                before,
+                null,
+                null);
     }
 
     @Transactional
@@ -316,17 +367,33 @@ public class StudentManagementServiceImpl implements StudentManagementService {
         return authService.resetPassword(user, current.get().id());
     }
 
-    @Override()
-    public List<Map<String, Object>> getTechnicians() {
+    @Override
+    public PageResponse<Map<String, Object>> searchTechniciansByPage(SearchRequest input) {
         guard.requirePermission(Permission.MAINTENANCE_UPDATE);
         String sql =
                 "SELECT u.id,u.full_name,u.username, (SELECT count(*) FROM maintenance_request m"
-                    + " WHERE m.assigned_to=u.id AND m.status IN ('ASSIGNED','IN_PROGRESS')) AS"
-                    + " task_count FROM app_user u WHERE u.role='TECHNICIAN' AND NOT u.locked AND"
-                        + (current.get().isAdmin() ? " TRUE" : " u.management_unit_id=?")
-                        + " ORDER BY u.full_name";
-        return current.get().isAdmin()
-                ? queries.list(sql)
-                : queries.list(sql, current.get().unitId());
+                        + " WHERE m.assigned_to=u.id AND m.status IN (?,?)) AS"
+                        + " task_count FROM app_user u WHERE u.role=? AND NOT u.locked";
+        var args = new ArrayList<Object>();
+        args.add(MaintenanceStatus.ASSIGNED);
+        args.add(MaintenanceStatus.IN_PROGRESS);
+        args.add(Role.TECHNICIAN);
+        if (!current.get().isAdmin()) {
+            sql += " AND u.management_unit_id=?";
+            args.add(current.get().unitId());
+        }
+        sql += " AND (u.full_name ILIKE ? OR u.username ILIKE ?)";
+        String keyword = LikePattern.contains(input.q().trim());
+        args.add(keyword);
+        args.add(keyword);
+        return queries.search(
+                sql, args, input, Set.of("id", "fullName", "username", "taskCount"), "id,desc");
+    }
+
+    private String requiredText(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw BusinessException.invalid(field, ValidationMessage.REQUIRED);
+        }
+        return value.trim();
     }
 }

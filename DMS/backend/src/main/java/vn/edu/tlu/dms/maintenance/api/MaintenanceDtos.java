@@ -18,10 +18,12 @@ public final class MaintenanceDtos {
 
     private MaintenanceDtos() {}
 
-    public record Create(
-            @NotBlank @Pattern(regexp = MaintenanceCategory.PATTERN) String category,
-            @NotBlank @Pattern(regexp = MaintenanceSeverity.PATTERN) String severity,
-            @NotBlank @Size(max = 1000) String description,
+    /** Không có id thì tạo mới; có id chỉ sửa các trường nội dung được gửi và giữ vị trí/ảnh cũ. */
+    public record Save(
+            @Positive Long id,
+            @Pattern(regexp = MaintenanceCategory.PATTERN) String category,
+            @Pattern(regexp = MaintenanceSeverity.PATTERN) String severity,
+            @Size(max = 1000) String description,
             @Positive Long roomId,
             @Positive Long buildingId,
             @Min(0) Short floor) {}

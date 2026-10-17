@@ -4,13 +4,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
-import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.SemesterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SummerChoice;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SummerStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -18,9 +22,11 @@ import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.impl.AbstractSqlCrudServiceImpl;
 import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
+import vn.edu.tlu.dms.registration.api.SummerCrudController.Input;
 import vn.edu.tlu.dms.registration.service.SummerCrudService;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -51,12 +57,13 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
     }
 
     @Override()
-    public Object searchChoices(int page, int size, String q) {
+    public PageResponse<Map<String, Object>> searchByPage(SearchRequest search, boolean mine) {
         guard.requirePermission(Permission.SUMMER_REGISTRATION_READ);
-        guard.requireRole(Role.STUDENT, Role.STAFF);
+        guard.requireRole(
+                mine ? new String[] {Role.STUDENT} : new String[] {Role.STUDENT, Role.STAFF});
         var args = new ArrayList<Object>();
         String scope;
-        if (current.get().is(Role.STUDENT)) {
+        if (mine || current.get().is(Role.STUDENT)) {
             scope = "c.student_id=?";
             args.add(current.get().id());
         } else if (current.get().canReadAllUnits()) {
@@ -65,7 +72,7 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
             scope = "a.preferred_unit_id=?";
             args.add(current.get().unitId());
         }
-        args.add(LikePattern.contains(q));
+        args.add(LikePattern.contains(search.q()));
         return queries.search(
                 "SELECT sc.*,c.code AS contract_code,u.full_name FROM summer_choice sc JOIN"
                         + " dormitory_contract c ON c.id=sc.contract_id JOIN room_application a ON"
@@ -73,8 +80,17 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
                         + scope
                         + " AND u.full_name ILIKE ?",
                 args,
-                page,
-                size);
+                search,
+                Set.of(
+                        "id",
+                        "contractId",
+                        "semesterId",
+                        "choice",
+                        "status",
+                        "createdAt",
+                        "contractCode",
+                        "fullName"),
+                "id,desc");
     }
 
     @Override()
@@ -102,21 +118,36 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
         return row;
     }
 
+    @Override
     @Transactional
-    @Override()
-    public Object createChoice(Map<String, Object> input) {
+    public Object saveOrUpdate(Input input) {
+        Long id = input.id();
+        if (id != null && id <= 0) {
+            throw BusinessException.invalid(ApiField.ID, ValidationMessage.ID_POSITIVE);
+        }
+        var fields = new LinkedHashMap<String, Object>();
+        if (input.contractId() != null) {
+            fields.put("contractId", input.contractId());
+        }
+        if (input.semesterId() != null) {
+            fields.put("semesterId", input.semesterId());
+        }
+        if (input.choice() != null) {
+            fields.put("choice", input.choice());
+        }
+        return id == null ? createChoice(fields) : updateChoice(id, fields);
+    }
+
+    private Object createChoice(Map<String, Object> input) {
         guard.requirePermission(Permission.SUMMER_REGISTRATION_CREATE);
         guard.requireRole(Role.STUDENT);
         var c = requireContract(number(input, "contractId"));
         if (!ContractStatus.ACTIVE.equals(c.get("status"))) {
             throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
-        String type =
-                jdbc.queryForObject(
-                        "SELECT type FROM semester WHERE id=?",
-                        String.class,
-                        number(input, "semesterId"));
-        if (!RegistrationKind.SUMMER.equals(type)) {
+        var semester =
+                queries.one("SELECT type FROM semester WHERE id=?", number(input, "semesterId"));
+        if (!SemesterType.SUMMER.equals(semester.get("type"))) {
             throw BusinessException.invalid("semesterId", "Chọn học kỳ hè");
         }
         validateChoice(input);
@@ -128,9 +159,7 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
                 Map.of("status", SummerStatus.PENDING));
     }
 
-    @Transactional
-    @Override()
-    public Object updateChoice(Long id, Map<String, Object> input) {
+    private Object updateChoice(Long id, Map<String, Object> input) {
         guard.requirePermission(Permission.SUMMER_REGISTRATION_UPDATE);
         loadEditable(id);
         if (input.size() != 1 || !input.containsKey("choice")) {

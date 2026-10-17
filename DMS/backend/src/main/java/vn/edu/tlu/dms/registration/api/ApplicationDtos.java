@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms.registration.api;
 
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
@@ -12,13 +13,34 @@ public final class ApplicationDtos {
 
     private ApplicationDtos() {}
 
+    /** Body lưu phẳng: ID trống tạo mới, ID dương sửa bản ghi đã có. */
     public record Input(
+            @Positive Long id,
             @Positive Long periodId,
             @Positive Long preferredUnitId,
             @Positive Long preferredRoomTypeId,
-            List<@Positive Long> priorityCategoryIds,
+            List<@NotNull @Positive Long> priorityCategoryIds,
             @Size(max = 500) String note,
-            @Positive Long studentId) {}
+            @Positive Long studentId) {
+
+        /** Giữ tương thích các lời gọi tạo mới trong mã Java hiện có. */
+        public Input(
+                Long periodId,
+                Long preferredUnitId,
+                Long preferredRoomTypeId,
+                List<Long> priorityCategoryIds,
+                String note,
+                Long studentId) {
+            this(
+                    null,
+                    periodId,
+                    preferredUnitId,
+                    preferredRoomTypeId,
+                    priorityCategoryIds,
+                    note,
+                    studentId);
+        }
+    }
 
     public record Priority(Long categoryId, String name, Integer weight, Boolean verified) {}
 

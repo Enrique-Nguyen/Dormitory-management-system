@@ -19,11 +19,17 @@ public final class RoomDtos {
     private RoomDtos() {}
 
     public record Input(
+            @Positive Long id,
             @Positive Long buildingId,
             @Min(0) Short floor,
             @Size(max = 20) String code,
             @Positive Long roomTypeId,
-            @Pattern(regexp = Gender.PATTERN) String gender) {}
+            @Pattern(regexp = Gender.PATTERN) String gender) {
+
+        public Input(Long buildingId, Short floor, String code, Long roomTypeId, String gender) {
+            this(null, buildingId, floor, code, roomTypeId, gender);
+        }
+    }
 
     public record Status(
             @NotBlank @Pattern(regexp = RoomStatus.PATTERN) String status,
@@ -36,7 +42,16 @@ public final class RoomDtos {
         }
     }
 
-    public record BedInput(@NotBlank @Size(max = 10) String code) {}
+    public record BedInput(@Positive Long id, @Positive Long roomId, @Size(max = 10) String code) {
+
+        public BedInput(String code) {
+            this(null, null, code);
+        }
+
+        public BedInput(Long roomId, String code) {
+            this(null, roomId, code);
+        }
+    }
 
     public record BedStatus(
             @NotBlank @Pattern(regexp = BedOperationStatus.PATTERN) String status,

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import vn.edu.tlu.dms.billing.domain.Invoice;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface InvoiceRepository
@@ -26,8 +27,8 @@ public interface InvoiceRepository
 
     /**
      * Phạm vi đơn vị của Staff. Điện nước theo đơn vị của phòng. Phí phòng theo đơn vị mà sinh viên
-     * ở trong học kỳ của hóa đơn (hoặc đã đăng ký nguyện vọng trong đợt thuộc học kỳ đó), không
-     * lấy mọi lịch sử ở từng đơn vị để sinh viên chuyển đơn vị không làm lộ hóa đơn kỳ khác.
+     * ở trong học kỳ của hóa đơn (hoặc đã đăng ký nguyện vọng trong đợt thuộc học kỳ đó), không lấy
+     * mọi lịch sử ở từng đơn vị để sinh viên chuyển đơn vị không làm lộ hóa đơn kỳ khác.
      */
     String STAFF_UNIT_SCOPE =
             """
@@ -70,17 +71,12 @@ public interface InvoiceRepository
     String SEARCH_FILTER =
             """
             AND (:type IS NULL OR i.type = :type)
-            AND (:status IS NULL OR i.status = :status)
+            AND (:filterStatuses = false OR i.status IN (:statuses))
             AND (i.code ILIKE :q OR EXISTS(SELECT 1 FROM app_user u WHERE u.id=i.student_id AND u.full_name ILIKE :q))
             """;
 
     @Query(
-            value =
-                    "SELECT i.* FROM invoice i WHERE "
-                            + ACCESS_SCOPE
-                            + MINE_FILTER
-                            + SEARCH_FILTER
-                            + " ORDER BY i.issued_at DESC, i.id DESC",
+            value = "SELECT i.* FROM invoice i WHERE " + ACCESS_SCOPE + MINE_FILTER + SEARCH_FILTER,
             countQuery =
                     "SELECT count(*) FROM invoice i WHERE "
                             + ACCESS_SCOPE
@@ -94,7 +90,8 @@ public interface InvoiceRepository
             boolean crossUnit,
             boolean mine,
             String type,
-            String status,
+            boolean filterStatuses,
+            List<String> statuses,
             String q,
             Pageable pageable);
 

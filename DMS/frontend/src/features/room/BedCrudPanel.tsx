@@ -14,7 +14,11 @@ import { useApiErrorHandler } from '../../hooks/useApiErrorHandler'
 import { hasPermission } from '../../services/api/auth'
 import type { RoomBedItem } from '../../services/api/room'
 import { useMe } from '../account/useMe'
-import { validationFieldErrors, writeCrudRecord } from '../crud/api'
+import {
+  saveOrUpdate,
+  validationFieldErrors,
+  writeCrudRecord,
+} from '../crud/api'
 
 /** Bảng giường của phòng: thêm, sửa mã và xóa giường chưa từng được phân (quyền BED_*). */
 export default function BedCrudPanel({
@@ -40,12 +44,13 @@ export default function BedCrudPanel({
     if (editing ? !canUpdate : !canCreate) return
     setBusy(true)
     try {
-      await writeCrudRecord(
-        editing ? `/beds/${editing.id}` : `/rooms/${roomId}/beds`,
-        editing ? 'patch' : 'post',
-        values,
-      )
+      await saveOrUpdate('/beds', {
+        code: values.code,
+        roomId,
+        ...(editing ? { id: editing.id } : {}),
+      })
       setEditing(undefined)
+      form.resetFields()
       await reload()
     } catch (e) {
       form.setFields(

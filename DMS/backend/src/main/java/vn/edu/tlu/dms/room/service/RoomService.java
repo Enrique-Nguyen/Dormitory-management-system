@@ -1,6 +1,7 @@
 package vn.edu.tlu.dms.room.service;
 
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.room.api.RoomDtos.AvailableRoom;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedInput;
 import vn.edu.tlu.dms.room.api.RoomDtos.BedResponse;
@@ -12,6 +13,9 @@ import vn.edu.tlu.dms.room.api.RoomDtos.Status;
 import java.util.List;
 
 public interface RoomService {
+
+    /** Tra cứu phòng theo trang và bộ lọc SearchRequest; SQL lọc đơn vị trước khi phân trang. */
+    PageResponse<Response> searchByPage(SearchRequest request);
 
     /** Tra cứu phòng; SQL lọc đơn vị trước khi phân trang, số chỗ trống lấy từ view. */
     PageResponse<Response> searchRooms(
@@ -43,20 +47,14 @@ public interface RoomService {
     /** Đọc phòng kèm giường và người đang ở/giữ chỗ, kiểm tra quyền trên đối tượng. */
     Response getRoomById(Long id);
 
-    /** Tạo phòng và toàn bộ giường theo loại phòng trong một transaction. */
-    Response createRoom(Input input);
+    /** Thêm mới khi chưa có id hoặc cập nhật từng phần phòng khi đã có id trong một transaction. */
+    Response saveOrUpdate(Input input);
 
-    /** Đổi giới tính/loại phòng chỉ khi không còn phân phòng hiệu lực; không đổi tòa. */
-    Response updateRoom(Long id, Input input);
+    /** Thêm mới giường hoặc cập nhật mã hiển thị giường trong một transaction. */
+    BedResponse saveOrUpdateBed(BedInput input);
 
     /** Đổi trạng thái vận hành có lý do; khóa giường trước khi kiểm tra còn người ở. */
     Response changeRoomStatus(Long id, Status input);
-
-    /** Thêm giường thuộc phòng của đơn vị đang quản lý. */
-    BedResponse addBedToRoom(Long roomId, BedInput input);
-
-    /** Sửa mã hiển thị của giường, giữ ID và lịch sử phân phòng. */
-    BedResponse updateBedCode(Long id, BedInput input);
 
     /** Không chuyển Hỏng/Ngừng dùng khi giường đang được ở hoặc giữ chỗ. */
     BedResponse changeBedStatus(Long id, BedStatus input);

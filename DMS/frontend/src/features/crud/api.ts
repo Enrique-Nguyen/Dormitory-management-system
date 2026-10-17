@@ -93,17 +93,134 @@ export function toLocalDateTime(value: unknown): string {
     .slice(0, 16)
 }
 
-export function crudRequestParams(query: CrudQuery, config: CrudResource) {
-  const params: Record<string, string | number | undefined> = {
+/** date dùng định dạng YYYY-MM-DD cho input[type="date"]; hỗ trợ chuỗi ISO, Date và timestamp. */
+export function toLocalDateString(value: unknown): string {
+  if (value == null || value === '') return ''
+  if (typeof value === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10)
+    const date = new Date(value)
+    if (Number.isFinite(date.getTime())) {
+      return date.toISOString().slice(0, 10)
+    }
+    return ''
+  }
+  if (value instanceof Date && Number.isFinite(value.getTime())) {
+    return value.toISOString().slice(0, 10)
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const date = new Date(value)
+    return Number.isFinite(date.getTime())
+      ? date.toISOString().slice(0, 10)
+      : ''
+  }
+  return ''
+}
+
+/**
+ * Chuyển đổi dữ liệu bản ghi API sang định dạng hiển thị và chỉnh sửa của Ant Design Form.
+ * Giữ nguyên giá trị boolean false, số 0, chuỗi rỗng tùy chọn và ánh xạ quan hệ lồng nhau.
+ */
+export function getRecordFormValues(
+  record: CrudRecord,
+  config: CrudResource,
+  resource: string,
+): Record<string, unknown> {
+  const initial: Record<string, unknown> = { ...record }
+  const allFields = [
+    ...(config.fields ?? []),
+    ...(config.editFields ?? []),
+    ...(config.createFields ?? []),
+  ]
+
+  for (const field of allFields) {
+    let val = initial[field.name]
+
+    // Ánh xạ khóa ngoại lồng nhau: ví dụ studentId từ student.id hoặc unitId từ unit.id
+    if (val == null && field.name.endsWith('Id')) {
+      const objKey = field.name.slice(0, -2)
+      const objVal = initial[objKey]
+      if (
+        objVal &&
+        typeof objVal === 'object' &&
+        'id' in (objVal as Record<string, unknown>)
+      ) {
+        val = (objVal as Record<string, unknown>).id
+        initial[field.name] = val
+      }
+    }
+
+    // Nếu val là đối tượng chứa id (select lookup đơn)
+    if (
+      val != null &&
+      field.kind === 'select' &&
+      !field.multiple &&
+      typeof val === 'object' &&
+      !Array.isArray(val) &&
+      'id' in (val as Record<string, unknown>)
+    ) {
+      val = (val as Record<string, unknown>).id
+      initial[field.name] = val
+    }
+
+    // Nếu là select multiple có danh sách đối tượng
+    if (field.multiple && Array.isArray(val)) {
+      initial[field.name] = val.map((item) =>
+        item && typeof item === 'object' && 'id' in item
+          ? (item as Record<string, unknown>).id
+          : item,
+      )
+    } else if (val != null) {
+      if (field.kind === 'datetime') {
+        initial[field.name] = toLocalDateTime(val)
+      } else if (field.kind === 'date') {
+        initial[field.name] = toLocalDateString(val)
+      }
+    }
+  }
+
+  // Ánh xạ diện ưu tiên cho màn hình đơn đăng ký
+  if (
+    ['myApplications', 'applications'].includes(resource) &&
+    Array.isArray(record.priorities)
+  ) {
+    initial.priorityCategoryIds = record.priorities
+      .map((p) => {
+        const item = p as Record<string, unknown>
+        return (
+          item.categoryId ??
+          (typeof item.category === 'object' &&
+          item.category &&
+          'id' in item.category
+            ? (item.category as Record<string, unknown>).id
+            : undefined)
+        )
+      })
+      .filter((id) => id != null)
+  }
+
+  return initial
+}
+
+/** Gửi điều kiện tìm kiếm có kiểu rõ ràng; trang API bắt đầu từ 0. */
+export function createSearchRequest(query: CrudQuery, config: CrudResource) {
+  const params: Record<string, string | number | boolean> = {
     page: query.page - 1,
     size: query.size,
-    q: config.localSearch ? undefined : query.search,
+    q: query.search,
   }
   for (const field of config.filters ?? []) {
     const value = query.filters[field.name]
-    if (value)
-      params[field.name] =
-        field.kind === 'datetime' ? new Date(value).toISOString() : value
+    if (!value) continue
+    params[field.name] =
+      field.kind === 'datetime'
+        ? new Date(value).toISOString()
+        : field.filterValueType === 'boolean'
+          ? value === 'true'
+          : field.filterValueType === 'number' ||
+              field.kind === 'number' ||
+              field.lookup
+            ? Number(value)
+            : value
   }
   return params
 }
@@ -127,7 +244,7 @@ export interface CrudPage {
   content: CrudRecord[]
   totalElements: number
 }
-/** Tương thích danh mục dạng mảng, danh sách phân trang và hồ sơ đơn lẻ. */
+/** Chuẩn hóa response phân trang và hồ sơ đơn lẻ. */
 export function normalizePage(data: unknown): CrudPage {
   if (Array.isArray(data))
     return { content: data as CrudRecord[], totalElements: data.length }
@@ -161,19 +278,31 @@ export async function getLookupRecords(
 ): Promise<CrudRecord[]> {
   const all: CrudRecord[] = []
   for (let page = 0; page < 100; page++) {
-    const { data } = await api.get(endpoint, { params: { page, size: 100 } })
-    const result = normalizePage(data)
+    const result = await searchByPage(endpoint, { page, size: 100 })
     all.push(...result.content)
-    if (
-      Array.isArray(data) ||
-      all.length >= result.totalElements ||
-      result.content.length === 0
-    )
-      break
+    if (all.length >= result.totalElements || result.content.length === 0) break
     if (page === 99)
       console.warn(`Lookup ${endpoint} chạm trần 100 trang, danh sách bị cắt.`)
   }
   return all
+}
+
+/** Danh sách luôn đi qua API tìm kiếm và phân trang tại máy chủ. */
+export async function searchByPage(
+  endpoint: string,
+  request: Record<string, unknown>,
+): Promise<CrudPage> {
+  return normalizePage(
+    (await api.post(`${endpoint}/search-by-page`, request)).data,
+  )
+}
+
+/** Một API lưu chung; body có id thì sửa, không có id thì tạo. */
+export async function saveOrUpdate(
+  endpoint: string,
+  values: unknown,
+): Promise<unknown> {
+  return (await api.post(`${endpoint}/save-or-update`, values)).data
 }
 
 export async function writeCrudRecord(

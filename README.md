@@ -2,6 +2,8 @@
 
 Khung CRUD backend: xem [hướng dẫn chạy, API đã có và phần cần làm tiếp](DMS/backend/README.md).
 
+API CRUD hiện tại dùng POST `.../search-by-page` cho danh sách/lookup và POST `.../save-or-update` cho tạo/sửa (ID trong body). React đã gọi theo contract này. Quy tắc nghiệp vụ và không hardcode được ghi trong [CLAUDE.md](CLAUDE.md); xem contract/ví dụ và kiểm chứng Java 17 trong README backend.
+
 Đồ án môn Chuyên đề CNTT, lớp 65CNTT, nhóm 3. Tài liệu thiết kế ở `Docs/`, mã nguồn ở `DMS/`.
 
 | Thư mục | Nội dung |
@@ -79,9 +81,33 @@ Trong mỗi module: `api/` (controller + DTO), `service/`, `domain/`, `repositor
 
 ## Quy ước làm việc
 
-- Nhánh `main` được bảo vệ: chỉ nhận thay đổi qua Pull Request, cần 1 người duyệt và CI xanh.
-- Tên nhánh: `feature/<module>-<viec>`, `fix/<module>-<loi>`, `docs/<tai-lieu>`. Ví dụ `feature/room-bed-occupancy`.
-- Commit ngắn, tiếng Việt hoặc tiếng Anh đều được, bắt đầu bằng phạm vi: `room: thêm BedOccupancyService.occupy`.
+### Nhánh
+
+| Nhánh | Vai trò | Nhận thay đổi từ |
+|---|---|---|
+| `main` | Bản ổn định, dùng để nộp và demo | PR từ `develop` khi xong một mốc, hoặc PR từ `hotfix/...` |
+| `develop` | Nhánh tích hợp hằng ngày, mọi nhánh việc tách từ đây | PR từ nhánh việc |
+| `<loai>/<module>-<viec>` | Một việc của một người | Tách từ `develop` mới nhất |
+
+- `main` và `develop` đều được bảo vệ: không push thẳng, chỉ nhận qua Pull Request, cần 1 người duyệt và CI xanh.
+- Tên nhánh việc: `<loai>/<module>-<viec>`, chữ thường, không dấu, các từ nối bằng `-`, tối đa khoảng 40 ký tự.
+  - `<loai>`: `feature` (chức năng mới), `fix` (sửa lỗi), `refactor` (sửa cấu trúc, không đổi hành vi), `test` (chỉ thêm hoặc sửa test), `docs` (tài liệu trong `Docs/`, README), `chore` (cấu hình, CI, thư viện), `hotfix` (sửa gấp trên `main`).
+  - `<module>`: `common`, `account`, `room`, `registration`, `contract`, `maintenance`, `billing`, `notification`; `frontend-core` cho layout, router, theme dùng chung của frontend; `shared` cho việc chạm nhiều module.
+  - Ví dụ: `feature/room-bed-occupancy` (TV2), `feature/contract-transfer-room` (TV2), `feature/contract-checkout` (TV4), `fix/billing-electric-rounding` (TV5), `docs/shared-git-conventions`.
+  - Không đặt nhánh theo tên người (`develop-ten`): nhiều người cùng module thì phân biệt bằng phần `<viec>`.
+- Mỗi nhánh một việc, sống ngắn (vài ngày). Trước khi mở PR, cập nhật từ `develop`: `git pull --rebase origin develop` nếu nhánh chỉ mình làm, `git merge origin/develop` nếu nhiều người cùng làm.
+- PR vào `develop` dùng **Squash and merge**, xóa nhánh sau khi merge. PR `develop` vào `main` dùng **Create a merge commit** (không squash, để hai nhánh không lệch lịch sử).
+- `hotfix/...` tách từ `main`, PR vào `main`, sau đó mở thêm PR `main` vào `develop` để `develop` có bản sửa.
+
+### Commit
+
+- Dạng `<loai>(<module>): <mô tả>`, mô tả ngắn, tiếng Việt hoặc tiếng Anh đều được, không chấm cuối câu.
+- `<loai>`: `feat`, `fix`, `refactor`, `test`, `docs`, `chore` (giống loại nhánh, `feature` viết là `feat`).
+- Ví dụ: `feat(room): thêm API chiếm giường`, `fix(billing): sửa làm tròn tiền điện`, `docs(shared): cập nhật quy ước nhánh`.
+- Tiêu đề PR theo cùng dạng, vì khi squash nó thành commit trên `develop`.
+
+### Khác
+
 - Đổi API, CSDL hoặc quy tắc nghiệp vụ thì sửa tài liệu trong `Docs/` cùng PR. Thứ tự ưu tiên khi mâu thuẫn: SRS, rồi SAD / CSDL / API, rồi giao diện.
 - Không commit `.env`, mật khẩu, file trong `node_modules/`, `target/`, `dist/`.
 
@@ -214,7 +240,7 @@ Khung tham khảo RolePrivilege của HR-V5: `ScopeGuard` kiểm tra quyền hi�
 - TECHNICIAN: đọc/cập nhật tiến độ ticket được giao, không CRUD dữ liệu phòng/hợp đồng/hóa đơn.
 - STUDENT: dữ liệu cá nhân và phòng đang ở; đơn/yêu cầu của mình, không sửa role hoặc ID người sở hữu.
 
-Đổi role của tài khoản Staff/KTV/Admin qua PATCH `/api/admin/users/{id}` hỗ trợ trường `role`, đồng bộ Keycloak và thu hồi token cũ. Staff/KTV phải có đơn vị; chuyển sang ADMIN xóa đơn vị và cờ tổng hợp; không chuyển hồ sơ STUDENT thành tài khoản cán bộ, không tự đổi role tài khoản đang sử dụng. ADMIN tạo đơn đăng ký hộ sinh viên bằng `studentId` rõ ràng; STUDENT không được gửi ID của người khác.
+Đổi role của tài khoản Staff/KTV/Admin qua POST `/api/admin/users/save-or-update` với `id` và `role` trong body, đồng bộ Keycloak và thu hồi token cũ. Staff/KTV phải có đơn vị; chuyển sang ADMIN xóa đơn vị và cờ tổng hợp; không chuyển hồ sơ STUDENT thành tài khoản cán bộ, không tự đổi role tài khoản đang sử dụng. ADMIN tạo đơn đăng ký hộ sinh viên bằng `studentId` rõ ràng; STUDENT không được gửi ID của người khác.
 
 Cập nhật 15/10/2026: ADMIN quản lý ma trận động tại `/admin/role-permissions`, lưu quyền của STAFF/STUDENT/TECHNICIAN trong `role_permission_matrix` qua Flyway V5. ADMIN giữ mọi quyền đã đăng ký và không có bản ghi để thu hồi quyền ADMIN. Mã quyền vẫn cố định trong Constants; quyền đang được cấp đọc từ CSDL. Sổ cọc/audit vẫn giữ chỉ đọc, hồ sơ có lịch sử và trạng thái vẫn chịu ràng buộc xóa/hủy như trước.
 
@@ -222,7 +248,7 @@ Kiểm chứng cập nhật phân quyền: backend clean verify đạt **44/44 t
 
 ### Khai quyền API bằng @RequirePrivilege — 14/10/2026
 
-Mọi hàm REST mapped trong ứng dụng khai `@RequirePrivilege(Permission.ROOM_CREATE)` hoặc một danh sách như `@RequirePrivilege({Permission.ROOM_TYPE_READ, Permission.ROOM_CREATE, Permission.ROOM_UPDATE})`. Nhiều mã dùng OR: có ít nhất một quyền mới được chạy API. Danh sách OR phù hợp API tra cứu cho form; thao tác ghi phải khai riêng CREATE/UPDATE/DELETE, không ghép quyền thêm/sửa để mở cả hai.
+Mọi hàm REST mapped khai `@RequirePrivilege(Permission.ROOM_CREATE)` hoặc một danh sách như `@RequirePrivilege({Permission.ROOM_TYPE_READ, Permission.ROOM_CREATE, Permission.ROOM_UPDATE})`. Nhiều mã dùng OR: có ít nhất một quyền mới được chạy API. Với API `save-or-update`, annotation cho phép CREATE hoặc UPDATE đi vào Controller; Service Impl bắt buộc kiểm tra chính xác CREATE khi không có ID, UPDATE khi có ID. Quyền Thêm không cấp quyền Sửa và ngược lại; DELETE vẫn kiểm tra riêng.
 
 `common/security/RequirePrivilege.java` chỉ khai annotation; `ScopeGuard.hasDeclaredPrivilege` đọc khai báo trên hàm thật, dùng khai báo lớp nếu hàm chưa khai, và kiểm role với dữ liệu tài khoản hiện tại. `SecurityConfig` bật Spring Security Method Security và đăng ký AuthorizationManagerBeforeMethodInterceptor: thiếu annotation, mảng rỗng hoặc không có quyền thì trả 403 trước thân Controller. Chưa đăng nhập/token không hợp lệ vẫn bị filter chain trả 401. Annotation ở hàm thay thế annotation lớp; Admin không vượt qua mã quyền chưa đăng ký.
 
@@ -243,9 +269,9 @@ Kiểm chứng: **55/55 test backend** đạt, gồm baseline giữ nguyên toà
 ### Hoàn thiện các luồng dùng chung — 15/10/2026
 
 - Đăng nhập và truy cập URL trực tiếp: trang gốc Admin kiểm USER_READ, Staff kiểm DASHBOARD_READ, Student kiểm PROFILE_READ, Technician kiểm MAINTENANCE_READ. Chuẩn hóa dấu gạch chéo/query/hash; cổng/màn không có trong khai báo bị từ chối. Chuyển hướng sau đăng nhập dùng quyền thực tế từ /auth/me.
-- Hồ sơ của tôi có ở cả bốn cổng, dùng lại CrudPage và GET/PATCH /api/me/profile. Sinh viên sửa điện thoại/ quê quán/liên hệ khẩn cấp; cán bộ chỉ sửa điện thoại. Mã sinh viên, họ tên, role và đơn vị không được sửa từ hồ sơ cá nhân.
+- Hồ sơ của tôi có ở cả bốn cổng, dùng lại CrudPage: GET `/api/me/profile` để đọc và POST `/api/me/profile/save-or-update` để sửa. Sinh viên sửa điện thoại/ quê quán/liên hệ khẩn cấp; cán bộ chỉ sửa điện thoại. Mã sinh viên, họ tên, role và đơn vị không được sửa từ hồ sơ cá nhân.
 - CRUD dùng chung lưu từ khóa, bộ lọc, số trang và cỡ trang trên URL theo từng resource, ví dụ users.q/users.role/users.page. Refresh, quay lại hoặc các tab ghép không làm lẫn điều kiện; đổi bộ lọc/cỡ trang trở về trang đầu, xóa hết trang tự về trang hợp lệ. Cỡ trang 10/20/50/100, mặc định 20; chỉ gửi bộ lọc được khai báo trong CrudResource.filters.
-- Control nhập liệu được đặt trực tiếp trong Form.Item để nhận value/onChange. Form hiển thị lỗi trường do API trả về; lỗi 409 tải lại dữ liệu qua handler chung. Chuỗi rỗng có thể xóa nội dung text tùy chọn, null vẫn giữ nghĩa PATCH cũ. Không đóng modal đang gửi request; thao tác xóa, khóa, reset, mở khóa và đổi phạm vi đọc có xác nhận.
+- Control nhập liệu được đặt trực tiếp trong Form.Item để nhận value/onChange. Form hiển thị lỗi trường do API trả về; lỗi 409 tải lại dữ liệu qua handler chung. Chuỗi rỗng có thể xóa nội dung text tùy chọn, trường không gửi hoặc null được giữ nguyên khi sửa. Không đóng modal đang gửi request; thao tác xóa, khóa, reset, mở khóa và đổi phạm vi đọc có xác nhận.
 - Tài khoản lọc role, managementUnitId và locked; UI xác nhận đổi vai trò/đơn vị và giải thích việc thu hồi phiên. Staff có thể được Admin cấp/thu hồi đọc liên đơn vị qua API cross-unit-access đã có; quyền ghi trong đơn vị vẫn giữ nguyên.
 - Nhật ký lọc actorId, action, entityType, from và to, kết hợp q. Action/type là mã chính xác; khoảng thời gian ISO có múi giờ, hai biên đều bao gồm. Bộ lọc sai trả 400; chỉ Admin được đọc. Khung hiện phân trang theo id giảm dần; xem chi tiết từ bản ghi đã trả về, không gọi endpoint chi tiết chưa có. Truy vấn nằm trong AuditServiceImpl, Controller chỉ nhận tham số và gọi Service.
 

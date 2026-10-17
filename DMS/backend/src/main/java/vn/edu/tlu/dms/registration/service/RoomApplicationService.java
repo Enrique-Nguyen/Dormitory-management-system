@@ -1,59 +1,28 @@
 package vn.edu.tlu.dms.registration.service;
 
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Input;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Response;
 
-import java.util.List;
-
-/** Khai báo thao tác với đơn đăng ký phòng; phần xử lý nằm trong RoomApplicationServiceImpl. */
+/** Hợp đồng đơn đăng ký phòng; logic nằm trong RoomApplicationServiceImpl. */
 public interface RoomApplicationService {
 
     /**
-     * Tìm và phân trang đơn theo đợt, trạng thái và cách sắp xếp, trong phạm vi được phép xem. mine
-     * bằng true chỉ lấy đơn của sinh viên đăng nhập; phiên bản này không lọc từ khóa.
+     * Tìm kiếm/phân trang theo đợt, trạng thái, từ khóa và sắp xếp sau khi lọc phạm vi. mine do
+     * Controller chỉ định, không nhận từ JSON; true chỉ lấy đơn của người đăng nhập.
      */
-    PageResponse<Response> searchApplications(
-            int page,
-            int size,
-            List<String> sort,
-            Long periodId,
-            List<String> statuses,
-            boolean mine);
+    PageResponse<Response> searchByPage(SearchRequest search, boolean mine);
 
-    /**
-     * Tìm và phân trang đơn theo từ khóa, đợt, trạng thái và cách sắp xếp. Từ khóa áp dụng cho
-     * thông tin sinh viên; mine bằng true chỉ lấy đơn của người đăng nhập.
-     */
-    PageResponse<Response> searchApplications(
-            int page,
-            int size,
-            List<String> sort,
-            Long periodId,
-            List<String> statuses,
-            boolean mine,
-            String keyword);
-
-    /** Lấy chi tiết đơn theo mã; chỉ cho phép chủ đơn hoặc cán bộ có phạm vi dữ liệu phù hợp. */
+    /** Đọc chi tiết đơn; ngoài chủ sở hữu/phạm vi được cấp trả NOT_FOUND. */
     Response getApplicationById(Long id);
 
     /**
-     * Tạo đơn nháp cho sinh viên đăng nhập; ADMIN được tạo hộ sinh viên có studentId hợp lệ. Trạng
-     * thái, điểm ưu tiên do hệ thống xác định và lịch sử ghi tài khoản thực hiện.
+     * Lưu đơn DRAFT: ID trống tạo, ID dương sửa; quyền CREATE/UPDATE kiểm tra riêng. ADMIN được
+     * chọn sinh viên thật khi tạo hộ; sửa không đổi chủ đơn hoặc đợt nguồn.
      */
-    Response createApplication(Input input);
+    Response saveOrUpdate(Input input);
 
-    /** Sửa đơn còn nháp của sinh viên đăng nhập; ADMIN được sửa đơn nháp ở mọi đơn vị. */
-    Response updateDraftApplication(Long id, Input input);
-
-    /**
-     * Thực hiện thao tác chuyển trạng thái đơn theo quyền và quy tắc hiện có. Khóa đơn rồi ghi
-     * trạng thái và lịch sử trong cùng giao dịch.
-     *
-     * @param id mã đơn đăng ký
-     * @param action tên thao tác, như submit, approve, reject hoặc cancel
-     * @param reason lý do thao tác khi quy tắc yêu cầu
-     * @return thông tin đơn sau khi thực hiện thao tác
-     */
+    /** Khóa đơn, kiểm tra Policy, đổi trạng thái và ghi lịch sử trong cùng transaction. */
     Response performApplicationAction(Long id, String action, String reason);
 }

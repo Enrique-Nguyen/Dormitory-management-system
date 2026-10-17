@@ -1,11 +1,12 @@
 package vn.edu.tlu.dms.common.service;
 
-import java.util.List;
+import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 
 public interface ConfigService {
 
-    /** Đọc danh sách các khóa cấu hình hệ thống; chỉ Admin được truy cập. */
-    List<ConfigValue> list();
+    /** Tìm và phân trang các khóa cấu hình theo từ khóa; chỉ Admin được truy cập. */
+    PageResponse<ConfigValue> searchByPage(SearchRequest input);
 
     /**
      * Đọc giá trị cấu hình dạng số nguyên dương; báo lỗi nếu thiếu khóa hoặc giá trị không hợp lệ.
@@ -13,7 +14,7 @@ public interface ConfigService {
     int positiveInt(String key);
 
     /** Cập nhật giá trị của khóa cấu hình đã có và ghi audit; không tạo khóa tùy ý từ client. */
-    ConfigValue update(String key, String value);
+    ConfigValue saveOrUpdate(String key, String value);
 
     public record ConfigValue(String key, String value, String description) {}
 }
