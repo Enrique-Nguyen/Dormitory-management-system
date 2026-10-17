@@ -17,9 +17,10 @@ import {
   type LeaderCandidate,
 } from '../../components'
 import { Permission } from '../../constants/authorization'
-import { STAFF_ROOMS_PATH } from '../../constants/navigation'
+import { portalPath, STAFF_ROOMS_PATH } from '../../constants/navigation'
 import {
   assignmentOccupancy,
+  BED_STATUS,
   roomGender,
   roomOperation,
 } from '../../constants/statusConfig'
@@ -36,7 +37,6 @@ import type { LeaderChange, StudentRef } from '../../services/api/room'
 import { errorMessage } from '../../utils/errorMessages'
 import { formatDateTime } from '../../utils/format'
 
-const BROKEN = 'BROKEN'
 const SYSTEM_ACTOR = 'Hệ thống'
 
 function studentLabel(student: StudentRef | null) {
@@ -91,7 +91,10 @@ export default function RoomDetailPage() {
           .filter(Boolean)
           .join(' · ')}
         breadcrumb={[
-          { label: 'Phòng & Giường', to: STAFF_ROOMS_PATH },
+          {
+            label: 'Phòng & Giường',
+            to: portalPath(me?.role, STAFF_ROOMS_PATH),
+          },
           { label: title },
         ]}
       />
@@ -169,7 +172,7 @@ export default function RoomDetailPage() {
                       <BedCard
                         key={bed.id}
                         number={bed.code}
-                        broken={bed.status === BROKEN}
+                        broken={bed.status === BED_STATUS.BROKEN}
                         occupancy={
                           bed.occupant
                             ? assignmentOccupancy[bed.occupant.kind]

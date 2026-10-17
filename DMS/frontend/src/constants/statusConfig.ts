@@ -190,6 +190,24 @@ export const assignmentOccupancy: Record<'HOLD' | 'STAY', BedOccupancy> = {
   STAY: 'OCCUPIED',
 }
 
+/** Loại phân phòng mở của lịch sử phân giường (khớp `room_assignment_history.kind`). */
+export type AssignmentKind = keyof typeof assignmentOccupancy
+
+/** Nhãn chiếm dụng giường (Đang giữ / Đang ở) theo loại phân phòng mở. */
+export function assignmentLabel(kind: AssignmentKind) {
+  return bedOccupancy[assignmentOccupancy[kind]].label
+}
+
+/** Trạng thái vận hành giường dùng ngoài bảng nhãn (khớp `bed.status`). */
+export const BED_STATUS = { BROKEN: 'BROKEN' } as const
+
+/** Mã hành động của yêu cầu chuyển phòng trong `allowedActions` (khớp API-Spec mục 4.7). */
+export const TRANSFER_ACTION = {
+  APPROVE: 'approve',
+  REJECT: 'reject',
+  CANCEL: 'cancel',
+} as const
+
 /** Nhãn giá trị dùng chung cho bảng/form CRUD; trang nghiệp vụ không tạo bản sao riêng. */
 export const crudValueLabels: Record<string, string> = {
   ACTIVE: 'Hoạt động',

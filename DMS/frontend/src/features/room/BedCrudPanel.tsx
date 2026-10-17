@@ -6,8 +6,7 @@ import { Button, Card, Modal, Tag } from '../../components/ui/Surface'
 import Table from '../../components/ui/DataTable'
 import { Permission } from '../../constants/authorization'
 import {
-  assignmentOccupancy,
-  bedOccupancy,
+  assignmentLabel,
   bedOperation,
 } from '../../constants/statusConfig'
 import { useApiErrorHandler } from '../../hooks/useApiErrorHandler'
@@ -100,7 +99,7 @@ export default function BedCrudPanel({
             render: (_: unknown, bed) =>
               bed.occupant
                 ? `${bed.occupant.fullName} · ${bed.occupant.studentCode} · ${
-                    bedOccupancy[assignmentOccupancy[bed.occupant.kind]].label
+                    assignmentLabel(bed.occupant.kind)
                   }`
                 : '—',
           },

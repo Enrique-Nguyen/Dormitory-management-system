@@ -56,11 +56,11 @@ function useRoomMutation<T>(
   const onError = useApiErrorHandler()
   return useMutation({
     mutationFn,
-    onSuccess: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: roomKeys.detail(id) }),
-        queryClient.invalidateQueries({ queryKey: ['crud'] }),
-      ]),
+    onSuccess: () => {
+      // Chỉ chờ chi tiết phòng đang xem; danh sách CRUD tải lại nền.
+      void queryClient.invalidateQueries({ queryKey: ['crud'] })
+      return queryClient.invalidateQueries({ queryKey: roomKeys.detail(id) })
+    },
     onError,
   })
 }

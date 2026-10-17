@@ -1,7 +1,7 @@
 import { stepsFromFlow } from '../ui/timelineSteps'
 import StatusTimeline from '../ui/StatusTimeline'
 import { Card, Descriptions } from '../ui/Surface'
-import { bedOccupancy, assignmentOccupancy } from '../../constants/statusConfig'
+import { assignmentLabel } from '../../constants/statusConfig'
 import type { TransferDetail } from '../../services/api/contract'
 import { formatBedCode, formatDateTime } from '../../utils/format'
 
@@ -48,7 +48,7 @@ export default function TransferSummary({
             label: 'Giường hiện tại',
             children: bed
               ? `${formatBedCode(bed.buildingCode, bed.roomCode, bed.bedCode)} · ${
-                  bedOccupancy[assignmentOccupancy[bed.kind]].label
+                  assignmentLabel(bed.kind)
                 }`
               : 'Không còn phân phòng',
           },

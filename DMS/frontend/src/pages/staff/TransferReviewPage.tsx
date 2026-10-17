@@ -10,7 +10,9 @@ import {
   StatusBadge,
   TransferSummary,
 } from '../../components'
-import { STAFF_REQUESTS_PATH } from '../../constants/navigation'
+import { portalPath, STAFF_REQUESTS_PATH } from '../../constants/navigation'
+import { TRANSFER_ACTION } from '../../constants/statusConfig'
+import { useMe } from '../../features/account/useMe'
 import {
   useApproveTransfer,
   useRejectTransfer,
@@ -21,8 +23,7 @@ import type { CrudRecord } from '../../features/crud/types'
 import { errorMessage } from '../../utils/errorMessages'
 import { formatBedCode } from '../../utils/format'
 
-const APPROVE = 'approve'
-const REJECT = 'reject'
+const { APPROVE, REJECT } = TRANSFER_ACTION
 
 function toOptions(records: CrudRecord[] | undefined, labelKey: string) {
   return (records ?? []).map((record) => ({
@@ -38,6 +39,7 @@ function toOptions(records: CrudRecord[] | undefined, labelKey: string) {
 export default function TransferReviewPage() {
   const id = Number(useParams().id)
   const request = useTransferRequest(id)
+  const { data: me } = useMe()
   const detail = request.data
   const canApprove = detail?.allowedActions.includes(APPROVE) ?? false
   const [filter, setFilter] = useState<{
@@ -79,7 +81,10 @@ export default function TransferReviewPage() {
         status={<StatusBadge entity="request" status={detail.status} />}
         subtitle={`${detail.studentName} · ${detail.studentCode}`}
         breadcrumb={[
-          { label: 'Yêu cầu chờ xử lý', to: STAFF_REQUESTS_PATH },
+          {
+            label: 'Yêu cầu chờ xử lý',
+            to: portalPath(me?.role, STAFF_REQUESTS_PATH),
+          },
           { label: `Chuyển phòng #${detail.id}` },
         ]}
         extra={

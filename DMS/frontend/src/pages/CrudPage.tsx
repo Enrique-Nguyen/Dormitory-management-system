@@ -924,7 +924,6 @@ export default function CrudPage({ resource }: { resource: string }) {
               ...config.columns.map((column) => ({
                 title: column.label,
                 key: column.key,
-                minWidth: 150,
                 render: (_: unknown, row: CrudRecord) => (
                   <span>{display(readValue(row, column.key))}</span>
                 ),

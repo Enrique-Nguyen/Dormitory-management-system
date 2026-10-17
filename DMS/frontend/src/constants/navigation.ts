@@ -95,6 +95,7 @@ export function permissionsForPath(path: string): Permission[] {
     rooms: [Permission.ROOM_READ],
     room: [Permission.ROOM_READ],
     contracts: [Permission.CONTRACT_READ],
+    transfers: [Permission.ROOM_TRANSFER_READ],
     requests: [
       Permission.CONTRACT_EXTENSION_READ,
       Permission.ROOM_TRANSFER_READ,
@@ -156,6 +157,14 @@ export const STAFF_REQUESTS_PATH = '/staff/requests'
 /** Màn nghiệp vụ chi tiết (TV2): route, link từ danh sách CRUD và breadcrumb dùng chung. */
 export const STAFF_ROOMS_PATH = '/staff/rooms'
 export const STAFF_TRANSFERS_PATH = '/staff/transfers'
+
+/** Admin dùng lại màn quản lý của Staff dưới cổng `/admin`; Staff giữ nguyên đường dẫn. */
+export function portalPath(role: Role | undefined, staffPath: string) {
+  return role === Role.ADMIN
+    ? staffPath.replace(rolePortal[Role.STAFF], rolePortal[Role.ADMIN])
+    : staffPath
+}
+
 export const STUDENT_REQUESTS_PATH = '/student/requests'
 export const STUDENT_TRANSFERS_PATH = `${STUDENT_REQUESTS_PATH}/transfers`
 

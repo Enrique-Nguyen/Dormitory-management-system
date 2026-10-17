@@ -9,6 +9,7 @@ import {
   TransferSummary,
 } from '../../components'
 import { STUDENT_REQUESTS_PATH } from '../../constants/navigation'
+import { TRANSFER_ACTION } from '../../constants/statusConfig'
 import { useCancelTransfer, useTransferRequest } from '../../features/contract'
 import { errorMessage } from '../../utils/errorMessages'
 
@@ -36,7 +37,7 @@ export default function TransferRequestPage() {
           <ActionBar
             allowedActions={detail.allowedActions}
             actions={{
-              cancel: {
+              [TRANSFER_ACTION.CANCEL]: {
                 label: 'Hủy yêu cầu',
                 danger: true,
                 icon: <StopOutlined />,

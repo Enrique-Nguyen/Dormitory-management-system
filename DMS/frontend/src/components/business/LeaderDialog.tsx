@@ -1,6 +1,6 @@
 import { Flex, Typography } from 'antd'
 import { useState } from 'react'
-import { bedOccupancy, assignmentOccupancy } from '../../constants/statusConfig'
+import { assignmentLabel } from '../../constants/statusConfig'
 import { Radio, RadioGroup } from '../ui/FormControls'
 import { Modal } from '../ui/Surface'
 
@@ -79,7 +79,7 @@ export default function LeaderDialog({
                 disabled={occupant.kind !== 'STAY'}
               >
                 {occupant.fullName} · {occupant.studentCode} ·{' '}
-                {bedOccupancy[assignmentOccupancy[occupant.kind]].label}
+                {assignmentLabel(occupant.kind)}
               </Radio>
             ))}
           </Flex>

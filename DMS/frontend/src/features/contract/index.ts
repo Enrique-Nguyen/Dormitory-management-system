@@ -33,12 +33,12 @@ function useTransferMutation<T>(
   const onError = useApiErrorHandler()
   return useMutation({
     mutationFn,
-    onSuccess: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: transferKeys.detail(id) }),
-        queryClient.invalidateQueries({ queryKey: ['room'] }),
-        queryClient.invalidateQueries({ queryKey: ['crud'] }),
-      ]),
+    onSuccess: () => {
+      // Chỉ chờ chi tiết đang xem; danh sách và giường trống tải lại nền, không giữ hộp thoại.
+      void queryClient.invalidateQueries({ queryKey: ['room'] })
+      void queryClient.invalidateQueries({ queryKey: ['crud'] })
+      return queryClient.invalidateQueries({ queryKey: transferKeys.detail(id) })
+    },
     onError,
   })
 }
