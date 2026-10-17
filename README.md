@@ -134,7 +134,17 @@ Lỗi `Connection to localhost:5432 refused` nghĩa là PostgreSQL chưa chạy.
 
 Đã kiểm chứng ngày 15/10/2026 bằng Java 17.0.17, classpath và thư mục chạy giống log IntelliJ: backend khởi động thành công, kết nối PostgreSQL/Flyway và health UP. Sau kiểm chứng đã trả cổng 8080 cho IDE; PostgreSQL và Keycloak tiếp tục chạy.
 
-### Chạy bằng Docker trên máy khác
+### Chạy bằng Docker trên máy Windows (một lệnh)
+
+Cần Docker Desktop đang chạy, JDK 17 trở lên và Node.js. Từ thư mục gốc repository:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\DMS\scripts\start-docker.ps1
+```
+
+Script tự làm theo thứ tự: tạo `DMS\.env` với secret ngẫu nhiên (lần đầu), `docker compose up -d`, chờ Keycloak, build JAR và `npm ci` nếu chưa có, để backend chạy Flyway, nạp `sample-data.sql` và `sample-accounts.sql`, cấp tài khoản Keycloak (admin và các tài khoản mẫu) bằng mật khẩu tạm ngẫu nhiên rồi khởi động backend và frontend. Mật khẩu tạm nằm trong `backend\data\local-run\keycloak-docker-accounts.local` (Git bỏ qua), mật khẩu quản trị Keycloak là `KC_BOOTSTRAP_ADMIN_PASSWORD` trong `DMS\.env`. Chạy lại script là an toàn. Dừng: `stop-local.ps1`, rồi `docker compose stop` trong `DMS`. Xóa sạch dữ liệu: `docker compose down -v` và xóa `DMS\.env`, tệp cấp mật khẩu.
+
+### Chạy bằng Docker trên máy khác (thủ công)
 
 Sao chép `.env.example` thành `.env` trong `DMS`, tự đặt mật khẩu DB Keycloak, mật khẩu quản trị Keycloak và secret client quản trị. Sau đó:
 
