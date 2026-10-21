@@ -96,18 +96,22 @@ function hasPeriodOpened(value: unknown) {
 function LookupInput({
   field,
   disabled,
+  record,
 }: {
   field: CrudField
   disabled?: boolean
+  record?: CrudRecord
 }) {
+  const selected = Form.useWatch(field.name, { preserve: true })
   const { data, isLoading, error } = useQuery({
-    queryKey: ['crud-lookup', field.lookup],
-    queryFn: () => getLookupRecords(field.lookup!),
-    enabled: !!field.lookup,
+    queryKey: ['crud-lookup', field.lookup, field.lookupFilters],
+    queryFn: () => getLookupRecords(field.lookup!, field.lookupFilters),
+    // Chi tiết đã có ID/metadata: không tải danh mục khác mà vai trò có thể không được xem.
+    enabled: !!field.lookup && !disabled,
     // Danh mục tham chiếu ít đổi; refresh() vẫn invalidate sau mỗi lần ghi.
     staleTime: 5 * 60 * 1000,
   })
-  const options = field.lookup
+  let options = field.lookup
     ? data?.map((row) => ({
         value: row.id,
         label: `${display(readValue(row, field.lookupLabel ?? 'name'))} (#${row.id})`,
@@ -116,6 +120,18 @@ function LookupInput({
         ...option,
         label: crudValueLabels[option.label] ?? option.label,
       }))
+  if (field.lookup && disabled) {
+    const values: unknown[] = Array.isArray(selected) ? selected : selected == null ? [] : [selected]
+    const reference = record?.[field.name.replace(/Id$/, '')]
+      ?? (field.name === 'managementUnitId' ? record?.unit : undefined)
+    const label = readValue((reference ?? {}) as CrudRecord, field.lookupLabel ?? 'name')
+      ?? (field.lookupLabel?.includes('.') ? readValue(record ?? {}, field.lookupLabel) : undefined)
+    const cachedOptions = options
+    options = values
+      .filter((value): value is string | number => typeof value === 'string' || typeof value === 'number')
+      .map((value) => cachedOptions?.find((option) => String(option.value) === String(value))
+        ?? { value, label: label == null ? `#${value}` : `${display(label)} (#${value})` })
+  }
   // Form.Item truyền value/onChange qua wrapper nên Select phải nằm trực tiếp trong component này.
   return (
     <Form.Item
@@ -1128,6 +1144,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                   >
                     <LookupInput
                       field={field}
+                      record={activeRecord ?? undefined}
                       disabled={
                         isViewMode ||
                         (resource === 'users' &&

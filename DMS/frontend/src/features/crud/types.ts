@@ -14,6 +14,8 @@ export interface CrudField {
   editOnly?: boolean
   options?: { value: string | number; label: string }[]
   lookup?: string
+  /** Bộ lọc lookup gửi trong body search-by-page, không ghép query vào đường dẫn API. */
+  lookupFilters?: Record<string, string | number | boolean>
   lookupLabel?: string
   multiple?: boolean
   /** Kiểu JSON của bộ lọc khi control/URL giữ giá trị dạng chuỗi. */

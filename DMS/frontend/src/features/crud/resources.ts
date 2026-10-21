@@ -60,6 +60,7 @@ const studentFields: CrudField[] = [
   text('hometown', 'Quê quán', false, 200),
   text('emergencyContact', 'Liên hệ khẩn cấp', false, 200),
 ]
+
 /** Nhãn màn import khai báo cùng registry tài nguyên, component chỉ dùng lại. */
 export const studentImportLabels = {
   title: 'Import sinh viên',
@@ -366,7 +367,7 @@ export const resources: Record<string, CrudResource> = {
     endpoint: '/applications',
     fields: [
       {
-        ...ref('studentId', 'Sinh viên', '/admin/students', 'fullName'),
+        ...ref('studentId', 'Sinh viên', '/students', 'fullName'),
         createOnly: true,
       },
       ref('periodId', 'Đợt đăng ký', '/registration-periods'),
@@ -438,9 +439,10 @@ export const resources: Record<string, CrudResource> = {
         ...ref(
           'applicationId',
           'Đơn đã duyệt',
-          '/applications?status=APPROVED',
+          '/applications',
           'student.fullName',
         ),
+        lookupFilters: { status: 'APPROVED' },
         createOnly: true,
       },
       date('startDate', 'Ngày bắt đầu'),
