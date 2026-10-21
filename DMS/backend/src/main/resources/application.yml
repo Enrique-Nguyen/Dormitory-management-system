@@ -34,6 +34,12 @@ management:
         include: health
 
 dms:
+  jobs:
+    enabled: ${DMS_JOBS_ENABLED:true}
+    cancel-pending-cron: ${DMS_CANCEL_PENDING_CRON:0 0 * * * *}
+    close-resolved-cron: ${DMS_CLOSE_RESOLVED_CRON:0 0 * * * *}
+    deposit-reminder-cron: ${DMS_DEPOSIT_REMINDER_CRON:0 0 * * * *}
+    contract-reminder-cron: ${DMS_CONTRACT_REMINDER_CRON:0 0 8 * * *}
   keycloak-bootstrap:
     enabled: ${DMS_KEYCLOAK_BOOTSTRAP_ENABLED:false}
     username: ${DMS_KEYCLOAK_INITIAL_ADMIN_USERNAME:admin}

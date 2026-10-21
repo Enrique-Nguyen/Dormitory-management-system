@@ -997,6 +997,8 @@ public final class DmsConstants {
         public static final String CONTRACT_AUTO_CANCEL = "CONTRACT_AUTO_CANCEL";
         public static final String APPLICATION_AUTO_CANCEL = "APPLICATION_AUTO_CANCEL";
         public static final String MAINTENANCE_AUTO_CLOSE = "MAINTENANCE_AUTO_CLOSE";
+        public static final String DEPOSIT_REMINDER = "DEPOSIT_REMINDER";
+        public static final String CONTRACT_EXPIRING_REMINDER = "CONTRACT_EXPIRING_REMINDER";
 
         private AuditAction() {}
     }
