@@ -153,7 +153,7 @@ public class SecurityConfig {
                                                                     ErrorCode.UNAUTHENTICATED,
                                                                     ErrorCode.UNAUTHENTICATED,
                                                                     Map.of(),
-                                                                    null));
+                                                                    (String) request.getAttribute("requestId")));
                                                 }))
                 .exceptionHandling(
                         errors ->
@@ -168,7 +168,7 @@ public class SecurityConfig {
                                                             ErrorCode.FORBIDDEN,
                                                             ErrorCode.FORBIDDEN,
                                                             Map.of(),
-                                                            null));
+                                                            (String) request.getAttribute("requestId")));
                                         }))
                 .addFilterAfter(
                         new AccountAccessFilter(current, mapper),
