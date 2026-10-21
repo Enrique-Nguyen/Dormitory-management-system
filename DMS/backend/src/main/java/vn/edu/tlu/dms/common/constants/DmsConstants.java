@@ -935,6 +935,7 @@ public final class DmsConstants {
     public static final class ConfigKey {
         public static final String CONTRACT_ACTIVATION_DAYS = "contract.activation_days";
         public static final String CONTRACT_EXPIRING_DAYS = "contract.expiring_days";
+        public static final String MAINTENANCE_AUTOCLOSE_DAYS = "maintenance.autoclose_days";
 
         private ConfigKey() {}
     }
@@ -985,6 +986,7 @@ public final class DmsConstants {
         public static final String STUDENT_IMPORT = "STUDENT_IMPORT";
         public static final String CONTRACT_AUTO_CANCEL = "CONTRACT_AUTO_CANCEL";
         public static final String APPLICATION_AUTO_CANCEL = "APPLICATION_AUTO_CANCEL";
+        public static final String MAINTENANCE_AUTO_CLOSE = "MAINTENANCE_AUTO_CLOSE";
 
         private AuditAction() {}
     }
