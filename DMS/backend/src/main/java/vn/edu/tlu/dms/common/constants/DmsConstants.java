@@ -781,6 +781,16 @@ public final class DmsConstants {
         private ContractStatus() {}
     }
 
+    /** Loại khoản trong sổ cọc, giữ nguyên các mã đã có trong CSDL. */
+    public static final class DepositType {
+        public static final String DEPOSIT = "DEPOSIT";
+        public static final String DEDUCTION = "DEDUCTION";
+        public static final String TOPUP = "TOPUP";
+        public static final String REFUND = "REFUND";
+
+        private DepositType() {}
+    }
+
     /** Gia hạn/chuyển phòng chỉ được sửa/xóa khi yêu cầu còn chờ xử lý. */
     public static final class StayRequestStatus {
         public static final String PENDING = "PENDING";
