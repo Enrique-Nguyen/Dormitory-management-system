@@ -101,8 +101,16 @@ public class ConfigServiceImpl implements ConfigService {
 
     @Override()
     public int positiveInt(String key) {
-        return Integer.parseInt(
-                repository.findById(key).orElseThrow(BusinessException::notFound).getValue());
+        try {
+            int value = Integer.parseInt(repository.findById(key)
+                    .orElseThrow(() -> BusinessException.conflict(ErrorCode.CONFIG_VALUE_INVALID)).getValue());
+            if (value < 1 || value > 3650) {
+                throw new NumberFormatException();
+            }
+            return value;
+        } catch (NumberFormatException error) {
+            throw BusinessException.conflict(ErrorCode.CONFIG_VALUE_INVALID);
+        }
     }
 
     @Transactional
