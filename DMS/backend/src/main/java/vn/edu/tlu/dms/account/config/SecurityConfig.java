@@ -185,6 +185,13 @@ public class SecurityConfig {
             String adminClientId,
             String adminClientSecret) {
 
+        @Override
+        public String toString() {
+            return "KeycloakProperties[serverUrl=" + serverUrl + ", realm=" + realm
+                    + ", audience=" + audience + ", adminClientId=" + adminClientId
+                    + ", adminClientSecret=REDACTED]";
+        }
+
         public KeycloakProperties {
             serverUrl = serverUrl.replaceAll("/+$", "");
             if (!realm.matches("[A-Za-z0-9_-]+") || audience.isBlank() || adminClientId.isBlank()) {

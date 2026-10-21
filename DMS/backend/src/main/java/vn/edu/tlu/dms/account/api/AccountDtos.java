@@ -18,7 +18,12 @@ public final class AccountDtos {
 
     public record Password(
             @NotBlank String currentPassword,
-            @NotBlank @Size(min = 8, max = 64) String newPassword) {}
+            @NotBlank @Size(min = 8, max = 64) String newPassword) {
+        @Override
+        public String toString() {
+            return "Password[REDACTED]";
+        }
+    }
 
     public record UnitRef(Long id, String code, String name) {}
 
@@ -91,7 +96,12 @@ public final class AccountDtos {
             String hometown,
             String emergencyContact) {}
 
-    public record TemporaryPassword(Long userId, String temporaryPassword) {}
+    public record TemporaryPassword(Long userId, String temporaryPassword) {
+        @Override
+        public String toString() {
+            return "TemporaryPassword[userId=" + userId + ", temporaryPassword=REDACTED]";
+        }
+    }
 
     public record Reason(@NotBlank @Size(min = 5, max = 500) String reason) {}
 
