@@ -1000,4 +1000,18 @@ public final class DmsConstants {
 
         private EntityType() {}
     }
+
+    /** Tác vụ nội bộ không giả danh Admin, actor_id null được hiển thị là SYSTEM. */
+    public static final class SystemJob {
+        public static final String CANCEL_PENDING = "cancel-pending-contracts";
+        public static final String CLOSE_RESOLVED = "close-resolved-tickets";
+        public static final String REMIND_DEPOSIT = "remind-overdue-deposits";
+        public static final String REMIND_CONTRACT = "remind-expiring-contracts";
+        public static final String EXPIRED_REASON = "SYSTEM: Quá hạn kích hoạt hợp đồng";
+        public static final String AUTOCLOSE_REASON = "SYSTEM: Quá hạn nghiệm thu sau khi sửa xong";
+        public static final String CONTRACT_SOURCE = "CONTRACT_EXPIRING";
+        public static final String DEPOSIT_SOURCE = "DEPOSIT_OVERDUE";
+
+        private SystemJob() {}
+    }
 }
