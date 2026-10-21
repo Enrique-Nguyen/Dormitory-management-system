@@ -1,10 +1,10 @@
 # Khung CRUD và đăng nhập backend DMS
 
-Nhánh triển khai: `develop-quyennnv`. Backend giữ Spring Boot 3.5, Java 17+, PostgreSQL 16, Flyway và `ddl-auto: validate`.
+Nhánh tích hợp: `develop`; thay đổi đi qua nhánh chức năng và PR theo README gốc. Backend giữ Spring Boot 3.5, Java 17+, PostgreSQL 16, Flyway và `ddl-auto: validate`.
 
 ## Cấu trúc và cách đọc mã
 
-Quy tắc không hardcode được ghi tại `../../AGENTS.md` và mục tương ứng trong `../../CLAUDE.md`. `DmsConstants.ErrorCode` là nguồn mã lỗi hiện dùng; HTTP status dùng `HttpStatus`/factory `BusinessException`. `PermissionCatalog`, `PermissionMessage` và `ApiField` giữ danh mục/nhãn/thông báo/tên trường của ma trận; Service Impl xử lý logic và đọc quyền động từ CSDL. Clean verify đạt **108/108 test**, gồm kiểm tra registry đủ 106 quyền và giữ nguyên hợp đồng lỗi/HTTP hiện có.
+Quy tắc không hardcode được ghi tại `../../AGENTS.md` và mục tương ứng trong `../../CLAUDE.md`. `DmsConstants.ErrorCode` là nguồn mã lỗi hiện dùng; HTTP status dùng `HttpStatus`/factory `BusinessException`. `PermissionCatalog`, `PermissionMessage` và `ApiField` giữ danh mục/nhãn/thông báo/tên trường của ma trận; Service Impl xử lý logic và đọc quyền động từ CSDL. Verify ngày 21/10/2026 đạt **152/152 test**, gồm kiểm tra registry đủ 106 quyền và giữ nguyên hợp đồng lỗi/HTTP hiện có.
 
 Mỗi module có `domain` (entity), `repository`, `service` và `api` (Controller, request/response DTO). Toàn bộ `service/<Tên>Service.java` là interface, chỉ khai báo chữ ký hàm và JavaDoc tiếng Việt. Logic nằm trong `service/impl/<Tên>ServiceImpl.java`, dùng `implements <Tên>Service`, constructor injection và `@Service`. Transaction đặt trên Impl; Controller và các module khác gọi qua interface. Các hàm overload cũng được triển khai trong Impl, không dùng `default` chứa thân hàm ở interface.
 
@@ -19,7 +19,7 @@ Tên hàm dùng tiếng Anh rõ nghĩa; JavaDoc và ghi chú quan trọng dùng 
 ## API đã có
 
 - Xác thực mặc định: Keycloak OIDC/PKCE, Spring Security JWT Resource Server; /me trả hồ sơ DMS, logout thu hồi version. Mật khẩu/khóa tạm/đổi mật khẩu thuộc Keycloak. Subject, role, version và scope vẫn kiểm tra tại DMS.
-- Tài khoản: Admin quản lý tài khoản và sinh viên; sinh viên được thêm từng hồ sơ bằng form CRUD, trả mật khẩu tạm một lần. Staff tìm kiếm/đọc/sửa và reset mật khẩu sinh viên trong phạm vi mình. Import Excel chưa triển khai. Tài khoản cán bộ dùng khóa thay cho xóa; sinh viên chỉ xóa khi chưa có dữ liệu liên quan.
+- Tài khoản: Admin quản lý tài khoản và sinh viên, thêm từng hồ sơ hoặc import Excel hai bước, trả mật khẩu tạm một lần. Staff tìm kiếm/đọc/sửa và reset mật khẩu sinh viên trong phạm vi mình; không đổi mã SV/họ tên/giới tính. Tài khoản cán bộ dùng khóa thay cho xóa; sinh viên chỉ xóa khi chưa có dữ liệu liên quan.
 - Sinh viên: POST `/api/(admin/)students/save-or-update` với ID trong body giữ nguyên trường không gửi (chỉ cần gửi trường muốn đổi).
 - Hồ sơ: đọc và sửa các trường được phép của chính mình. Cấu hình hệ thống: Admin đọc và cập nhật các khóa hiện có.
 - Danh mục: đơn vị quản lý, tòa nhà, loại phòng, học kỳ, diện ưu tiên có tìm kiếm phân trang/chi tiết/lưu chung/xóa. Request sửa qua save-or-update giữ nguyên trường không gửi hoặc gửi null; khung chưa hỗ trợ dùng null để xóa giá trị tùy chọn.
@@ -64,7 +64,7 @@ API giữ tiền tố `/api`, dùng `/search-by-page` và `/save-or-update` theo
 
 ## Giới hạn của khung
 
-Phạm vi hiện tại được chốt là **khung CRUD BE và React đơn giản**, chưa phải toàn bộ MVP. Các chức năng chi tiết để làm sau: import/export, xác minh ưu tiên, phân giường/hủy giữ chỗ, kích hoạt/gia hạn/trả phòng, xét duyệt hè/gửi nhận đồ, tự phát hành/điều chỉnh hóa đơn, thu/trừ/bù/hoàn cọc, kết luận chi phí sửa chữa, dashboard/công nợ và job định kỳ.
+Phạm vi hiện tại gồm khung CRUD, tài khoản/RBAC/Excel/audit và bốn job SYSTEM, chưa phải toàn bộ MVP. Các chức năng chi tiết còn lại: export báo cáo, xác minh ưu tiên, nối luồng phân giường/hủy giữ chỗ với đơn, kích hoạt/gia hạn/trả phòng, xét duyệt hè/gửi nhận đồ, tự phát hành/điều chỉnh hóa đơn, thu/trừ/bù/hoàn cọc, kết luận chi phí sửa chữa, dashboard/công nợ. Dịch vụ giường và chuyển phòng của TV2 đã có; các luồng khác tiếp tục gọi dịch vụ chung này.
 
 Các giới hạn cụ thể liên quan đến chỗ ở và chuyển phòng:
 - Chưa phân lại giường đầu HK1 (`storageRecordId` trong API giường trống chưa triển khai, FR-CON-12 ngoài phạm vi hiện tại).
@@ -110,7 +110,13 @@ Test tích hợp mặc định dùng PostgreSQL Testcontainers và cần Docker.
 .\mvnw.cmd '-Ddms.test.external-db=true' '-Dspring.datasource.url=jdbc:postgresql://localhost:55432/postgres' '-Dspring.datasource.username=dms_test' '-Dspring.datasource.password=test' verify
 ```
 
-Không trỏ test vào CSDL đang sử dụng: test khởi động chạy migration và tạo dữ liệu mẫu. Các case CRUD thông thường có transaction rollback. Kiểm tra xóa/khóa, constraint, quyền, trạng thái và session nằm trong `CrudApiIntegrationTest`; mapping/schema trong `DmsApplicationTests`; phụ thuộc module trong `ModuleDependencyTest`; kiểm tra chiếm/trả/chuyển giường và ca đồng thời (AT-02, AT-03, chuyển chéo, duyệt kép) trong `BedOccupancyIntegrationTest`; kiểm tra trưởng phòng và lịch sử audit trong `RoomLeaderIntegrationTest`; kiểm tra ma trận chuyển trạng thái chuyển phòng trong `RoomTransferPolicyTest`. Tổng số test backend hiện tại: **108/108 test** đạt.
+Không trỏ test vào CSDL đang sử dụng: test khởi động chạy migration và tạo dữ liệu mẫu. Các case CRUD thông thường có transaction rollback. Kiểm tra xóa/khóa, constraint, quyền, trạng thái và JWT nằm trong `CrudApiIntegrationTest`, `KeycloakAccountIntegrationTest` và `KeycloakJwtDecoderTest`; mapping/schema trong `DmsApplicationTests`; phụ thuộc module trong `ModuleDependencyTest`; kiểm tra chiếm/trả/chuyển giường và ca đồng thời (AT-02, AT-03, chuyển chéo, duyệt kép) trong `BedOccupancyIntegrationTest`; kiểm tra trưởng phòng và lịch sử audit trong `RoomLeaderIntegrationTest`; kiểm tra ma trận chuyển trạng thái chuyển phòng trong `RoomTransferPolicyTest`. Import, tác vụ SYSTEM và che giá trị nhạy cảm được kiểm tra trong `StudentImportIntegrationTest`, `SystemJobsIntegrationTest` và `SensitiveValuesTest`. Tổng số test backend hiện tại: **152/152 test** đạt; độ phủ dòng tầng `service.impl` là **75,26%**.
+
+### Kiểm chứng TV1 và DataTest — 21/10/2026
+
+Import Excel đã có tải mẫu, preview không ghi, kiểm tra từng dòng và xác nhận tạo các dòng hợp lệ trong một transaction; Keycloak cấp mật khẩu tạm và bắt đổi lần đầu. API chi tiết audit hiển thị trước/sau và tác nhân SYSTEM. Khung job chạy riêng từng ID, có requestId, cô lập lỗi và audit cùng transaction; các handler hủy hợp đồng quá hạn, đóng ticket, nhắc bù cọc và hợp đồng sắp hết hạn dùng khung này. Lịch và cách tắt từng cron được ghi trong `application.yml` và `.env.example`.
+
+Bộ [DataTest](../scripts/datatest/README.md) nạp dữ liệu cho mọi màn hiện có, tạo danh tính Keycloak thật và sao lưu trước khi ghi. Local đã kiểm tra 81 lượt mở màn (gồm 5 lượt trên màn hình 360px), 19 kiểm tra API/OIDC và 21 bất biến dữ liệu; frontend lint/build đạt. Phạm vi kiểm chứng và những luồng nghiệp vụ chưa hoàn thành của các module khác được ghi trong [báo cáo TV1](../../Docs/04%20Testing/TV1-kiem-tra-va-datatest.md). Các kết quả này không thay thế kiểm thử tải hoặc nghiệm thu production.
 
 Kiểm chứng đăng nhập ngày 13/10/2026: `clean verify` đạt 38/38 test trên PostgreSQL kiểm thử riêng, gồm 14 case `AuthenticationSecurityIntegrationTest` cho CSRF/session thật, khóa đồng thời, đổi/reset mật khẩu, thu hồi phiên sau commit và phạm vi Staff. Frontend lint/build đạt. Chưa xác nhận thao tác UI trực tiếp vì công cụ trình duyệt báo `Unable to load browser request-header policy`.
 
