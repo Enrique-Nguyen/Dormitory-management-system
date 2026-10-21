@@ -2057,6 +2057,20 @@ class CrudApiIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT gender FROM student_profile WHERE user_id=?", String.class, studentId)).isEqualTo("M");
     }
 
+    @Test
+    void auditDetailsAreAdminOnlyAndShowSystemActorAndBeforeAfterValues() throws Exception {
+        Long logId = jdbc.queryForObject("INSERT INTO audit_log(action,entity_type,old_value,new_value)"
+                + " VALUES('TEST_AUDIT','CONFIG','{\"value\":1}'::jsonb,'{\"value\":2}'::jsonb) RETURNING id", Long.class);
+        mvc.perform(get("/api/admin/audit-logs/{id}", logId).with(asUser(adminId, Role.ADMIN)))
+                .andExpect(status().isOk()).andExpect(jsonPath("fullName").value("SYSTEM"))
+                .andExpect(jsonPath("oldValue").value("{\"value\": 1}"))
+                .andExpect(jsonPath("newValue").value("{\"value\": 2}"));
+        mvc.perform(get("/api/admin/audit-logs/{id}", logId).with(asUser(staffId, Role.STAFF)))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("requestId").isNotEmpty());
+        mvc.perform(get("/api/admin/audit-logs/{id}", Long.MAX_VALUE).with(asUser(adminId, Role.ADMIN)))
+                .andExpect(status().isNotFound());
+    }
+
     /** Mọi màn và lookup dùng cùng envelope, tổng ổn định khi đổi trang và tìm không có kết quả. */
     @Test
     void allCrudListsAndLookupsSharePagedSearchContract() throws Exception {

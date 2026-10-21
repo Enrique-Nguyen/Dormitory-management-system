@@ -760,7 +760,6 @@ export const resources: Record<string, CrudResource> = {
   },
   audit: {
     permission: Resource.AUDIT,
-    inlineDetail: true,
     title: 'Nhật ký hệ thống',
     endpoint: '/admin/audit-logs',
     filters: [
@@ -775,6 +774,8 @@ export const resources: Record<string, CrudResource> = {
       ['actorId', 'ID người thao tác'],
       ['entityId', 'ID đối tượng'],
       ['requestId', 'Mã yêu cầu'],
+      ['oldValue', 'Dữ liệu trước'],
+      ['newValue', 'Dữ liệu sau'],
     ),
     columns: columns(
       ['fullName', 'Người thực hiện'],

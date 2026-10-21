@@ -75,9 +75,9 @@ public class AuditServiceImpl implements AuditService {
         StringBuilder sql =
                 new StringBuilder(
                         "SELECT"
-                            + " a.id,a.actor_id,u.full_name,a.action,a.entity_type,a.entity_id,a.reason,a.request_id,a.created_at"
+                            + " a.id,a.actor_id,COALESCE(u.full_name,'SYSTEM') AS full_name,a.action,a.entity_type,a.entity_id,a.reason,a.request_id,a.created_at"
                             + " FROM audit_log a LEFT JOIN app_user u ON u.id=a.actor_id WHERE"
-                            + " (a.action ILIKE ? OR u.full_name ILIKE ?)");
+                            + " (a.action ILIKE ? OR COALESCE(u.full_name,'SYSTEM') ILIKE ?)");
         if (actorId != null) {
             sql.append(" AND a.actor_id = ?");
             args.add(actorId);
@@ -135,6 +135,16 @@ public class AuditServiceImpl implements AuditService {
                 entityType,
                 entityId,
                 action);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getAuditById(Long id) {
+        guard.requirePermission(Permission.AUDIT_READ);
+        return queries.one("SELECT a.id,a.actor_id,COALESCE(u.full_name,'SYSTEM') AS full_name,"
+                + "a.action,a.entity_type,a.entity_id,a.old_value::text AS old_value,"
+                + "a.new_value::text AS new_value,a.reason,a.request_id,a.created_at"
+                + " FROM audit_log a LEFT JOIN app_user u ON u.id=a.actor_id WHERE a.id=?", id);
     }
 
     @Transactional
