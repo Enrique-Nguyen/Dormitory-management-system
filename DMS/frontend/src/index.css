@@ -267,6 +267,10 @@ body {
   margin: 0 auto;
 }
 
+.dms-full-width {
+  width: 100%;
+}
+
 @media (min-width: 640px) {
   .dms-page {
     padding: var(--space-6);

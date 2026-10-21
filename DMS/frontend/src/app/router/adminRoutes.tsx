@@ -3,6 +3,7 @@ import type { RouteObject } from 'react-router'
 import { Navigate } from 'react-router'
 import CrudPage from '../../pages/CrudPage'
 import RolePermissionsPage from '../../pages/admin/RolePermissionsPage'
+import StudentImportPage from '../../pages/admin/StudentImportPage'
 import RequireRole from '../guards/RequireRole'
 import AdminLayout from '../layouts/AdminLayout'
 import { staffRoutes } from './staffRoutes'
@@ -19,7 +20,7 @@ export const adminRoutes: RouteObject = {
         { path: 'users', element: <CrudPage resource="users" /> },
         { path: 'units', element: <CrudPage resource="units" /> },
         { path: 'buildings', element: <CrudPage resource="buildings" /> },
-        { path: 'import', element: <CrudPage resource="adminStudents" /> },
+        { path: 'import', element: <StudentImportPage /> },
         {
           path: 'aggregate-permissions',
           element: <CrudPage resource="users" />,
