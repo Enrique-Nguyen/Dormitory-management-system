@@ -2040,6 +2040,23 @@ class CrudApiIntegrationTest {
                 .andExpect(jsonPath("$.photos[0].id").value(photoId));
     }
 
+    @Test
+    void staffCannotChangeStudentIdentityButCanUpdateContactInsideOwnUnit() throws Exception {
+        createDraftApplication(createOpenPeriod());
+        for (var change : Map.of("studentCode", "NEW" + suffix,
+                "fullName", "Tên không được phép đổi", "gender", "F").entrySet()) {
+            mvc.perform(post("/api/students/save-or-update").with(asUser(staffId, Role.STAFF))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(mapper.writeValueAsString(Map.of("id", studentId, change.getKey(), change.getValue()))))
+                    .andExpect(status().isForbidden()).andExpect(jsonPath("errorCode").value("FORBIDDEN"));
+        }
+        mvc.perform(post("/api/students/save-or-update").with(asUser(staffId, Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(Map.of("id", studentId, "phone", "0912345678"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("phone").value("0912345678"));
+        assertThat(jdbc.queryForObject("SELECT gender FROM student_profile WHERE user_id=?", String.class, studentId)).isEqualTo("M");
+    }
+
     /** Mọi màn và lookup dùng cùng envelope, tổng ổn định khi đổi trang và tìm không có kết quả. */
     @Test
     void allCrudListsAndLookupsSharePagedSearchContract() throws Exception {

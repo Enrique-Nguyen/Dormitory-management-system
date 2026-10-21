@@ -206,6 +206,13 @@ public class StudentManagementServiceImpl implements StudentManagementService {
         String studentCode = merged(in.studentCode(), before.get("studentCode"), "studentCode");
         String fullName = merged(in.fullName(), before.get("fullName"), "fullName");
         String gender = merged(in.gender(), before.get("gender"), "gender");
+        // FR-ACC-04: quyền sửa hồ sơ trong đơn vị không cho Staff đổi danh tính sinh viên.
+        if (!current.get().isAdmin()
+                && (!studentCode.equals(before.get("studentCode"))
+                        || !fullName.equals(before.get("fullName"))
+                        || !gender.equals(before.get("gender")))) {
+            throw BusinessException.forbidden();
+        }
         if (!gender.equals(before.get("gender"))
                 && Boolean.TRUE.equals(
                         jdbc.queryForObject(

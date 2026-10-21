@@ -276,6 +276,8 @@ export const resources: Record<string, CrudResource> = {
     title: 'Sinh viên',
     endpoint: '/students',
     fields: studentFields,
+    editFields: studentFields.filter((field) =>
+      !['studentCode', 'fullName', 'gender'].includes(field.name)),
     columns: columns(
       ['studentCode', 'Mã sinh viên'],
       ['fullName', 'Họ tên'],
