@@ -1,13 +1,14 @@
 # Tài liệu kiến trúc phần mềm (SAD) — DMS
 
-> **Phiên bản 1.4**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.11 (mục 2, 4, 6, 7, 10), `DB-Design-DMS.md` v0.7, `DMS-UI-UX-Design.md` (mục 27), đề xuất đề tài (mục 4, 10, 13)
+> **Phiên bản 1.5**, 21/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.12 (mục 2, 4, 6, 7, 10), `DB-Design-DMS.md` v0.8, `DMS-UI-UX-Design.md` (mục 27), đề xuất đề tài (mục 4, 10, 13)
 > Trạng thái: bản 1.0 được duyệt ngày 10/10/2026; bản 1.1 đồng bộ cấu trúc Service/Impl và luồng xác thực đã triển khai ngày 13/10/2026; bản 1.4 đồng bộ kết quả sửa lỗi từ code review.
 
 ### Lịch sử thay đổi
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 1.5 | 21/10/2026 | TV1: triển khai import Excel có giới hạn giải nén và bù trừ danh tính khi rollback; SystemJobService dùng REQUIRES_NEW qua TransactionTemplate, SYSTEM không giả danh Admin; hủy hợp đồng phát sự kiện trạng thái đồng bộ. Nhắc cọc mỗi giờ theo NFR-REL-03; cron cấu hình môi trường, giữ ngưỡng nghiệp vụ trong system_config |
 | 0.1 | 10/10/2026 | Bản đầu tiên: gom các quyết định kiến trúc rải rác ở SRS, đề xuất, UI và CSDL; bổ sung ranh giới module, đồng thời, bảo mật, triển khai |
 | 0.2 | 10/10/2026 | Theo thẩm định: tách sự kiện trạng thái (cùng transaction) và sự kiện thông báo (sau commit); quan hệ chéo module chỉ lưu ID; job dùng `TransactionTemplate` và khóa lại từng bản ghi; lọc phạm vi danh sách ngay trong SQL; thứ tự ghi ảnh và dọn file khi rollback; chốt Q-ARC-01..06 |
 | 1.0 | 10/10/2026 | Nhóm duyệt bản 0.2, không đổi nội dung |
@@ -220,13 +221,15 @@ Quy tắc chung: **khóa xong mới kiểm tra lại điều kiện**, vì đi�
 |---|---|---|---|---|
 | Tự hủy hợp đồng PENDING quá hạn | `contract` | Mỗi giờ | FR-CON-02 | Chỉ chọn hợp đồng còn PENDING và quá N ngày; xử lý từng hợp đồng một transaction |
 | Tự đóng ticket RESOLVED quá 3 ngày | `maintenance` | Mỗi giờ | FR-MNT-06 | Chỉ chọn ticket còn RESOLVED |
-| Nhắc bù cọc quá hạn | `billing` | Mỗi ngày 08:00 | FR-BIL-13 | Không tạo lại thông báo đã có cho cùng (hợp đồng, khoản trừ) |
+| Nhắc bù cọc quá hạn | `billing` + `notification` | Mỗi giờ | FR-BIL-13, NFR-REL-03 | Tính FIFO sau khi khóa hợp đồng ACTIVE; không tạo lại thông báo cho cùng (hợp đồng, khoản trừ) |
 | Thông báo hợp đồng sắp hết hạn | `contract` | Mỗi ngày 08:00 | FR-NOT-04 | Như trên, theo (hợp đồng, mốc) |
 
-- Dùng `@Scheduled` của Spring; một lớp cơ sở trong `common` lo việc: đăng nhập với người dùng `SYSTEM`, xử lý **từng bản ghi trong một transaction riêng** (một bản ghi lỗi không chặn cả lô), ghi `audit_log`.
+- Dùng `@Scheduled` của Spring; dịch vụ chung trong `common` lo việc: thiết lập ngữ cảnh `SYSTEM` nội bộ, xử lý **từng bản ghi trong một transaction riêng** (một bản ghi lỗi không chặn cả lô), ghi `audit_log`.
 - Cách cài đặt transaction riêng: dùng `TransactionTemplate` (`transactionTemplate.executeWithoutResult(st -> processOne(id))`). **Không** gọi hàm `@Transactional(REQUIRES_NEW)` nằm trong cùng lớp với hàm `@Scheduled`: Spring proxy bỏ qua lời gọi nội bộ (self-invocation) nên annotation không có tác dụng.
 - Truy vấn đầu tiên chỉ lấy **danh sách ID** ứng viên. Trong transaction của từng bản ghi, khóa bản ghi (`FOR UPDATE`) rồi **kiểm tra lại điều kiện** (còn PENDING? còn quá hạn?), vì Staff có thể đã kích hoạt hoặc xử lý trong lúc job đang chạy. Không thỏa thì bỏ qua.
 - Chỉ chạy **một instance** backend nên không cần khóa phân tán. Nếu sau này chạy nhiều instance thì thêm ShedLock.
+- `SystemJobService` xóa ngữ cảnh xác thực request khi chạy và khôi phục trong `finally`; SYSTEM là `actor_id = NULL`, không cấp quyền Admin cho request. Mỗi ID có `requestId` riêng; lỗi một ID rollback cả dữ liệu/audit rồi tiếp tục ID sau. `PendingContractExpired` là sự kiện đồng bộ: lỗi hủy đơn rollback cả trả giường/hủy hợp đồng. Mọi đóng phân phòng vẫn qua `BedOccupancyService`; khóa giường/sinh viên trước hợp đồng.
+- `dms.jobs.enabled` và bốn cron đọc từ môi trường, có thể đặt `-` để tắt riêng một lịch. Ngưỡng tự đóng ticket/sắp hết hạn đọc `ConfigService`; hủy PENDING dùng `activation_deadline` đã chụp, không tính lại từ cấu hình mới. Thông báo sắp hết hạn chống trùng theo hợp đồng/ngày hết hạn; gia hạn tạo mốc nhắc mới.
 - Nhãn suy ra ("Sắp hết hạn", "Quá hạn", "Quá hạn bù cọc") **không cần job**: luôn tính khi đọc từ view (BR-08).
 
 ---
