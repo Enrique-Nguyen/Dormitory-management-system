@@ -1,13 +1,14 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.14**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.11 (mục 3, 6.2, 10), `SAD-DMS.md` v1.4, `DB-Design-DMS.md` v0.8, `DMS-UI-UX-Design.md` (mục 27.2)
+> **Phiên bản 0.15**, 21/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.12 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.8, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
 ### Lịch sử thay đổi
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.15 | 21/10/2026 | TV1: import sinh viên hai bước đã triển khai, bổ sung createdAccounts trả mật khẩu một lần và no-store; đọc chi tiết audit trước/sau, hiển thị SYSTEM; lỗi bảo mật có requestId. Staff không được đổi mã SV/họ tên/giới tính |
 | 0.1 | 10/10/2026 | Bản đầu tiên: quy ước chung, danh mục endpoint theo 7 module, schema cho các nghiệp vụ chính, danh mục `errorCode`, `allowedActions`, định dạng file import |
 | 0.2 | 10/10/2026 | Theo thẩm định: Staff tạo ticket của phòng (`roomId`); xem trước trả phòng cảnh báo ticket chưa kết luận chi phí; xem trước điện nước trả phòng thiếu trưởng phòng và thiếu chỉ số; một thông báo `ROOM` cho mỗi hóa đơn điện nước; tổng hóa đơn không âm sau điều chỉnh; quy ước tên hành động không đổi trạng thái; `link` của thông báo do backend suy ra; chốt Q-API-01..07; trừ cọc chia cho người Staff chọn (`chargedStudentIds`, endpoint `chargeable-students`) |
 | 0.3 | 13/10/2026 | Bổ sung GET chi tiết/DELETE danh mục và DELETE phòng/giường chưa có lịch sử cho khung CRUD; ghi rõ giới hạn triển khai và dẫn README backend |
@@ -278,6 +279,7 @@ Các endpoint CRUD/search bên dưới theo contract 0.10. Những dòng phân g
 | POST | `/api/admin/student-imports` | A | Import Excel, hai bước (mục 4.10) | FR-ACC-05 |
 | GET | `/api/admin/student-imports/template` | A | Tải file mẫu `.xlsx` | FR-ACC-05 |
 | POST | `/api/admin/audit-logs/search-by-page` | A | Lọc `actorId`, `action`, `entityType`, `from`, `to`, `q`; thời gian ISO có múi giờ, hai biên inclusive, từ > đến trả 400. Khung phân trang theo `id,desc` | FR-ACC-09 |
+| GET | `/api/admin/audit-logs/{id}` | A | Dữ liệu trước/sau (`oldValue`, `newValue` dạng chuỗi JSON), lý do, requestId; actor trống hiển thị SYSTEM; thiếu bản ghi trả 404 | FR-ACC-09 |
 | POST | `/api/admin/configs/search-by-page` | A | Tham số cấu hình (`system_config`) | SRS 2.6 |
 | POST | `/api/admin/configs/save-or-update` | A | `{ key, value }`; kiểm tra kiểu theo khóa; chỉ sửa khóa hiện có, không tạo cấu hình mới | SRS 2.6 |
 
@@ -536,7 +538,7 @@ Thành công trả 204, thu hồi **mọi phiên kể cả phiên hiện tại**
 
 Mật khẩu tạm sinh ngẫu nhiên, **chỉ trả một lần** trong response này, không lưu dạng rõ, không ghi log; tài khoản bật `mustChangePassword`. Reset xóa khóa tạm/bộ đếm sai, thu hồi mọi phiên cũ, không tự mở khóa do Admin. Staff chỉ reset sinh viên có hồ sơ thật và có đơn trong đợt `openAt <= hiện tại <= closeAt` hoặc phân phòng `endedAt = null` tại đơn vị mình; lịch sử hết hiệu lực/quyền đọc liên đơn vị không đủ quyền reset. Ngoài phạm vi trả 404. Admin reset được mọi tài khoản; người được reset phải đăng nhập bằng mật khẩu tạm rồi đổi.
 
-Quên mật khẩu được xử lý qua người quản lý có quyền; chưa có endpoint tự đăng ký hoặc gửi email reset. Bootstrap Admin mặc định tắt và yêu cầu mật khẩu do người triển khai cung cấp, không có tài khoản/mật khẩu demo tự tạo. Import Excel vẫn là nghiệp vụ dự kiến của FR-ACC-05, chưa nằm trong phần khung CRUD đã triển khai.
+Quên mật khẩu được xử lý qua người quản lý có quyền; chưa có endpoint tự đăng ký hoặc gửi email reset. Bootstrap Admin mặc định tắt và yêu cầu mật khẩu do người triển khai cung cấp, không có tài khoản/mật khẩu demo tự tạo. FR-ACC-05 đã có import Excel hai bước tại mục 4.10. Staff chỉ sửa thông tin hồ sơ được phép trong đơn vị, không đổi mã SV/họ tên/giới tính của sinh viên.
 
 ### 4.2. Tạo đợt đăng ký
 
@@ -866,7 +868,10 @@ Một transaction: chiếm giường qua `BedOccupancyService` (mở phân phòn
 
 - `rows` chỉ liệt kê dòng `ERROR` và `EXISTS` (dòng hợp lệ không liệt kê để response gọn).
 - `result`: `CREATED` (bước 2), `VALID` (bước 1), `EXISTS`, `ERROR`. File sai cấu trúc (thiếu cột, không phải xlsx): `400 IMPORT_FILE_INVALID`, `details.missingColumns`.
-- Mức Could (SAD 9): tham số `resultFile=true` trả lại file `.xlsx` có thêm cột "Kết quả" và "Lỗi". Định dạng cột ở mục 7.1.
+- Response bổ sung `createdAccounts: [{id, username, temporaryPassword}]`, chỉ có phần tử khi `dryRun=false` tạo thành công. `validRows` không bao gồm dòng lỗi/đã tồn tại. Cả preview/ghi đều có `Cache-Control: no-store`; không cache hoặc ghi mật khẩu vào audit/log/storage. Giao diện giữ kết quả trong bộ nhớ và cho tải tài khoản vừa tạo một lần; mất bản tải thì reset theo FR-ACC-07.
+- Không gửi `dryRun` mặc định là `true`. Khi ghi, server kiểm tra lại toàn bộ và mã đã tồn tại; cùng lô là một transaction. Keycloak lỗi làm rollback toàn lô và xóa các danh tính vừa tạo bằng transaction synchronization; không chiếm tài khoản Keycloak đã có. Thao tác ghi đồng thời với CRUD có thể trả 409; client phải kiểm tra lại, không tự retry ghi.
+- Từ chối công thức/ô lỗi/boolean ở các trường nhập, sai lịch hoặc tuổi, thiếu tiêu đề, tiêu đề trùng, hơn 5.000 dòng và archive giải nén hơn 50 MB/200 entry. Số điện thoại không bắt buộc nên có thể thiếu cột này. Dòng trống được bỏ qua; `rowNumber` vẫn là số dòng Excel. Mã SV/tài khoản cán bộ đã tồn tại đều được bỏ qua để tránh trùng username.
+- Mức Could `resultFile=true` (SAD 9) **chưa triển khai**. Response hiện là JSON; không công bố file Excel báo cáo kết quả. Định dạng cột nhập ở mục 7.1.
 
 ### 4.11. Tạo ticket kèm ảnh
 

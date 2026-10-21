@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Phiên bản | **0.11** |
-| Ngày | 15/10/2026 |
+| Phiên bản | **0.12** |
+| Ngày | 21/10/2026 |
 | Học phần | Chuyên đề CNTT, lớp 65CNTT, Nhóm 3 |
 | Giảng viên | Hoàng Quốc Dũng |
 | Thành viên | Nguyễn Văn Séc, Nguyễn Phú Nguyên, Lê Đức Nguyên, Nguyễn Văn Quyền, Nguyễn Tiến Lộc |
@@ -15,6 +15,7 @@
 
 | Phiên bản | Ngày | Người thực hiện | Nội dung |
 |---|---|---|---|
+| 0.12 | 21/10/2026 | TV1 Nguyễn Văn Séc | Đồng bộ phần tài khoản và khung chung: làm rõ lỗi JWT, giữ FR-ACC-05 hai bước và trả mật khẩu tạm một lần; khung job SYSTEM có transaction riêng từng ID, nhắc bù cọc ít nhất mỗi giờ theo NFR-REL-03. Không đổi luồng nghiệp vụ của các module khác |
 | 0.1 | 07/10/2026 | Nhóm 3 | Bản đầu tiên, dựng từ tài liệu đề xuất đã chốt |
 | 0.2 | 07/10/2026 | Nhóm 3 | Cập nhật theo trả lời Q-01 đến Q-06: phí phòng theo học kỳ; hạn đóng 7 ngày; điện nước tính theo phòng qua **trưởng phòng**; **sổ tiền cọc** (mức cọc theo tòa, trừ khi sửa chữa, bù cọc, hoàn cọc); ngưỡng sắp hết hạn 15 ngày |
 | 0.3 | 07/10/2026 | Nhóm 3 | Chốt Q-07 đến Q-21: quy mô ~1.500 sinh viên; hao mòn tự nhiên không trừ cọc; quá hạn bù cọc thì nhắc nhở; quy trình **học kỳ hè** (đăng ký ở hè, tạm rời hè và gửi đồ vào kho) |
@@ -389,7 +390,7 @@ Mục này mô tả ở mức nghiệp vụ. Tên bảng, kiểu dữ liệu và
 
 - JSON qua HTTPS; tiền tố `/api`. Hành động chuyển trạng thái dùng `POST /api/<tài nguyên>/{id}/<hành động>` (ví dụ `/approve`, `/reject`, `/activate`, `/move-out`).
 - Mã lỗi: 400 dữ liệu không hợp lệ, 401 chưa đăng nhập, 403 ngoài quyền / phạm vi, 404 không tồn tại **hoặc ngoài phạm vi đọc**, 409 xung đột trạng thái / ràng buộc (giường đã bị chiếm, gửi trùng).
-- Xác thực trả `SESSION_REVOKED` (401) khi phiên không còn khớp phiên bản bảo mật; `CSRF_TOKEN_INVALID` (403) khi request ghi thiếu/sai token. Giao diện yêu cầu đăng nhập lại khi hết hạn/thu hồi và không giữ dữ liệu của tài khoản trước.
+- Xác thực Bearer JWT trả `SESSION_REVOKED` (401) khi token không còn khớp phiên bản bảo mật. API không xác thực bằng cookie phiên; state/nonce/PKCE thuộc luồng Keycloak. Mọi lỗi bảo mật có `requestId`. Giao diện yêu cầu đăng nhập lại khi hết hạn/thu hồi và không giữ dữ liệu của tài khoản trước.
 - Lỗi 400 / 409 trả về `errorCode` ổn định (ví dụ `BED_TAKEN`, `DUPLICATE_INVOICE`, `CONTRACT_AUTO_CANCELLED`) kèm dữ liệu chi tiết; giao diện dựng thông báo tiếng Việt từ mã, không dựa vào chuỗi `message`.
 - API chi tiết của đơn, hợp đồng, ticket, hóa đơn và yêu cầu trả về `allowedActions`: các hành động người dùng hiện tại được thực hiện ở trạng thái hiện tại. Giao diện chỉ hiển thị nút theo danh sách này; API vẫn kiểm tra lại khi nhận request.
 - Danh sách endpoint chi tiết thuộc tài liệu đặc tả API (tuần 3–4); tối thiểu bao phủ mọi FR trong mục 3.
