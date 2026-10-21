@@ -752,6 +752,7 @@ public final class DmsConstants {
         public static final String DRAFT = "DRAFT";
         public static final String SUBMITTED = "SUBMITTED";
         public static final String APPROVED = "APPROVED";
+        public static final String ASSIGNED = "ASSIGNED";
         public static final String REJECTED = "REJECTED";
         public static final String CANCELLED = "CANCELLED";
 
@@ -775,6 +776,7 @@ public final class DmsConstants {
     public static final class ContractStatus {
         public static final String PENDING = "PENDING";
         public static final String ACTIVE = "ACTIVE";
+        public static final String CANCELLED = "CANCELLED";
 
         private ContractStatus() {}
     }
@@ -932,6 +934,7 @@ public final class DmsConstants {
     /** Khóa cấu hình nghiệp vụ lưu tại system_config; giá trị cấu hình vẫn lấy từ CSDL. */
     public static final class ConfigKey {
         public static final String CONTRACT_ACTIVATION_DAYS = "contract.activation_days";
+        public static final String CONTRACT_EXPIRING_DAYS = "contract.expiring_days";
 
         private ConfigKey() {}
     }
@@ -980,6 +983,8 @@ public final class DmsConstants {
         public static final String USER_UPDATE = "USER_UPDATE";
         public static final String ROLE_PERMISSION_UPDATE = "ROLE_PERMISSION_UPDATE";
         public static final String STUDENT_IMPORT = "STUDENT_IMPORT";
+        public static final String CONTRACT_AUTO_CANCEL = "CONTRACT_AUTO_CANCEL";
+        public static final String APPLICATION_AUTO_CANCEL = "APPLICATION_AUTO_CANCEL";
 
         private AuditAction() {}
     }
