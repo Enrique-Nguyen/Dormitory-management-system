@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Phiên bản | **0.12** |
-| Ngày | 21/10/2026 |
+| Phiên bản | **0.13** |
+| Ngày | 22/10/2026 |
 | Học phần | Chuyên đề CNTT, lớp 65CNTT, Nhóm 3 |
 | Giảng viên | Hoàng Quốc Dũng |
 | Thành viên | Nguyễn Văn Séc, Nguyễn Phú Nguyên, Lê Đức Nguyên, Nguyễn Văn Quyền, Nguyễn Tiến Lộc |
@@ -15,6 +15,7 @@
 
 | Phiên bản | Ngày | Người thực hiện | Nội dung |
 |---|---|---|---|
+| 0.13 | 22/10/2026 | TV5 Nguyễn Tiến Lộc | Đồng bộ phân hệ 6 & 7: chuẩn hóa nghiệp vụ sổ cọc (thu cọc ban đầu, trừ cọc FIFO, bù cọc, hoàn cọc), tra cứu công nợ sinh viên/phòng, tự động phát hành hóa đơn phòng và điện nước theo đợt/chỉ số, cùng tổng hợp KPI Staff Dashboard |
 | 0.12 | 21/10/2026 | TV1 Nguyễn Văn Séc | Đồng bộ phần tài khoản và khung chung: làm rõ lỗi JWT, giữ FR-ACC-05 hai bước và trả mật khẩu tạm một lần; khung job SYSTEM có transaction riêng từng ID, nhắc bù cọc ít nhất mỗi giờ theo NFR-REL-03. Không đổi luồng nghiệp vụ của các module khác |
 | 0.1 | 07/10/2026 | Nhóm 3 | Bản đầu tiên, dựng từ tài liệu đề xuất đã chốt |
 | 0.2 | 07/10/2026 | Nhóm 3 | Cập nhật theo trả lời Q-01 đến Q-06: phí phòng theo học kỳ; hạn đóng 7 ngày; điện nước tính theo phòng qua **trưởng phòng**; **sổ tiền cọc** (mức cọc theo tòa, trừ khi sửa chữa, bù cọc, hoàn cọc); ngưỡng sắp hết hạn 15 ngày |

@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.billing.api.InvoiceDtos;
 import vn.edu.tlu.dms.billing.domain.Invoice;
+import vn.edu.tlu.dms.billing.domain.InvoiceItem;
 import vn.edu.tlu.dms.billing.repository.InvoiceItemRepository;
 import vn.edu.tlu.dms.billing.repository.InvoiceRepository;
 import vn.edu.tlu.dms.billing.service.InvoiceService;
@@ -27,8 +28,12 @@ import vn.edu.tlu.dms.common.service.StatusHistoryService;
 import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Hóa đơn và dòng tiền không có API xóa/sửa tùy ý; thanh toán là một hành động có khóa. */
@@ -150,7 +155,7 @@ public class InvoiceServiceImpl implements InvoiceService {
      */
     @Transactional
     @Override
-    public InvoiceDtos.Response confirmInvoicePayment(Long id, InvoiceDtos.Payment input) {
+    public InvoiceDtos.Response confirmPayment(Long id, InvoiceDtos.Payment input) {
         scopeGuard.requirePermission(Permission.INVOICE_UPDATE);
         scopeGuard.requireRole(Role.STAFF);
         jdbc.query(
@@ -189,6 +194,280 @@ public class InvoiceServiceImpl implements InvoiceService {
                 currentUser.get().id(),
                 null);
         return toInvoiceResponse(invoice, true);
+    }
+
+    @Transactional
+    @Override
+    public InvoiceDtos.BatchIssueResult issueRoomFee(Long semesterId) {
+        scopeGuard.requirePermission(Permission.INVOICE_CREATE);
+        scopeGuard.requireRole(Role.STAFF, Role.ADMIN);
+
+        var actor = currentUser.get();
+        List<Map<String, Object>> semesterRows =
+                jdbc.queryForList(
+                        "SELECT id, name, type FROM semester WHERE id = ?", semesterId);
+        if (semesterRows.isEmpty()) {
+            throw BusinessException.notFound();
+        }
+        String semesterType = (String) semesterRows.get(0).get("type");
+        String semesterName = (String) semesterRows.get(0).get("name");
+
+        String scopeCondition = "TRUE";
+        List<Object> args = new ArrayList<>();
+        if (!actor.isAdmin() && !actor.canReadAllUnits()) {
+            scopeCondition = "bd.management_unit_id = ?";
+            args.add(actor.unitId());
+        }
+
+        String sql =
+                """
+                SELECT h.id AS assignment_id, h.student_id, h.price_main, h.price_summer
+                FROM room_assignment_history h
+                JOIN bed b ON b.id = h.bed_id
+                JOIN room r ON r.id = b.room_id
+                JOIN building bd ON bd.id = r.building_id
+                WHERE h.ended_at IS NULL AND h.kind = 'STAY' AND %s
+                """.formatted(scopeCondition);
+
+        List<Map<String, Object>> stays = jdbc.queryForList(sql, args.toArray());
+
+        int created = 0;
+        int skipped = 0;
+        long totalAmount = 0L;
+
+        LocalDate now = LocalDate.now();
+        OffsetDateTime issuedAt = OffsetDateTime.now();
+        LocalDate dueDate = now.plusDays(7);
+
+        for (var stay : stays) {
+            Long studentId = ((Number) stay.get("student_id")).longValue();
+            Long assignmentId = ((Number) stay.get("assignment_id")).longValue();
+
+            Boolean exists =
+                    jdbc.queryForObject(
+                            "SELECT EXISTS(SELECT 1 FROM invoice WHERE student_id = ? AND semester_id = ? AND type = 'ROOM_FEE')",
+                            Boolean.class,
+                            studentId,
+                            semesterId);
+            if (Boolean.TRUE.equals(exists)) {
+                skipped++;
+                continue;
+            }
+
+            Number rawPrice = "SUMMER".equals(semesterType)
+                    ? (Number) stay.get("price_summer")
+                    : (Number) stay.get("price_main");
+            long price = rawPrice != null ? rawPrice.longValue() : 0L;
+
+            String code =
+                    jdbc.queryForObject(
+                            "SELECT fn_next_code('HP','seq_invoice_code',true)", String.class);
+
+            Invoice invoice = new Invoice();
+            invoice.setCode(code);
+            invoice.setType(InvoiceType.ROOM_FEE);
+            invoice.setStudentId(studentId);
+            invoice.setSemesterId(semesterId);
+            invoice.setTotalAmount(price);
+            invoice.setDueDate(dueDate);
+            invoice.setIssuedAt(issuedAt);
+            invoice.setIssuedBy(actor.id());
+            invoice.setStatus(InvoiceStatus.UNPAID);
+            invoice = invoices.saveAndFlush(invoice);
+
+            InvoiceItem item = new InvoiceItem();
+            item.setInvoiceId(invoice.getId());
+            item.setItemType(InvoiceType.ROOM_FEE);
+            item.setQuantity(BigDecimal.ONE);
+            item.setUnitPrice(price);
+            item.setAmount(price);
+            item.setAssignmentId(assignmentId);
+            item.setNote("Phí phòng " + semesterName);
+            items.saveAndFlush(item);
+
+            historyService.record(
+                    EntityType.INVOICE,
+                    invoice.getId(),
+                    null,
+                    InvoiceStatus.UNPAID,
+                    actor.id(),
+                    "Phát hành hóa đơn phí phòng học kỳ " + semesterName);
+
+            created++;
+            totalAmount += price;
+        }
+
+        return new InvoiceDtos.BatchIssueResult(created, skipped, totalAmount);
+    }
+
+    @Transactional
+    @Override
+    public InvoiceDtos.BatchIssueResult issueUtility(
+            Long managementUnitId, LocalDate billingMonth) {
+        scopeGuard.requirePermission(Permission.INVOICE_CREATE);
+        scopeGuard.requireRole(Role.STAFF, Role.ADMIN);
+
+        var actor = currentUser.get();
+        Long effectiveUnitId = actor.isAdmin() ? managementUnitId : actor.unitId();
+
+        if (billingMonth == null) {
+            throw BusinessException.invalid("billingMonth", "Kỳ điện nước không được để trống");
+        }
+
+        Long electricRate =
+                jdbc.query(
+                                """
+                                SELECT unit_price FROM utility_rate
+                                WHERE meter_type = 'ELECTRIC' AND effective_from <= ?
+                                ORDER BY effective_from DESC, id DESC LIMIT 1
+                                """,
+                                (rs, rowNum) -> rs.getLong(1),
+                                billingMonth)
+                        .stream()
+                        .findFirst()
+                        .orElseThrow(
+                                () ->
+                                        BusinessException.invalid(
+                                                "rate",
+                                                "Chưa có đơn giá điện có hiệu lực cho kỳ này"));
+
+        Long waterRate =
+                jdbc.query(
+                                """
+                                SELECT unit_price FROM utility_rate
+                                WHERE meter_type = 'WATER' AND effective_from <= ?
+                                ORDER BY effective_from DESC, id DESC LIMIT 1
+                                """,
+                                (rs, rowNum) -> rs.getLong(1),
+                                billingMonth)
+                        .stream()
+                        .findFirst()
+                        .orElseThrow(
+                                () ->
+                                        BusinessException.invalid(
+                                                "rate",
+                                                "Chưa có đơn giá nước có hiệu lực cho kỳ này"));
+
+        String unitCondition = effectiveUnitId != null ? "bd.management_unit_id = ?" : "TRUE";
+        List<Object> args = new ArrayList<>();
+        if (effectiveUnitId != null) {
+            args.add(effectiveUnitId);
+        }
+
+        String sql =
+                """
+                SELECT r.id, r.code, r.room_leader_id
+                FROM room r
+                JOIN building bd ON bd.id = r.building_id
+                WHERE %s AND r.status = 'ACTIVE'
+                """.formatted(unitCondition);
+
+        List<Map<String, Object>> roomRows = jdbc.queryForList(sql, args.toArray());
+
+        int created = 0;
+        int skipped = 0;
+        long totalAmount = 0L;
+
+        LocalDate now = LocalDate.now();
+        OffsetDateTime issuedAt = OffsetDateTime.now();
+        LocalDate dueDate = now.plusDays(7);
+
+        for (var roomRow : roomRows) {
+            Long roomId = ((Number) roomRow.get("id")).longValue();
+
+            Boolean exists =
+                    jdbc.queryForObject(
+                            "SELECT EXISTS(SELECT 1 FROM invoice WHERE room_id = ? AND billing_month = ? AND type = 'UTILITY')",
+                            Boolean.class,
+                            roomId,
+                            billingMonth);
+            if (Boolean.TRUE.equals(exists)) {
+                skipped++;
+                continue;
+            }
+
+            List<Map<String, Object>> readings =
+                    jdbc.queryForList(
+                            "SELECT id, meter_type, consumption FROM utility_reading WHERE room_id = ? AND billing_month = ?",
+                            roomId,
+                            billingMonth);
+
+            Long electricConsumption = null;
+            Long electricReadingId = null;
+            Long waterConsumption = null;
+            Long waterReadingId = null;
+
+            for (var reading : readings) {
+                String type = (String) reading.get("meter_type");
+                Number c = (Number) reading.get("consumption");
+                Long rId = ((Number) reading.get("id")).longValue();
+                if ("ELECTRIC".equals(type)) {
+                    electricConsumption = c != null ? c.longValue() : 0L;
+                    electricReadingId = rId;
+                } else if ("WATER".equals(type)) {
+                    waterConsumption = c != null ? c.longValue() : 0L;
+                    waterReadingId = rId;
+                }
+            }
+
+            if (electricConsumption == null || waterConsumption == null) {
+                skipped++;
+                continue;
+            }
+
+            long electricCost = electricConsumption * electricRate;
+            long waterCost = waterConsumption * waterRate;
+            long total = electricCost + waterCost;
+
+            String code =
+                    jdbc.queryForObject(
+                            "SELECT fn_next_code('DN','seq_invoice_code',true)", String.class);
+
+            Invoice invoice = new Invoice();
+            invoice.setCode(code);
+            invoice.setType(InvoiceType.UTILITY);
+            invoice.setRoomId(roomId);
+            invoice.setBillingMonth(billingMonth);
+            invoice.setTotalAmount(total);
+            invoice.setDueDate(dueDate);
+            invoice.setIssuedAt(issuedAt);
+            invoice.setIssuedBy(actor.id());
+            invoice.setStatus(InvoiceStatus.UNPAID);
+            invoice = invoices.saveAndFlush(invoice);
+
+            InvoiceItem elItem = new InvoiceItem();
+            elItem.setInvoiceId(invoice.getId());
+            elItem.setItemType("ELECTRIC");
+            elItem.setQuantity(BigDecimal.valueOf(electricConsumption));
+            elItem.setUnitPrice(electricRate);
+            elItem.setAmount(electricCost);
+            elItem.setUtilityReadingId(electricReadingId);
+            elItem.setNote("Tiền điện tiêu thụ " + electricConsumption + " kWh");
+            items.saveAndFlush(elItem);
+
+            InvoiceItem wItem = new InvoiceItem();
+            wItem.setInvoiceId(invoice.getId());
+            wItem.setItemType("WATER");
+            wItem.setQuantity(BigDecimal.valueOf(waterConsumption));
+            wItem.setUnitPrice(waterRate);
+            wItem.setAmount(waterCost);
+            wItem.setUtilityReadingId(waterReadingId);
+            wItem.setNote("Tiền nước tiêu thụ " + waterConsumption + " m3");
+            items.saveAndFlush(wItem);
+
+            historyService.record(
+                    EntityType.INVOICE,
+                    invoice.getId(),
+                    null,
+                    InvoiceStatus.UNPAID,
+                    actor.id(),
+                    "Phát hành hóa đơn điện nước kỳ " + billingMonth);
+
+            created++;
+            totalAmount += total;
+        }
+
+        return new InvoiceDtos.BatchIssueResult(created, skipped, totalAmount);
     }
 
     private Invoice findAccessibleInvoice(Long id) {

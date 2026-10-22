@@ -44,7 +44,7 @@ export const studentRoutes: RouteObject = {
         },
         { path: 'requests/transfers/:id', element: <TransferRequestPage /> },
         { path: 'invoices', element: <CrudPage resource="myInvoices" /> },
-        { path: 'deposit', element: <CrudPage resource="deposits" /> },
+        { path: 'deposit', element: <CrudPage resource="myDeposits" /> },
         { path: 'maintenance', element: <CrudPage resource="maintenance" /> },
         {
           path: 'maintenance/:id',

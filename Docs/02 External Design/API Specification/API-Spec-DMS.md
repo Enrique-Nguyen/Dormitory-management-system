@@ -1,13 +1,14 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.15**, 21/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.12 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.8, `DMS-UI-UX-Design.md` (mục 27.2)
+> **Phiên bản 0.16**, 22/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.13 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.8, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
 ### Lịch sử thay đổi
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.16 | 22/10/2026 | TV5: hoàn thiện API sổ cọc (thu cọc, trừ cọc, bù cọc, hoàn cọc), tra cứu công nợ sinh viên và phòng, phát hành hóa đơn tự động (tiền phòng & điện nước), xác nhận thanh toán và tổng hợp KPI Staff Dashboard |
 | 0.15 | 21/10/2026 | TV1: import sinh viên hai bước đã triển khai, bổ sung createdAccounts trả mật khẩu một lần và no-store; đọc chi tiết audit trước/sau, hiển thị SYSTEM; lỗi bảo mật có requestId. Staff không được đổi mã SV/họ tên/giới tính |
 | 0.1 | 10/10/2026 | Bản đầu tiên: quy ước chung, danh mục endpoint theo 7 module, schema cho các nghiệp vụ chính, danh mục `errorCode`, `allowedActions`, định dạng file import |
 | 0.2 | 10/10/2026 | Theo thẩm định: Staff tạo ticket của phòng (`roomId`); xem trước trả phòng cảnh báo ticket chưa kết luận chi phí; xem trước điện nước trả phòng thiếu trưởng phòng và thiếu chỉ số; một thông báo `ROOM` cho mỗi hóa đơn điện nước; tổng hóa đơn không âm sau điều chỉnh; quy ước tên hành động không đổi trạng thái; `link` của thông báo do backend suy ra; chốt Q-API-01..07; trừ cọc chia cho người Staff chọn (`chargedStudentIds`, endpoint `chargeable-students`) |
@@ -437,17 +438,19 @@ Khung có DELETE phòng/giường chưa từng sử dụng; khi đã có lịch 
 | POST | `/api/utility-readings/save-or-update` | St | Lưu một bản ghi bằng ID trong body (mục 4.13); không phải import hàng loạt. Khi sửa giữ phòng/loại/kỳ | FR-BIL-02 |
 | POST | `/api/utility-readings/{id}/meter-replacement` | St | `{ oldMeterFinalReading, newMeterStartReading, reason }` | FR-BIL-03 |
 | GET | `/api/invoices/room-fee/preview` | St | `semesterId`, `buildingId?`: số sinh viên sẽ phát hành, số đã có hóa đơn, tổng tiền | FR-BIL-05, 06 |
-| POST | `/api/invoices/room-fee/issue` | St | Phát hành phí phòng (mục 4.14) | FR-BIL-05, 06, 07 |
-| GET | `/api/invoices/utility/preview` | St | `billingMonth`, `buildingId?`: số phòng sẽ phát hành, đã phát hành, tổng tiền; `roomsMissingReading` và `roomsWithoutLeader` dạng `[{ id, code }]` để hiện cảnh báo trước khi phát hành (mục 4.14) | FR-BIL-04, 06 |
-| POST | `/api/invoices/utility/issue` | St | Phát hành điện nước theo phòng (mục 4.14) | FR-BIL-04, 06, 07 |
+| POST | `/api/invoices/issue-room-fee` | St | Phát hành phí phòng theo học kỳ | FR-BIL-05, 06, 07 |
+| GET | `/api/invoices/utility/preview` | St | `billingMonth`, `buildingId?`: số phòng sẽ phát hành, đã phát hành, tổng tiền; `roomsMissingReading` và `roomsWithoutLeader` dạng `[{ id, code }]` để hiện cảnh báo trước khi phát hành | FR-BIL-04, 06 |
+| POST | `/api/invoices/issue-utility` | St | Phát hành điện nước theo phòng | FR-BIL-04, 06, 07 |
 | POST | `/api/invoices/search-by-page` | St | Khung lọc `type`, `status`, `q` trong phạm vi; bộ lọc công nợ/kỳ/đối tượng nâng cao là kế hoạch MVP | FR-BIL-08, 11 |
 | GET | `/api/invoices/{id}` | S, St | Chi tiết, các dòng, `allowedActions`. Sinh viên: hóa đơn phí phòng của mình, hóa đơn điện nước của phòng mình đang ở hoặc đã ở trong tháng đó. Staff: điện nước theo đơn vị phòng, phí phòng theo học kỳ hóa đơn và lịch sử ở/đơn trong kỳ (`STAFF_UNIT_SCOPE`); ngoài scope trả 404 | FR-BIL-04, 10 |
 | POST | `/api/me/invoices/search-by-page` | S | Hóa đơn của tôi và của phòng tôi; lọc `type`, `status` | FR-BIL-10 |
 | POST | `/api/invoices/{id}/confirm-payment` | St | UNPAID → PAID (mục 4.15); bắt buộc thuộc đơn vị ghi của Staff (`isInStaffUnit`), quyền tổng hợp không mở rộng ghi tài chính, ngoài scope trả 404 | FR-BIL-08 |
 | POST | `/api/invoices/{id}/adjustments` | St | Thêm dòng điều chỉnh vào hóa đơn **UNPAID** này cho một hóa đơn đã PAID trước đó của cùng sinh viên / phòng: `{ adjustsInvoiceId, amount (âm / dương, ≠ 0), reason }`. Tổng hóa đơn sau điều chỉnh phải ≥ 0 → nếu âm: `409 ADJUSTMENT_INVALID`, `details: { totalAfter }` (CSDL cũng chặn bằng `CHECK (total_amount >= 0)`) | FR-BIL-12 |
-| GET | `/api/contracts/{id}/deposit` | S, St | Sổ cọc: mức cọc, số dư, số cần bù, hạn bù, quá hạn, các giao dịch (mục 4.16) | FR-BIL-09, 10 |
-| GET | `/api/me/deposit` | S | Sổ cọc của hợp đồng hiện tại | FR-BIL-10 |
-| POST | `/api/contracts/{id}/deposit/top-ups` | St | Xác nhận sinh viên nộp bù: `{ amount, paymentMethod, note }`; `amount` ≤ số cần bù → nếu lớn hơn: `409 TOPUP_EXCEEDS_REQUIRED` | FR-BIL-09 |
+| GET | `/api/contracts/{id}/deposit-balance` | S, St | Sổ cọc: mức cọc, số dư, số cần bù, hạn bù, quá hạn (mục 4.16) | FR-BIL-09, 10 |
+| GET | `/api/contracts/{id}/deposit-transactions` | S, St | Lịch sử giao dịch sổ cọc của hợp đồng | FR-BIL-09, 10 |
+| POST | `/api/contracts/{id}/initial-deposit` | St | Thu cọc ban đầu khi kích hoạt hợp đồng | FR-BIL-09 |
+| POST | `/api/contracts/{id}/deposit-topup` | St | Xác nhận sinh viên nộp bù cọc | FR-BIL-09, 12 |
+| POST | `/api/contracts/{id}/deposit-refund` | St | Hoàn trả tiền cọc khi kết thúc hợp đồng | FR-BIL-13 |
 | POST | `/api/deposits/overdue-top-ups/search-by-page` | St | Danh sách cần nhắc: hợp đồng có khoản bù quá hạn | FR-BIL-13 |
 | POST | `/api/debts/students/search-by-page` | St | Công nợ theo sinh viên: phí phòng chưa đóng, bù cọc (khi ACTIVE), số dư cọc âm sau trả phòng. Lọc `semesterId`, `buildingId`, `contractStatus` | FR-BIL-11, FR-CON-10 |
 | POST | `/api/debts/rooms/search-by-page` | St | Công nợ điện nước theo phòng; lọc `billingMonth`, `buildingId` | FR-BIL-11 |
@@ -474,7 +477,7 @@ Khung có DELETE phòng/giường chưa từng sử dụng; khi đã có lịch 
 | POST | `/api/notifications/read-all` | \* | 204 | FR-NOT-03 |
 | POST | `/api/notifications/save-or-update` | St | Tạo/sửa thông báo thủ công: `{id, scope, unitId, buildingId, floor, roomId, title, body}`. Khi sửa giữ phạm vi và chỉ cho người tạo đủ quyền; mục 4.17 | FR-NOT-01, 02 |
 | POST | `/api/notifications/published/search-by-page` | St | Thông báo do Staff đơn vị mình đăng (cả loại `ROOM`) | FR-NOT-01 |
-| GET | `/api/dashboard` | St | Số liệu dashboard (mục 4.18); `unitId` chỉ dùng khi có quyền tổng hợp, bỏ trống = toàn KTX | FR-NOT-05, 06 |
+| GET | `/api/staff/dashboard` | St | Số liệu dashboard KPI cho nhân viên (mục 4.18); `managementUnitId` chỉ dùng khi có quyền tổng hợp, bỏ trống = toàn KTX | FR-NOT-05, 06 |
 | POST | `/api/pending-items/search-by-page` | St | Hộp "Yêu cầu chờ xử lý" (UI mục 22A): đơn SUBMITTED, gia hạn, chuyển phòng, lựa chọn hè PENDING, hợp đồng PENDING chờ kích hoạt. Lọc `type`; trả `{ type, entityId, student, submittedAt }` | UI 22A |
 
 | Method | Path | Vai trò | Mô tả | FR |

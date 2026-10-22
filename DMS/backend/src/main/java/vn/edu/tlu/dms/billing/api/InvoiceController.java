@@ -47,6 +47,20 @@ public class InvoiceController {
     @PostMapping("/api/invoices/{id}/confirm-payment")
     public InvoiceDtos.Response confirmInvoicePayment(
             @PathVariable Long id, @Valid @RequestBody InvoiceDtos.Payment input) {
-        return service.confirmInvoicePayment(id, input);
+        return service.confirmPayment(id, input);
+    }
+
+    @RequirePrivilege(Permission.INVOICE_CREATE)
+    @PostMapping("/api/invoices/issue-room-fee")
+    public InvoiceDtos.BatchIssueResult issueRoomFeeInvoices(
+            @Valid @RequestBody InvoiceDtos.RoomFeeBatchIssueRequest request) {
+        return service.issueRoomFee(request.semesterId());
+    }
+
+    @RequirePrivilege(Permission.INVOICE_CREATE)
+    @PostMapping("/api/invoices/issue-utility")
+    public InvoiceDtos.BatchIssueResult issueUtilityInvoices(
+            @Valid @RequestBody InvoiceDtos.UtilityBatchIssueRequest request) {
+        return service.issueUtility(request.managementUnitId(), request.billingMonth());
     }
 }

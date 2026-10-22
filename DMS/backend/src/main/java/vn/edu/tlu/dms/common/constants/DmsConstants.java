@@ -32,9 +32,13 @@ public final class DmsConstants {
         public static final String CONCURRENT_UPDATE = "CONCURRENT_UPDATE";
         public static final String CONFIG_VALUE_INVALID = "CONFIG_VALUE_INVALID";
         public static final String CONTRACT_EXISTS = "CONTRACT_EXISTS";
+        public static final String CONTRACT_NOT_ACTIVE = "CONTRACT_NOT_ACTIVE";
         public static final String CROSS_UNIT_ONLY_STAFF = "CROSS_UNIT_ONLY_STAFF";
         public static final String DEPOSIT_INVALID = "DEPOSIT_INVALID";
+        public static final String DUPLICATE_DEDUCTION = "DUPLICATE_DEDUCTION";
+        public static final String DUPLICATE_DEPOSIT = "DUPLICATE_DEPOSIT";
         public static final String DUPLICATE_INVOICE = "DUPLICATE_INVOICE";
+        public static final String DUPLICATE_REFUND = "DUPLICATE_REFUND";
         public static final String DUPLICATE_USERNAME = "DUPLICATE_USERNAME";
         public static final String DUPLICATE_VALUE = "DUPLICATE_VALUE";
         public static final String FILE_TOO_LARGE = "FILE_TOO_LARGE";
@@ -63,6 +67,7 @@ public final class DmsConstants {
         public static final String READING_HAS_FOLLOWING_MONTH = "READING_HAS_FOLLOWING_MONTH";
         public static final String READING_INVALID = "READING_INVALID";
         public static final String READING_LOCKED = "READING_LOCKED";
+        public static final String REFUND_EXCEEDS_BALANCE = "REFUND_EXCEEDS_BALANCE";
         public static final String REQUEST_PENDING_EXISTS = "REQUEST_PENDING_EXISTS";
         public static final String RESOURCE_IN_USE = "RESOURCE_IN_USE";
         public static final String ROOM_CODE_EXISTS = "ROOM_CODE_EXISTS";
@@ -999,6 +1004,11 @@ public final class DmsConstants {
         public static final String MAINTENANCE_AUTO_CLOSE = "MAINTENANCE_AUTO_CLOSE";
         public static final String DEPOSIT_REMINDER = "DEPOSIT_REMINDER";
         public static final String CONTRACT_EXPIRING_REMINDER = "CONTRACT_EXPIRING_REMINDER";
+        public static final String DEPOSIT_COLLECT = "DEPOSIT_COLLECT";
+        public static final String DEPOSIT_DEDUCT = "DEPOSIT_DEDUCT";
+        public static final String DEPOSIT_TOPUP = "DEPOSIT_TOPUP";
+        public static final String DEPOSIT_REFUND = "DEPOSIT_REFUND";
+        public static final String INVOICE_BATCH_ISSUE = "INVOICE_BATCH_ISSUE";
 
         private AuditAction() {}
     }
@@ -1009,6 +1019,7 @@ public final class DmsConstants {
         public static final String ASSIGNMENT = "ASSIGNMENT";
         public static final String BED = "BED";
         public static final String CONTRACT = "CONTRACT";
+        public static final String DEPOSIT_TRANSACTION = "DEPOSIT_TRANSACTION";
         public static final String INVOICE = "INVOICE";
         public static final String MAINTENANCE = "MAINTENANCE";
         public static final String NOTIFICATION = "NOTIFICATION";
