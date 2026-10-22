@@ -153,7 +153,7 @@ public class SecurityConfig {
                                                                     ErrorCode.UNAUTHENTICATED,
                                                                     ErrorCode.UNAUTHENTICATED,
                                                                     Map.of(),
-                                                                    null));
+                                                                    (String) request.getAttribute("requestId")));
                                                 }))
                 .exceptionHandling(
                         errors ->
@@ -168,7 +168,7 @@ public class SecurityConfig {
                                                             ErrorCode.FORBIDDEN,
                                                             ErrorCode.FORBIDDEN,
                                                             Map.of(),
-                                                            null));
+                                                            (String) request.getAttribute("requestId")));
                                         }))
                 .addFilterAfter(
                         new AccountAccessFilter(current, mapper),
@@ -184,6 +184,13 @@ public class SecurityConfig {
             String audience,
             String adminClientId,
             String adminClientSecret) {
+
+        @Override
+        public String toString() {
+            return "KeycloakProperties[serverUrl=" + serverUrl + ", realm=" + realm
+                    + ", audience=" + audience + ", adminClientId=" + adminClientId
+                    + ", adminClientSecret=REDACTED]";
+        }
 
         public KeycloakProperties {
             serverUrl = serverUrl.replaceAll("/+$", "");

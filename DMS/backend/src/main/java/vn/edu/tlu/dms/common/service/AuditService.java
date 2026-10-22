@@ -17,6 +17,9 @@ public interface AuditService {
      */
     PageResponse<Map<String, Object>> searchByPage(SearchRequest input);
 
+    /** Admin đọc dữ liệu trước/sau của một bản ghi; thiếu ID trả 404, không có API sửa/xóa. */
+    Map<String, Object> getAuditById(Long id);
+
     /**
      * Ghi nhật ký thao tác gồm người thực hiện, dữ liệu trước/sau và lý do; dùng cùng transaction
      * với thao tác cần theo dõi.

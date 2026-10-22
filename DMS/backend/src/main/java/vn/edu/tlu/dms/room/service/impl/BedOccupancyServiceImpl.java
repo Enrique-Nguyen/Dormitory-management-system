@@ -167,6 +167,19 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
 
     @Override
     @Transactional
+    public void lockOpenAssignment(Long contractId, Long studentId) {
+        var open = findOpenRow(contractId);
+        if (open.isPresent()) {
+            lockBeds(List.of(open.get().bedId()));
+        }
+        references.lockStudentProfile(studentId);
+        if (!open.equals(findOpenRow(contractId))) {
+            throw BusinessException.conflict(ErrorCode.CONCURRENT_UPDATE);
+        }
+    }
+
+    @Override
+    @Transactional
     public Assignment transfer(Long contractId, Long targetBedId, String note) {
         if (targetBedId == null) {
             throw BusinessException.invalid(ApiField.TARGET_BED_ID, ValidationMessage.REQUIRED);

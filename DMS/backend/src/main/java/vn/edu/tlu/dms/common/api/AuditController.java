@@ -3,6 +3,8 @@ package vn.edu.tlu.dms.common.api;
 import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,5 +30,11 @@ public class AuditController {
     @RequirePrivilege(Permission.AUDIT_READ)
     public PageResponse<Map<String, Object>> searchByPage(@Valid @RequestBody SearchRequest input) {
         return service.searchByPage(input);
+    }
+
+    @GetMapping("/api/admin/audit-logs/{id}")
+    @RequirePrivilege(Permission.AUDIT_READ)
+    public Map<String, Object> getAuditById(@PathVariable Long id) {
+        return service.getAuditById(id);
     }
 }

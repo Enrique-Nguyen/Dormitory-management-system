@@ -275,10 +275,11 @@ export function readValue(row: CrudRecord, path: string): unknown {
 /** Lookup tải đủ các trang được phép, để chọn tham chiếu mà không phải gõ ID. */
 export async function getLookupRecords(
   endpoint: string,
+  filters: Record<string, string | number | boolean> = {},
 ): Promise<CrudRecord[]> {
   const all: CrudRecord[] = []
   for (let page = 0; page < 100; page++) {
-    const result = await searchByPage(endpoint, { page, size: 100 })
+    const result = await searchByPage(endpoint, { ...filters, page, size: 100 })
     all.push(...result.content)
     if (all.length >= result.totalElements || result.content.length === 0) break
     if (page === 99)

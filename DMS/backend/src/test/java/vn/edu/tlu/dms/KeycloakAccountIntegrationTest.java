@@ -148,7 +148,8 @@ class KeycloakAccountIntegrationTest {
 
     @Test
     void anonymousRequestIsRejected() throws Exception {
-        mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("requestId").isNotEmpty());
     }
 
     @Test

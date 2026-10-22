@@ -45,6 +45,7 @@ public final class DmsConstants {
         public static final String IDENTITY_NOT_LINKED = "IDENTITY_NOT_LINKED";
         public static final String IDENTITY_UNAVAILABLE = "IDENTITY_UNAVAILABLE";
         public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
+        public static final String IMPORT_FILE_INVALID = "IMPORT_FILE_INVALID";
         public static final String INVALID_STATE_TRANSITION = "INVALID_STATE_TRANSITION";
         public static final String INVOICE_ALREADY_PAID = "INVOICE_ALREADY_PAID";
         public static final String LEADER_ALREADY_ASSIGNED = "LEADER_ALREADY_ASSIGNED";
@@ -88,6 +89,13 @@ public final class DmsConstants {
 
     /** Tên field của hợp đồng validation, audit và ma trận quyền; không dùng làm tên cột SQL. */
     public static final class ApiField {
+        public static final String STUDENT_CODE = "studentCode";
+        public static final String FULL_NAME = "fullName";
+        public static final String GENDER = "gender";
+        public static final String DATE_OF_BIRTH = "dateOfBirth";
+        public static final String FACULTY = "faculty";
+        public static final String COHORT = "cohort";
+        public static final String PHONE = "phone";
         public static final String ID = "id";
         public static final String FORM = "form";
         public static final String SORT = "sort";
@@ -109,6 +117,34 @@ public final class DmsConstants {
         public static final String CURRENT_STATUS = "currentStatus";
 
         private ApiField() {}
+    }
+
+    /** Hợp đồng file import sinh viên; giới hạn kỹ thuật, không phải tham số nghiệp vụ. */
+    public static final class StudentImport {
+        public static final long MAX_BYTES = 5L * 1024 * 1024;
+        public static final int MAX_ROWS = 5000;
+        public static final long MAX_UNCOMPRESSED_BYTES = 50L * 1024 * 1024;
+        public static final int MAX_ZIP_ENTRIES = 200;
+        public static final String FILE_NAME = "mau-import-sinh-vien.xlsx";
+        public static final String SHEET_NAME = "Sinh viên";
+        public static final String REQUIRED = "REQUIRED";
+        public static final String PATTERN = "PATTERN";
+        public static final String DUPLICATE_IN_FILE = "DUPLICATE_IN_FILE";
+        public static final String INVALID = "INVALID";
+        public static final String ERROR = "ERROR";
+        public static final String EXISTS = "EXISTS";
+        public static final List<String> FIELDS = List.of(
+                ApiField.STUDENT_CODE, ApiField.FULL_NAME, ApiField.GENDER, ApiField.DATE_OF_BIRTH,
+                ApiField.FACULTY, ApiField.COHORT, ApiField.PHONE);
+        public static final List<String> HEADERS = List.of(
+                "Mã SV", "Họ tên", "Giới tính", "Ngày sinh", "Khoa", "Khóa", "Số điện thoại");
+        public static final String CODE_PATTERN = "[0-9]{6,20}";
+        public static final String PHONE_PATTERN = "0[0-9]{9}";
+        public static final String COHORT_PATTERN = "K[0-9]{1,9}";
+        public static final Map<String, String> GENDERS = Map.of(
+                "NAM", Gender.M, "M", Gender.M, "NỮ", Gender.F, "F", Gender.F);
+
+        private StudentImport() {}
     }
 
     /** Thông báo validation dùng chung; giữ nguyên từng chuỗi đã trả về qua API. */
@@ -716,6 +752,7 @@ public final class DmsConstants {
         public static final String DRAFT = "DRAFT";
         public static final String SUBMITTED = "SUBMITTED";
         public static final String APPROVED = "APPROVED";
+        public static final String ASSIGNED = "ASSIGNED";
         public static final String REJECTED = "REJECTED";
         public static final String CANCELLED = "CANCELLED";
 
@@ -739,8 +776,19 @@ public final class DmsConstants {
     public static final class ContractStatus {
         public static final String PENDING = "PENDING";
         public static final String ACTIVE = "ACTIVE";
+        public static final String CANCELLED = "CANCELLED";
 
         private ContractStatus() {}
+    }
+
+    /** Loại khoản trong sổ cọc, giữ nguyên các mã đã có trong CSDL. */
+    public static final class DepositType {
+        public static final String DEPOSIT = "DEPOSIT";
+        public static final String DEDUCTION = "DEDUCTION";
+        public static final String TOPUP = "TOPUP";
+        public static final String REFUND = "REFUND";
+
+        private DepositType() {}
     }
 
     /** Gia hạn/chuyển phòng chỉ được sửa/xóa khi yêu cầu còn chờ xử lý. */
@@ -896,6 +944,8 @@ public final class DmsConstants {
     /** Khóa cấu hình nghiệp vụ lưu tại system_config; giá trị cấu hình vẫn lấy từ CSDL. */
     public static final class ConfigKey {
         public static final String CONTRACT_ACTIVATION_DAYS = "contract.activation_days";
+        public static final String CONTRACT_EXPIRING_DAYS = "contract.expiring_days";
+        public static final String MAINTENANCE_AUTOCLOSE_DAYS = "maintenance.autoclose_days";
 
         private ConfigKey() {}
     }
@@ -943,6 +993,12 @@ public final class DmsConstants {
         public static final String USER_UNLOCK = "USER_UNLOCK";
         public static final String USER_UPDATE = "USER_UPDATE";
         public static final String ROLE_PERMISSION_UPDATE = "ROLE_PERMISSION_UPDATE";
+        public static final String STUDENT_IMPORT = "STUDENT_IMPORT";
+        public static final String CONTRACT_AUTO_CANCEL = "CONTRACT_AUTO_CANCEL";
+        public static final String APPLICATION_AUTO_CANCEL = "APPLICATION_AUTO_CANCEL";
+        public static final String MAINTENANCE_AUTO_CLOSE = "MAINTENANCE_AUTO_CLOSE";
+        public static final String DEPOSIT_REMINDER = "DEPOSIT_REMINDER";
+        public static final String CONTRACT_EXPIRING_REMINDER = "CONTRACT_EXPIRING_REMINDER";
 
         private AuditAction() {}
     }
@@ -962,5 +1018,19 @@ public final class DmsConstants {
         public static final String UTILITY_RATE = "UTILITY_RATE";
 
         private EntityType() {}
+    }
+
+    /** Tác vụ nội bộ không giả danh Admin, actor_id null được hiển thị là SYSTEM. */
+    public static final class SystemJob {
+        public static final String CANCEL_PENDING = "cancel-pending-contracts";
+        public static final String CLOSE_RESOLVED = "close-resolved-tickets";
+        public static final String REMIND_DEPOSIT = "remind-overdue-deposits";
+        public static final String REMIND_CONTRACT = "remind-expiring-contracts";
+        public static final String EXPIRED_REASON = "SYSTEM: Quá hạn kích hoạt hợp đồng";
+        public static final String AUTOCLOSE_REASON = "SYSTEM: Quá hạn nghiệm thu sau khi sửa xong";
+        public static final String CONTRACT_SOURCE = "CONTRACT_EXPIRING";
+        public static final String DEPOSIT_SOURCE = "DEPOSIT_OVERDUE";
+
+        private SystemJob() {}
     }
 }

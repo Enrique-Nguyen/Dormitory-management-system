@@ -6,6 +6,13 @@
 > Backend: Spring Boot REST API  
 > Database: PostgreSQL  
 > Responsive: từ 360px
+> Phiên bản: 1.0, 21/10/2026
+
+### Lịch sử thay đổi
+
+| Phiên bản | Ngày | Nội dung |
+|---|---|---|
+| 1.0 | 21/10/2026 | Bắt đầu ghi phiên bản; giữ thiết kế hiện có, bổ sung luồng import và đọc chi tiết audit đã triển khai bởi TV1 |
 
 ---
 
@@ -1481,6 +1488,12 @@ Mã SV: 20230023
 
 [Chỉ import dòng hợp lệ]
 ```
+
+Triển khai tại `/admin/import` gồm tab **Import Excel** và **Hồ sơ sinh viên**. Dùng FormControls/Surface/DataTable và ConfirmDialog chung; kiểm tra quyền `STUDENT_CREATE` cho chọn file, tải mẫu và ghi. Kiểm tra lại sau khi đổi file; chỉ hiện nút ghi khi preview có dòng hợp lệ. Lỗi dòng hiển thị số dòng Excel, mã SV, tên cột và lý do tiếng Việt; mã đã tồn tại được bỏ qua.
+
+Sau khi ghi thành công, hiển thị tổng số đã tạo và nút tải tài khoản vừa tạo. Không hiển thị mật khẩu trực tiếp trên bảng, không lưu vào query cache/localStorage/sessionStorage; người quản trị tải và bàn giao một lần. Tài khoản mới bắt đổi mật khẩu qua Keycloak. Mất bản tải được xử lý bằng reset có quyền.
+
+Màn nhật ký `/admin/audit-logs` giữ bộ lọc hiện tại; mở chi tiết tải dữ liệu trước/sau, lý do và requestId. Người thực hiện trống trong CSDL hiển thị **SYSTEM**; chỉ có quyền xem, không có sửa/xóa. Staff sửa hồ sơ sinh viên không có trường mã SV/họ tên/giới tính; backend vẫn từ chối nếu tự gửi các trường này để thay đổi danh tính.
 
 ---
 

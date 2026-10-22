@@ -13,6 +13,15 @@ import java.util.Optional;
 public interface BedOccupancyService {
 
     /**
+     * Khóa giường và sinh viên của phân phòng mở trước khi nơi gọi khóa hợp đồng.
+     * Dùng cho job hủy giữ chỗ để giữ thứ tự bed → student_profile → contract.
+     * Kể cả khi chưa có HOLD vẫn khóa hồ sơ sinh viên; nếu phân phòng đổi trong lúc chờ khóa
+     * thì báo xung đột để nơi gọi rollback và thử lại ở lượt job sau.
+     * Không thay đổi phân phòng; chỉ dùng bên trong transaction nghiệp vụ.
+     */
+    void lockOpenAssignment(Long contractId, Long studentId);
+
+    /**
      * Phân giường giữ chỗ (HOLD) cho sinh viên theo hợp đồng PENDING. Khóa giường rồi khóa sinh
      * viên, kiểm tra lại giường/phòng ACTIVE, giường trống, sinh viên chưa có phân phòng hiệu lực
      * và giới tính; chụp đơn giá loại phòng vào phân phòng. Giường ngoài đơn vị của Staff trả 404.

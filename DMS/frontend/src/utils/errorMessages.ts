@@ -8,6 +8,8 @@ import { formatDate, formatDateTime } from './format'
 type Details = Record<string, unknown>
 
 const messages: Record<string, (d: Details) => string> = {
+  IMPORT_FILE_INVALID: () =>
+    'File import không hợp lệ. Dùng file mẫu .xlsx, kiểm tra tên cột và giới hạn 5.000 dòng; không dùng công thức.',
   // 5.1 Chung
   IDENTITY_NOT_LINKED: () =>
     'Tài khoản đăng nhập chưa được cấp hồ sơ DMS. Liên hệ quản trị viên.',

@@ -18,6 +18,9 @@ import {
 } from '@ant-design/icons'
 import type { ComponentType } from 'react'
 
+/** Mã kết quả import dùng chung với API, nhãn nằm trong registry resources. */
+export const StudentImportResult = { ERROR: 'ERROR', EXISTS: 'EXISTS' } as const
+
 // Nguồn duy nhất cho nhãn, màu, icon của mọi trạng thái (UI/UX mục 2.2).
 // Người dùng không bao giờ thấy enum tiếng Anh. Khóa theo (entity, status) vì một enum
 // có thể mang nghĩa khác nhau: ASSIGNED ở đơn là "Đã giữ chỗ", ở ticket là "Đã giao KTV".
