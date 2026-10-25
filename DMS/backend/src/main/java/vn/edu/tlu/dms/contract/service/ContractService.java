@@ -39,4 +39,10 @@ public interface ContractService {
      * @return true nếu còn hợp đồng sống tham chiếu đơn này
      */
     boolean hasLiveContractForApplication(Long applicationId);
+
+    /** Đếm hợp đồng ACTIVE sắp hết hạn và quá hạn trả phòng trong phạm vi đơn vị đã xác định. */
+    ExpirySummary getExpirySummary(Long managementUnitId, int expiringDays);
+
+    /** Dữ liệu vận hành hợp đồng chỉ đọc cung cấp cho Dashboard. */
+    record ExpirySummary(long expiringSoon, long overdueMoveout) {}
 }

@@ -42,7 +42,9 @@ import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -435,5 +437,25 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                         .toList())
                         : null,
                 detail ? history.list(EntityType.MAINTENANCE, r.getId()) : null);
+    }
+
+    /** Tổng hợp ticket của phòng hoặc khu vực chung trong đơn vị được yêu cầu. */
+    @Override
+    public Map<String, Long> countByStatus(Long managementUnitId) {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        jdbc.query(
+                """
+                SELECT m.status, COUNT(*) AS cnt FROM maintenance_request m
+                LEFT JOIN room r ON r.id=m.room_id
+                LEFT JOIN building bd ON bd.id=COALESCE(r.building_id,m.building_id)
+                WHERE (CAST(? AS bigint) IS NULL OR bd.management_unit_id=?) GROUP BY m.status
+                ORDER BY m.status
+                """,
+                rs -> {
+                    counts.put(rs.getString("status"), rs.getLong("cnt"));
+                },
+                managementUnitId,
+                managementUnitId);
+        return counts;
     }
 }

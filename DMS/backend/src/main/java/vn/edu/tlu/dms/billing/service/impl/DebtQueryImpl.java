@@ -4,11 +4,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.billing.repository.InvoiceRepository;
 import vn.edu.tlu.dms.billing.service.DebtQuery;
+import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceType;
+
+import java.util.ArrayList;
 
 /**
- * Cài đặt truy vấn chỉ đọc về công nợ của sinh viên và phòng (SAD 4.1, 4.2).
- * Không khóa bản ghi và không làm thay đổi trạng thái giao dịch.
+ * Cài đặt truy vấn chỉ đọc về công nợ của sinh viên và phòng (SAD 4.1, 4.2). Không khóa bản ghi và
+ * không làm thay đổi trạng thái giao dịch.
  */
 @Service
 @Transactional(readOnly = true)
@@ -20,6 +25,7 @@ public class DebtQueryImpl implements DebtQuery {
         this.jdbc = jdbc;
     }
 
+    /** Tổng hợp nợ phí phòng và nợ cọc của sinh viên cho các nghiệp vụ nội bộ. */
     @Override
     public StudentDebt getStudentDebt(Long studentId) {
         if (studentId == null) {
@@ -53,6 +59,7 @@ public class DebtQueryImpl implements DebtQuery {
         return new StudentDebt(studentId, roomFee, depDebt, total, total > 0);
     }
 
+    /** Tổng hợp nợ hóa đơn điện nước của phòng cho các nghiệp vụ nội bộ. */
     @Override
     public RoomDebt getRoomDebt(Long roomId) {
         if (roomId == null) {
@@ -71,5 +78,47 @@ public class DebtQueryImpl implements DebtQuery {
 
         long utility = unpaidUtility != null ? unpaidUtility : 0L;
         return new RoomDebt(roomId, utility, utility > 0);
+    }
+
+    /** Dùng cùng phạm vi với danh sách hóa đơn, theo đơn vị và học kỳ của từng hóa đơn. */
+    @Override
+    public FinanceSummary getFinanceSummary(Long managementUnitId) {
+        String scope =
+                managementUnitId == null
+                        ? "TRUE"
+                        : "(" + InvoiceRepository.STAFF_UNIT_SCOPE.replace(":unitId", "?") + ")";
+        var args = new ArrayList<Object>();
+        args.add(InvoiceType.ROOM_FEE);
+        args.add(InvoiceType.UTILITY);
+        args.add(InvoiceStatus.UNPAID);
+        if (managementUnitId != null) {
+            long parameters =
+                    InvoiceRepository.STAFF_UNIT_SCOPE.chars().filter(c -> c == ':').count();
+            for (int i = 0; i < parameters; i++) args.add(managementUnitId);
+        }
+        var totals =
+                jdbc.queryForMap(
+                        """
+                        SELECT COALESCE(SUM(i.total_amount) FILTER (WHERE i.type=?),0) AS room_fee,
+                               COALESCE(SUM(i.total_amount) FILTER (WHERE i.type=?),0) AS utility
+                        FROM invoice i WHERE i.status=? AND
+                        """
+                                + scope,
+                        args.toArray());
+        Long topup =
+                jdbc.queryForObject(
+                        """
+                        SELECT COALESCE(SUM(v.topup_needed),0) FROM v_deposit_balance v
+                        JOIN dormitory_contract c ON c.id=v.contract_id
+                        JOIN room_application ap ON ap.id=c.application_id
+                        WHERE (CAST(? AS bigint) IS NULL OR ap.preferred_unit_id=?)
+                        """,
+                        Long.class,
+                        managementUnitId,
+                        managementUnitId);
+        return new FinanceSummary(
+                ((Number) totals.get("room_fee")).longValue(),
+                ((Number) totals.get("utility")).longValue(),
+                topup == null ? 0 : topup);
     }
 }

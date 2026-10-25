@@ -1,6 +1,5 @@
 package vn.edu.tlu.dms.billing.service.impl;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,12 +8,16 @@ import vn.edu.tlu.dms.billing.api.DepositDtos;
 import vn.edu.tlu.dms.billing.domain.DepositTransaction;
 import vn.edu.tlu.dms.billing.repository.DepositTransactionRepository;
 import vn.edu.tlu.dms.billing.service.DepositService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.DepositType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
@@ -24,23 +27,45 @@ import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.SqlPage;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
- * Cài đặt dịch vụ sổ cọc và các giao dịch tiền cọc theo quy tắc nghiệp vụ BR-10.
- * Khóa hợp đồng khi thay đổi tiền cọc; số dư cọc tính động từ sổ cái qua view v_deposit_balance.
+ * Cài đặt dịch vụ sổ cọc và các giao dịch tiền cọc theo quy tắc nghiệp vụ BR-10. Khóa hợp đồng khi
+ * thay đổi tiền cọc; số dư cọc tính động từ sổ cái qua view v_deposit_balance.
  */
 @Service
 public class DepositServiceImpl implements DepositService {
 
+    private static final String BALANCE_SELECT =
+            """
+            SELECT c.id AS id, c.id AS contract_id, c.student_id, c.status, c.deposit_required, ap.preferred_unit_id,
+                   COALESCE(v.balance, (SELECT COALESCE(SUM(t.amount),0)
+                       FROM deposit_transaction t WHERE t.contract_id=c.id)) AS balance,
+                   COALESCE(v.topup_needed,0) AS topup_needed, v.oldest_unpaid_due,
+                   COALESCE(v.topup_overdue,false) AS topup_overdue,
+                   COALESCE(v.deposit_debt,0) AS deposit_debt,
+                   c.code AS contract_code, u.full_name AS student_name, sp.student_code
+            FROM dormitory_contract c
+            JOIN room_application ap ON ap.id=c.application_id
+            JOIN app_user u ON u.id=c.student_id
+            LEFT JOIN student_profile sp ON sp.user_id=c.student_id
+            LEFT JOIN v_deposit_balance v ON v.contract_id=c.id
+            """;
+
     private static final Set<String> BALANCE_SORT_COLUMNS =
             Set.of(
                     "contractId",
+                    "contractCode",
+                    "studentName",
+                    "studentCode",
                     "studentId",
                     "status",
                     "depositRequired",
@@ -72,6 +97,7 @@ public class DepositServiceImpl implements DepositService {
         this.auditService = auditService;
     }
 
+    /** Thu đúng mức cọc của hợp đồng PENDING hoặc ACTIVE sau khi khóa và kiểm tra phạm vi. */
     @Override
     @Transactional
     public DepositDtos.Transaction collectInitial(Long contractId, Long amount, String note) {
@@ -79,14 +105,23 @@ public class DepositServiceImpl implements DepositService {
         scopeGuard.requireRole(Role.STAFF, Role.ADMIN);
 
         if (amount == null || amount <= 0) {
-            throw BusinessException.invalid("amount", "Số tiền cọc phải lớn hơn 0");
+            throw BusinessException.invalid(
+                    ApiField.AMOUNT, ValidationMessage.DEPOSIT_AMOUNT_POSITIVE);
         }
 
         lockContract(contractId);
         checkContractWriteScope(contractId);
 
+        var contract = getBalance(contractId);
+        if (!Set.of(ContractStatus.PENDING, ContractStatus.ACTIVE).contains(contract.status())
+                || !amount.equals(contract.depositRequired())) {
+            throw BusinessException.conflict(ErrorCode.DEPOSIT_INVALID);
+        }
+
         // Kiểm tra không thu cọc trùng lặp trên cùng hợp đồng
-        if (transactionRepository.findByContractIdAndType(contractId, DepositType.DEPOSIT).isPresent()) {
+        if (transactionRepository
+                .findByContractIdAndType(contractId, DepositType.DEPOSIT)
+                .isPresent()) {
             throw BusinessException.conflict(ErrorCode.DUPLICATE_DEPOSIT);
         }
 
@@ -101,11 +136,7 @@ public class DepositServiceImpl implements DepositService {
         tx.setCreatedAt(now);
         tx.setNote(note == null ? null : note.trim());
 
-        try {
-            tx = transactionRepository.saveAndFlush(tx);
-        } catch (DataIntegrityViolationException ex) {
-            throw BusinessException.conflict(ErrorCode.DUPLICATE_DEPOSIT);
-        }
+        tx = transactionRepository.saveAndFlush(tx);
 
         auditService.record(
                 actorId,
@@ -119,6 +150,7 @@ public class DepositServiceImpl implements DepositService {
         return toTransactionDto(tx);
     }
 
+    /** Ghi khoản trừ cọc gắn ticket, giữ nguyên lỗi ràng buộc để ánh xạ chính xác. */
     @Override
     @Transactional
     public DepositDtos.Transaction deduct(
@@ -131,13 +163,17 @@ public class DepositServiceImpl implements DepositService {
         scopeGuard.requireRole(Role.STAFF, Role.ADMIN);
 
         if (amount == null || amount <= 0) {
-            throw BusinessException.invalid("amount", "Số tiền trừ cọc phải lớn hơn 0");
+            throw BusinessException.invalid(
+                    ApiField.AMOUNT, ValidationMessage.DEDUCTION_AMOUNT_POSITIVE);
         }
         if (dueDate == null) {
-            throw BusinessException.invalid("dueDate", "Hạn nộp bù cọc không được để trống");
+            throw BusinessException.invalid(
+                    ApiField.DUE_DATE, ValidationMessage.TOPUP_DUE_DATE_REQUIRED);
         }
         if (maintenanceRequestId == null) {
-            throw BusinessException.invalid("maintenanceRequestId", "Mã ticket sửa chữa không được để trống");
+            throw BusinessException.invalid(
+                    ApiField.MAINTENANCE_REQUEST_ID,
+                    ValidationMessage.MAINTENANCE_REQUEST_REQUIRED);
         }
 
         lockContract(contractId);
@@ -164,11 +200,7 @@ public class DepositServiceImpl implements DepositService {
         tx.setCreatedAt(now);
         tx.setNote(note == null ? null : note.trim());
 
-        try {
-            tx = transactionRepository.saveAndFlush(tx);
-        } catch (DataIntegrityViolationException ex) {
-            throw BusinessException.conflict(ErrorCode.DUPLICATE_DEDUCTION);
-        }
+        tx = transactionRepository.saveAndFlush(tx);
 
         auditService.record(
                 actorId,
@@ -186,6 +218,7 @@ public class DepositServiceImpl implements DepositService {
         return toTransactionDto(tx);
     }
 
+    /** Ghi nhận nộp bù cọc cho hợp đồng đang ACTIVE trong đơn vị được ghi. */
     @Override
     @Transactional
     public DepositDtos.Transaction topup(Long contractId, Long amount, String note) {
@@ -193,14 +226,15 @@ public class DepositServiceImpl implements DepositService {
         scopeGuard.requireRole(Role.STAFF, Role.ADMIN);
 
         if (amount == null || amount <= 0) {
-            throw BusinessException.invalid("amount", "Số tiền bù cọc phải lớn hơn 0");
+            throw BusinessException.invalid(
+                    ApiField.AMOUNT, ValidationMessage.TOPUP_AMOUNT_POSITIVE);
         }
 
         lockContract(contractId);
         checkContractWriteScope(contractId);
 
         var balance = getBalance(contractId);
-        if (!"ACTIVE".equals(balance.status())) {
+        if (!ContractStatus.ACTIVE.equals(balance.status())) {
             throw BusinessException.conflict(ErrorCode.CONTRACT_NOT_ACTIVE);
         }
 
@@ -229,6 +263,7 @@ public class DepositServiceImpl implements DepositService {
         return toTransactionDto(tx);
     }
 
+    /** Hoàn cọc cho hợp đồng đã kết thúc, kiểm tra số dư và không hoàn hai lần. */
     @Override
     @Transactional
     public DepositDtos.Transaction refund(Long contractId, Long amount, String note) {
@@ -236,17 +271,23 @@ public class DepositServiceImpl implements DepositService {
         scopeGuard.requireRole(Role.STAFF, Role.ADMIN);
 
         if (amount == null || amount <= 0) {
-            throw BusinessException.invalid("amount", "Số tiền hoàn cọc phải lớn hơn 0");
+            throw BusinessException.invalid(
+                    ApiField.AMOUNT, ValidationMessage.REFUND_AMOUNT_POSITIVE);
         }
 
         lockContract(contractId);
         checkContractWriteScope(contractId);
 
-        if (transactionRepository.findByContractIdAndType(contractId, DepositType.REFUND).isPresent()) {
+        if (transactionRepository
+                .findByContractIdAndType(contractId, DepositType.REFUND)
+                .isPresent()) {
             throw BusinessException.conflict(ErrorCode.DUPLICATE_REFUND);
         }
 
         var balance = getBalance(contractId);
+        if (!Set.of(ContractStatus.EXPIRED, ContractStatus.TERMINATED).contains(balance.status())) {
+            throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
+        }
         if (amount > balance.balance()) {
             throw BusinessException.conflict(ErrorCode.REFUND_EXCEEDS_BALANCE);
         }
@@ -262,11 +303,7 @@ public class DepositServiceImpl implements DepositService {
         tx.setCreatedAt(now);
         tx.setNote(note == null ? null : note.trim());
 
-        try {
-            tx = transactionRepository.saveAndFlush(tx);
-        } catch (DataIntegrityViolationException ex) {
-            throw BusinessException.conflict(ErrorCode.DUPLICATE_REFUND);
-        }
+        tx = transactionRepository.saveAndFlush(tx);
 
         auditService.record(
                 actorId,
@@ -280,6 +317,7 @@ public class DepositServiceImpl implements DepositService {
         return toTransactionDto(tx);
     }
 
+    /** Đọc số dư và hành động được phép của hợp đồng, bao gồm cả PENDING. */
     @Override
     @Transactional(readOnly = true)
     public DepositDtos.Balance getBalance(Long contractId) {
@@ -288,60 +326,12 @@ public class DepositServiceImpl implements DepositService {
 
         checkContractReadScope(contractId);
 
-        String sql =
-                """
-                SELECT contract_id, student_id, status, deposit_required, balance,
-                       topup_needed, oldest_unpaid_due, topup_overdue, deposit_debt
-                FROM v_deposit_balance
-                WHERE contract_id = ?
-                """;
-
-        List<DepositDtos.Balance> results =
-                jdbc.query(
-                        sql,
-                        (rs, rowNum) ->
-                                new DepositDtos.Balance(
-                                        rs.getLong("contract_id"),
-                                        rs.getLong("student_id"),
-                                        rs.getString("status"),
-                                        rs.getLong("deposit_required"),
-                                        rs.getLong("balance"),
-                                        rs.getLong("topup_needed"),
-                                        rs.getDate("oldest_unpaid_due") == null
-                                                ? null
-                                                : rs.getDate("oldest_unpaid_due").toLocalDate(),
-                                        rs.getBoolean("topup_overdue"),
-                                        rs.getLong("deposit_debt")),
-                        contractId);
-
-        if (results.isEmpty()) {
-            // Trường hợp hợp đồng PENDING chưa phát sinh giao dịch, đọc trực tiếp từ dormitory_contract
-            return jdbc.query(
-                            """
-                            SELECT c.id AS contract_id, c.student_id, c.status, c.deposit_required
-                            FROM dormitory_contract c
-                            WHERE c.id = ?
-                            """,
-                            (rs, rowNum) ->
-                                    new DepositDtos.Balance(
-                                            rs.getLong("contract_id"),
-                                            rs.getLong("student_id"),
-                                            rs.getString("status"),
-                                            rs.getLong("deposit_required"),
-                                            0L,
-                                            0L,
-                                            null,
-                                            false,
-                                            0L),
-                            contractId)
-                    .stream()
-                    .findFirst()
-                    .orElseThrow(BusinessException::notFound);
-        }
-
-        return results.get(0);
+        return jdbc.query(BALANCE_SELECT + " WHERE c.id=?", this::mapBalance, contractId).stream()
+                .findFirst()
+                .orElseThrow(BusinessException::notFound);
     }
 
+    /** Đọc lịch sử sổ cọc theo thời gian sau khi kiểm tra hợp đồng và phạm vi. */
     @Override
     @Transactional(readOnly = true)
     public List<DepositDtos.Transaction> listTransactions(Long contractId) {
@@ -350,16 +340,16 @@ public class DepositServiceImpl implements DepositService {
 
         checkContractReadScope(contractId);
 
-        return transactionRepository
-                .findByContractIdOrderByCreatedAtAscIdAsc(contractId)
-                .stream()
+        return transactionRepository.findByContractIdOrderByCreatedAtAscIdAsc(contractId).stream()
                 .map(this::toTransactionDto)
                 .toList();
     }
 
+    /** Tìm sổ cọc theo mã hợp đồng hoặc tên sinh viên, giữ đúng phạm vi trước phân trang và đếm. */
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<DepositDtos.Balance> searchBalancesByPage(SearchRequest input, boolean mine) {
+    public PageResponse<DepositDtos.Balance> searchBalancesByPage(
+            SearchRequest input, boolean mine) {
         scopeGuard.requirePermission(Permission.DEPOSIT_READ);
         scopeGuard.requireRole(Role.STAFF, Role.STUDENT);
 
@@ -368,36 +358,40 @@ public class DepositServiceImpl implements DepositService {
         args.add(LikePattern.contains(input.q()));
 
         String sql =
-                """
-                SELECT v.contract_id, v.student_id, v.status, v.deposit_required,
-                       v.balance, v.topup_needed, v.oldest_unpaid_due, v.topup_overdue, v.deposit_debt
-                FROM v_deposit_balance v
-                JOIN dormitory_contract c ON c.id = v.contract_id
-                JOIN room_application ap ON ap.id = c.application_id
-                JOIN app_user u ON u.id = c.student_id
-                WHERE %s AND (u.full_name ILIKE ? OR c.code ILIKE ?)
-                """.formatted(filter);
+                BALANCE_SELECT
+                        + " WHERE "
+                        + filter
+                        + " AND (u.full_name ILIKE ? OR c.code ILIKE ?)";
         args.add(LikePattern.contains(input.q()));
-
         var rawPage = sqlPage.search(sql, args, input, BALANCE_SORT_COLUMNS, "contractId,desc");
-
         List<DepositDtos.Balance> items =
                 rawPage.content().stream()
                         .map(
                                 row ->
                                         new DepositDtos.Balance(
-                                                ((Number) row.get("contract_id")).longValue(),
-                                                ((Number) row.get("student_id")).longValue(),
+                                                ((Number) row.get("contractId")).longValue(),
+                                                ((Number) row.get("studentId")).longValue(),
                                                 (String) row.get("status"),
-                                                ((Number) row.get("deposit_required")).longValue(),
+                                                ((Number) row.get("depositRequired")).longValue(),
                                                 ((Number) row.get("balance")).longValue(),
-                                                ((Number) row.get("topup_needed")).longValue(),
-                                                row.get("oldest_unpaid_due") == null
+                                                ((Number) row.get("topupNeeded")).longValue(),
+                                                row.get("oldestUnpaidDue") == null
                                                         ? null
-                                                        : ((java.sql.Date) row.get("oldest_unpaid_due"))
-                                                                .toLocalDate(),
-                                                (Boolean) row.get("topup_overdue"),
-                                                ((Number) row.get("deposit_debt")).longValue()))
+                                                        : (LocalDate) row.get("oldestUnpaidDue"),
+                                                (Boolean) row.get("topupOverdue"),
+                                                ((Number) row.get("depositDebt")).longValue(),
+                                                (String) row.get("contractCode"),
+                                                (String) row.get("studentName"),
+                                                (String) row.get("studentCode"),
+                                                allowedDepositActions(
+                                                        ((Number) row.get("contractId"))
+                                                                .longValue(),
+                                                        (String) row.get("status"),
+                                                        ((Number) row.get("balance")).longValue(),
+                                                        ((Number) row.get("topupNeeded"))
+                                                                .longValue(),
+                                                        ((Number) row.get("preferredUnitId"))
+                                                                .longValue())))
                         .toList();
 
         return new PageResponse<>(
@@ -406,6 +400,49 @@ public class DepositServiceImpl implements DepositService {
                 rawPage.size(),
                 rawPage.totalElements(),
                 rawPage.totalPages());
+    }
+
+    private DepositDtos.Balance mapBalance(ResultSet rs, int rowNum) throws SQLException {
+        return new DepositDtos.Balance(
+                rs.getLong("contract_id"),
+                rs.getLong("student_id"),
+                rs.getString("status"),
+                rs.getLong("deposit_required"),
+                rs.getLong("balance"),
+                rs.getLong("topup_needed"),
+                rs.getObject("oldest_unpaid_due", LocalDate.class),
+                rs.getBoolean("topup_overdue"),
+                rs.getLong("deposit_debt"),
+                rs.getString("contract_code"),
+                rs.getString("student_name"),
+                rs.getString("student_code"),
+                allowedDepositActions(
+                        rs.getLong("contract_id"),
+                        rs.getString("status"),
+                        rs.getLong("balance"),
+                        rs.getLong("topup_needed"),
+                        rs.getLong("preferred_unit_id")));
+    }
+
+    /** Hành động giao diện dùng cùng trạng thái, quyền động và phạm vi ghi với API. */
+    private List<String> allowedDepositActions(
+            Long contractId, String status, long balance, long topupNeeded, Long unitId) {
+        var actor = currentUser.get();
+        if ((!actor.isAdmin() && (!actor.is(Role.STAFF) || !Objects.equals(actor.unitId(), unitId)))
+                || !scopeGuard.hasPermission(Permission.DEPOSIT_CREATE)) {
+            return List.of();
+        }
+        if (ContractStatus.ACTIVE.equals(status) && topupNeeded > 0) {
+            return List.of(BusinessAction.DEPOSIT_TOPUP);
+        }
+        if (Set.of(ContractStatus.EXPIRED, ContractStatus.TERMINATED).contains(status)
+                && balance > 0
+                && transactionRepository
+                        .findByContractIdAndType(contractId, DepositType.REFUND)
+                        .isEmpty()) {
+            return List.of(BusinessAction.DEPOSIT_REFUND);
+        }
+        return List.of();
     }
 
     private void lockContract(Long contractId) {
@@ -420,60 +457,37 @@ public class DepositServiceImpl implements DepositService {
     }
 
     private void checkContractReadScope(Long contractId) {
+        checkContractScope(contractId, false);
+    }
+
+    private void checkContractWriteScope(Long contractId) {
+        checkContractScope(contractId, true);
+    }
+
+    /** Tồn tại và phạm vi được kiểm tra ngay cả khi đọc tổng hợp hoặc đọc lịch sử rỗng. */
+    private void checkContractScope(Long contractId, boolean writing) {
+        var rows =
+                jdbc.queryForList(
+                        """
+                        SELECT c.student_id, ap.preferred_unit_id FROM dormitory_contract c
+                        JOIN room_application ap ON ap.id=c.application_id WHERE c.id=?
+                        """,
+                        contractId);
+        if (rows.isEmpty()) {
+            throw BusinessException.notFound();
+        }
         var actor = currentUser.get();
+        var row = rows.get(0);
         if (actor.isAdmin()) {
             return;
         }
         if (actor.is(Role.STUDENT)) {
-            Boolean match =
-                    jdbc.queryForObject(
-                            "SELECT EXISTS(SELECT 1 FROM dormitory_contract WHERE id = ? AND student_id = ?)",
-                            Boolean.class,
-                            contractId,
-                            actor.id());
-            if (!Boolean.TRUE.equals(match)) {
+            if (writing || !actor.id().equals(((Number) row.get("student_id")).longValue())) {
                 throw BusinessException.notFound();
             }
-            return;
-        }
-        if (actor.canReadAllUnits()) {
-            return;
-        }
-        Boolean inUnit =
-                jdbc.queryForObject(
-                        """
-                        SELECT EXISTS(
-                            SELECT 1 FROM dormitory_contract c
-                            JOIN room_application ap ON ap.id = c.application_id
-                            WHERE c.id = ? AND ap.preferred_unit_id = ?
-                        )
-                        """,
-                        Boolean.class,
-                        contractId,
-                        actor.unitId());
-        if (!Boolean.TRUE.equals(inUnit)) {
-            throw BusinessException.notFound();
-        }
-    }
-
-    private void checkContractWriteScope(Long contractId) {
-        var actor = currentUser.get();
-        if (actor.isAdmin()) {
-            return;
-        }
-        Boolean inUnit =
-                jdbc.queryForObject(
-                        """
-                        SELECT EXISTS(
-                            SELECT 1 FROM dormitory_contract c
-                            JOIN room_application ap ON ap.id = c.application_id
-                            WHERE c.id = ? AND ap.preferred_unit_id = ?
-                        )
-                        """,
-                        Boolean.class,
-                        contractId,
-                        actor.unitId());
-        if (!Boolean.TRUE.equals(inUnit)) {
+        } else if ((writing || !actor.canReadAllUnits())
+                && !Objects.equals(
+                        actor.unitId(), ((Number) row.get("preferred_unit_id")).longValue())) {
             throw BusinessException.notFound();
         }
     }

@@ -1,3 +1,4 @@
+import { DepositLedgerModal } from '../features/billing'
 import {
   Input,
   InputNumber,
@@ -237,6 +238,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     !config.singleton &&
     !config.noCreate
   const canWrite = canCreate || canUpdate || canDelete
+  const [ledgerRecord, setLedgerRecord] = useState<CrudRecord | null>(null)
   const idKey = config.idKey ?? 'id'
   const writeEndpoint =
     resource === 'students' && role === Role.ADMIN
@@ -721,16 +723,17 @@ export default function CrudPage({ resource }: { resource: string }) {
     })
   }
   async function showDetail(row: CrudRecord) {
+    if (resource === 'deposits' || resource === 'myDeposits') {
+      setLedgerRecord(row)
+      return
+    }
     try {
       const selected =
         config.singleton ||
         config.useListRecordForEdit ||
         config.inlineDetail
           ? row
-          : resource === 'deposits'
-            ? ((await api.get(`/contracts/${row.id}/deposit`))
-                .data as CrudRecord)
-            : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
+          : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
                 .data as CrudRecord)
       setActiveRecord(selected)
       setModalMode('view')
@@ -1252,6 +1255,9 @@ export default function CrudPage({ resource }: { resource: string }) {
           </>
         )}
       </Modal>
+      {ledgerRecord && <DepositLedgerModal contractId={Number(ledgerRecord.contractId)}
+        contractCode={String(ledgerRecord.contractCode)} studentName={String(ledgerRecord.studentName)}
+        open onClose={() => setLedgerRecord(null)} readOnly={resource === 'myDeposits'} />}
     </>
   )
 }

@@ -1,128 +1,78 @@
 import { useState } from 'react'
-import { Modal, Form, Radio, Select, DatePicker, message, Alert } from 'antd'
-import { ThunderboltOutlined, HomeOutlined } from '@ant-design/icons'
-import { useIssueRoomFeeInvoices, useIssueUtilityInvoices } from './index'
-import { useRoomCatalog } from '../room'
-import dayjs from 'dayjs'
+import { Form, message } from 'antd'
+import { useQuery } from '@tanstack/react-query'
+import dayjs, { type Dayjs } from 'dayjs'
+import { Alert, DatePicker, FormGrid, Modal, Radio, RadioGroup, Select } from '../../components'
+import { InvoiceType } from '../../constants/statusConfig'
+import { Permission } from '../../constants/authorization'
+import { hasPermission } from '../../services/api/auth'
+import { useMe } from '../account/useMe'
+import { getLookupRecords, validationFieldErrors } from '../crud/api'
+import { useIssueRoomFeeInvoices, useIssueUtilityInvoices } from './useBilling'
 
 interface Props {
   open: boolean
   onClose: () => void
-  currentUnitId?: number
+  currentUnitId?: number | null
 }
+interface IssueForm { semesterId: number; billingMonth: Dayjs }
 
 export default function IssueInvoicesModal({ open, onClose, currentUnitId }: Props) {
-  const [issueType, setIssueType] = useState<'ROOM_FEE' | 'UTILITY'>('ROOM_FEE')
-  const [form] = Form.useForm()
-
-  const issueRoomFee = useIssueRoomFeeInvoices()
-  const issueUtility = useIssueUtilityInvoices()
-
-  // Lấy danh mục học kỳ từ CRUD lookup
-  const { data: semesters, isLoading: loadingSemesters } = useRoomCatalog('/semesters' as any)
-
+  const [issueType, setIssueType] = useState<string>(InvoiceType.ROOM_FEE)
+  const [form] = Form.useForm<IssueForm>()
+  const { data: me } = useMe()
+  const roomFee = useIssueRoomFeeInvoices()
+  const utility = useIssueUtilityInvoices()
+  const canIssue = hasPermission(me, Permission.INVOICE_CREATE)
+  const { data: semesters = [], isLoading: loadingSemesters } = useQuery({
+    queryKey: ['crud-lookup', '/semesters'],
+    queryFn: () => getLookupRecords('/semesters'),
+    enabled: open && issueType === InvoiceType.ROOM_FEE && hasPermission(me, Permission.SEMESTER_READ),
+  })
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields()
-      if (issueType === 'ROOM_FEE') {
-        const res = await issueRoomFee.mutateAsync({ semesterId: values.semesterId })
-        message.success(`Đã phát hành thành công ${res.count} hóa đơn tiền phòng!`)
-      } else {
-        const billingMonth = dayjs(values.billingMonth).startOf('month').format('YYYY-MM-DD')
-        const unitId = currentUnitId || values.managementUnitId || 1
-        const res = await issueUtility.mutateAsync({
-          managementUnitId: unitId,
-          billingMonth,
-        })
-        message.success(`Đã phát hành thành công ${res.count} hóa đơn điện nước!`)
-      }
+      const result = issueType === InvoiceType.ROOM_FEE
+        ? await roomFee.mutateAsync({ semesterId: values.semesterId })
+        : await utility.mutateAsync({
+            managementUnitId: currentUnitId ?? undefined,
+            billingMonth: values.billingMonth.startOf('month').format('YYYY-MM-DD'),
+          })
+      message.success('Đã tạo ' + result.totalCreated + ' hóa đơn, bỏ qua ' + result.totalSkipped
+        + '; tổng tiền ' + result.totalAmount.toLocaleString('vi-VN') + ' đ.')
       form.resetFields()
       onClose()
-    } catch {
-      // Handled by onError handler
+    } catch (error) {
+      const fields = validationFieldErrors(error)
+      if (fields.length) form.setFields(fields.filter((item): item is { field: keyof IssueForm; message: string } => item.field === 'semesterId' || item.field === 'billingMonth')
+        .map(({ field, message }) => ({ name: field, errors: [message] })))
     }
   }
-
-  const isPending = issueRoomFee.isPending || issueUtility.isPending
-
   return (
-    <Modal
-      title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {issueType === 'ROOM_FEE' ? (
-            <HomeOutlined style={{ color: '#1890ff', fontSize: 20 }} />
+    <Modal title="Phát hành hóa đơn hàng loạt" open={open} onCancel={onClose}
+      onOk={handleSubmit} confirmLoading={roomFee.isPending || utility.isPending}
+      okButtonProps={{ disabled: !canIssue }} okText="Xác nhận phát hành" cancelText="Hủy" destroyOnHidden>
+      <RadioGroup value={issueType} onChange={(event) => setIssueType(event.target.value)}>
+        <Radio value={InvoiceType.ROOM_FEE}>Tiền phòng học kỳ</Radio>
+        <Radio value={InvoiceType.UTILITY}>Điện nước tháng</Radio>
+      </RadioGroup>
+      <Alert type="info" showIcon style={{ marginBlock: 16 }}
+        title={issueType === InvoiceType.ROOM_FEE
+          ? 'Phát hành trong học kỳ hiện tại theo giá trên phân phòng đang ở. Hóa đơn đã có được bỏ qua.'
+          : 'Phát hành cho phòng đang có người ở trong phạm vi quản lý. Phòng thiếu chỉ số điện hoặc nước được bỏ qua.'} />
+      <Form form={form} layout="vertical" initialValues={{ billingMonth: dayjs().subtract(1, 'month').startOf('month') }}>
+        <FormGrid>
+          {issueType === InvoiceType.ROOM_FEE ? (
+            <Form.Item name="semesterId" label="Học kỳ" rules={[{ required: true, message: 'Vui lòng chọn học kỳ' }]}>
+              <Select loading={loadingSemesters} placeholder="Chọn học kỳ"
+                options={semesters.map((semester) => ({ value: Number(semester.id), label: String(semester.name) }))} />
+            </Form.Item>
           ) : (
-            <ThunderboltOutlined style={{ color: '#faad14', fontSize: 20 }} />
+            <Form.Item name="billingMonth" label="Tháng điện nước" rules={[{ required: true, message: 'Vui lòng chọn tháng' }]}>
+              <DatePicker picker="month" format="MM/YYYY" style={{ width: '100%' }} />
+            </Form.Item>
           )}
-          <span style={{ fontWeight: 600 }}>Phát hành hóa đơn hàng loạt</span>
-        </div>
-      }
-      open={open}
-      onCancel={onClose}
-      onOk={handleSubmit}
-      confirmLoading={isPending}
-      okText="Xác nhận phát hành"
-      cancelText="Hủy bỏ"
-      destroyOnClose
-    >
-      <div style={{ marginBottom: 16 }}>
-        <Radio.Group
-          value={issueType}
-          onChange={(e) => setIssueType(e.target.value)}
-          buttonStyle="solid"
-          style={{ width: '100%', display: 'flex' }}
-        >
-          <Radio.Button value="ROOM_FEE" style={{ flex: 1, textAlign: 'center' }}>
-            <HomeOutlined /> Tiền phòng học kỳ
-          </Radio.Button>
-          <Radio.Button value="UTILITY" style={{ flex: 1, textAlign: 'center' }}>
-            <ThunderboltOutlined /> Điện nước tháng
-          </Radio.Button>
-        </Radio.Group>
-      </div>
-
-      <Alert
-        message={
-          issueType === 'ROOM_FEE'
-            ? 'Hệ thống sẽ quét tất cả hợp đồng ACTIVE trong học kỳ được chọn, chốt mức giá snapshot và tạo hóa đơn tiền phòng. Các sinh viên đã có hóa đơn sẽ tự động được bỏ qua (BR-04).'
-            : 'Hệ thống sẽ tổng hợp chỉ số điện & nước đã ghi trong tháng cho từng phòng thuộc cơ sở quản lý, áp dụng bảng giá tương ứng và tạo hóa đơn gửi phòng (BR-03, BR-04).'
-        }
-        type="info"
-        showIcon
-        style={{ marginBottom: 16, fontSize: 13 }}
-      />
-
-      <Form form={form} layout="vertical">
-        {issueType === 'ROOM_FEE' ? (
-          <Form.Item
-            name="semesterId"
-            label="Học kỳ áp dụng"
-            rules={[{ required: true, message: 'Vui lòng chọn học kỳ' }]}
-          >
-            <Select
-              placeholder="Chọn học kỳ..."
-              loading={loadingSemesters}
-              options={(semesters ?? []).map((s: any) => ({
-                label: `${s.name ?? s.code ?? ''} (${s.academicYear ?? ''})`,
-                value: s.id,
-              }))}
-            />
-          </Form.Item>
-        ) : (
-          <Form.Item
-            name="billingMonth"
-            label="Tháng chốt điện nước"
-            rules={[{ required: true, message: 'Vui lòng chọn tháng' }]}
-            initialValue={dayjs().subtract(1, 'month').startOf('month')}
-          >
-            <DatePicker
-              picker="month"
-              style={{ width: '100%' }}
-              placeholder="Chọn tháng..."
-              format="MM/YYYY"
-            />
-          </Form.Item>
-        )}
+        </FormGrid>
       </Form>
     </Modal>
   )

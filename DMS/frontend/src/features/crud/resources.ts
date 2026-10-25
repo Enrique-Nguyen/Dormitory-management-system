@@ -615,7 +615,7 @@ export const resources: Record<string, CrudResource> = {
       ['status', 'Trạng thái'],
     ),
     editStates: ['UNPAID'],
-    note: 'CRUD hồ sơ chưa có dòng chi tiết. Chưa làm phát hành tự tính tiền; hóa đơn đã thanh toán hoặc có lịch sử không được sửa/xóa.',
+    note: 'CRUD chỉ áp dụng hồ sơ chưa có dòng chi tiết. Phát hành tự tính tiền tại Dashboard; hóa đơn đã thanh toán hoặc có lịch sử không được sửa/xóa.',
   },
   myInvoices: {
     permission: Resource.INVOICE,
@@ -633,6 +633,7 @@ export const resources: Record<string, CrudResource> = {
     readOnly: true,
   },
   deposits: {
+    idKey: 'contractId',
     permission: Resource.DEPOSIT,
     title: 'Tiền cọc',
     endpoint: '/deposit-balances',
@@ -649,6 +650,7 @@ export const resources: Record<string, CrudResource> = {
     note: 'Sổ tiền chỉ tra cứu. Thu/trừ/bù/hoàn cọc là nghiệp vụ chi tiết, không sửa/xóa giao dịch đã ghi.',
   },
   myDeposits: {
+    idKey: 'contractId',
     permission: Resource.DEPOSIT,
     title: 'Tiền cọc của tôi',
     endpoint: '/me/deposit-balances',

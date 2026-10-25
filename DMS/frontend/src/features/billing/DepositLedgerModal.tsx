@@ -1,32 +1,14 @@
 import { useState } from 'react'
-import {
-  Modal,
-  Table,
-  Tag,
-  Descriptions,
-  Button,
-  Space,
-  Form,
-  InputNumber,
-  Input,
-  message,
-  Divider,
-  Alert,
-  Spin,
-} from 'antd'
-import {
-  SafetyCertificateOutlined,
-  PlusCircleOutlined,
-  RollbackOutlined,
-  HistoryOutlined,
-} from '@ant-design/icons'
-import {
-  useDepositBalance,
-  useDepositTransactions,
-  useRecordDepositTopup,
-  useRecordDepositRefund,
-} from './index'
-import dayjs from 'dayjs'
+import { Form, message, Spin, type TableColumnsType } from 'antd'
+import { Alert, Button, DataTable, Descriptions, FormGrid, InputNumber, Modal, StatusBadge, TextArea } from '../../components'
+import { BillingAction, depositTransactionLabels } from '../../constants/statusConfig'
+import { Permission } from '../../constants/authorization'
+import { hasPermission } from '../../services/api/auth'
+import type { DepositTransaction } from '../../services/api/billing'
+import { useMe } from '../account/useMe'
+import { validationFieldErrors } from '../crud/api'
+import { useDepositBalance, useDepositTransactions, useRecordDepositTopup, useRecordDepositRefund } from './useBilling'
+import { formatDateTime, formatMoney, formatDate } from '../../utils/format'
 
 interface Props {
   contractId: number
@@ -36,328 +18,74 @@ interface Props {
   onClose: () => void
   readOnly?: boolean
 }
+interface LedgerForm { amount: number; note?: string }
 
-export default function DepositLedgerModal({
-  contractId,
-  contractCode,
-  studentName,
-  open,
-  onClose,
-  readOnly = false,
-}: Props) {
-  const { data: balance, isLoading: loadingBalance } = useDepositBalance(contractId)
-  const { data: transactions, isLoading: loadingTxs } = useDepositTransactions(contractId)
-
-  const [topupModalOpen, setTopupModalOpen] = useState(false)
-  const [refundModalOpen, setRefundModalOpen] = useState(false)
-  const [form] = Form.useForm()
-
-  const recordTopup = useRecordDepositTopup(contractId)
-  const recordRefund = useRecordDepositRefund(contractId)
-
-  const handleTopup = async () => {
+export default function DepositLedgerModal({ contractId, contractCode, studentName, open, onClose, readOnly = false }: Props) {
+  const { data: me } = useMe()
+  const { data: balance, isLoading: loadingBalance, error: balanceError } = useDepositBalance(open ? contractId : undefined)
+  const { data: transactions, isLoading: loadingTxs, error: transactionError } = useDepositTransactions(open ? contractId : undefined)
+  const [action, setAction] = useState<'topup' | 'refund' | null>(null)
+  const [form] = Form.useForm<LedgerForm>()
+  const topup = useRecordDepositTopup(contractId)
+  const refund = useRecordDepositRefund(contractId)
+  const canWrite = !readOnly && hasPermission(me, Permission.DEPOSIT_CREATE)
+  const canTopup = canWrite && balance?.allowedActions.includes(BillingAction.DEPOSIT_TOPUP)
+  const canRefund = canWrite && balance?.allowedActions.includes(BillingAction.DEPOSIT_REFUND)
+  const save = async () => {
     try {
       const values = await form.validateFields()
-      await recordTopup.mutateAsync({
-        amount: values.amount,
-        note: values.note,
-      })
-      message.success('Đã ghi nhận nộp bù cọc thành công!')
-      form.resetFields()
-      setTopupModalOpen(false)
-    } catch {
-      // Handled by onError
+      if (action === 'topup') await topup.mutateAsync(values)
+      else if (action === 'refund') await refund.mutateAsync(values)
+      else return
+      message.success('Đã ghi nhận giao dịch tiền cọc.')
+      setAction(null)
+    } catch (error) {
+      form.setFields(validationFieldErrors(error).filter((item): item is { field: keyof LedgerForm; message: string } => item.field === 'amount' || item.field === 'note').map(({ field, message }) => ({ name: field, errors: [message] })))
     }
   }
-
-  const handleRefund = async () => {
-    try {
-      const values = await form.validateFields()
-      await recordRefund.mutateAsync({
-        amount: values.amount,
-        note: values.note,
-      })
-      message.success('Đã ghi nhận hoàn cọc thành công!')
-      form.resetFields()
-      setRefundModalOpen(false)
-    } catch {
-      // Handled by onError
-    }
-  }
-
-  const columns = [
-    {
-      title: 'Thời gian',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (v: string) => (v ? dayjs(v).format('DD/MM/YYYY HH:mm') : '-'),
-      width: 140,
-    },
-    {
-      title: 'Loại GD',
-      dataIndex: 'type',
-      key: 'type',
-      width: 110,
-      render: (type: string) => {
-        switch (type) {
-          case 'DEPOSIT':
-            return <Tag color="blue">Nộp ban đầu</Tag>
-          case 'DEDUCTION':
-            return <Tag color="red">Khấu trừ vi phạm</Tag>
-          case 'TOPUP':
-            return <Tag color="green">Nộp bổ sung</Tag>
-          case 'REFUND':
-            return <Tag color="purple">Hoàn trả cọc</Tag>
-          default:
-            return <Tag>{type}</Tag>
-        }
-      },
-    },
-    {
-      title: 'Số tiền (VNĐ)',
-      dataIndex: 'amount',
-      key: 'amount',
-      align: 'right' as const,
-      render: (amount: number) => {
-        const isPositive = amount > 0
-        return (
-          <span
-            style={{
-              fontWeight: 600,
-              color: isPositive ? '#52c41a' : '#ff4d4f',
-            }}
-          >
-            {isPositive ? `+${amount.toLocaleString('vi-VN')}` : amount.toLocaleString('vi-VN')} đ
-          </span>
-        )
-      },
-    },
-    {
-      title: 'Số dư sau GD',
-      dataIndex: 'balanceAfter',
-      key: 'balanceAfter',
-      align: 'right' as const,
-      render: (v: number) => (
-        <span style={{ fontWeight: 600 }}>{v.toLocaleString('vi-VN')} đ</span>
-      ),
-    },
-    {
-      title: 'Ghi chú / Tham chiếu',
-      dataIndex: 'note',
-      key: 'note',
-      render: (note: string, record: any) => (
-        <div>
-          <div>{note || '-'}</div>
-          {record.refTicketId && (
-            <Tag color="orange" style={{ marginTop: 2 }}>
-              Ticket #{record.refTicketId}
-            </Tag>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Cán bộ ghi nhận',
-      dataIndex: 'staffName',
-      key: 'staffName',
-      render: (v: string) => v || 'Hệ thống',
-      width: 130,
-    },
+  const columns: TableColumnsType<DepositTransaction> = [
+    { title: 'Thời gian', dataIndex: 'createdAt', render: (value: string) => formatDateTime(value) },
+    { title: 'Giao dịch', dataIndex: 'type', render: (value: string) => depositTransactionLabels[value] ?? value },
+    { title: 'Số tiền', dataIndex: 'amount', align: 'right', render: (value: number) => formatMoney(value) },
+    { title: 'Ticket', dataIndex: 'maintenanceRequestId', render: (value: number | null) => value ?? '—' },
+    { title: 'Hạn nộp bù', dataIndex: 'dueDate', render: (value: string | null) => formatDate(value) },
+    { title: 'Người xác nhận (ID)', dataIndex: 'confirmedBy', render: (value: number | null) => value ?? '—' },
+    { title: 'Ghi chú', dataIndex: 'note' },
   ]
-
-  return (
-    <>
-      <Modal
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <SafetyCertificateOutlined style={{ color: '#52c41a', fontSize: 20 }} />
-            <span style={{ fontWeight: 600 }}>
-              Sổ tiền cọc hợp đồng {contractCode ? `(${contractCode})` : ''}
-            </span>
-          </div>
-        }
-        open={open}
-        onCancel={onClose}
-        footer={[
-          <Button key="close" onClick={onClose}>
-            Đóng
-          </Button>,
-        ]}
-        width={850}
-        destroyOnClose
-      >
-        {loadingBalance ? (
-          <div style={{ textAlign: 'center', padding: 30 }}>
-            <Spin />
-          </div>
-        ) : balance ? (
-          <div>
-            <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }} style={{ marginBottom: 16 }}>
-              <Descriptions.Item label="Sinh viên">{studentName || balance.studentName || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Mã sinh viên">{balance.studentCode || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Phòng / Tòa">
-                {balance.roomCode ? `${balance.roomCode} (${balance.buildingCode ?? ''})` : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Mức cọc quy định">
-                <span style={{ fontWeight: 600 }}>
-                  {balance.depositRequired.toLocaleString('vi-VN')} đ
-                </span>
-              </Descriptions.Item>
-              <Descriptions.Item label="Số dư cọc hiện tại">
-                <span
-                  style={{
-                    fontWeight: 700,
-                    fontSize: 15,
-                    color:
-                      balance.balance < balance.depositRequired
-                        ? '#ff4d4f'
-                        : '#52c41a',
-                  }}
-                >
-                  {balance.balance.toLocaleString('vi-VN')} đ
-                </span>
-              </Descriptions.Item>
-              <Descriptions.Item label="Trạng thái cọc">
-                {balance.status === 'TOPUP_NEEDED' ? (
-                  <Tag color="error">Cần nộp bù cọc</Tag>
-                ) : balance.status === 'REFUNDED' ? (
-                  <Tag color="purple">Đã tất toán</Tag>
-                ) : (
-                  <Tag color="success">Đầy đủ</Tag>
-                )}
-              </Descriptions.Item>
-            </Descriptions>
-
-            {balance.status === 'TOPUP_NEEDED' && (
-              <Alert
-                message="Cần nộp bù cọc"
-                description={`Hợp đồng này bị khấu trừ tiền cọc do đền bù hư hỏng vật tư và hiện đang thiếu ${(
-                  balance.depositRequired - balance.balance
-                ).toLocaleString('vi-VN')} đ.`}
-                type="warning"
-                showIcon
-                style={{ marginBottom: 16 }}
-              />
-            )}
-
-            {!readOnly && (
-              <div style={{ display: 'flex', gap: 10, marginBottom: 16, justifyContent: 'flex-end' }}>
-                <Button
-                  type="primary"
-                  icon={<PlusCircleOutlined />}
-                  onClick={() => {
-                    const diff = Math.max(0, balance.depositRequired - balance.balance)
-                    form.setFieldsValue({ amount: diff > 0 ? diff : undefined })
-                    setTopupModalOpen(true)
-                  }}
-                >
-                  Nộp bù cọc
-                </Button>
-                {balance.balance > 0 && (
-                  <Button
-                    danger
-                    icon={<RollbackOutlined />}
-                    onClick={() => {
-                      form.setFieldsValue({ amount: balance.balance })
-                      setRefundModalOpen(true)
-                    }}
-                  >
-                    Hoàn trả cọc
-                  </Button>
-                )}
-              </div>
-            )}
-
-            <Divider style={{ margin: '12px 0' }}>
-              <Space>
-                <HistoryOutlined />
-                <span>Lịch sử biến động sổ cọc</span>
-              </Space>
-            </Divider>
-
-            <Table
-              dataSource={transactions ?? []}
-              columns={columns}
-              rowKey="id"
-              size="small"
-              loading={loadingTxs}
-              pagination={{ pageSize: 5 }}
-            />
-          </div>
-        ) : (
-          <Alert message="Chưa có dữ liệu sổ cọc cho hợp đồng này." type="info" />
-        )}
-      </Modal>
-
-      {/* Modal nộp bù cọc */}
-      <Modal
-        title="Ghi nhận nộp bù cọc"
-        open={topupModalOpen}
-        onCancel={() => setTopupModalOpen(false)}
-        onOk={handleTopup}
-        confirmLoading={recordTopup.isPending}
-        okText="Xác nhận nộp bù"
-        cancelText="Hủy"
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="amount"
-            label="Số tiền nộp bổ sung (VNĐ)"
-            rules={[
-              { required: true, message: 'Vui lòng nhập số tiền' },
-              { type: 'number', min: 1000, message: 'Số tiền tối thiểu 1.000 đ' },
-            ]}
-          >
-            <InputNumber
-              style={{ width: '100%' }}
-              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={(value) => value?.replace(/\$\s?|(,*)/g, '') as any}
-            />
-          </Form.Item>
-          <Form.Item name="note" label="Ghi chú">
-            <Input.TextArea placeholder="Lý do nộp bổ sung..." rows={3} />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* Modal hoàn cọc */}
-      <Modal
-        title="Ghi nhận hoàn trả cọc khi trả phòng"
-        open={refundModalOpen}
-        onCancel={() => setRefundModalOpen(false)}
-        onOk={handleRefund}
-        confirmLoading={recordRefund.isPending}
-        okText="Xác nhận hoàn cọc"
-        cancelText="Hủy"
-        destroyOnClose
-      >
-        <Alert
-          message="Lưu ý: Chỉ thực hiện hoàn cọc khi sinh viên làm thủ tục trả phòng hoặc kết thúc hợp đồng."
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="amount"
-            label="Số tiền hoàn trả (VNĐ)"
-            rules={[
-              { required: true, message: 'Vui lòng nhập số tiền' },
-              { type: 'number', min: 1000, message: 'Số tiền tối thiểu 1.000 đ' },
-            ]}
-          >
-            <InputNumber
-              style={{ width: '100%' }}
-              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={(value) => value?.replace(/\$\s?|(,*)/g, '') as any}
-            />
-          </Form.Item>
-          <Form.Item name="note" label="Ghi chú">
-            <Input.TextArea placeholder="Biên bản bàn giao phòng, số tài khoản nhận hoàn cọc..." rows={3} />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </>
-  )
+  return <>
+    <Modal title={'Sổ cọc — ' + (contractCode ?? balance?.contractCode ?? contractId)}
+      open={open} onCancel={onClose} footer={<Button onClick={onClose}>Đóng</Button>} width={1000} destroyOnHidden>
+      {loadingBalance ? <Spin /> : balanceError ? <Alert type="error" title="Không thể tải số dư cọc" /> : balance ? <>
+        <Descriptions bordered column={{ xs: 1, sm: 2 }} items={[
+          { key: 'student', label: 'Sinh viên', children: studentName ?? balance.studentName },
+          { key: 'code', label: 'Mã sinh viên', children: balance.studentCode ?? balance.studentId },
+          { key: 'status', label: 'Hợp đồng', children: <StatusBadge entity="contract" status={balance.status} /> },
+          { key: 'required', label: 'Mức cọc', children: formatMoney(balance.depositRequired) },
+          { key: 'balance', label: 'Số dư', children: formatMoney(balance.balance) },
+          { key: 'topup', label: 'Cần bù', children: formatMoney(balance.topupNeeded) },
+          { key: 'debt', label: 'Công nợ sau trả phòng', children: formatMoney(balance.depositDebt) },
+        ]} />
+        {balance.topupOverdue && <Alert style={{ marginBlock: 16 }} type="warning" showIcon title="Khoản bù cọc đã quá hạn" />}
+        <div style={{ display: 'flex', gap: 12, marginBlock: 16 }}>
+          {canTopup && <Button type="primary" onClick={() => setAction('topup')}>Nộp bù cọc</Button>}
+          {canRefund && <Button danger onClick={() => setAction('refund')}>Hoàn cọc</Button>}
+        </div>
+        {transactionError ? <Alert type="error" title="Không thể tải lịch sử giao dịch" /> : <DataTable<DepositTransaction>
+          dataSource={transactions ?? []} columns={columns} rowKey="id" loading={loadingTxs} pagination={false} scroll={{ x: 800 }} />}
+      </> : <Alert type="info" title="Chưa có dữ liệu sổ cọc" />}
+    </Modal>
+    <Modal title={action === 'topup' ? 'Ghi nhận nộp bù cọc' : 'Ghi nhận hoàn cọc'} open={action !== null}
+      onCancel={() => setAction(null)} onOk={save} confirmLoading={topup.isPending || refund.isPending}
+      destroyOnHidden okText="Xác nhận" cancelText="Hủy"
+      afterOpenChange={(visible) => { if (visible) { form.resetFields(); form.setFieldsValue({ amount: action === 'topup' ? balance?.topupNeeded : balance?.balance }) } }}>
+      <Form form={form} layout="vertical"><FormGrid>
+        <Form.Item name="amount" label="Số tiền (đ)" rules={[{ required: true, message: 'Vui lòng nhập số tiền' }, { type: 'number', min: 1, message: 'Số tiền phải lớn hơn 0' }]}>
+          <InputNumber precision={0} min={1} style={{ width: '100%' }} />
+        </Form.Item>
+        <Form.Item name="note" label="Ghi chú" className="dms-form-span-full" rules={[{ max: 500 }]}>
+          <TextArea rows={3} />
+        </Form.Item>
+      </FormGrid></Form>
+    </Modal>
+  </>
 }

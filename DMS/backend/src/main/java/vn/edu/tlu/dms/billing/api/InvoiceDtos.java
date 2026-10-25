@@ -57,15 +57,10 @@ public final class InvoiceDtos {
             @Min(0) Long totalAmount,
             LocalDate dueDate) {}
 
-    public record BatchIssueResult(
-            int totalCreated,
-            int totalSkipped,
-            long totalAmount) {}
+    public record BatchIssueResult(int totalCreated, int totalSkipped, long totalAmount) {}
 
-    public record RoomFeeBatchIssueRequest(
-            @NotNull Long semesterId) {}
+    public record RoomFeeBatchIssueRequest(@NotNull @Positive Long semesterId) {}
 
     public record UtilityBatchIssueRequest(
-            Long managementUnitId,
-            @NotNull LocalDate billingMonth) {}
+            @Positive Long managementUnitId, @NotNull LocalDate billingMonth) {}
 }

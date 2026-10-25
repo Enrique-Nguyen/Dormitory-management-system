@@ -45,6 +45,11 @@ const messages: Record<string, (d: Details) => string> = {
   READING_HAS_FOLLOWING_MONTH: () =>
     'Tháng sau đã có chỉ số, không thể thay đổi tháng trước.',
   READING_INVALID: () => 'Chỉ số cuối phải lớn hơn hoặc bằng chỉ số đầu.',
+  DUPLICATE_DEPOSIT: () => 'Hợp đồng đã thu cọc ban đầu. Hãy tải lại sổ cọc.',
+  DUPLICATE_DEDUCTION: () => 'Ticket này đã được trừ cọc cho hợp đồng.',
+  DUPLICATE_REFUND: () => 'Hợp đồng đã hoàn cọc, không thể hoàn lần nữa.',
+  REFUND_EXCEEDS_BALANCE: () => 'Số tiền hoàn vượt số dư cọc hiện tại.',
+  CONTRACT_NOT_ACTIVE: () => 'Hợp đồng chưa hoặc không còn hiệu lực để nộp bù cọc.',
   DUPLICATE_INVOICE: () => 'Sinh viên/phòng đã có hóa đơn của kỳ này.',
   CONTRACT_EXISTS: () => 'Sinh viên đã có hợp đồng đang chờ hoặc đang ở.',
   INVALID_STATE_TRANSITION: () =>

@@ -1,6 +1,9 @@
-import { Modal, Form, Radio, Input, message, Alert } from 'antd'
+import { Form, message } from 'antd'
+import { Modal, Radio, RadioGroup, Input, Alert, FormGrid } from '../../components'
+import { PaymentMethod } from '../../constants/statusConfig'
+import { validationFieldErrors } from '../crud/api'
 import { CheckCircleOutlined, DollarOutlined, BankOutlined } from '@ant-design/icons'
-import { useConfirmPayment } from './index'
+import { useConfirmPayment } from './useBilling'
 
 interface Props {
   invoiceId: number
@@ -30,8 +33,8 @@ export default function ConfirmPaymentModal({
       message.success(`Đã xác nhận thu tiền hóa đơn ${invoiceCode ?? ''} thành công!`)
       form.resetFields()
       onClose()
-    } catch {
-      // Handled by onError
+    } catch (error) {
+      form.setFields(validationFieldErrors(error).map(({ field, message }) => ({ name: field, errors: [message] })))
     }
   }
 
@@ -39,7 +42,7 @@ export default function ConfirmPaymentModal({
     <Modal
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 20 }} />
+          <CheckCircleOutlined style={{ color: 'var(--color-success)', fontSize: 20 }} />
           <span style={{ fontWeight: 600 }}>
             Xác nhận thanh toán {invoiceCode ? `(${invoiceCode})` : ''}
           </span>
@@ -51,7 +54,7 @@ export default function ConfirmPaymentModal({
       confirmLoading={confirmPayment.isPending}
       okText="Xác nhận đã thu"
       cancelText="Hủy bỏ"
-      destroyOnClose
+      destroyOnHidden
     >
       {totalAmount != null && (
         <Alert
@@ -62,25 +65,27 @@ export default function ConfirmPaymentModal({
         />
       )}
 
-      <Form form={form} layout="vertical" initialValues={{ paymentMethod: 'TRANSFER' }}>
+      <Form form={form} layout="vertical" initialValues={{ paymentMethod: PaymentMethod.TRANSFER }}>
+        <FormGrid>
         <Form.Item
           name="paymentMethod"
           label="Phương thức thanh toán"
           rules={[{ required: true, message: 'Vui lòng chọn phương thức' }]}
         >
-          <Radio.Group buttonStyle="solid" style={{ width: '100%', display: 'flex' }}>
-            <Radio.Button value="TRANSFER" style={{ flex: 1, textAlign: 'center' }}>
+          <RadioGroup buttonStyle="solid" style={{ width: '100%', display: 'flex' }}>
+            <Radio value={PaymentMethod.TRANSFER} style={{ flex: 1, textAlign: 'center' }}>
               <BankOutlined /> Chuyển khoản ngân hàng
-            </Radio.Button>
-            <Radio.Button value="CASH" style={{ flex: 1, textAlign: 'center' }}>
+            </Radio>
+            <Radio value={PaymentMethod.CASH} style={{ flex: 1, textAlign: 'center' }}>
               <DollarOutlined /> Tiền mặt
-            </Radio.Button>
-          </Radio.Group>
+            </Radio>
+          </RadioGroup>
         </Form.Item>
 
-        <Form.Item name="payerName" label="Họ tên người nộp tiền (nếu có)">
+        <Form.Item name="payerName" label="Họ tên người nộp tiền" rules={[{ required: true, whitespace: true, message: 'Vui lòng nhập người nộp tiền' }, { max: 100 }]}>
           <Input placeholder="Ví dụ: Nguyễn Văn A (Trưởng phòng)..." />
         </Form.Item>
+      </FormGrid>
       </Form>
     </Modal>
   )

@@ -1,3 +1,4 @@
+import { ContractStatus, DepositType, InvoiceType, InvoiceStatus, PaymentMethod } from '../../constants/statusConfig'
 import { api } from './client'
 
 // API Spec: Phân hệ 6 (Điện nước, Hóa đơn & Tiền cọc) & Phân hệ 7 (Dashboard & Báo cáo) - TV5
@@ -12,35 +13,27 @@ export interface PageResponse<T> {
 
 export interface InvoiceItem {
   id: number
-  description: string
+  itemType: string
   quantity: number
   unitPrice: number
   amount: number
-  kind: string
+  note: string | null
 }
 
 export interface InvoiceDetail {
   id: number
   code: string
-  type: 'ROOM_FEE' | 'UTILITY'
-  studentId?: number
-  studentCode?: string
-  studentName?: string
-  semesterId?: number
-  semesterName?: string
-  roomId?: number
-  roomCode?: string
-  buildingCode?: string
-  billingMonth?: string
+  type: (typeof InvoiceType)[keyof typeof InvoiceType]
+  studentId: number | null
+  semesterId: number | null
+  roomId: number | null
+  billingMonth: string | null
   totalAmount: number
-  issuedAt: string
   dueDate: string
-  status: 'UNPAID' | 'PAID'
-  paidAt?: string
-  paymentMethod?: 'CASH' | 'TRANSFER'
-  payerName?: string
-  confirmedBy?: number
-  items?: InvoiceItem[]
+  status: (typeof InvoiceStatus)[keyof typeof InvoiceStatus]
+  paidAt: string | null
+  items: InvoiceItem[] | null
+  allowedActions: string[] | null
 }
 
 export interface IssueRoomFeeRequest {
@@ -48,12 +41,12 @@ export interface IssueRoomFeeRequest {
 }
 
 export interface IssueUtilityRequest {
-  managementUnitId: number
+  managementUnitId?: number
   billingMonth: string // YYYY-MM-DD
 }
 
 export interface ConfirmPaymentRequest {
-  paymentMethod: 'CASH' | 'TRANSFER'
+  paymentMethod: (typeof PaymentMethod)[keyof typeof PaymentMethod]
   payerUserId?: number
   payerName?: string
 }
@@ -61,68 +54,58 @@ export interface ConfirmPaymentRequest {
 export interface DepositTransaction {
   id: number
   contractId: number
-  studentId: number
-  studentCode?: string
-  studentName?: string
-  type: 'DEPOSIT' | 'DEDUCTION' | 'TOPUP' | 'REFUND'
+  type: (typeof DepositType)[keyof typeof DepositType]
   amount: number
-  balanceAfter: number
-  refTicketId?: number
-  refInvoiceId?: number
-  note?: string
+  maintenanceRequestId: number | null
+  dueDate: string | null
+  confirmedBy: number | null
   createdAt: string
-  staffName?: string
+  note: string | null
 }
 
 export interface DepositBalance {
   contractId: number
-  contractCode?: string
   studentId: number
-  studentCode?: string
-  studentName?: string
-  roomCode?: string
-  buildingCode?: string
+  contractCode: string
+  studentName: string
+  studentCode: string | null
+  status: (typeof ContractStatus)[keyof typeof ContractStatus]
   depositRequired: number
   balance: number
-  status: 'NORMAL' | 'TOPUP_NEEDED' | 'REFUNDED'
+  topupNeeded: number
+  oldestUnpaidDue: string | null
+  topupOverdue: boolean
+  depositDebt: number
+  allowedActions: string[]
 }
 
-export interface StudentDebt {
-  studentId: number
-  unpaidRoomFee: number
-  unpaidUtilityShare: number
-  depositTopupNeeded: number
-  totalDebt: number
-  hasDebt: boolean
-}
-
-export interface RoomDebt {
-  roomId: number
-  unpaidUtilityAmount: number
-  unpaidMonthsCount: number
-  hasDebt: boolean
+export interface BatchIssueResult {
+  totalCreated: number
+  totalSkipped: number
+  totalAmount: number
 }
 
 export interface StaffDashboardSummary {
-  managementUnitId: number
-  managementUnitName: string
+  managementUnitId: number | null
+  unitName: string | null
   capacity: {
-    totalBeds: number
+    operationalBeds: number
     occupiedBeds: number
-    heldBeds: number
-    freeBeds: number
+    availableBeds: number
+    maintenanceBeds: number
     occupancyRate: number
   }
-  financial: {
-    unpaidInvoicesCount: number
-    unpaidInvoicesAmount: number
-    topupNeededCount: number
+  finance: {
+    totalUnpaidAmount: number
+    unpaidRoomFeeAmount: number
+    unpaidUtilityAmount: number
+    totalTopupNeededAmount: number
   }
   operations: {
     roomsMissingLeader: number
-    expiringContractsCount: number
-    pendingTicketsCount: number
-    openTicketsByCategory: Record<string, number>
+    contractsExpiringSoon: number
+    contractsOverdueMoveout: number
+    ticketsByStatus: Record<string, number>
   }
 }
 
@@ -136,14 +119,14 @@ export async function getStaffDashboard(): Promise<StaffDashboardSummary> {
 
 export async function issueRoomFeeInvoices(
   data: IssueRoomFeeRequest,
-): Promise<{ count: number }> {
-  return (await api.post<{ count: number }>('/invoices/issue-room-fee', data)).data
+): Promise<BatchIssueResult> {
+  return (await api.post<BatchIssueResult>('/invoices/issue-room-fee', data)).data
 }
 
 export async function issueUtilityInvoices(
   data: IssueUtilityRequest,
-): Promise<{ count: number }> {
-  return (await api.post<{ count: number }>('/invoices/issue-utility', data)).data
+): Promise<BatchIssueResult> {
+  return (await api.post<BatchIssueResult>('/invoices/issue-utility', data)).data
 }
 
 export async function confirmInvoicePayment(
@@ -191,12 +174,4 @@ export async function recordDepositRefund(data: {
       { amount: data.amount, note: data.note },
     )
   ).data
-}
-
-export async function getStudentDebt(studentId: number): Promise<StudentDebt> {
-  return (await api.get<StudentDebt>(`/billing/debt/student/${studentId}`)).data
-}
-
-export async function getRoomDebt(roomId: number): Promise<RoomDebt> {
-  return (await api.get<RoomDebt>(`/billing/debt/room/${roomId}`)).data
 }

@@ -121,6 +121,17 @@ public final class DmsConstants {
         public static final String COUNT = "count";
         public static final String CURRENT_STATUS = "currentStatus";
 
+        public static final String SEMESTER_ID = "semesterId";
+        public static final String BILLING_MONTH = "billingMonth";
+        public static final String PRICE = "price";
+        public static final String PAYER_NAME = "payerName";
+        public static final String AMOUNT = "amount";
+        public static final String MAINTENANCE_REQUEST_ID = "maintenanceRequestId";
+        public static final String DUE_DATE = "dueDate";
+        public static final String TYPE = "type";
+        public static final String STATUS = "status";
+        public static final String CONTRACT_ID = "contractId";
+
         private ApiField() {}
     }
 
@@ -138,16 +149,29 @@ public final class DmsConstants {
         public static final String INVALID = "INVALID";
         public static final String ERROR = "ERROR";
         public static final String EXISTS = "EXISTS";
-        public static final List<String> FIELDS = List.of(
-                ApiField.STUDENT_CODE, ApiField.FULL_NAME, ApiField.GENDER, ApiField.DATE_OF_BIRTH,
-                ApiField.FACULTY, ApiField.COHORT, ApiField.PHONE);
-        public static final List<String> HEADERS = List.of(
-                "Mã SV", "Họ tên", "Giới tính", "Ngày sinh", "Khoa", "Khóa", "Số điện thoại");
+        public static final List<String> FIELDS =
+                List.of(
+                        ApiField.STUDENT_CODE,
+                        ApiField.FULL_NAME,
+                        ApiField.GENDER,
+                        ApiField.DATE_OF_BIRTH,
+                        ApiField.FACULTY,
+                        ApiField.COHORT,
+                        ApiField.PHONE);
+        public static final List<String> HEADERS =
+                List.of(
+                        "Mã SV",
+                        "Họ tên",
+                        "Giới tính",
+                        "Ngày sinh",
+                        "Khoa",
+                        "Khóa",
+                        "Số điện thoại");
         public static final String CODE_PATTERN = "[0-9]{6,20}";
         public static final String PHONE_PATTERN = "0[0-9]{9}";
         public static final String COHORT_PATTERN = "K[0-9]{1,9}";
-        public static final Map<String, String> GENDERS = Map.of(
-                "NAM", Gender.M, "M", Gender.M, "NỮ", Gender.F, "F", Gender.F);
+        public static final Map<String, String> GENDERS =
+                Map.of("NAM", Gender.M, "M", Gender.M, "NỮ", Gender.F, "F", Gender.F);
 
         private StudentImport() {}
     }
@@ -163,6 +187,26 @@ public final class DmsConstants {
         public static final String SORT_DIRECTION_INVALID = "Chỉ dùng asc hoặc desc";
         public static final String SORT_REQUIRED = "Trường sắp xếp không được rỗng";
         public static final String PAGE_RANGE = "page >= 0, size 1–100";
+
+        public static final String INVOICE_CURRENT_SEMESTER =
+                "Chỉ phát hành phí phòng trong học kỳ hiện tại";
+        public static final String ASSIGNMENT_PRICE_REQUIRED =
+                "Phân phòng chưa có đơn giá học kỳ hợp lệ";
+        public static final String BILLING_MONTH_START = "Kỳ điện nước phải là ngày đầu tháng";
+        public static final String ELECTRIC_RATE_REQUIRED =
+                "Chưa có đơn giá điện có hiệu lực cho kỳ này";
+        public static final String WATER_RATE_REQUIRED =
+                "Chưa có đơn giá nước có hiệu lực cho kỳ này";
+        public static final String PAYER_REQUIRED = "Cần người nộp hoặc họ tên người nộp";
+        public static final String DEPOSIT_AMOUNT_POSITIVE = "Số tiền cọc phải lớn hơn 0";
+        public static final String DEDUCTION_AMOUNT_POSITIVE = "Số tiền trừ cọc phải lớn hơn 0";
+        public static final String TOPUP_AMOUNT_POSITIVE = "Số tiền bù cọc phải lớn hơn 0";
+        public static final String REFUND_AMOUNT_POSITIVE = "Số tiền hoàn cọc phải lớn hơn 0";
+        public static final String TOPUP_DUE_DATE_REQUIRED = "Hạn nộp bù cọc không được để trống";
+        public static final String MAINTENANCE_REQUEST_REQUIRED =
+                "Mã ticket sửa chữa không được để trống";
+        public static final String INVOICE_TYPE_INVALID = "Loại hóa đơn không hợp lệ";
+        public static final String INVOICE_STATUS_INVALID = "Trạng thái hóa đơn không hợp lệ";
 
         private ValidationMessage() {}
     }
@@ -690,6 +734,10 @@ public final class DmsConstants {
         public static final String ACCEPT = "accept";
         public static final String REOPEN = "reopen";
 
+        public static final String CONFIRM_PAYMENT = "confirm-payment";
+        public static final String DEPOSIT_TOPUP = "deposit-topup";
+        public static final String DEPOSIT_REFUND = "deposit-refund";
+
         private BusinessAction() {}
     }
 
@@ -782,6 +830,8 @@ public final class DmsConstants {
         public static final String PENDING = "PENDING";
         public static final String ACTIVE = "ACTIVE";
         public static final String CANCELLED = "CANCELLED";
+        public static final String EXPIRED = "EXPIRED";
+        public static final String TERMINATED = "TERMINATED";
 
         private ContractStatus() {}
     }
@@ -809,6 +859,7 @@ public final class DmsConstants {
     /** Trạng thái lựa chọn đăng ký hè được khung CRUD sử dụng. */
     public static final class SummerStatus {
         public static final String PENDING = "PENDING";
+        public static final String APPROVED = "APPROVED";
 
         private SummerStatus() {}
     }
@@ -895,6 +946,9 @@ public final class DmsConstants {
         public static final String ROOM_FEE = "ROOM_FEE";
         public static final String UTILITY = "UTILITY";
 
+        public static final String ROOM_FEE_PREFIX = "HP";
+        public static final String UTILITY_PREFIX = "DN";
+
         private InvoiceType() {}
     }
 
@@ -948,6 +1002,7 @@ public final class DmsConstants {
 
     /** Khóa cấu hình nghiệp vụ lưu tại system_config; giá trị cấu hình vẫn lấy từ CSDL. */
     public static final class ConfigKey {
+        public static final String INVOICE_DUE_DAYS = "invoice.due_days";
         public static final String CONTRACT_ACTIVATION_DAYS = "contract.activation_days";
         public static final String CONTRACT_EXPIRING_DAYS = "contract.expiring_days";
         public static final String MAINTENANCE_AUTOCLOSE_DAYS = "maintenance.autoclose_days";

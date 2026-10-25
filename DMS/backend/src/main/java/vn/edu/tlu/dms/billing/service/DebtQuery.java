@@ -21,8 +21,11 @@ public interface DebtQuery {
             boolean hasDebt) {}
 
     /** Dữ liệu công nợ tiền điện nước của phòng. */
-    public record RoomDebt(
-            Long roomId,
-            Long unpaidUtilityFee,
-            boolean hasDebt) {}
+    public record RoomDebt(Long roomId, Long unpaidUtilityFee, boolean hasDebt) {}
+
+    /** Tổng hợp nợ hóa đơn theo học kỳ/phòng và bù cọc trong đơn vị cho Dashboard. */
+    FinanceSummary getFinanceSummary(Long managementUnitId);
+
+    /** Chỉ số tiền chưa thanh toán; không suy ra phạm vi từ chỗ ở hiện tại của sinh viên. */
+    record FinanceSummary(long unpaidRoomFee, long unpaidUtility, long topupNeeded) {}
 }

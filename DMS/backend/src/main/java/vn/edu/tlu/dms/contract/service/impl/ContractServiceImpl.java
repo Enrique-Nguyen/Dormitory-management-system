@@ -2,6 +2,7 @@ package vn.edu.tlu.dms.contract.service.impl;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,16 +41,19 @@ public class ContractServiceImpl implements ContractService {
     private final ScopeGuard scopeGuard;
 
     private final StatusHistoryService historyService;
+    private final JdbcTemplate jdbc;
 
     public ContractServiceImpl(
             DormitoryContractRepository repository,
             CurrentUser currentUser,
             ScopeGuard scopeGuard,
-            StatusHistoryService historyService) {
+            StatusHistoryService historyService,
+            JdbcTemplate jdbc) {
         this.repository = repository;
         this.currentUser = currentUser;
         this.scopeGuard = scopeGuard;
         this.historyService = historyService;
+        this.jdbc = jdbc;
     }
 
     @Override
@@ -155,5 +159,22 @@ public class ContractServiceImpl implements ContractService {
                 contract.getStatusReason(),
                 detail ? List.of() : null,
                 detail ? historyService.list(EntityType.CONTRACT, contract.getId()) : null);
+    }
+
+    /** Tổng hợp theo đơn vị của hợp đồng; ngưỡng ngày do ConfigService cung cấp. */
+    @Override
+    public ExpirySummary getExpirySummary(Long managementUnitId, int expiringDays) {
+        return jdbc.queryForObject(
+                """
+                SELECT COUNT(*) FILTER (WHERE c.end_date BETWEEN CURRENT_DATE AND CURRENT_DATE+?) AS expiring,
+                       COUNT(*) FILTER (WHERE c.end_date<CURRENT_DATE) AS overdue
+                FROM dormitory_contract c JOIN room_application ap ON ap.id=c.application_id
+                WHERE c.status=? AND (CAST(? AS bigint) IS NULL OR ap.preferred_unit_id=?)
+                """,
+                (rs, i) -> new ExpirySummary(rs.getLong("expiring"), rs.getLong("overdue")),
+                expiringDays,
+                ContractStatus.ACTIVE,
+                managementUnitId,
+                managementUnitId);
     }
 }

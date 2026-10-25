@@ -4,6 +4,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentKind;
+import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.RoomStatus;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.room.repository.BuildingRepository;
 import vn.edu.tlu.dms.room.repository.RoomRepository;
@@ -107,5 +110,57 @@ public class RoomReferenceServiceImpl implements RoomReferenceService {
         if (rows.isEmpty()) {
             throw BusinessException.notFound();
         }
+    }
+
+    /** Tính sức chứa và lấp đầy trên cùng phạm vi giường hoạt động, tách giường bảo trì. */
+    @Override
+    public DashboardCapacity getDashboardCapacity(Long managementUnitId) {
+        String unitName =
+                managementUnitId == null
+                        ? null
+                        : jdbc
+                                .query(
+                                        "SELECT name FROM management_unit WHERE id=?",
+                                        (rs, i) -> rs.getString(1),
+                                        managementUnitId)
+                                .stream()
+                                .findFirst()
+                                .orElseThrow(BusinessException::notFound);
+        return jdbc.queryForObject(
+                """
+                SELECT COUNT(*) FILTER (WHERE b.status=? AND r.status=?) AS operational,
+                       COUNT(*) FILTER (WHERE b.status=? AND r.status=? AND EXISTS (
+                           SELECT 1 FROM room_assignment_history h WHERE h.bed_id=b.id
+                               AND h.ended_at IS NULL AND h.kind=?)) AS occupied,
+                       COUNT(*) FILTER (WHERE b.status=? AND r.status=? AND NOT EXISTS (
+                           SELECT 1 FROM room_assignment_history h WHERE h.bed_id=b.id
+                               AND h.ended_at IS NULL)) AS available,
+                       COUNT(*) FILTER (WHERE r.status=?) AS maintenance,
+                       COUNT(DISTINCT r.id) FILTER (WHERE r.status=? AND r.leader_student_id IS NULL
+                           AND EXISTS (SELECT 1 FROM room_assignment_history h JOIN bed hb ON hb.id=h.bed_id
+                               WHERE hb.room_id=r.id AND h.ended_at IS NULL AND h.kind=?)) AS missing_leader
+                FROM bed b JOIN room r ON r.id=b.room_id JOIN building bd ON bd.id=r.building_id
+                WHERE (CAST(? AS bigint) IS NULL OR bd.management_unit_id=?)
+                """,
+                (rs, i) ->
+                        new DashboardCapacity(
+                                unitName,
+                                rs.getLong("operational"),
+                                rs.getLong("occupied"),
+                                rs.getLong("available"),
+                                rs.getLong("maintenance"),
+                                rs.getLong("missing_leader")),
+                BedOperationStatus.ACTIVE,
+                RoomStatus.ACTIVE,
+                BedOperationStatus.ACTIVE,
+                RoomStatus.ACTIVE,
+                AssignmentKind.STAY,
+                BedOperationStatus.ACTIVE,
+                RoomStatus.ACTIVE,
+                RoomStatus.MAINTENANCE,
+                RoomStatus.ACTIVE,
+                AssignmentKind.STAY,
+                managementUnitId,
+                managementUnitId);
     }
 }

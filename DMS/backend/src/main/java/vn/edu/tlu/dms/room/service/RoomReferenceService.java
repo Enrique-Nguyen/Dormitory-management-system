@@ -39,4 +39,16 @@ public interface RoomReferenceService {
             Long roomId, Long buildingId, Long unitId, String gender, String status) {}
 
     public record SemesterRef(Long id, String type, LocalDate startDate, LocalDate endDate) {}
+
+    /** Tổng hợp giường khai thác và phòng thiếu trưởng phòng theo đơn vị cho Dashboard. */
+    DashboardCapacity getDashboardCapacity(Long managementUnitId);
+
+    /** Các chỉ số được tính trên cùng tập giường đang khai thác; HOLD không tính là đang ở. */
+    record DashboardCapacity(
+            String unitName,
+            long operationalBeds,
+            long occupiedBeds,
+            long availableBeds,
+            long maintenanceBeds,
+            long roomsMissingLeader) {}
 }

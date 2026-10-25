@@ -1,6 +1,6 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.8**, 15/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.9**, 25/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.11 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
 > DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak, ma trận quyền động V5 và quyền V6; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
@@ -16,6 +16,7 @@
 | 0.5 | 14/10/2026 | Bổ sung V4 Keycloak OIDC, keycloak_user_id nullable password_hash |
 | 0.6 | 15/10/2026 | Bổ sung V5 ma trận quyền động role_permission_matrix (STAFF=72, STUDENT=35, TECHNICIAN=11, ADMIN=105) |
 | 0.7 | 15/10/2026 | Ánh xạ ràng buộc CSDL theo code review, chặn sửa bed_count loại phòng đang dùng và hủy đơn đã có hợp đồng |
+| 0.9 | 25/10/2026 | PR #13: thống nhất ánh xạ unique index sổ cọc sang mã lỗi chuyên biệt, phân biệt FK/CHECK; tra cứu PENDING bằng LEFT JOIN từ hợp đồng, giữ nguyên V1–V6. |
 | 0.8 | 15/10/2026 | Bổ sung Flyway V6 cấp quyền ROOM_TRANSFER_APPROVE cho STAFF (STAFF=73, ADMIN=106); ghi chú JPA/Service: status_history entity_type='TRANSFER', lịch sử trưởng phòng từ audit_log (ROOM_LEADER_CHANGE), missingLeader tính động khi đọc |
 
 ---
@@ -240,7 +241,7 @@ Mật khẩu chỉ lưu hash BCrypt; mật khẩu tạm trả một lần, khôn
 | BR-03 Chỉ số điện nước | `UNIQUE(room_id, meter_type, billing_month)`, CHECK cuối ≥ đầu (kể cả khi thay đồng hồ) | → `READING_INVALID` |
 | FR-BIL-12 Tổng hóa đơn không âm (kể cả sau dòng điều chỉnh âm) | `CHECK (total_amount >= 0)` trên `invoice` | → `ADJUSTMENT_INVALID` |
 | BR-04 Không phát hành trùng | `UNIQUE(student_id, semester_id) WHERE type='ROOM_FEE'`, `UNIQUE(room_id, billing_month) WHERE type='UTILITY'` | → `DUPLICATE_INVOICE` |
-| BR-10 Sổ cọc | CHECK dấu theo loại; `UNIQUE(contract_id) WHERE type='DEPOSIT'` và `='REFUND'`; `UNIQUE(contract_id, maintenance_request_id) WHERE type='DEDUCTION'` | → `DEPOSIT_INVALID` |
+| BR-10 Sổ cọc | CHECK dấu theo loại; unique thu/hoàn/trừ cọc | CHECK → DEPOSIT_INVALID; ux_deposit_once → DUPLICATE_DEPOSIT; ux_refund_once → DUPLICATE_REFUND; ux_deduction_ticket → DUPLICATE_DEDUCTION. FK đầu vào không tồn tại → VALIDATION_FAILED (400). |
 | BR-10 Hoàn cọc bằng số dư | `move_out_record`: `refund_amount = GREATEST(deposit_balance, 0)` | |
 | FR-MNT-09 Nguyên nhân, chi phí | 4 CHECK trên `maintenance_request` | → `COST_INVALID` |
 | Học kỳ không chồng nhau | `EXCLUDE USING gist (daterange(...) WITH &&)` | `semester_daterange_excl` → `SEMESTER_OVERLAP` |
@@ -459,3 +460,7 @@ Flyway `V6__room_transfer_approve_permission.sql` bổ sung quyền duyệt chuy
 - Script chỉ thực hiện `UPDATE role_permission_matrix SET permissions = permissions || '["ROOM_TRANSFER_APPROVE"]'::jsonb WHERE role = 'STAFF' AND NOT permissions ? 'ROOM_TRANSFER_APPROVE'`.
 - Không tăng `version` của dòng cấu hình (để tránh xung đột lạc quan với màn quản trị ma trận quyền của ADMIN), không thay đổi cấu trúc bảng hay schema CSDL.
 - Sau khi áp dụng V6: vai trò STAFF mặc định có **73** quyền, ADMIN có **106** quyền (toàn bộ danh mục 106 mã).
+
+### Bổ sung tra cứu sổ cọc v0.9 — 25/10/2026
+
+View v_deposit_balance giữ nguyên phạm vi ACTIVE/EXPIRED/TERMINATED. API danh sách và chi tiết lấy dormitory_contract làm gốc, LEFT JOIN view và tổng sổ cái để không bỏ sót PENDING. Thêm nhãn hợp đồng/sinh viên qua JOIN; không lưu dữ liệu suy ra và không sửa migration đã áp dụng. Giữ khóa hợp đồng trước kiểm tra trạng thái và ghi sổ cọc. Phát hành phí phòng khóa student_profile theo ID tăng dần; phát hành điện nước khóa phòng rồi chỉ số theo ID tăng dần trước kiểm tra hóa đơn.

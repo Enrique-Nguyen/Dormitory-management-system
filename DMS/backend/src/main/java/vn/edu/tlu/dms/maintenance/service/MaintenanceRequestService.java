@@ -9,6 +9,7 @@ import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Save;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 /** Khai báo thao tác với yêu cầu sửa chữa; phần xử lý nằm trong MaintenanceRequestServiceImpl. */
 public interface MaintenanceRequestService {
@@ -48,4 +49,7 @@ public interface MaintenanceRequestService {
 
     /** Kiểm tra quyền xem yêu cầu rồi trả đường dẫn của ảnh thuộc đúng yêu cầu đó. */
     Path getAuthorizedPhotoFile(Long id, Long photoId);
+
+    /** Đếm ticket theo trạng thái và đơn vị quản lý để cung cấp cho Dashboard. */
+    Map<String, Long> countByStatus(Long managementUnitId);
 }

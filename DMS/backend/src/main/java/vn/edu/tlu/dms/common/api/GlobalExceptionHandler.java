@@ -49,9 +49,9 @@ public class GlobalExceptionHandler {
                     Map.entry("room_building_id_code_key", ErrorCode.ROOM_CODE_EXISTS),
                     Map.entry("semester_daterange_excl", ErrorCode.SEMESTER_OVERLAP),
                     Map.entry("utility_rate_meter_type_effective_from_key", ErrorCode.RATE_EXISTS),
-                    Map.entry("ux_deposit_once", ErrorCode.DEPOSIT_INVALID),
-                    Map.entry("ux_refund_once", ErrorCode.DEPOSIT_INVALID),
-                    Map.entry("ux_deduction_ticket", ErrorCode.DEPOSIT_INVALID),
+                    Map.entry("ux_deposit_once", ErrorCode.DUPLICATE_DEPOSIT),
+                    Map.entry("ux_refund_once", ErrorCode.DUPLICATE_REFUND),
+                    Map.entry("ux_deduction_ticket", ErrorCode.DUPLICATE_DEDUCTION),
                     Map.entry("ux_invoice_room_fee", ErrorCode.DUPLICATE_INVOICE),
                     Map.entry("ux_invoice_utility", ErrorCode.DUPLICATE_INVOICE),
                     Map.entry("ux_extension_pending", ErrorCode.REQUEST_PENDING_EXISTS),
@@ -112,7 +112,9 @@ public class GlobalExceptionHandler {
                 request);
     }
 
-    /** Thiếu tham số/phần multipart hoặc sai kiểu validate tham số: lỗi của client, không phải 500. */
+    /**
+     * Thiếu tham số/phần multipart hoặc sai kiểu validate tham số: lỗi của client, không phải 500.
+     */
     @ExceptionHandler({
         ServletRequestBindingException.class,
         MissingServletRequestPartException.class,
@@ -150,7 +152,8 @@ public class GlobalExceptionHandler {
 
     /**
      * Ưu tiên tên ràng buộc đã khai báo; còn lại theo SQLState để lỗi xác định (trùng, khóa ngoại,
-     * CHECK) không bị báo thành "dữ liệu vừa bị người khác thay đổi" khiến người dùng thử lại vô ích.
+     * CHECK) không bị báo thành "dữ liệu vừa bị người khác thay đổi" khiến người dùng thử lại vô
+     * ích.
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ApiError> integrity(
@@ -168,7 +171,10 @@ public class GlobalExceptionHandler {
         }
         HttpStatus status = HttpStatus.CONFLICT;
         String code = name == null ? null : CONSTRAINT_CODES.get(name);
-        if (code == null && name != null && name.startsWith("deposit_transaction")) {
+        if (code == null
+                && name != null
+                && name.startsWith("deposit_transaction")
+                && "23514".equals(sqlState)) {
             code = ErrorCode.DEPOSIT_INVALID;
         }
         if (code == null && name != null && name.startsWith("utility_reading")) {
@@ -180,7 +186,8 @@ public class GlobalExceptionHandler {
                 switch (sqlState) {
                     case "23505", "23P01" -> code = ErrorCode.DUPLICATE_VALUE;
                     case "23503" -> {
-                        // DELETE vướng bản ghi con = đang được dùng; ghi mà cha không tồn tại = tham
+                        // DELETE vướng bản ghi con = đang được dùng; ghi mà cha không tồn tại =
+                        // tham
                         // chiếu sai, người dùng cần sửa dữ liệu nhập chứ không phải giải phóng.
                         if (HttpMethod.DELETE.matches(request.getMethod())) {
                             code = ErrorCode.RESOURCE_IN_USE;

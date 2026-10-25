@@ -1,13 +1,14 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.16**, 22/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.13 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.8, `DMS-UI-UX-Design.md` (mục 27.2)
+> **Phiên bản 0.17**, 25/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.13 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.9, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
 ### Lịch sử thay đổi
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.17 | 25/10/2026 | Sửa theo review PR #13: đồng bộ contract phát hành/Dashboard/sổ cọc; quyền ghi theo đơn vị; cấu hình hạn đóng; khóa chống phát hành trùng; thống nhất mã lỗi cọc và tra cứu PENDING. Công nợ sinh viên/phòng hiện chỉ là Service nội bộ, chưa mở REST endpoint. |
 | 0.16 | 22/10/2026 | TV5: hoàn thiện API sổ cọc (thu cọc, trừ cọc, bù cọc, hoàn cọc), tra cứu công nợ sinh viên và phòng, phát hành hóa đơn tự động (tiền phòng & điện nước), xác nhận thanh toán và tổng hợp KPI Staff Dashboard |
 | 0.15 | 21/10/2026 | TV1: import sinh viên hai bước đã triển khai, bổ sung createdAccounts trả mật khẩu một lần và no-store; đọc chi tiết audit trước/sau, hiển thị SYSTEM; lỗi bảo mật có requestId. Staff không được đổi mã SV/họ tên/giới tính |
 | 0.1 | 10/10/2026 | Bản đầu tiên: quy ước chung, danh mục endpoint theo 7 module, schema cho các nghiệp vụ chính, danh mục `errorCode`, `allowedActions`, định dạng file import |
@@ -937,30 +938,26 @@ Một transaction: chiếm giường qua `BedOccupancyService` (mở phân phòn
 
 ### 4.14. Phát hành hóa đơn
 
-`POST /api/invoices/room-fee/issue`
+Hai endpoint đã triển khai, đều yêu cầu quyền INVOICE_CREATE:
 
-```json
-{ "semesterId": 7, "buildingId": null, "noticeDate": "2026-09-05" }
-```
+- POST /api/invoices/issue-room-fee nhận { "semesterId": 7 }.
+- POST /api/invoices/issue-utility nhận { "managementUnitId": 1, "billingMonth": "2026-10-01" }.
 
-`POST /api/invoices/utility/issue`
+Staff chỉ phát hành trong đơn vị được giao; quyền đọc tổng hợp không mở rộng quyền ghi. Admin được phát hành mọi đơn vị; managementUnitId có thể bỏ trống để lấy toàn bộ đơn vị. Staff gửi đơn vị khác trả 404 NOT_FOUND. ID phải dương; kỳ điện nước là ngày đầu tháng.
 
-```json
-{ "billingMonth": "2026-10", "buildingId": 1, "noticeDate": "2026-11-02" }
-```
+Phí phòng chỉ phát hành trong học kỳ chứa ngày hiện tại, cho sinh viên có phân phòng STAY đang mở và hợp đồng ACTIVE. Hè yêu cầu lựa chọn STAY đã APPROVED cho đúng học kỳ. Giá lấy từ snapshot phân phòng; thiếu giá báo 400 VALIDATION_FAILED, không tự thay bằng 0. Hạn đóng do server tính: ngày phát hành + invoice.due_days qua ConfigService.
 
-- `noticeDate` mặc định hôm nay; `dueDate = noticeDate + invoice.due_days` (7).
-- Phí phòng: một hóa đơn cho mỗi sinh viên đang có phân phòng `STAY` trong học kỳ (hè: chỉ sinh viên có lựa chọn `STAY` đã duyệt), số tiền = đơn giá trên phân phòng hiệu lực tại ngày phát hành. Điện nước: một hóa đơn cho mỗi phòng có đủ hai chỉ số tháng đó, người nhận là trưởng phòng.
-- **Bỏ qua** (không lỗi) đối tượng đã có hóa đơn, để chạy lại an toàn. Chạy trong một transaction (NFR-REL-02, NFR-PER-02).
+Phòng điện nước phải ACTIVE, có người đang ở và đủ hai chỉ số. Đơn giá điện/nước là giá có hiệu lực tại kỳ điện nước, chụp vào dòng hóa đơn; thiếu giá báo validation.
 
-```json
-{ "created": 1462, "skippedExisting": 25, "skippedMissingReading": 0, "roomsMissingReading": [], "roomsWithoutLeader": [ { "id": 213, "code": "K1-A103" } ], "totalAmount": 2631600000 }
-```
+Response chung:
 
-- `skippedMissingReading`: phòng thiếu chỉ số điện hoặc nước của tháng (chỉ với điện nước).
-- Phòng thiếu chỉ số bị **bỏ qua**, không chặn cả đợt (SRS v0.6, UC-21 1a); nhập đủ rồi phát hành lại thì chỉ tạo hóa đơn cho phòng còn thiếu.
-- Phòng chưa có trưởng phòng **vẫn được phát hành** (Q-API-05). Preview đã trả `roomsWithoutLeader` để Staff chỉ định trước; response phát hành trả lại danh sách này.
-- Thông báo: mỗi hóa đơn điện nước tạo **một** thông báo `scope = ROOM` cho phòng đó; `v_user_notification` tự đưa đến mọi người đang ở trong phòng, kể cả trưởng phòng, không cần rẽ nhánh. Mỗi hóa đơn phí phòng tạo một thông báo `scope = USER` cho sinh viên.
+~~~json
+{ "totalCreated": 10, "totalSkipped": 2, "totalAmount": 15000000 }
+~~~
+
+Đối tượng đã có hóa đơn hoặc phòng thiếu chỉ số được bỏ qua. Một request là một transaction theo SRS UC-21; lỗi không dự kiến rollback cả request. Phí phòng khóa student_profile theo ID tăng dần rồi đọc lại phân phòng; điện nước khóa các phòng theo ID tăng dần, sau đó khóa chỉ số. Hai request phát hành đồng thời được tuần tự hóa trước kiểm tra tồn tại và không sinh trùng. Mỗi request ghi INVOICE_BATCH_ISSUE cùng transaction, kèm loại, học kỳ/kỳ điện nước, đơn vị và kết quả.
+
+Thông báo phát hành tự động theo thiết kế FR-BIL-07 chưa nằm trong thay đổi sửa review này; không coi là đã triển khai.
 
 ### 4.15. Xác nhận thanh toán
 
@@ -976,25 +973,31 @@ Một transaction: chiếm giường qua `BedOccupancyService` (mở phân phòn
 
 ### 4.16. Sổ cọc
 
-`GET /api/contracts/{id}/deposit`
+GET /api/contracts/{id}/deposit-balance trả:
 
-```json
+~~~json
 {
-  "contractId": 377,
-  "required": 1000000,
-  "balance": 950000,
-  "topUpRequired": 50000,
-  "oldestUnpaidTopUpDue": "2026-10-17",
-  "topUpOverdue": false,
-  "negativeBalanceDebt": 0,
-  "transactions": [
-    { "id": 1, "type": "DEPOSIT", "amount": 1000000, "createdAt": "2026-08-21T09:00:00+07:00", "confirmedBy": { "id": 31, "fullName": "Trần Thị B", "username": "staff.k1.b" }, "maintenanceRequest": null, "topUpDueDate": null, "note": null },
-    { "id": 9, "type": "DEDUCTION", "amount": -50000, "createdAt": "2026-10-10T10:00:00+07:00", "confirmedBy": null, "maintenanceRequest": { "id": 1024, "code": "TK-1024" }, "topUpDueDate": "2026-10-17", "note": "Vỡ kính cửa sổ" }
-  ]
+  "contractId": 377, "studentId": 501, "status": "ACTIVE",
+  "depositRequired": 1000000, "balance": 950000, "topupNeeded": 50000,
+  "oldestUnpaidDue": "2026-10-17", "topupOverdue": false, "depositDebt": 0,
+  "contractCode": "HD-377", "studentName": "Nguyễn Văn A", "studentCode": "SV501",
+  "allowedActions": ["deposit-topup"]
 }
-```
+~~~
 
-Số tiền có dấu như trong CSDL (`DEDUCTION`, `REFUND` âm). Frontend hiển thị dấu và màu theo `type`.
+POST /api/deposit-balances/search-by-page và POST /api/me/deposit-balances/search-by-page trả PageResponse với các item cùng schema. contractId là định danh dòng; tìm theo mã hợp đồng/tên sinh viên và lọc phạm vi trước truy vấn dữ liệu/đếm. Bao gồm hợp đồng PENDING kể cả chưa phát sinh giao dịch; số dư lấy tổng sổ cái, các chỉ số cần bù/nợ chỉ có nghĩa ở trạng thái tương ứng. Không sửa view/migration cũ.
+
+GET /api/contracts/{id}/deposit-transactions trả mảng theo createdAt rồi id tăng dần:
+
+~~~json
+[{ "id": 1, "contractId": 377, "type": "DEDUCTION", "amount": -50000,
+   "maintenanceRequestId": 1024, "dueDate": "2026-10-17", "confirmedBy": 31,
+   "createdAt": "2026-10-10T10:00:00+07:00", "note": "Vỡ kính" }]
+~~~
+
+Transaction không trả balanceAfter, staffName hoặc studentId. confirmedBy là ID người xác nhận. status trong Balance là trạng thái hợp đồng, không phải NORMAL/TOPUP_NEEDED/REFUNDED.
+
+Các action thu/trừ/bù/hoàn cọc giữ đường dẫn ở mục 3.6 và kiểm quyền DEPOSIT_CREATE. Thu ban đầu chỉ khi PENDING/ACTIVE và amount đúng depositRequired; sai trả 409 DEPOSIT_INVALID. Bù cọc chỉ khi ACTIVE. Hoàn cọc chỉ khi EXPIRED/TERMINATED, không vượt số dư và tối đa một lần. Mọi action khóa hợp đồng, kiểm lại trạng thái/phạm vi trước ghi; Staff chỉ ghi trong đơn vị mình dù có quyền đọc tổng hợp. Student chỉ xem hợp đồng của chính mình; ngoài phạm vi hoặc ID không tồn tại trả 404 NOT_FOUND.
 
 ### 4.17. Đăng thông báo
 
@@ -1018,25 +1021,21 @@ Mỗi item trong `content` của hộp thư (`POST /api/notifications/search-by-
 
 ### 4.18. Dashboard
 
-`GET /api/dashboard`
+GET /api/staff/dashboard?managementUnitId=1 yêu cầu DASHBOARD_READ. Staff thường chỉ đọc đơn vị mình; Staff có quyền tổng hợp và Admin có thể bỏ đơn vị để đọc toàn ký túc xá. Staff thường gửi đơn vị khác trả 404 NOT_FOUND.
 
-```json
+~~~json
 {
-  "scope": { "unitId": 1, "unitCode": "K1" },
-  "beds": { "operationalCapacity": 600, "occupied": 512, "held": 18, "free": 70, "inMaintenanceRooms": 12 },
-  "unpaid": { "roomFeeAmount": 54000000, "utilityAmount": 8400000, "overdueInvoiceCount": 31 },
-  "deposits": { "topUpOutstandingAmount": 1250000, "overdueTopUpCount": 4 },
-  "tickets": { "OPEN": 5, "ASSIGNED": 3, "IN_PROGRESS": 7, "RESOLVED": 2 },
-  "contracts": { "expiring": 14, "overdueMoveOut": 2, "pendingActivation": 18 },
-  "roomsWithoutLeader": 6,
-  "charts": {
-    "occupancyByBuilding": [ { "buildingCode": "K1", "occupied": 512, "capacity": 600 } ],
-    "unpaidBySemester": [ { "semesterName": "HK1 2026-2027", "amount": 54000000 } ]
-  }
+  "managementUnitId": 1, "unitName": "K1",
+  "capacity": { "operationalBeds": 600, "occupiedBeds": 512, "availableBeds": 70,
+                "maintenanceBeds": 12, "occupancyRate": 85.3 },
+  "finance": { "totalUnpaidAmount": 62400000, "unpaidRoomFeeAmount": 54000000,
+               "unpaidUtilityAmount": 8400000, "totalTopupNeededAmount": 1250000 },
+  "operations": { "roomsMissingLeader": 6, "contractsExpiringSoon": 14,
+                  "contractsOverdueMoveout": 2, "ticketsByStatus": { "OPEN": 5, "CLOSED": 3 } }
 }
-```
+~~~
 
-`occupancy rate = occupied / operationalCapacity`; giường trong phòng bảo trì không nằm trong `operationalCapacity`, hiển thị riêng (FR-NOT-05). `charts` phục vụ FR-NOT-06 (đường cắt ✂: nếu cắt thì trả `charts: null`).
+occupiedBeds chỉ đếm STAY đang mở trên giường ACTIVE trong phòng ACTIVE. availableBeds loại cả HOLD và STAY. Tỷ lệ occupiedBeds / operationalBeds không tính giường không khai thác; maintenanceBeds là giường trong phòng bảo trì. Ngưỡng sắp hết hạn lấy contract.expiring_days qua ConfigService. Nợ phí phòng lọc theo đơn vị và học kỳ của hóa đơn, không dựa trên chỗ ở hiện tại. Dashboard ghép Service công khai của room, billing, contract và maintenance, không truy vấn trực tiếp bảng của các module đó. Biểu đồ FR-NOT-06 chưa nằm trong response hiện tại.
 
 ---
 
@@ -1161,7 +1160,12 @@ Mã bổ sung cho Keycloak:
 | `ADJUSTMENT_INVALID` | 409 | Chỉ điều chỉnh hóa đơn đã thanh toán, ghi vào hóa đơn chưa thanh toán của cùng sinh viên / phòng; tổng sau điều chỉnh không được âm ({totalAfter} đ) |
 | `TOPUP_EXCEEDS_REQUIRED` | 409 | Số tiền bù vượt quá số cần bù ({topUpRequired} đ) |
 | `NO_TOPUP_REQUIRED` | 409 | Hợp đồng không có khoản cần bù cọc |
-| `DEPOSIT_INVALID` | 409 | Giao dịch tiền cọc không hợp lệ (bắt từ ràng buộc CSDL) |
+| DEPOSIT_INVALID | 409 | Trạng thái hợp đồng/số tiền thu cọc không hợp lệ hoặc vi phạm CHECK sổ cọc |
+| DUPLICATE_DEPOSIT | 409 | Hợp đồng đã thu cọc ban đầu |
+| DUPLICATE_DEDUCTION | 409 | Ticket đã được trừ cọc cho hợp đồng |
+| DUPLICATE_REFUND | 409 | Hợp đồng đã hoàn cọc |
+| REFUND_EXCEEDS_BALANCE | 409 | Số tiền hoàn vượt số dư |
+| CONTRACT_NOT_ACTIVE | 409 | Hợp đồng không ACTIVE để nộp bù cọc |
 
 ### 5.8. Ánh xạ ràng buộc CSDL → `errorCode`
 
@@ -1175,7 +1179,11 @@ Theo `DB-Design-DMS.md` mục 4; `GlobalExceptionHandler` đọc tên ràng bu�
 | `UNIQUE(student_id, period_id)` của `room_application` | `APPLICATION_EXISTS` |
 | `UNIQUE(room_id, meter_type, billing_month)`, CHECK chỉ số | `READING_INVALID` |
 | Hai partial unique index của `invoice` | `DUPLICATE_INVOICE` |
-| CHECK / UNIQUE của `deposit_transaction` | `DEPOSIT_INVALID` |
+| CHECK của deposit_transaction | DEPOSIT_INVALID |
+| ux_deposit_once | DUPLICATE_DEPOSIT |
+| ux_refund_once | DUPLICATE_REFUND |
+| ux_deduction_ticket | DUPLICATE_DEDUCTION |
+| Khóa ngoại không tồn tại khi ghi sổ cọc | VALIDATION_FAILED (400) |
 | CHECK nguyên nhân, chi phí của `maintenance_request` | `COST_INVALID` |
 | `CHECK (total_amount >= 0)` của `invoice` | `ADJUSTMENT_INVALID` |
 | `EXCLUDE` của `semester` | `SEMESTER_OVERLAP` |
@@ -1337,3 +1345,9 @@ Service Impl vẫn giữ kiểm tra quyền cho lời gọi nội bộ, phạm v
 `/api/auth/me.permissions` đọc quyền CSDL hiện hành, ADMIN luôn có toàn bộ danh mục 106 mã. Thay đổi ảnh hưởng mọi tài khoản cùng role trên cùng database DMS. Các máy dùng database riêng vẫn có ma trận riêng dù cùng dùng Keycloak; muốn đồng bộ quyền phải dùng chung backend/database.
 
 Cập nhật (bản 0.11, 15/10/2026): Thêm hành động `APPROVE` và mã quyền `ROOM_TRANSFER_APPROVE` vào catalogue phân quyền, nâng tổng số quyền từ 105 lên **106** mã. Migration `V6__room_transfer_approve_permission.sql` bổ sung mã này vào danh sách quyền của role STAFF trong `role_permission_matrix`, nâng số quyền mặc định của STAFF từ 72 lên **73** quyền. Dòng change log bản 0.9 ghi nhận lịch sử 105 quyền tại thời điểm áp dụng V5 và được giữ nguyên.
+
+### Ghi chú triển khai PR #13 (25/10/2026)
+
+- Balance trả allowedActions theo quyền DEPOSIT_CREATE, phạm vi ghi và trạng thái. deposit-topup chỉ cho ACTIVE còn thiếu cọc; deposit-refund chỉ cho EXPIRED/TERMINATED có số dư dương và chưa hoàn. Student và Staff đọc tổng hợp ngoài đơn vị nhận danh sách rỗng. Backend vẫn kiểm tra lại mọi action.
+- Các endpoint preview hóa đơn, báo cáo/export công nợ trong bảng thiết kế là kế hoạch, không phải endpoint đã triển khai. DebtQuery chỉ phục vụ lời gọi Service nội bộ; frontend không gọi /billing/debt/student/{id} hoặc /billing/debt/room/{id}.
+- Xác nhận thanh toán hiện nhận payerUserId hoặc payerName và paymentMethod; thời điểm xác nhận lấy từ server. paidAt/note trong ví dụ thiết kế 4.15 chưa phải field đầu vào của DTO hiện tại.

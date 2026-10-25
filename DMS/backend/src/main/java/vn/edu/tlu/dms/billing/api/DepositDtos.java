@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 /** DTO dữ liệu sổ cọc và giao dịch tiền cọc theo thiết kế SAD và SRS. */
 public final class DepositDtos {
@@ -34,7 +35,11 @@ public final class DepositDtos {
             Long topupNeeded,
             LocalDate oldestUnpaidDue,
             Boolean topupOverdue,
-            Long depositDebt) {}
+            Long depositDebt,
+            String contractCode,
+            String studentName,
+            String studentCode,
+            List<String> allowedActions) {}
 
     /** Yêu cầu thu tiền cọc ban đầu khi kích hoạt hợp đồng (FR-CON-01, BR-10). */
     public record InitialDepositRequest(
