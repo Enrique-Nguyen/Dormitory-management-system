@@ -70,7 +70,7 @@ export interface DepositBalance {
   studentName: string
   studentCode: string | null
   status: (typeof ContractStatus)[keyof typeof ContractStatus]
-  depositRequired: number
+  depositRequired: number | null
   balance: number
   topupNeeded: number
   oldestUnpaidDue: string | null
