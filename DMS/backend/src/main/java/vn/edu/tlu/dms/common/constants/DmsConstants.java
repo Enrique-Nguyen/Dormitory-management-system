@@ -68,6 +68,8 @@ public final class DmsConstants {
         public static final String READING_INVALID = "READING_INVALID";
         public static final String READING_LOCKED = "READING_LOCKED";
         public static final String REFUND_EXCEEDS_BALANCE = "REFUND_EXCEEDS_BALANCE";
+        public static final String TOPUP_EXCEEDS_REQUIRED = "TOPUP_EXCEEDS_REQUIRED";
+        public static final String NO_TOPUP_REQUIRED = "NO_TOPUP_REQUIRED";
         public static final String REQUEST_PENDING_EXISTS = "REQUEST_PENDING_EXISTS";
         public static final String RESOURCE_IN_USE = "RESOURCE_IN_USE";
         public static final String ROOM_CODE_EXISTS = "ROOM_CODE_EXISTS";
@@ -202,6 +204,7 @@ public final class DmsConstants {
         public static final String DEDUCTION_AMOUNT_POSITIVE = "Số tiền trừ cọc phải lớn hơn 0";
         public static final String TOPUP_AMOUNT_POSITIVE = "Số tiền bù cọc phải lớn hơn 0";
         public static final String REFUND_AMOUNT_POSITIVE = "Số tiền hoàn cọc phải lớn hơn 0";
+        public static final String REFUND_FULL_BALANCE_REQUIRED = "Phải hoàn toàn bộ số dư cọc còn lại";
         public static final String TOPUP_DUE_DATE_REQUIRED = "Hạn nộp bù cọc không được để trống";
         public static final String MAINTENANCE_REQUEST_REQUIRED =
                 "Mã ticket sửa chữa không được để trống";
@@ -1064,6 +1067,7 @@ public final class DmsConstants {
         public static final String DEPOSIT_TOPUP = "DEPOSIT_TOPUP";
         public static final String DEPOSIT_REFUND = "DEPOSIT_REFUND";
         public static final String INVOICE_BATCH_ISSUE = "INVOICE_BATCH_ISSUE";
+        public static final String INVOICE_CONFIRM_PAYMENT = "INVOICE_CONFIRM_PAYMENT";
 
         private AuditAction() {}
     }

@@ -19,10 +19,17 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.billing.api.InvoiceDtos;
+import vn.edu.tlu.dms.billing.api.UtilityReadingController.Input;
 import vn.edu.tlu.dms.billing.service.DebtQuery;
 import vn.edu.tlu.dms.billing.service.DepositService;
 import vn.edu.tlu.dms.billing.service.InvoiceService;
+import vn.edu.tlu.dms.billing.service.UtilityReadingService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.MeterType;
+import vn.edu.tlu.dms.common.constants.DmsConstants.PaymentMethod;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
@@ -43,6 +50,7 @@ import java.util.UUID;
 class DepositIntegrationTest {
 
     @Autowired DepositService depositService;
+    @Autowired UtilityReadingService readingService;
 
     @Autowired DebtQuery debtQuery;
     @Autowired InvoiceService invoiceService;
@@ -150,7 +158,7 @@ class DepositIntegrationTest {
         Long buildingId =
                 jdbc.queryForObject(
                         "INSERT INTO building(code, name, management_unit_id, deposit_amount)"
-                            + " VALUES(?, ?, ?, 1000000) RETURNING id",
+                                + " VALUES(?, ?, ?, 1000000) RETURNING id",
                         Long.class,
                         "B" + suffix,
                         "Building " + suffix,
@@ -159,14 +167,14 @@ class DepositIntegrationTest {
         Long roomTypeId =
                 jdbc.queryForObject(
                         "INSERT INTO room_type(name, bed_count, price_main, price_summer) VALUES(?,"
-                            + " 4, 1500000, 500000) RETURNING id",
+                                + " 4, 1500000, 500000) RETURNING id",
                         Long.class,
                         "T4-" + suffix);
 
         roomId =
                 jdbc.queryForObject(
                         "INSERT INTO room(building_id, room_type_id, code, floor, gender, status)"
-                            + " VALUES(?, ?, '101', 1, 'M', 'ACTIVE') RETURNING id",
+                                + " VALUES(?, ?, '101', 1, 'M', 'ACTIVE') RETURNING id",
                         Long.class,
                         buildingId,
                         roomTypeId);
@@ -276,6 +284,7 @@ class DepositIntegrationTest {
 
     @Test
     void debtQuery_returnsAccurateDebts() {
+        depositService.collectInitial(contractId, 1000000L, "Thu cọc trước khi kiểm tra công nợ");
         // Ban đầu chưa có hóa đơn UNPAID và chưa có cọc âm
         var debt = debtQuery.getStudentDebt(studentId);
         assertThat(debt.hasDebt()).isFalse();
@@ -405,7 +414,7 @@ class DepositIntegrationTest {
         assertThat(
                         jdbc.queryForObject(
                                 "SELECT COUNT(*) FROM audit_log WHERE actor_id=? AND"
-                                    + " action='INVOICE_BATCH_ISSUE'",
+                                        + " action='INVOICE_BATCH_ISSUE'",
                                 Long.class,
                                 staffId))
                 .isEqualTo(2);
@@ -437,7 +446,7 @@ class DepositIntegrationTest {
         assertThat(invoiceService.issueRoomFee(semesterId).totalCreated()).isZero();
         jdbc.update(
                 "INSERT INTO summer_choice(contract_id,semester_id,choice,status)"
-                    + " VALUES(?,?,'STAY','APPROVED')",
+                        + " VALUES(?,?,'STAY','APPROVED')",
                 contractId,
                 semesterId);
         assertThat(invoiceService.issueRoomFee(semesterId).totalAmount()).isEqualTo(500000L);
@@ -473,7 +482,7 @@ class DepositIntegrationTest {
                 .isEqualTo(1);
         jdbc.update(
                 "UPDATE room_assignment_history SET kind='HOLD',stay_started_at=NULL WHERE"
-                    + " contract_id=?",
+                        + " contract_id=?",
                 contractId);
         assertThat(dashboardService.getSummary(unitId).capacity().occupiedBeds()).isZero();
         assertThat(dashboardService.getSummary(unitId).capacity().availableBeds()).isZero();
@@ -490,7 +499,7 @@ class DepositIntegrationTest {
         invoiceService.issueRoomFee(semesterId);
         jdbc.update(
                 "UPDATE room_assignment_history SET"
-                    + " ended_at=CURRENT_TIMESTAMP,end_reason='MOVE_OUT' WHERE contract_id=?",
+                        + " ended_at=CURRENT_TIMESTAMP,end_reason='MOVE_OUT' WHERE contract_id=?",
                 contractId);
         assertThat(dashboardService.getSummary(unitId).finance().unpaidRoomFeeAmount())
                 .isEqualTo(1500000L);
@@ -500,10 +509,86 @@ class DepositIntegrationTest {
         return LocalDate.now().withDayOfMonth(1);
     }
 
+    @Test
+    void topupAllowsPartialPaymentButRejectsExcessAndUnneededPayment() {
+        depositService.collectInitial(contractId, 1000000L, "Thu cọc");
+        depositService.deduct(
+                contractId, ticketId, 200000L, LocalDate.now().plusDays(7), "Khấu trừ");
+        depositService.topup(contractId, 50000L, "Bù một phần");
+        assertThat(debtQuery.getStudentDebt(studentId).depositDebt()).isEqualTo(150000L);
+        assertThatThrownBy(() -> depositService.topup(contractId, 150001L, "Thu vượt"))
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.TOPUP_EXCEEDS_REQUIRED);
+        depositService.topup(contractId, 150000L, "Bù đủ");
+        assertThatThrownBy(() -> depositService.topup(contractId, 1L, "Không cần bù"))
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NO_TOPUP_REQUIRED);
+        assertThat(depositService.getBalance(contractId).balance()).isEqualTo(1000000L);
+    }
+
+    @Test
+    void refundRejectsPartialSettlementBeforeFullRefund() {
+        depositService.collectInitial(contractId, 1000000L, "Thu cọc");
+        jdbc.update("UPDATE dormitory_contract SET status='TERMINATED' WHERE id=?", contractId);
+        assertThatThrownBy(() -> depositService.refund(contractId, 1L, "Hoàn thiếu"))
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.VALIDATION_FAILED);
+        assertThat(depositService.listTransactions(contractId)).hasSize(1);
+        depositService.refund(contractId, 1000000L, "Tất toán");
+        assertThat(depositService.getBalance(contractId).balance()).isZero();
+    }
+
+    @Test
+    void confirmPaymentWritesOneAuditAndRejectsRepeatedConfirmation() {
+        prepareStay();
+        invoiceService.issueRoomFee(semesterId);
+        Long id =
+                jdbc.queryForObject(
+                        "SELECT id FROM invoice WHERE student_id=?", Long.class, studentId);
+        var input = new InvoiceDtos.Payment(null, "Người nộp kiểm thử", PaymentMethod.CASH);
+        var paid = invoiceService.confirmPayment(id, input);
+        assertThat(paid.status()).isEqualTo(InvoiceStatus.PAID);
+        assertThat(paid.paidAt()).isNotNull();
+        assertThatThrownBy(() -> invoiceService.confirmPayment(id, input))
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVOICE_ALREADY_PAID);
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM audit_log WHERE action=? AND entity_id=?",
+                                Long.class,
+                                AuditAction.INVOICE_CONFIRM_PAYMENT,
+                                id))
+                .isEqualTo(1L);
+    }
+
+    @Test
+    void readingWithFollowingMonthHasNoEditActionsAndCannotBeDeleted() {
+        prepareReadings(false);
+        Long id =
+                jdbc.queryForObject(
+                        "SELECT id FROM utility_reading WHERE room_id=?", Long.class, roomId);
+        readingService.saveOrUpdate(
+                new Input(
+                        roomId,
+                        MeterType.ELECTRIC,
+                        billingMonth().plusMonths(1),
+                        null,
+                        20,
+                        null,
+                        null,
+                        null));
+        var row = readingService.getReading(id);
+        assertThat((java.util.List<?>) row.get("allowedActions")).isEmpty();
+        assertThatThrownBy(() -> readingService.deleteUnusedReading(id))
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.READING_HAS_FOLLOWING_MONTH);
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM utility_reading WHERE room_id=?",
+                                Long.class,
+                                roomId))
+                .isEqualTo(2L);
+    }
+
     private void prepareStay() {
         jdbc.update(
                 "UPDATE semester SET start_date=CURRENT_DATE-10,end_date=CURRENT_DATE+30 WHERE"
-                    + " id=?",
+                        + " id=?",
                 semesterId);
         Long bedId =
                 jdbc.queryForObject(
@@ -524,7 +609,7 @@ class DepositIntegrationTest {
     private void prepareReadings(boolean water) {
         jdbc.update(
                 "INSERT INTO utility_rate(meter_type,unit_price,effective_from,created_by)"
-                    + " VALUES('ELECTRIC',3000,?,?),('WATER',10000,?,?)",
+                        + " VALUES('ELECTRIC',3000,?,?),('WATER',10000,?,?)",
                 billingMonth(),
                 staffId,
                 billingMonth(),

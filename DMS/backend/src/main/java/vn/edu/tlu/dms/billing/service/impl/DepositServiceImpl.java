@@ -238,6 +238,13 @@ public class DepositServiceImpl implements DepositService {
             throw BusinessException.conflict(ErrorCode.CONTRACT_NOT_ACTIVE);
         }
 
+        if (balance.topupNeeded() <= 0) {
+            throw BusinessException.conflict(ErrorCode.NO_TOPUP_REQUIRED);
+        }
+        if (amount > balance.topupNeeded()) {
+            throw BusinessException.conflict(ErrorCode.TOPUP_EXCEEDS_REQUIRED);
+        }
+
         Long actorId = currentUser.get().id();
         OffsetDateTime now = OffsetDateTime.now();
 
@@ -290,6 +297,10 @@ public class DepositServiceImpl implements DepositService {
         }
         if (amount > balance.balance()) {
             throw BusinessException.conflict(ErrorCode.REFUND_EXCEEDS_BALANCE);
+        }
+        if (!amount.equals(balance.balance())) {
+            throw BusinessException.invalid(
+                    ApiField.AMOUNT, ValidationMessage.REFUND_FULL_BALANCE_REQUIRED);
         }
 
         Long actorId = currentUser.get().id();

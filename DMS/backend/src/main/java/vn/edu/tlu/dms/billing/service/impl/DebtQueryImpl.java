@@ -37,15 +37,17 @@ public class DebtQueryImpl implements DebtQuery {
                         """
                         SELECT COALESCE(SUM(total_amount), 0)
                         FROM invoice
-                        WHERE student_id = ? AND type = 'ROOM_FEE' AND status = 'UNPAID'
+                        WHERE student_id = ? AND type = ? AND status = ?
                         """,
                         Long.class,
-                        studentId);
+                        studentId,
+                        InvoiceType.ROOM_FEE,
+                        InvoiceStatus.UNPAID);
 
         Long depositDebt =
                 jdbc.queryForObject(
                         """
-                        SELECT COALESCE(SUM(deposit_debt), 0)
+                        SELECT COALESCE(SUM(topup_needed + deposit_debt), 0)
                         FROM v_deposit_balance
                         WHERE student_id = ?
                         """,
@@ -71,10 +73,12 @@ public class DebtQueryImpl implements DebtQuery {
                         """
                         SELECT COALESCE(SUM(total_amount), 0)
                         FROM invoice
-                        WHERE room_id = ? AND type = 'UTILITY' AND status = 'UNPAID'
+                        WHERE room_id = ? AND type = ? AND status = ?
                         """,
                         Long.class,
-                        roomId);
+                        roomId,
+                        InvoiceType.UTILITY,
+                        InvoiceStatus.UNPAID);
 
         long utility = unpaidUtility != null ? unpaidUtility : 0L;
         return new RoomDebt(roomId, utility, utility > 0);
