@@ -222,6 +222,14 @@ public class InvoiceServiceImpl implements InvoiceService {
                 InvoiceStatus.PAID,
                 currentUser.get().id(),
                 null);
+        audit.record(
+                currentUser.get().id(),
+                AuditAction.INVOICE_CONFIRM_PAYMENT,
+                EntityType.INVOICE,
+                id,
+                Map.of(ApiField.STATUS, InvoiceStatus.UNPAID),
+                Map.of(ApiField.STATUS, InvoiceStatus.PAID),
+                null);
         return toInvoiceResponse(invoice, true);
     }
 

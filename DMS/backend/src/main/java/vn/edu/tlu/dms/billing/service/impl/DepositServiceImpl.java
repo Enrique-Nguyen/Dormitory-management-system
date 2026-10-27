@@ -298,6 +298,10 @@ public class DepositServiceImpl implements DepositService {
         if (amount > balance.balance()) {
             throw BusinessException.conflict(ErrorCode.REFUND_EXCEEDS_BALANCE);
         }
+        if (!amount.equals(balance.balance())) {
+            throw BusinessException.invalid(
+                    ApiField.AMOUNT, ValidationMessage.REFUND_FULL_BALANCE_REQUIRED);
+        }
 
         Long actorId = currentUser.get().id();
         OffsetDateTime now = OffsetDateTime.now();

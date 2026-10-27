@@ -78,8 +78,11 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
         args.add(LikePattern.contains(input.q()));
         String sql =
                 "SELECT ur.*,r.code AS room_code,EXISTS(SELECT 1 FROM invoice_item ii WHERE"
-                    + " ii.utility_reading_id=ur.id) AS invoiced FROM utility_reading ur JOIN room"
-                    + " r ON r.id=ur.room_id JOIN building bd ON bd.id=r.building_id WHERE "
+                    + " ii.utility_reading_id=ur.id) AS invoiced,EXISTS(SELECT 1 FROM"
+                    + " utility_reading later WHERE later.room_id=ur.room_id AND"
+                    + " later.meter_type=ur.meter_type AND later.billing_month>ur.billing_month) AS"
+                    + " has_following_month FROM utility_reading ur JOIN room r ON r.id=ur.room_id"
+                    + " JOIN building bd ON bd.id=r.building_id WHERE "
                         + scope
                         + " AND r.code ILIKE ?";
         if (input.billingMonth() != null) {
@@ -120,14 +123,18 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
         var row =
                 queries.one(
                         "SELECT ur.*,EXISTS(SELECT 1 FROM invoice_item ii WHERE"
-                            + " ii.utility_reading_id=ur.id) AS invoiced FROM utility_reading ur"
-                            + " WHERE ur.id=?",
+                            + " ii.utility_reading_id=ur.id) AS invoiced,EXISTS(SELECT 1 FROM"
+                            + " utility_reading later WHERE later.room_id=ur.room_id AND"
+                            + " later.meter_type=ur.meter_type AND"
+                            + " later.billing_month>ur.billing_month) AS has_following_month FROM"
+                            + " utility_reading ur WHERE ur.id=?",
                         id);
         Long roomId = ((Number) row.get("roomId")).longValue();
         guard.requireReadableUnit(rooms.getRoomLocation(roomId).unitId());
         row.put(
                 "allowedActions",
                 !Boolean.TRUE.equals(row.get("invoiced"))
+                                && !Boolean.TRUE.equals(row.get("hasFollowingMonth"))
                                 && (current.get().isAdmin()
                                         || rooms.getRoomLocation(roomId)
                                                 .unitId()
@@ -286,6 +293,10 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
     public void deleteUnusedReading(Long id) {
         guard.requirePermission(Permission.UTILITY_READING_DELETE);
         guard.requireRole(Role.STAFF);
+        var initial = getReading(id);
+        Long roomId = ((Number) initial.get("roomId")).longValue();
+        guard.requireUnit(rooms.getRoomLocation(roomId).unitId());
+        jdbc.queryForObject("SELECT id FROM room WHERE id=? FOR UPDATE", Long.class, roomId);
         lockReading(id);
         var row = getReading(id);
         requireEditable(row);

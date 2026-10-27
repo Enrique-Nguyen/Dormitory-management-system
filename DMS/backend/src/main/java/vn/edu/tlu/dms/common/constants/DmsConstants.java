@@ -62,7 +62,6 @@ public final class DmsConstants {
         public static final String LEADER_ALREADY_ASSIGNED = "LEADER_ALREADY_ASSIGNED";
         public static final String LEADER_NOT_STAYING = "LEADER_NOT_STAYING";
         public static final String METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED";
-        public static final String NO_TOPUP_REQUIRED = "NO_TOPUP_REQUIRED";
         public static final String NO_HOLD_ASSIGNMENT = "NO_HOLD_ASSIGNMENT";
         public static final String APPLICATION_NOT_APPROVED = "APPLICATION_NOT_APPROVED";
         public static final String MOVE_OUT_WARNINGS_NOT_ACKNOWLEDGED =
@@ -81,6 +80,7 @@ public final class DmsConstants {
         public static final String READING_INVALID = "READING_INVALID";
         public static final String READING_LOCKED = "READING_LOCKED";
         public static final String REFUND_EXCEEDS_BALANCE = "REFUND_EXCEEDS_BALANCE";
+        public static final String NO_TOPUP_REQUIRED = "NO_TOPUP_REQUIRED";
         public static final String REQUEST_PENDING_EXISTS = "REQUEST_PENDING_EXISTS";
         public static final String RESOURCE_IN_USE = "RESOURCE_IN_USE";
         public static final String ROOM_CODE_EXISTS = "ROOM_CODE_EXISTS";
@@ -255,6 +255,7 @@ public final class DmsConstants {
         public static final String DEDUCTION_AMOUNT_POSITIVE = "Số tiền trừ cọc phải lớn hơn 0";
         public static final String TOPUP_AMOUNT_POSITIVE = "Số tiền bù cọc phải lớn hơn 0";
         public static final String REFUND_AMOUNT_POSITIVE = "Số tiền hoàn cọc phải lớn hơn 0";
+        public static final String REFUND_FULL_BALANCE_REQUIRED = "Phải hoàn toàn bộ số dư cọc còn lại";
         public static final String TOPUP_DUE_DATE_REQUIRED = "Hạn nộp bù cọc không được để trống";
         public static final String MAINTENANCE_REQUEST_REQUIRED =
                 "Mã ticket sửa chữa không được để trống";
@@ -1179,6 +1180,7 @@ public final class DmsConstants {
         public static final String DEPOSIT_TOPUP = "DEPOSIT_TOPUP";
         public static final String DEPOSIT_REFUND = "DEPOSIT_REFUND";
         public static final String INVOICE_BATCH_ISSUE = "INVOICE_BATCH_ISSUE";
+        public static final String INVOICE_CONFIRM_PAYMENT = "INVOICE_CONFIRM_PAYMENT";
         public static final String MAINTENANCE_CONCLUDE = "MAINTENANCE_CONCLUDE";
         public static final String CONTRACT_MOVE_OUT = "CONTRACT_MOVE_OUT";
         public static final String STORAGE_CREATE = "STORAGE_CREATE";
