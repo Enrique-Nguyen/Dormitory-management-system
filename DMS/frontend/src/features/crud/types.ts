@@ -21,7 +21,27 @@ export interface CrudField {
   /** Kiểu JSON của bộ lọc khi control/URL giữ giá trị dạng chuỗi. */
   filterValueType?: 'string' | 'number' | 'boolean'
   visibleWhen?: { field: string; value: string }
+  /** Gợi ý ngắn dưới trường nhập; nội dung tĩnh khai tại registry tài nguyên. */
+  hint?: string
 }
+
+/** Cách hiển thị cột danh sách; dữ liệu vẫn lấy nguyên từ API. */
+export type CrudColumnFormat = 'money' | 'number' | 'date' | 'datetime' | 'month'
+
+export interface CrudColumn {
+  key: string
+  label: string
+  format?: CrudColumnFormat
+  align?: 'left' | 'center' | 'right'
+}
+
+/** Nhóm trường trong form thêm/sửa; thứ tự nhóm theo khai báo. */
+export interface CrudFormSection {
+  title: string
+  note?: string
+  fields: string[]
+}
+
 /** Mỗi màn chỉ khai báo API và trường được ghi; mẫu trang dùng chung không tự suy ra nghiệp vụ. */
 export interface CrudResource {
   title: string
@@ -35,12 +55,23 @@ export interface CrudResource {
   createDefaults?: Record<string, unknown>
   /** Bộ lọc POST search-by-page; chỉ gửi các tên được màn khai báo. */
   filters?: CrudField[]
-  columns: { key: string; label: string }[]
+  columns: CrudColumn[]
   /** Trường chỉ hiện ở chi tiết, không được đưa vào payload thêm/sửa. */
   detailColumns?: { key: string; label: string }[]
   /** Dùng dữ liệu danh sách cho form khi tài nguyên không có API chi tiết riêng. */
   useListRecordForEdit?: boolean
   note?: string
+  /** Nhãn mô tả ngắn dưới tiêu đề màn danh sách. */
+  subtitle?: string
+  /** Nhãn nút tạo mới; mặc định do trang dùng chung đặt. */
+  createLabel?: string
+  searchPlaceholder?: string
+  emptyTitle?: string
+  emptyHint?: string
+  /** Nhóm trường trong form; trường không khai báo hiển thị ở nhóm còn lại. */
+  formSections?: CrudFormSection[]
+  /** Màn Tài chính dùng khung trình bày thống nhất cho danh sách và hộp thoại. */
+  finance?: boolean
   editStates?: string[]
   deleteLabel?: string
   deleteAction?: string

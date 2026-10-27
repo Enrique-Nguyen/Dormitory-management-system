@@ -72,7 +72,8 @@ export default function ResponsiveTable<T extends object>({
     )
   }
 
-  if (loading) return <Skeleton active paragraph={{ rows: 4 }} />
+  if (loading)
+    return <Skeleton active paragraph={{ rows: 4 }} className="dms-skeleton" />
   if (!data || data.length === 0)
     return <EmptyState title={emptyTitle} description={emptyDescription} />
 
@@ -164,7 +165,7 @@ export default function ResponsiveTable<T extends object>({
                       </span>
                       <span
                         style={{
-                          textAlign: 'right',
+                          textAlign: 'left',
                           fontWeight: 500,
                           fontSize: 13,
                         }}
