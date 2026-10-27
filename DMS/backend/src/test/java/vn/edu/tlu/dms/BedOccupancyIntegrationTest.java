@@ -376,7 +376,8 @@ class BedOccupancyIntegrationTest {
         Long applicant = createStudent("M");
         Long application = createApplication(applicant, "APPROVED", preferredType);
 
-        List<AvailableRoom> rooms = roomService.findAvailableBeds(application, null, null, null);
+        List<AvailableRoom> rooms =
+                fixtureRooms(roomService.findAvailableBeds(application, null, null, null));
 
         assertThat(rooms).extracting(r -> r.room().id()).containsExactly(roomB, roomA);
         assertThat(rooms.get(0).matchesPreferredType()).isTrue();
@@ -403,7 +404,8 @@ class BedOccupancyIntegrationTest {
                         contract,
                         "Muốn đổi phòng");
 
-        List<AvailableRoom> rooms = roomService.findAvailableBeds(null, request, null, null);
+        List<AvailableRoom> rooms =
+                fixtureRooms(roomService.findAvailableBeds(null, request, null, null));
 
         assertThat(rooms)
                 .flatExtracting(AvailableRoom::freeBeds)
@@ -707,6 +709,18 @@ class BedOccupancyIntegrationTest {
                 contract,
                 bed,
                 staffId);
+    }
+
+    /**
+     * Giới hạn danh sách giường khả dụng về các phòng do fixture tạo. Đơn vị K1 trên CSDL local còn
+     * phòng của dữ liệu mẫu nên không so được danh sách tuyệt đối; trên PostgreSQL sạch bộ lọc này
+     * là phép chiếu đồng nhất, thứ tự nhóm và các phòng loại trừ vẫn kiểm tra nguyên trạng.
+     */
+    private List<AvailableRoom> fixtureRooms(List<AvailableRoom> rooms) {
+        List<Long> fixtureRoomIds = List.of(roomA, roomB, femaleRoom, otherUnitRoom);
+        return rooms.stream()
+                .filter(room -> fixtureRoomIds.contains(room.room().id()))
+                .toList();
     }
 
     private Long createStudent(String gender) {

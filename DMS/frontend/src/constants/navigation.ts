@@ -102,6 +102,11 @@ export function permissionsForPath(path: string): Permission[] {
     ],
     summer: [Permission.SUMMER_REGISTRATION_READ],
     storage: [Permission.STORAGE_READ],
+    extensions: [Permission.CONTRACT_EXTENSION_READ],
+    'pending-items': [
+      Permission.ROOM_APPLICATION_READ,
+      Permission.CONTRACT_READ,
+    ],
     'utilities/prices': [Permission.UTILITY_RATE_READ],
     utilities: [Permission.UTILITY_READING_READ],
     invoices: [Permission.INVOICE_READ],
@@ -110,6 +115,7 @@ export function permissionsForPath(path: string): Permission[] {
     maintenance: [Permission.MAINTENANCE_READ],
     tasks: [Permission.MAINTENANCE_READ],
     notifications: [Permission.NOTIFICATION_READ],
+    inbox: [Permission.NOTIFICATION_READ],
     'room-types': [Permission.ROOM_TYPE_READ],
     semesters: [Permission.SEMESTER_READ],
     'registration-periods': [Permission.REGISTRATION_PERIOD_READ],
@@ -151,12 +157,24 @@ export const roleLabel: Record<Role, string> = {
   [Role.ADMIN]: 'Quản trị viên',
 }
 
-/** Mục "Yêu cầu chờ xử lý" mang badge số lượng (UI 4.2). */
+/** Trang tab yêu cầu theo loại; các màn chi tiết dùng làm đích "quay lại danh sách". */
 export const STAFF_REQUESTS_PATH = '/staff/requests'
+
+/** Mục "Yêu cầu chờ xử lý" tổng hợp mọi loại việc cần xét duyệt (UI 22A), có badge số lượng. */
+export const STAFF_PENDING_ITEMS_PATH = '/staff/pending-items'
+
+/** Hộp thư thông báo dùng chung cho Staff và Admin (chuông trên topbar mở vào đây). */
+export const STAFF_INBOX_PATH = '/staff/inbox'
 
 /** Màn nghiệp vụ chi tiết (TV2): route, link từ danh sách CRUD và breadcrumb dùng chung. */
 export const STAFF_ROOMS_PATH = '/staff/rooms'
 export const STAFF_TRANSFERS_PATH = '/staff/transfers'
+
+/** Màn chi tiết nghiệp vụ TV3: danh sách CRUD và link mở bản ghi dùng chung một hằng số. */
+export const STAFF_APPLICATIONS_PATH = '/staff/applications'
+export const STAFF_CONTRACTS_PATH = '/staff/contracts'
+export const STAFF_EXTENSIONS_PATH = '/staff/extensions'
+export const STAFF_SUMMER_PATH = '/staff/summer'
 
 /** Admin dùng lại màn quản lý của Staff dưới cổng `/admin`; Staff giữ nguyên đường dẫn. */
 export function portalPath(role: Role | undefined, staffPath: string) {
@@ -167,6 +185,10 @@ export function portalPath(role: Role | undefined, staffPath: string) {
 
 export const STUDENT_REQUESTS_PATH = '/student/requests'
 export const STUDENT_TRANSFERS_PATH = `${STUDENT_REQUESTS_PATH}/transfers`
+export const STUDENT_EXTENSIONS_PATH = `${STUDENT_REQUESTS_PATH}/extensions`
+export const STUDENT_APPLICATIONS_PATH = '/student/applications'
+export const STUDENT_CONTRACTS_PATH = '/student/contracts'
+export const STUDENT_SUMMER_PATH = '/student/summer'
 
 /** Danh mục phục vụ nghiệp vụ, dùng chung giữa cổng quản lý và cổng quản trị. */
 const catalogNav: NavGroup = {
@@ -182,17 +204,17 @@ export const staffNav: NavGroup[] = [
   {
     items: [
       item('Dashboard', '/staff/dashboard', DashboardOutlined),
-      item('Yêu cầu chờ xử lý', STAFF_REQUESTS_PATH, ClockCircleOutlined),
+      item('Yêu cầu chờ xử lý', STAFF_PENDING_ITEMS_PATH, ClockCircleOutlined),
     ],
   },
   {
     title: 'Quản lý',
     items: [
-      item('Đơn đăng ký', '/staff/applications', FileTextOutlined),
+      item('Đơn đăng ký', STAFF_APPLICATIONS_PATH, FileTextOutlined),
       item('Phòng & Giường', STAFF_ROOMS_PATH, HomeOutlined),
       item('Sinh viên', '/staff/students', TeamOutlined),
-      item('Hợp đồng', '/staff/contracts', SolutionOutlined),
-      item('Kỳ hè', '/staff/summer', InboxOutlined),
+      item('Hợp đồng', STAFF_CONTRACTS_PATH, SolutionOutlined),
+      item('Kỳ hè', STAFF_SUMMER_PATH, InboxOutlined),
       item('Kho gửi đồ', '/staff/storage', InboxOutlined),
     ],
   },
@@ -209,7 +231,7 @@ export const staffNav: NavGroup[] = [
     title: 'Vận hành',
     items: [
       item('Sửa chữa', '/staff/maintenance', ToolOutlined),
-      item('Thông báo', '/staff/notifications', BellOutlined),
+      item('Thông báo', STAFF_INBOX_PATH, BellOutlined),
     ],
   },
   catalogNav,
@@ -256,9 +278,12 @@ export const adminNav: NavGroup[] = [
   },
 ]
 
-/** Bottom nav sinh viên trên mobile (UI 4.1). Tab "Báo hỏng" chỉ bật khi đang ở. */
+/** Màn báo hỏng của sinh viên và danh sách việc của kỹ thuật viên (UI 21). */
+export const STAFF_MAINTENANCE_PATH = '/staff/maintenance'
 export const STUDENT_MAINTENANCE_PATH = '/student/maintenance'
+export const TECHNICIAN_TASKS_PATH = '/technician/tasks'
 
+/** Bottom nav sinh viên trên mobile (UI 4.1). Tab "Báo hỏng" chỉ bật khi đang ở. */
 export const studentBottomNav: NavItem[] = [
   item('Home', '/student', HomeOutlined),
   item('Phòng', '/student/room', HomeOutlined),

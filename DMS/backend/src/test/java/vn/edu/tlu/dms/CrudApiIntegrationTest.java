@@ -61,6 +61,10 @@ import java.util.UUID;
 @Transactional
 class CrudApiIntegrationTest {
 
+    /** Khóa bộ lọc search-by-page phải gửi đi dưới dạng số nguyên dài. */
+    private static final List<String> LONG_FILTERS =
+            List.of("page", "size", "managementUnitId", "actorId", "buildingId", "roomTypeId");
+
     @Autowired MockMvc mvc;
 
     @Autowired JdbcTemplate jdbc;
@@ -260,7 +264,11 @@ class CrudApiIntegrationTest {
     @Test
     void listsAndDetailsRespectUnitScopeAndAggregatePermissionDoesNotAllowWrites()
             throws Exception {
-        mvc.perform(searchByPage("/api/rooms").with(asUser(staffId, "STAFF")))
+        // Lọc theo roomTypeId của fixture (duy nhất mỗi lần chạy) để phạm vi đơn vị là yếu tố duy
+        // nhất quyết định số bản ghi, kể cả khi CSDL local đã có phòng mẫu trong cùng đơn vị.
+        mvc.perform(
+                        searchByPage("/api/rooms", "roomTypeId", roomTypeId)
+                                .with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
         mvc.perform(get("/api/rooms/" + otherRoomId).with(asUser(staffId, "STAFF")))
@@ -268,7 +276,9 @@ class CrudApiIntegrationTest {
                 .andExpect(jsonPath("$.errorCode").value("NOT_FOUND"));
         jdbc.update("UPDATE app_user SET cross_unit_access = true WHERE id = ?", staffId);
         entityManager.clear();
-        mvc.perform(searchByPage("/api/rooms").with(asUser(staffId, "STAFF")))
+        mvc.perform(
+                        searchByPage("/api/rooms", "roomTypeId", roomTypeId)
+                                .with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(2));
         mvc.perform(
@@ -428,7 +438,14 @@ class CrudApiIntegrationTest {
                         .getResponse()
                         .getContentAsString();
         Long id = mapper.readTree(created).get("id").asLong();
-        mvc.perform(searchByPage("/api/maintenance-requests").with(asUser(staffId, "STAFF")))
+        // Tìm theo đúng mã ticket vừa sinh để số bản ghi không phụ thuộc ticket mẫu của đơn vị
+        // trong CSDL local.
+        mvc.perform(
+                        searchByPage(
+                                        "/api/maintenance-requests",
+                                        "q",
+                                        mapper.readTree(created).get("code").asText())
+                                .with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
         mvc.perform(
@@ -459,25 +476,33 @@ class CrudApiIntegrationTest {
 
     @Test
     void notificationReadsAreIdempotentAndStudentsCannotPublish() throws Exception {
+        String title = "Thông báo " + suffix;
         Long id =
                 jdbc.queryForObject(
                         """
-                        INSERT INTO notification(scope,user_id,title,body,created_by) VALUES ('USER',?,'Thông báo','Nội dung',?) RETURNING id
+                        INSERT INTO notification(scope,user_id,title,body,created_by) VALUES ('USER',?,?,?,?) RETURNING id
                         """,
                         Long.class,
                         studentId,
+                        title,
+                        "Nội dung",
                         staffId);
-        mvc.perform(get("/api/notifications/unread-count").with(asUser(studentId, "STUDENT")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.count").value(1));
+        // Đếm theo hiệu trước/sau vì hộp thư sinh viên còn nhận tin mẫu (phạm vi ALL, FLOOR) từ
+        // CSDL local; đối tượng kiểm tra là đúng một tin chưa đọc của test bị ẩn khi đọc lặp lại.
+        long unreadBefore = unreadNotifications();
+        assertThat(unreadBefore).isGreaterThanOrEqualTo(1);
         for (int repeat = 0; repeat < 2; repeat++) {
             mvc.perform(
                             post("/api/notifications/" + id + "/read")
                                     .with(asUser(studentId, "STUDENT")))
                     .andExpect(status().isNoContent());
         }
-        mvc.perform(searchByPage("/api/notifications").with(asUser(studentId, "STUDENT")))
+        assertThat(unreadNotifications()).isEqualTo(unreadBefore - 1);
+        mvc.perform(
+                        searchByPage("/api/notifications", "q", title)
+                                .with(asUser(studentId, "STUDENT")))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.content[0].isRead").value(true));
         mvc.perform(
                         post("/api/notifications/save-or-update")
@@ -517,7 +542,11 @@ class CrudApiIntegrationTest {
                 contractId,
                 bedId,
                 staffId);
-        mvc.perform(searchByPage("/api/contracts").with(asUser(staffId, "STAFF")))
+        // Lọc theo mã hợp đồng/ hóa đơn của fixture để phép đếm chỉ tính dữ liệu test tạo, không
+        // cộng thêm hợp đồng, hóa đơn mẫu đang có trong đơn vị ở CSDL local.
+        mvc.perform(
+                        searchByPage("/api/contracts", "q", "HD-" + suffix)
+                                .with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
         mvc.perform(get("/api/contracts/" + contractId).with(asUser(otherStaffId, "STAFF")))
@@ -539,17 +568,23 @@ class CrudApiIntegrationTest {
                                 Long.class,
                                 periodId),
                         staffId);
-        mvc.perform(searchByPage("/api/invoices").with(asUser(staffId, "STAFF")))
+        mvc.perform(
+                        searchByPage("/api/invoices", "q", "HP-" + suffix)
+                                .with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
         mvc.perform(searchByPage("/api/me/invoices").with(asUser(studentId, "STUDENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
         // API tổng hợp của ADMIN xem toàn hệ thống; /me vẫn chỉ là dữ liệu của chính ADMIN.
-        mvc.perform(searchByPage("/api/contracts").with(asUser(adminId, "ADMIN")))
+        mvc.perform(
+                        searchByPage("/api/contracts", "q", "HD-" + suffix)
+                                .with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
-        mvc.perform(searchByPage("/api/invoices").with(asUser(adminId, "ADMIN")))
+        mvc.perform(
+                        searchByPage("/api/invoices", "q", "HP-" + suffix)
+                                .with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
         mvc.perform(searchByPage("/api/me/contracts").with(asUser(adminId, "ADMIN")))
@@ -615,7 +650,13 @@ class CrudApiIntegrationTest {
                                 Long.class,
                                 id))
                 .isZero();
-        mvc.perform(searchByPage("/api/contracts", "q", "HD-").with(asUser(staffId, "STAFF")))
+        // Tìm đúng mã hợp đồng API vừa sinh để phép đếm không dính hợp đồng mẫu trong đơn vị.
+        mvc.perform(
+                        searchByPage(
+                                        "/api/contracts",
+                                        "q",
+                                        mapper.readTree(result).get("code").asText())
+                                .with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
         mvc.perform(
@@ -739,7 +780,14 @@ class CrudApiIntegrationTest {
                                 .content(withId(invoiceId, "{\"totalAmount\":30000}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalAmount").value(30000));
-        mvc.perform(searchByPage("/api/invoices", "q", "DN-").with(asUser(staffId, "STAFF")))
+        // Dùng chính mã hóa đơn API sinh ra (thay vì tiền tố "DN-") để không đếm kèm hóa đơn điện
+        // nước mẫu của dữ liệu local.
+        mvc.perform(
+                        searchByPage(
+                                        "/api/invoices",
+                                        "q",
+                                        mapper.readTree(result).get("code").asText())
+                                .with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
         mvc.perform(delete("/api/invoices/" + invoiceId).with(asUser(staffId, "STAFF")))
@@ -2714,6 +2762,19 @@ class CrudApiIntegrationTest {
         return mapper.readTree(response).get("id").asLong();
     }
 
+    /** Số bản tin chưa đọc mà API unread-count trả về cho sinh viên của fixture. */
+    private long unreadNotifications() throws Exception {
+        String response =
+                mvc.perform(
+                                get("/api/notifications/unread-count")
+                                        .with(asUser(studentId, "STUDENT")))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        return mapper.readTree(response).get("count").asLong();
+    }
+
     /** Gửi bộ lọc dưới dạng JSON có kiểu; dữ liệu sai vẫn để API kiểm tra và trả 400. */
     private MockHttpServletRequestBuilder searchByPage(String base, Object... filters)
             throws Exception {
@@ -2725,8 +2786,7 @@ class CrudApiIntegrationTest {
             Object value = filters[index + 1];
             if ("sort".equals(key)) {
                 value = List.of(value.toString());
-            } else if (List.of("page", "size", "managementUnitId", "actorId", "buildingId")
-                    .contains(key)) {
+            } else if (LONG_FILTERS.contains(key)) {
                 value = Long.valueOf(value.toString());
             } else if ("locked".equals(key)
                     && List.of("true", "false").contains(value.toString())) {

@@ -34,6 +34,9 @@ public class ApplicationPriority {
     @Column(name = "verified_at")
     private OffsetDateTime verifiedAt;
 
+    @Column(name = "note")
+    private String note;
+
     public Long getApplicationId() {
         return applicationId;
     }
@@ -72,5 +75,13 @@ public class ApplicationPriority {
 
     public void setVerifiedAt(OffsetDateTime value) {
         this.verifiedAt = value;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String value) {
+        this.note = value;
     }
 }

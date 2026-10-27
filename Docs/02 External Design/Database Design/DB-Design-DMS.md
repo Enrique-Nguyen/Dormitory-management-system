@@ -1,8 +1,8 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.9**, 25/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.10**, 27/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.11 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
-> DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak, ma trận quyền động V5 và quyền V6; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
+> DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak, ma trận quyền động V5, quyền V6 và ghi chú xác minh diện ưu tiên V7; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
 
 ### Lịch sử thay đổi
@@ -18,6 +18,7 @@
 | 0.7 | 15/10/2026 | Ánh xạ ràng buộc CSDL theo code review, chặn sửa bed_count loại phòng đang dùng và hủy đơn đã có hợp đồng |
 | 0.9 | 25/10/2026 | PR #13: thống nhất ánh xạ unique index sổ cọc sang mã lỗi chuyên biệt, phân biệt FK/CHECK; tra cứu PENDING bằng LEFT JOIN từ hợp đồng, giữ nguyên V1–V6. |
 | 0.8 | 15/10/2026 | Bổ sung Flyway V6 cấp quyền ROOM_TRANSFER_APPROVE cho STAFF (STAFF=73, ADMIN=106); ghi chú JPA/Service: status_history entity_type='TRANSFER', lịch sử trưởng phòng từ audit_log (ROOM_LEADER_CHANGE), missingLeader tính động khi đọc |
+| 0.10 | 27/10/2026 | Flyway V7 thêm `application_priority.note VARCHAR(500)` lưu ghi chú của Staff khi xác nhận diện ưu tiên (FR-REG-06, hoàn thiện TV3); cột trả về ở `priorities[].note`. Kiểm tra quyền theo vai trò cho `POST /api/transfer-requests/{id}/approve\|reject` và phạm vi `GET /api/beds/available` ghi ở SAD/API Spec, không đổi schema |
 
 ---
 
@@ -34,7 +35,7 @@ DB và Keycloak không có transaction phân tán; rollback dùng thao tác bù,
 | Hạng mục | Lựa chọn | Ghi chú |
 |---|---|---|
 | DBMS | **PostgreSQL 16** | Theo SRS mục 2.5. Cần partial unique index, `EXCLUDE`, `JSONB`, generated column |
-| Migration | Flyway V1 tạo nghiệp vụ, V2 Spring Session, V3 `security_version`, V4 Keycloak, V5 ma trận quyền, V6 cấp `ROOM_TRANSFER_APPROVE` cho STAFF | Giữ nguyên V1–V4; snapshot SQL hiện tại không dùng để nâng cấp CSDL đã chạy. Hibernate `ddl-auto: validate` |
+| Migration | Flyway V1 tạo nghiệp vụ, V2 Spring Session, V3 `security_version`, V4 Keycloak, V5 ma trận quyền, V6 cấp `ROOM_TRANSFER_APPROVE` cho STAFF, V7 thêm `application_priority.note` | Giữ nguyên V1–V6; snapshot SQL hiện tại không dùng để nâng cấp CSDL đã chạy. Hibernate `ddl-auto: validate` |
 | Đặt tên | `snake_case`, số ít (`room`, `bed`) | `app_user` thay cho `user` vì `user` là từ khóa |
 | Khóa chính | `BIGINT GENERATED ALWAYS AS IDENTITY` | Mã hiển thị (HD-2026-0012, TK-1024) là cột `code` riêng, `UNIQUE` |
 | Mã hiển thị | Sequence riêng mỗi loại + hàm `fn_next_code` | Xem Q-DB-10 |
@@ -189,7 +190,7 @@ Mật khẩu chỉ lưu hash BCrypt; mật khẩu tạm trả một lần, khôn
 | `registration_quota` | Chỉ tiêu theo tòa | PK kép | FR-REG-01 |
 | `priority_category` | Diện ưu tiên + trọng số cấu hình được | | Q-07, FR-REG-05 |
 | `room_application` | Đơn đăng ký | `UNIQUE(student_id, period_id)`; REJECTED bắt buộc lý do. Đơn APPROVED chỉ được phép hủy khi chưa sinh hợp đồng PENDING hoặc ACTIVE liên kết (trả 409 `APPLICATION_HAS_CONTRACT`) | FR-REG-02..12 |
-| `application_priority` | Diện sinh viên khai và kết quả Staff xác nhận | `verified` NULL / TRUE / FALSE | FR-REG-06 |
+| `application_priority` | Diện sinh viên khai và kết quả Staff xác nhận (`verified`, `verified_by`, `verified_at`, `note`) | `verified` NULL / TRUE / FALSE | FR-REG-06 |
 
 ### 3.4. Hợp đồng, phân phòng, kỳ hè
 

@@ -14,7 +14,9 @@ import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.ReasonRequest;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
+import vn.edu.tlu.dms.registration.api.ApplicationDtos.AssignRequest;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Input;
+import vn.edu.tlu.dms.registration.api.ApplicationDtos.PriorityVerifyRequest;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Response;
 import vn.edu.tlu.dms.registration.service.RoomApplicationService;
 
@@ -76,5 +78,28 @@ public class RoomApplicationController {
     @PostMapping("/api/applications/{id}/cancel")
     public Response cancelApplication(@PathVariable Long id) {
         return service.performApplicationAction(id, BusinessAction.CANCEL, null);
+    }
+
+    @RequirePrivilege(Permission.ROOM_APPLICATION_UPDATE)
+    @PostMapping("/api/applications/{id}/assign")
+    public Response assignApplication(
+            @PathVariable Long id, @Valid @RequestBody AssignRequest input) {
+        return service.assignBed(id, input.bedId());
+    }
+
+    @RequirePrivilege(Permission.ROOM_APPLICATION_UPDATE)
+    @PostMapping("/api/applications/{id}/release-hold")
+    public Response releaseHold(
+            @PathVariable Long id, @Valid @RequestBody ReasonRequest input) {
+        return service.releaseHold(id, input.reason());
+    }
+
+    @RequirePrivilege(Permission.ROOM_APPLICATION_UPDATE)
+    @PostMapping("/api/applications/{id}/priorities/{categoryId}/verify")
+    public Response verifyPriority(
+            @PathVariable Long id,
+            @PathVariable Long categoryId,
+            @Valid @RequestBody PriorityVerifyRequest input) {
+        return service.verifyPriority(id, categoryId, input.verified(), input.note());
     }
 }

@@ -64,8 +64,27 @@ public class ContractCrudController {
 
     @RequirePrivilege(Permission.CONTRACT_EXTENSION_READ)
     @GetMapping("/api/extension-requests/{id}")
-    public Object getExtension(@PathVariable Long id) {
-        return service.getExtensionRequest(id);
+    public ContractDtos.ExtensionDetail getExtension(@PathVariable Long id) {
+        return service.getExtensionDetail(id);
+    }
+
+    @RequirePrivilege(Permission.CONTRACT_EXTENSION_UPDATE)
+    @PostMapping("/api/extension-requests/{id}/approve")
+    public ContractDtos.ExtensionDetail approveExtension(@PathVariable Long id) {
+        return service.approveExtension(id);
+    }
+
+    @RequirePrivilege(Permission.CONTRACT_EXTENSION_UPDATE)
+    @PostMapping("/api/extension-requests/{id}/reject")
+    public ContractDtos.ExtensionDetail rejectExtension(
+            @PathVariable Long id, @RequestBody ContractDtos.ExtensionRejectRequest input) {
+        return service.rejectExtension(id, input.reason());
+    }
+
+    @RequirePrivilege(Permission.CONTRACT_EXTENSION_DELETE)
+    @PostMapping("/api/extension-requests/{id}/cancel")
+    public ContractDtos.ExtensionDetail cancelExtension(@PathVariable Long id) {
+        return service.cancelExtension(id);
     }
 
     @RequirePrivilege({Permission.CONTRACT_EXTENSION_CREATE, Permission.CONTRACT_EXTENSION_UPDATE})

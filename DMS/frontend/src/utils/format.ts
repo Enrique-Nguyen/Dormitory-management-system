@@ -13,11 +13,6 @@ export function formatMoney(amount: number): string {
   return `${moneyFormat.format(amount)} đ`
 }
 
-/** Dòng sổ cọc: +1.000.000 đ / -200.000 đ */
-export function formatSignedMoney(amount: number): string {
-  return `${amount > 0 ? '+' : ''}${formatMoney(amount)}`
-}
-
 /** dd/MM/yyyy; giá trị rỗng hiện "—" */
 export function formatDate(value: DateInput): string {
   return value ? dayjs(value).format('DD/MM/YYYY') : '—'

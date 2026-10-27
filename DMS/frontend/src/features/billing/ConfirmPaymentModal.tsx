@@ -1,8 +1,9 @@
-import { Form, message } from 'antd'
+import { App, Form } from 'antd'
 import { Modal, Radio, RadioGroup, Input, Alert, FormGrid } from '../../components'
 import { PaymentMethod } from '../../constants/statusConfig'
 import { validationFieldErrors } from '../crud/api'
 import { CheckCircleOutlined, DollarOutlined, BankOutlined } from '@ant-design/icons'
+import { formatMoney } from '../../utils/format'
 import { useConfirmPayment } from './useBilling'
 
 interface Props {
@@ -20,6 +21,7 @@ export default function ConfirmPaymentModal({
   open,
   onClose,
 }: Props) {
+  const { message } = App.useApp()
   const [form] = Form.useForm()
   const confirmPayment = useConfirmPayment(invoiceId)
 
@@ -34,7 +36,7 @@ export default function ConfirmPaymentModal({
       form.resetFields()
       onClose()
     } catch (error) {
-      form.setFields(validationFieldErrors(error).map(({ field, message }) => ({ name: field, errors: [message] })))
+      form.setFields(validationFieldErrors(error).map((issue) => ({ name: issue.field, errors: [issue.message] })))
     }
   }
 
@@ -58,7 +60,7 @@ export default function ConfirmPaymentModal({
     >
       {totalAmount != null && (
         <Alert
-          message={`Số tiền cần thu: ${totalAmount.toLocaleString('vi-VN')} đ`}
+          title={`Số tiền cần thu: ${formatMoney(totalAmount)}`}
           type="info"
           showIcon
           style={{ marginBottom: 16, fontWeight: 600 }}

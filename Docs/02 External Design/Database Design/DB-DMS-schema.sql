@@ -197,6 +197,7 @@ CREATE TABLE application_priority (
     verified        BOOLEAN,                 -- NULL: chưa xác nhận; TRUE / FALSE: Staff xác nhận
     verified_by     BIGINT REFERENCES app_user(id),
     verified_at     TIMESTAMPTZ,
+    note            VARCHAR(500),            -- V7: ghi chú xác minh của Staff
     PRIMARY KEY (application_id, category_id)
 );
 

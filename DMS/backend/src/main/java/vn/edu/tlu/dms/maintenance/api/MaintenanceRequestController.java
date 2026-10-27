@@ -23,6 +23,8 @@ import vn.edu.tlu.dms.common.dto.ReasonRequest;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Assign;
+import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.ChargeableStudent;
+import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Conclude;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Note;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Response;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Save;
@@ -75,6 +77,19 @@ public class MaintenanceRequestController {
                                 ? MediaType.APPLICATION_OCTET_STREAM
                                 : MediaType.parseMediaType(type))
                 .body(new FileSystemResource(path));
+    }
+
+    @RequirePrivilege(Permission.MAINTENANCE_READ)
+    @GetMapping("/{id}/chargeable-students")
+    public List<ChargeableStudent> findChargeableStudents(@PathVariable Long id) {
+        return service.findChargeableStudents(id);
+    }
+
+    @RequirePrivilege(Permission.MAINTENANCE_UPDATE)
+    @PostMapping("/{id}/conclude")
+    public Response concludeMaintenanceRequest(
+            @PathVariable Long id, @Valid @RequestBody Conclude input) {
+        return service.conclude(id, input);
     }
 
     @RequirePrivilege(Permission.MAINTENANCE_UPDATE)

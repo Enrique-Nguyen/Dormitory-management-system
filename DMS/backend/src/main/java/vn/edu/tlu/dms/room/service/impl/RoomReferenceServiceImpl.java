@@ -62,6 +62,11 @@ public class RoomReferenceServiceImpl implements RoomReferenceService {
                 .getManagementUnitId();
     }
 
+    @Override
+    public Long getBuildingDepositAmount(Long id) {
+        return buildings.findById(id).orElseThrow(BusinessException::notFound).getDepositAmount();
+    }
+
     @Override()
     public void requireActiveRoomType(Long id) {
         if (id == null

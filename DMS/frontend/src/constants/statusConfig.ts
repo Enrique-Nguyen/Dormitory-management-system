@@ -255,6 +255,25 @@ export const ContractStatus = {
   PENDING: 'PENDING', ACTIVE: 'ACTIVE', EXPIRED: 'EXPIRED',
   TERMINATED: 'TERMINATED', CANCELLED: 'CANCELLED',
 } as const
+/** Trạng thái phòng khớp `DmsConstants.RoomStatus`. */
+export const RoomStatus = {
+  ACTIVE: 'ACTIVE', MAINTENANCE: 'MAINTENANCE', CLOSED: 'CLOSED',
+} as const
+/** Giới tính khai trên phòng khớp `DmsConstants.Gender`. */
+export const RoomGender = { M: 'M', F: 'F' } as const
+/** Trạng thái yêu cầu ở lại (gia hạn, chuyển phòng) khớp `DmsConstants.StayRequestStatus`. */
+export const StayRequestStatus = {
+  PENDING: 'PENDING', APPROVED: 'APPROVED', REJECTED: 'REJECTED', CANCELLED: 'CANCELLED',
+} as const
+/** Trạng thái lựa chọn hè khớp `DmsConstants.SummerStatus`. */
+export const SummerStatus = {
+  PENDING: 'PENDING', APPROVED: 'APPROVED', REJECTED: 'REJECTED',
+} as const
+/** Trạng thái phiếu bảo trì khớp `DmsConstants.MaintenanceStatus`. */
+export const MaintenanceStatus = {
+  OPEN: 'OPEN', ASSIGNED: 'ASSIGNED', IN_PROGRESS: 'IN_PROGRESS', RESOLVED: 'RESOLVED',
+  CLOSED: 'CLOSED', REJECTED: 'REJECTED', CANCELLED: 'CANCELLED',
+} as const
 export const DepositType = {
   DEPOSIT: 'DEPOSIT', DEDUCTION: 'DEDUCTION', TOPUP: 'TOPUP', REFUND: 'REFUND',
 } as const

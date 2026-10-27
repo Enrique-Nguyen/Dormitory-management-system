@@ -2,6 +2,7 @@ package vn.edu.tlu.dms.maintenance.service.impl;
 
 import jakarta.persistence.EntityManager;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -11,9 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.billing.service.DepositService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ConfigKey;
+import vn.edu.tlu.dms.common.constants.DmsConstants.DepositType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceStatus;
@@ -26,23 +30,37 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
+import vn.edu.tlu.dms.common.service.ConfigService;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
 import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
+import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.ChargeableStudent;
+import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Conclude;
+import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Deduction;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Photo;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Response;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Save;
+import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.StudentRef;
 import vn.edu.tlu.dms.maintenance.domain.MaintenanceRequest;
 import vn.edu.tlu.dms.maintenance.domain.MaintenanceRequestPolicy;
+import vn.edu.tlu.dms.maintenance.domain.MaintenanceRequestPolicy.Cause;
+import vn.edu.tlu.dms.maintenance.domain.TicketConcludedEvent;
+import vn.edu.tlu.dms.maintenance.domain.TicketStatusChangedEvent;
 import vn.edu.tlu.dms.maintenance.repository.MaintenancePhotoRepository;
 import vn.edu.tlu.dms.maintenance.repository.MaintenanceRequestRepository;
 import vn.edu.tlu.dms.maintenance.service.MaintenancePhotoService;
 import vn.edu.tlu.dms.maintenance.service.MaintenanceRequestService;
+import vn.edu.tlu.dms.room.service.OccupancyQuery;
+import vn.edu.tlu.dms.room.service.OccupancyQuery.Occupant;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -51,6 +69,16 @@ import java.util.Set;
 @Service
 @Transactional(readOnly = true)
 public class MaintenanceRequestServiceImpl implements MaintenanceRequestService {
+
+    /** Giới hạn độ dài reason của status_history/audit_log để không cắt mất giao dịch. */
+    private static final int REASON_MAX_LENGTH = 500;
+
+    /** Ghi chú kết luận và lý do bỏ bớt người chịu trách nhiệm cần tối thiểu 5 ký tự. */
+    private static final int MIN_NOTE_LENGTH = 5;
+
+    private static final String NOTE_FIELD = "note";
+
+    private static final String INVALID_IDS_FIELD = "invalidIds";
 
     private final MaintenanceRequestRepository requests;
 
@@ -61,6 +89,12 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     private final RoomReferenceService rooms;
 
     private final AccountReferenceService accounts;
+
+    private final OccupancyQuery occupancy;
+
+    private final DepositService deposits;
+
+    private final ConfigService config;
 
     private final CurrentUser current;
 
@@ -74,29 +108,39 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
     private final EntityManager entityManager;
 
+    private final ApplicationEventPublisher events;
+
     public MaintenanceRequestServiceImpl(
             MaintenanceRequestRepository requests,
             MaintenancePhotoRepository photoRows,
             MaintenancePhotoService photos,
             RoomReferenceService rooms,
             AccountReferenceService accounts,
+            OccupancyQuery occupancy,
+            DepositService deposits,
+            ConfigService config,
             CurrentUser current,
             ScopeGuard guard,
             StatusHistoryService history,
             JdbcTemplate jdbc,
             AuditService audit,
-            EntityManager entityManager) {
+            EntityManager entityManager,
+            ApplicationEventPublisher events) {
         this.requests = requests;
         this.photoRows = photoRows;
         this.photos = photos;
         this.rooms = rooms;
         this.accounts = accounts;
+        this.occupancy = occupancy;
+        this.deposits = deposits;
+        this.config = config;
         this.current = current;
         this.guard = guard;
         this.history = history;
         this.jdbc = jdbc;
         this.audit = audit;
         this.entityManager = entityManager;
+        this.events = events;
     }
 
     @Override
@@ -321,6 +365,274 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         return toMaintenanceResponse(request, true);
     }
 
+    @Override
+    public List<ChargeableStudent> findChargeableStudents(Long id) {
+        guard.requirePermission(Permission.MAINTENANCE_READ);
+        guard.requireRole(Role.STAFF, Role.ADMIN);
+        var request = loadAccessibleRequest(id, false);
+        requireRoomTicket(request);
+        // Danh sách dùng cho thao tác ghi nên phải đúng đơn vị ghi, không mở theo quyền đọc tổng
+        // hợp.
+        guard.requireUnit(requestUnitId(request));
+        requireConclusiveState(request);
+        return chargeableStudents(request);
+    }
+
+    /** Kết luận và trừ cọc là một transaction; một lần deduct lỗi sẽ rollback cả ticket/audit. */
+    @Transactional
+    @Override
+    public Response conclude(Long id, Conclude input) {
+        guard.requirePermission(Permission.MAINTENANCE_UPDATE);
+        guard.requireRole(Role.STAFF, Role.ADMIN);
+        var request = loadAccessibleRequest(id, true);
+        requireRoomTicket(request);
+        requireConclusiveState(request);
+        Cause cause = Cause.from(input.cause());
+        if (cause == null) {
+            throw BusinessException.invalid(ApiField.CAUSE, ValidationMessage.CAUSE_INVALID);
+        }
+        String note = input.note();
+        List<Deduction> deductions =
+                cause == Cause.WEAR
+                        ? concludeWear(input, note)
+                        : concludeMisuse(request, input, note);
+        request.setCause(cause.name());
+        request.setRepairCost(input.repairCost());
+        request.setCostNote(note);
+        request.setCostDecidedBy(current.get().id());
+        request.setCostDecidedAt(OffsetDateTime.now());
+        requests.saveAndFlush(request);
+        String reason = conclusionReason(cause, input.repairCost(), deductions, note);
+        history.record(
+                EntityType.MAINTENANCE,
+                request.getId(),
+                MaintenanceStatus.CLOSED,
+                MaintenanceStatus.CLOSED,
+                current.get().id(),
+                reason);
+        audit.record(
+                current.get().id(),
+                AuditAction.MAINTENANCE_CONCLUDE,
+                EntityType.MAINTENANCE,
+                request.getId(),
+                null,
+                conclusionAudit(cause, input, deductions, note),
+                reason);
+        events.publishEvent(
+                new TicketConcludedEvent(
+                        request.getId(),
+                        request.getRequesterId(),
+                        cause.name(),
+                        deductions.stream().map(deduction -> deduction.student().id()).toList()));
+        return toMaintenanceResponse(request, true, deductions);
+    }
+
+    /** WEAR không trừ cọc, không nhận chi phí và bắt buộc ghi chú theo BR-10/FR-MNT-09. */
+    private List<Deduction> concludeWear(Conclude input, String note) {
+        if (input.repairCost() != null) {
+            throw new BusinessException(ErrorCode.COST_INVALID, HttpStatus.BAD_REQUEST);
+        }
+        if (input.chargedStudentIds() != null && !input.chargedStudentIds().isEmpty()) {
+            throw new BusinessException(ErrorCode.CHARGED_STUDENTS_INVALID, HttpStatus.BAD_REQUEST);
+        }
+        if (note == null || note.length() < MIN_NOTE_LENGTH) {
+            throw BusinessException.invalid(NOTE_FIELD, ValidationMessage.WEAR_NOTE_REQUIRED);
+        }
+        return List.of();
+    }
+
+    /** MISUSE thu đủ chi phí từ đúng các sinh viên đang ở tại thời điểm tạo ticket. */
+    private List<Deduction> concludeMisuse(
+            MaintenanceRequest request, Conclude input, String note) {
+        Long cost = input.repairCost();
+        if (cost == null || cost <= 0) {
+            throw new BusinessException(ErrorCode.COST_INVALID, HttpStatus.BAD_REQUEST);
+        }
+        List<Occupant> candidates =
+                occupancy.findOccupantsAt(request.getRoomId(), request.getCreatedAt()).stream()
+                        .sorted(Comparator.comparing(Occupant::contractId))
+                        .toList();
+        if (candidates.isEmpty()) {
+            throw BusinessException.conflict(ErrorCode.NO_OCCUPANT_TO_CHARGE);
+        }
+        LinkedHashSet<Long> candidateIds = new LinkedHashSet<>();
+        candidates.forEach(candidate -> candidateIds.add(candidate.studentId()));
+        LinkedHashSet<Long> selectedIds = new LinkedHashSet<>();
+        if (input.chargedStudentIds() == null || input.chargedStudentIds().isEmpty()) {
+            selectedIds.addAll(candidateIds);
+        } else {
+            List<Long> invalidIds = new ArrayList<>();
+            for (Long studentId : input.chargedStudentIds()) {
+                if (studentId == null || !candidateIds.contains(studentId)) {
+                    invalidIds.add(studentId);
+                } else {
+                    selectedIds.add(studentId);
+                }
+            }
+            if (!invalidIds.isEmpty()) {
+                throw new BusinessException(
+                        ErrorCode.CHARGED_STUDENTS_INVALID,
+                        HttpStatus.BAD_REQUEST,
+                        Map.of(INVALID_IDS_FIELD, invalidIds));
+            }
+        }
+        List<Occupant> selected =
+                candidates.stream()
+                        .filter(candidate -> selectedIds.contains(candidate.studentId()))
+                        .toList();
+        if (selected.size() < candidates.size()
+                && (note == null || note.length() < MIN_NOTE_LENGTH)) {
+            throw BusinessException.invalid(NOTE_FIELD, ValidationMessage.CHARGED_NOTE_REQUIRED);
+        }
+        // Mỗi sinh viên được chọn phải nhận khoản trừ dương; không thể chia đồng tiền nhỏ hơn số
+        // người.
+        if (cost < selected.size()) {
+            throw new BusinessException(ErrorCode.COST_INVALID, HttpStatus.BAD_REQUEST);
+        }
+        LocalDate dueDate =
+                LocalDate.now()
+                        .plusDays(config.positiveInt(ConfigKey.DEPOSIT_TOPUP_DUE_DAYS));
+        long base = cost / selected.size();
+        long remainder = cost % selected.size();
+        List<Deduction> deductions = new ArrayList<>(selected.size());
+        for (int index = 0; index < selected.size(); index++) {
+            Occupant occupant = selected.get(index);
+            long amount = base + (index == selected.size() - 1 ? remainder : 0);
+            deposits.deduct(occupant.contractId(), request.getId(), amount, dueDate, note);
+            deductions.add(
+                    new Deduction(
+                            occupant.contractId(),
+                            studentRef(occupant.studentId()),
+                            amount,
+                            dueDate));
+        }
+        return deductions;
+    }
+
+    private List<ChargeableStudent> chargeableStudents(MaintenanceRequest request) {
+        return occupancy.findOccupantsAt(request.getRoomId(), request.getCreatedAt()).stream()
+                .sorted(Comparator.comparing(Occupant::contractId))
+                .map(
+                        occupant ->
+                                new ChargeableStudent(
+                                        studentRef(occupant.studentId()),
+                                        occupant.contractId(),
+                                        contractStatus(occupant.contractId())))
+                .toList();
+    }
+
+    private StudentRef studentRef(Long studentId) {
+        var user = accounts.user(studentId);
+        // Tên đăng nhập của sinh viên chính là mã sinh viên theo quy ước tài khoản hiện tại.
+        return new StudentRef(user.id(), user.username(), user.fullName(), user.gender());
+    }
+
+    /**
+     * Đọc trạng thái hợp đồng qua record của tầng Service billing, không phụ thuộc DTO. Trạng thái
+     * chỉ dùng để hiển thị nên trả null thay vì làm hỏng cả danh sách khi thiếu quyền/ngoài phạm vi.
+     */
+    private String contractStatus(Long contractId) {
+        if (!guard.hasPermission(Permission.DEPOSIT_READ)) {
+            return null;
+        }
+        try {
+            return deposits.getBalanceView(contractId).status();
+        } catch (BusinessException exception) {
+            return null;
+        }
+    }
+
+    /**
+     * Đọc lại các khoản trừ cọc đã ghi cho ticket để màn chi tiết không phải suy đoán. Chỉ gọi
+     * dịch vụ công khai của billing; lỗi đọc sổ cọc của một hợp đồng lịch sử được bỏ qua vì lỗi
+     * hiển thị không được biến thành lỗi 404/403 của ticket.
+     */
+    private List<Deduction> storedDeductions(MaintenanceRequest request) {
+        if (request.getCause() == null
+                || Cause.WEAR.name().equals(request.getCause())
+                || request.getRoomId() == null
+                || !guard.hasPermission(Permission.DEPOSIT_READ)) {
+            return List.of();
+        }
+        List<Deduction> deductions = new ArrayList<>();
+        for (Occupant occupant :
+                occupancy.findOccupantsAt(request.getRoomId(), request.getCreatedAt())) {
+            List<DepositService.DepositEntry> entries;
+            try {
+                entries = deposits.listEntries(occupant.contractId());
+            } catch (BusinessException exception) {
+                continue;
+            }
+            for (DepositService.DepositEntry entry : entries) {
+                if (!Objects.equals(request.getId(), entry.maintenanceRequestId())
+                        || !DepositType.DEDUCTION.equals(entry.type())) {
+                    continue;
+                }
+                long amount = Math.abs(entry.amount());
+                deductions.add(
+                        new Deduction(
+                                occupant.contractId(),
+                                studentRef(occupant.studentId()),
+                                amount,
+                                entry.dueDate()));
+            }
+        }
+        deductions.sort(Comparator.comparing(Deduction::contractId));
+        return deductions;
+    }
+
+    private Map<String, Object> conclusionAudit(
+            Cause cause, Conclude input, List<Deduction> deductions, String note) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put(ApiField.CAUSE, cause.name());
+        if (input.repairCost() != null) {
+            details.put(ApiField.REPAIR_COST, input.repairCost());
+        }
+        details.put(
+                ApiField.CHARGED_STUDENT_IDS,
+                deductions.stream().map(deduction -> deduction.student().id()).toList());
+        if (note != null) {
+            details.put(NOTE_FIELD, note);
+        }
+        return details;
+    }
+
+    private String conclusionReason(
+            Cause cause, Long repairCost, List<Deduction> deductions, String note) {
+        String summary =
+                cause == Cause.WEAR
+                        ? "Kết luận hao mòn tự nhiên"
+                        : "Kết luận hư hỏng do sử dụng; trừ cọc "
+                                + repairCost
+                                + " đ cho "
+                                + deductions.size()
+                                + " sinh viên";
+        if (note != null) {
+            summary += ": " + note;
+        }
+        return truncate(summary, REASON_MAX_LENGTH);
+    }
+
+    private static String truncate(String value, int maxLength) {
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    private void requireRoomTicket(MaintenanceRequest request) {
+        if (request.getRoomId() == null) {
+            throw BusinessException.conflict(ErrorCode.COMMON_AREA_NO_CHARGE);
+        }
+    }
+
+    /** Đã kết luận được báo riêng để người dùng không thử lại thao tác không thể đảo ngược. */
+    private void requireConclusiveState(MaintenanceRequest request) {
+        if (!MaintenanceStatus.CLOSED.equals(request.getStatus())) {
+            throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
+        }
+        if (request.getCause() != null) {
+            throw BusinessException.conflict(ErrorCode.TICKET_ALREADY_CONCLUDED);
+        }
+    }
+
     @Override()
     public Path getAuthorizedPhotoFile(Long id, Long photoId) {
         guard.requirePermission(Permission.MAINTENANCE_READ);
@@ -389,9 +701,18 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         requests.saveAndFlush(r);
         history.record(
                 EntityType.MAINTENANCE, r.getId(), previous, next, current.get().id(), reason);
+        // Notification chỉ xử lý sau commit; sự kiện vẫn mang trạng thái mới và người được giao.
+        events.publishEvent(
+                new TicketStatusChangedEvent(
+                        r.getId(), r.getRequesterId(), r.getAssignedTo(), next));
     }
 
     private Response toMaintenanceResponse(MaintenanceRequest r, boolean detail) {
+        return toMaintenanceResponse(r, detail, detail ? storedDeductions(r) : null);
+    }
+
+    private Response toMaintenanceResponse(
+            MaintenanceRequest r, boolean detail, List<Deduction> deductions) {
         return new Response(
                 r.getId(),
                 r.getCode(),
@@ -419,6 +740,11 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                                                 + p.getId()))
                                 .toList()
                         : null,
+                r.getCause(),
+                r.getRepairCost(),
+                r.getCostNote(),
+                r.getCause() != null,
+                deductions,
                 detail
                         ? (current.get().is(Role.STAFF)
                                         && !Objects.equals(current.get().unitId(), requestUnitId(r))
