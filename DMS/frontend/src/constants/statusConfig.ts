@@ -247,3 +247,40 @@ export const crudValueLabels: Record<string, string> = {
   TEMP_LEAVE: 'Tạm rời hè',
   LEAVE: 'Rời KTX',
 }
+
+/** Mã nghiệp vụ billing giữ nguyên hợp đồng API. */
+export const InvoiceType = { ROOM_FEE: 'ROOM_FEE', UTILITY: 'UTILITY' } as const
+export const PaymentMethod = { CASH: 'CASH', TRANSFER: 'TRANSFER' } as const
+export const ContractStatus = {
+  PENDING: 'PENDING', ACTIVE: 'ACTIVE', EXPIRED: 'EXPIRED',
+  TERMINATED: 'TERMINATED', CANCELLED: 'CANCELLED',
+} as const
+/** Trạng thái phòng khớp `DmsConstants.RoomStatus`. */
+export const RoomStatus = {
+  ACTIVE: 'ACTIVE', MAINTENANCE: 'MAINTENANCE', CLOSED: 'CLOSED',
+} as const
+/** Giới tính khai trên phòng khớp `DmsConstants.Gender`. */
+export const RoomGender = { M: 'M', F: 'F' } as const
+/** Trạng thái yêu cầu ở lại (gia hạn, chuyển phòng) khớp `DmsConstants.StayRequestStatus`. */
+export const StayRequestStatus = {
+  PENDING: 'PENDING', APPROVED: 'APPROVED', REJECTED: 'REJECTED', CANCELLED: 'CANCELLED',
+} as const
+/** Trạng thái lựa chọn hè khớp `DmsConstants.SummerStatus`. */
+export const SummerStatus = {
+  PENDING: 'PENDING', APPROVED: 'APPROVED', REJECTED: 'REJECTED',
+} as const
+/** Trạng thái phiếu bảo trì khớp `DmsConstants.MaintenanceStatus`. */
+export const MaintenanceStatus = {
+  OPEN: 'OPEN', ASSIGNED: 'ASSIGNED', IN_PROGRESS: 'IN_PROGRESS', RESOLVED: 'RESOLVED',
+  CLOSED: 'CLOSED', REJECTED: 'REJECTED', CANCELLED: 'CANCELLED',
+} as const
+export const DepositType = {
+  DEPOSIT: 'DEPOSIT', DEDUCTION: 'DEDUCTION', TOPUP: 'TOPUP', REFUND: 'REFUND',
+} as const
+export const depositTransactionLabels: Record<string, string> = {
+  [DepositType.DEPOSIT]: 'Thu cọc ban đầu', [DepositType.DEDUCTION]: 'Trừ cọc',
+  [DepositType.TOPUP]: 'Nộp bù cọc', [DepositType.REFUND]: 'Hoàn cọc',
+}
+
+export const InvoiceStatus = { UNPAID: 'UNPAID', PAID: 'PAID' } as const
+export const BillingAction = { CONFIRM_PAYMENT: 'confirm-payment', DEPOSIT_TOPUP: 'deposit-topup', DEPOSIT_REFUND: 'deposit-refund' } as const

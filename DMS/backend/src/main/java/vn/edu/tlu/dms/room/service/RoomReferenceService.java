@@ -13,6 +13,9 @@ public interface RoomReferenceService {
     /** Lấy ID đơn vị sở hữu tòa để nơi gọi kiểm tra phạm vi quyền. */
     Long getBuildingManagementUnitId(Long id);
 
+    /** Đọc mức cọc của tòa để kích hoạt hợp đồng, không trả entity ra ngoài module. */
+    Long getBuildingDepositAmount(Long id);
+
     /** Kiểm tra loại phòng tồn tại và đang ACTIVE trước khi tạo hoặc cập nhật hồ sơ liên quan. */
     void requireActiveRoomType(Long id);
 
@@ -39,4 +42,16 @@ public interface RoomReferenceService {
             Long roomId, Long buildingId, Long unitId, String gender, String status) {}
 
     public record SemesterRef(Long id, String type, LocalDate startDate, LocalDate endDate) {}
+
+    /** Tổng hợp giường khai thác và phòng thiếu trưởng phòng theo đơn vị cho Dashboard. */
+    DashboardCapacity getDashboardCapacity(Long managementUnitId);
+
+    /** Các chỉ số được tính trên cùng tập giường đang khai thác; HOLD không tính là đang ở. */
+    record DashboardCapacity(
+            String unitName,
+            long operationalBeds,
+            long occupiedBeds,
+            long availableBeds,
+            long maintenanceBeds,
+            long roomsMissingLeader) {}
 }

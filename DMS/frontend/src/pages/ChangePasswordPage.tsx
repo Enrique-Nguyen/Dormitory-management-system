@@ -1,5 +1,5 @@
-import { Button, Card } from '../components/ui/Surface'
-import { Alert, Typography } from 'antd'
+import { Alert, Button, Card } from '../components/ui/Surface'
+import { Typography } from 'antd'
 import { useState } from 'react'
 import { changeKeycloakPassword } from '../services/api/auth'
 import { errorMessage } from '../utils/errorMessages'

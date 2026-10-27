@@ -1,10 +1,41 @@
 import { Resource, Role } from '../../constants/authorization'
 import {
   portalPath,
+  STAFF_APPLICATIONS_PATH,
+  STAFF_CONTRACTS_PATH,
+  STAFF_EXTENSIONS_PATH,
+  STAFF_MAINTENANCE_PATH,
   STAFF_ROOMS_PATH,
+  STAFF_SUMMER_PATH,
   STAFF_TRANSFERS_PATH,
+  STUDENT_APPLICATIONS_PATH,
+  STUDENT_CONTRACTS_PATH,
+  STUDENT_EXTENSIONS_PATH,
+  STUDENT_MAINTENANCE_PATH,
+  STUDENT_SUMMER_PATH,
   STUDENT_TRANSFERS_PATH,
+  TECHNICIAN_TASKS_PATH,
 } from '../../constants/navigation'
+import {
+  ContractStatus,
+  InvoiceStatus,
+  InvoiceType,
+  MaintenanceStatus,
+  RoomGender,
+  RoomStatus,
+  StayRequestStatus,
+  SummerStatus,
+  TRANSFER_ACTION,
+} from '../../constants/statusConfig'
+import {
+  ExtensionAction,
+  ExtensionStatus,
+} from '../../services/api/contract'
+import {
+  ApplicationAction,
+  ApplicationStatus,
+} from '../../services/api/registration'
+import { SummerChoice } from '../../services/api/summer'
 import type { CrudField, CrudResource } from './types'
 
 const text = (
@@ -97,28 +128,28 @@ export const studentImportLabels = {
 }
 const invoiceFields: CrudField[] = [
   {
-    ...select('type', 'Loại hóa đơn', ['ROOM_FEE', 'UTILITY']),
+    ...select('type', 'Loại hóa đơn', Object.values(InvoiceType)),
     createOnly: true,
   },
   {
     ...ref('studentId', 'Sinh viên', '/students', 'fullName'),
     createOnly: true,
-    visibleWhen: { field: 'type', value: 'ROOM_FEE' },
+    visibleWhen: { field: 'type', value: InvoiceType.ROOM_FEE },
   },
   {
     ...ref('semesterId', 'Học kỳ', '/semesters'),
     createOnly: true,
-    visibleWhen: { field: 'type', value: 'ROOM_FEE' },
+    visibleWhen: { field: 'type', value: InvoiceType.ROOM_FEE },
   },
   {
     ...ref('roomId', 'Phòng', '/rooms', 'code'),
     createOnly: true,
-    visibleWhen: { field: 'type', value: 'UTILITY' },
+    visibleWhen: { field: 'type', value: InvoiceType.UTILITY },
   },
   {
     ...date('billingMonth', 'Kỳ điện nước (ngày đầu tháng)'),
     createOnly: true,
-    visibleWhen: { field: 'type', value: 'UTILITY' },
+    visibleWhen: { field: 'type', value: InvoiceType.UTILITY },
   },
   number('totalAmount', 'Tổng tiền (đ)'),
   date('dueDate', 'Hạn đóng'),
@@ -276,6 +307,8 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.STUDENT,
     title: 'Sinh viên',
     endpoint: '/students',
+    // Backend chỉ mở xóa hồ sơ ở /api/admin/students; thêm/sửa vẫn dùng /students cho Staff.
+    deleteEndpoint: '/admin/students',
     fields: studentFields,
     editFields: studentFields.filter((field) =>
       !['studentCode', 'fullName', 'gender'].includes(field.name)),
@@ -310,9 +343,13 @@ export const resources: Record<string, CrudResource> = {
       ref('buildingId', 'Tòa nhà', '/buildings', 'name', false),
       ref('roomTypeId', 'Loại phòng', '/room-types', 'name', false),
       { ...number('floor', 'Tầng'), required: false },
-      { ...select('gender', 'Giới tính', ['M', 'F']), required: false },
+      { ...select('gender', 'Giới tính', [RoomGender.M, RoomGender.F]), required: false },
       {
-        ...select('status', 'Trạng thái', ['ACTIVE', 'MAINTENANCE', 'CLOSED']),
+        ...select('status', 'Trạng thái', [
+          RoomStatus.ACTIVE,
+          RoomStatus.MAINTENANCE,
+          RoomStatus.CLOSED,
+        ]),
         required: false,
       },
     ],
@@ -392,10 +429,14 @@ export const resources: Record<string, CrudResource> = {
       ['priorityScore', 'Điểm ưu tiên'],
       ['submittedAt', 'Ngày nộp'],
     ),
-    editStates: ['DRAFT'],
+    editStates: [ApplicationStatus.DRAFT],
     deleteLabel: 'Hủy',
-    deleteAction: 'cancel',
-    note: 'Admin tạo đơn cho sinh viên, sửa/hủy đơn nháp. Trạng thái và lịch sử vẫn được backend kiểm tra.',
+    deleteAction: ApplicationAction.CANCEL,
+    detailRoutes: {
+      [Role.STAFF]: STAFF_APPLICATIONS_PATH,
+      [Role.ADMIN]: portalPath(Role.ADMIN, STAFF_APPLICATIONS_PATH),
+    },
+    note: 'Xem chi tiết để duyệt, phân giường, hủy giữ chỗ và xác nhận diện ưu tiên; danh sách chỉ tạo/sửa/hủy đơn nháp.',
   },
   myApplications: {
     permission: Resource.ROOM_APPLICATION,
@@ -426,9 +467,10 @@ export const resources: Record<string, CrudResource> = {
       ['note', 'Ghi chú'],
     ),
     deleteLabel: 'Hủy',
-    deleteAction: 'cancel',
-    editStates: ['DRAFT'],
-    note: 'Chỉ sửa đơn nháp. Hủy giữ lại lịch sử đơn.',
+    deleteAction: ApplicationAction.CANCEL,
+    editStates: [ApplicationStatus.DRAFT],
+    detailRoutes: { [Role.STUDENT]: STUDENT_APPLICATIONS_PATH },
+    note: 'Chỉ sửa đơn nháp. Xem chi tiết để theo dõi duyệt, giường đang giữ và lịch sử đơn.',
   },
   contracts: {
     permission: Resource.CONTRACT,
@@ -442,7 +484,7 @@ export const resources: Record<string, CrudResource> = {
           '/applications',
           'student.fullName',
         ),
-        lookupFilters: { status: 'APPROVED' },
+        lookupFilters: { status: ApplicationStatus.APPROVED },
         createOnly: true,
       },
       date('startDate', 'Ngày bắt đầu'),
@@ -455,8 +497,12 @@ export const resources: Record<string, CrudResource> = {
       ['endDate', 'Kết thúc'],
       ['status', 'Trạng thái'],
     ),
-    editStates: ['PENDING'],
-    note: 'CRUD hồ sơ chờ, chưa phân giường/thu cọc. Các luồng kích hoạt và trả phòng sẽ làm sau.',
+    editStates: [ContractStatus.PENDING],
+    detailRoutes: {
+      [Role.STAFF]: STAFF_CONTRACTS_PATH,
+      [Role.ADMIN]: portalPath(Role.ADMIN, STAFF_CONTRACTS_PATH),
+    },
+    note: 'CRUD hồ sơ chờ; kích hoạt thu cọc, trả phòng và gửi đồ làm ở màn chi tiết.',
   },
   myContracts: {
     permission: Resource.CONTRACT,
@@ -471,6 +517,7 @@ export const resources: Record<string, CrudResource> = {
       ['status', 'Trạng thái'],
     ),
     readOnly: true,
+    detailRoutes: { [Role.STUDENT]: STUDENT_CONTRACTS_PATH },
   },
   extensions: {
     permission: Resource.CONTRACT_EXTENSION,
@@ -491,8 +538,16 @@ export const resources: Record<string, CrudResource> = {
       ['reason', 'Lý do'],
       ['status', 'Trạng thái'],
     ),
-    editStates: ['PENDING'],
-    note: 'Khung CRUD yêu cầu đang chờ; xét duyệt và cập nhật hợp đồng để làm sau.',
+    editStates: [ExtensionStatus.PENDING],
+    // Sinh viên hủy yêu cầu còn PENDING bằng POST /cancel, không xóa cứng.
+    deleteLabel: 'Hủy',
+    deleteAction: ExtensionAction.CANCEL,
+    detailRoutes: {
+      [Role.STAFF]: STAFF_EXTENSIONS_PATH,
+      [Role.ADMIN]: portalPath(Role.ADMIN, STAFF_EXTENSIONS_PATH),
+      [Role.STUDENT]: STUDENT_EXTENSIONS_PATH,
+    },
+    note: 'Sinh viên gửi yêu cầu và hủy khi còn chờ; Staff xét duyệt ở màn chi tiết.',
   },
   transfers: {
     permission: Resource.ROOM_TRANSFER,
@@ -511,10 +566,10 @@ export const resources: Record<string, CrudResource> = {
       ['reason', 'Lý do'],
       ['status', 'Trạng thái'],
     ),
-    editStates: ['PENDING'],
+    editStates: [StayRequestStatus.PENDING],
     // Hủy giữ lại yêu cầu và lịch sử (POST /cancel), không xóa cứng.
     deleteLabel: 'Hủy',
-    deleteAction: 'cancel',
+    deleteAction: TRANSFER_ACTION.CANCEL,
     detailRoutes: {
       [Role.STAFF]: STAFF_TRANSFERS_PATH,
       [Role.ADMIN]: portalPath(Role.ADMIN, STAFF_TRANSFERS_PATH),
@@ -531,7 +586,7 @@ export const resources: Record<string, CrudResource> = {
         createOnly: true,
       },
       { ...ref('semesterId', 'Học kỳ hè', '/semesters'), createOnly: true },
-      select('choice', 'Lựa chọn', ['STAY', 'TEMP_LEAVE', 'LEAVE']),
+      select('choice', 'Lựa chọn', Object.values(SummerChoice)),
     ],
     columns: columns(
       ['contractCode', 'Hợp đồng'],
@@ -539,25 +594,13 @@ export const resources: Record<string, CrudResource> = {
       ['choice', 'Lựa chọn'],
       ['status', 'Trạng thái'],
     ),
-    editStates: ['PENDING'],
-    note: 'CRUD lựa chọn chờ; chưa tự gia hạn hay thay đổi chỗ ở.',
-  },
-  storage: {
-    inlineDetail: true,
-    permission: Resource.STORAGE,
-    title: 'Kho gửi đồ',
-    endpoint: '/storage-records',
-    fields: [],
-    columns: columns(
-      ['fullName', 'Sinh viên'],
-      ['packageCount', 'Số kiện'],
-      ['description', 'Mô tả'],
-      ['location', 'Vị trí'],
-      ['depositedAt', 'Ngày gửi'],
-      ['returnedAt', 'Ngày nhận'],
-    ),
-    readOnly: true,
-    note: 'Khung tra cứu. Gửi/nhận đồ gắn với luồng tạm rời hè nên chưa triển khai thao tác chi tiết.',
+    editStates: [SummerStatus.PENDING],
+    detailRoutes: {
+      [Role.STAFF]: STAFF_SUMMER_PATH,
+      [Role.ADMIN]: portalPath(Role.ADMIN, STAFF_SUMMER_PATH),
+      [Role.STUDENT]: STUDENT_SUMMER_PATH,
+    },
+    note: 'Sinh viên khai báo và sửa khi còn chờ; Staff xét duyệt ở màn chi tiết, STAY tự gia hạn hợp đồng.',
   },
   readings: {
     keepCreateOnlyOnEdit: true,
@@ -602,10 +645,17 @@ export const resources: Record<string, CrudResource> = {
     note: 'Giá đã có hiệu lực được lưu lịch sử; thêm giá mới thay cho sửa giá cũ.',
   },
   invoices: {
-    createDefaults: { type: 'ROOM_FEE' },
+    createDefaults: { type: InvoiceType.ROOM_FEE },
     permission: Resource.INVOICE,
     title: 'Hóa đơn',
     endpoint: '/invoices',
+    filters: [
+      { ...select('type', 'Loại', Object.values(InvoiceType)), required: false },
+      {
+        ...select('status', 'Trạng thái', Object.values(InvoiceStatus)),
+        required: false,
+      },
+    ],
     fields: invoiceFields,
     columns: columns(
       ['code', 'Mã'],
@@ -614,14 +664,21 @@ export const resources: Record<string, CrudResource> = {
       ['dueDate', 'Hạn đóng'],
       ['status', 'Trạng thái'],
     ),
-    editStates: ['UNPAID'],
-    note: 'CRUD hồ sơ chưa có dòng chi tiết. Chưa làm phát hành tự tính tiền; hóa đơn đã thanh toán hoặc có lịch sử không được sửa/xóa.',
+    editStates: [InvoiceStatus.UNPAID],
+    note: 'CRUD chỉ áp dụng hồ sơ chưa có dòng chi tiết. Phát hành tự tính tiền tại Dashboard; hóa đơn đã thanh toán hoặc có lịch sử không được sửa/xóa.',
   },
   myInvoices: {
     permission: Resource.INVOICE,
     title: 'Hóa đơn của tôi',
     endpoint: '/me/invoices',
     detailEndpoint: '/invoices',
+    filters: [
+      { ...select('type', 'Loại', Object.values(InvoiceType)), required: false },
+      {
+        ...select('status', 'Trạng thái', Object.values(InvoiceStatus)),
+        required: false,
+      },
+    ],
     fields: [],
     columns: columns(
       ['code', 'Mã'],
@@ -633,20 +690,36 @@ export const resources: Record<string, CrudResource> = {
     readOnly: true,
   },
   deposits: {
+    idKey: 'contractId',
     permission: Resource.DEPOSIT,
     title: 'Tiền cọc',
-    endpoint: '/deposits',
+    endpoint: '/deposit-balances',
     detailEndpoint: '/contracts',
     fields: [],
     columns: columns(
-      ['code', 'Hợp đồng'],
-      ['fullName', 'Sinh viên'],
+      ['contractCode', 'Hợp đồng'],
+      ['studentName', 'Sinh viên'],
       ['depositRequired', 'Mức cọc'],
       ['balance', 'Số dư'],
       ['topupNeeded', 'Cần bù'],
     ),
     readOnly: true,
     note: 'Sổ tiền chỉ tra cứu. Thu/trừ/bù/hoàn cọc là nghiệp vụ chi tiết, không sửa/xóa giao dịch đã ghi.',
+  },
+  myDeposits: {
+    idKey: 'contractId',
+    permission: Resource.DEPOSIT,
+    title: 'Tiền cọc của tôi',
+    endpoint: '/me/deposit-balances',
+    detailEndpoint: '/contracts',
+    fields: [],
+    columns: columns(
+      ['contractCode', 'Hợp đồng'],
+      ['depositRequired', 'Mức cọc'],
+      ['balance', 'Số dư'],
+      ['status', 'Trạng thái'],
+    ),
+    readOnly: true,
   },
   maintenance: {
     permission: Resource.MAINTENANCE,
@@ -686,10 +759,16 @@ export const resources: Record<string, CrudResource> = {
       ['status', 'Trạng thái'],
     ),
     rowOwned: 'requesterId',
-    editStates: ['OPEN'],
+    editStates: [MaintenanceStatus.OPEN],
     deleteLabel: 'Hủy',
     createFormat: 'multipart',
-    note: 'Người tạo sửa/hủy khi ticket còn mở; các thao tác xử lý chi tiết chưa đưa vào màn CRUD.',
+    detailRoutes: {
+      [Role.STUDENT]: STUDENT_MAINTENANCE_PATH,
+      [Role.STAFF]: STAFF_MAINTENANCE_PATH,
+      [Role.TECHNICIAN]: TECHNICIAN_TASKS_PATH,
+      [Role.ADMIN]: portalPath(Role.ADMIN, STAFF_MAINTENANCE_PATH),
+    },
+    note: 'Màn chi tiết xử lý ticket có ảnh, lịch sử và kết luận chi phí; danh sách chỉ tạo/sửa/hủy.',
   },
   notifications: {
     createDefaults: { scope: 'UNIT' },
@@ -727,21 +806,6 @@ export const resources: Record<string, CrudResource> = {
       ['createdAt', 'Ngày đăng'],
     ),
     note: 'Quản lý thông báo thủ công; Admin quản lý toàn hệ thống, Staff quản lý thông báo của mình trong đơn vị.',
-  },
-  inbox: {
-    inlineDetail: true,
-    permission: Resource.NOTIFICATION,
-    title: 'Hộp thư thông báo',
-    endpoint: '/notifications',
-    fields: [],
-    columns: columns(
-      ['title', 'Tiêu đề'],
-      ['body', 'Nội dung'],
-      ['createdAt', 'Ngày gửi'],
-      ['isRead', 'Đã đọc'],
-    ),
-    readOnly: true,
-    useListRecordForEdit: false,
   },
   profile: {
     permission: Resource.PROFILE,
@@ -791,6 +855,8 @@ export const resources: Record<string, CrudResource> = {
   },
   configs: {
     noCreate: true,
+    // Backend không có API xóa khóa cấu hình; màn chỉ mở sửa giá trị.
+    noDelete: true,
     inlineDetail: true,
     permission: Resource.CONFIG,
     title: 'Cấu hình hệ thống',

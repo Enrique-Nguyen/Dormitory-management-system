@@ -6,12 +6,13 @@
 > Backend: Spring Boot REST API  
 > Database: PostgreSQL  
 > Responsive: từ 360px
-> Phiên bản: 1.0, 21/10/2026
+> Phiên bản: 1.1, 22/10/2026
 
 ### Lịch sử thay đổi
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 1.1 | 22/10/2026 | Bổ sung mô tả triển khai frontend TV5: màn hình Quản lý sổ cọc (bảng số dư, chi tiết ledger giao dịch, dialog nộp/bù/hoàn cọc), Quản lý hóa đơn & công nợ (modal phát hành tiền phòng/điện nước hàng loạt, dialog xác nhận thanh toán), và Staff Dashboard (KPI thẻ số liệu phòng, giường, công nợ, ticket) |
 | 1.0 | 21/10/2026 | Bắt đầu ghi phiên bản; giữ thiết kế hiện có, bổ sung luồng import và đọc chi tiết audit đã triển khai bởi TV1 |
 
 ---

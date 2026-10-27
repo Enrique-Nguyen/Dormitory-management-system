@@ -45,6 +45,16 @@ const messages: Record<string, (d: Details) => string> = {
   READING_HAS_FOLLOWING_MONTH: () =>
     'Tháng sau đã có chỉ số, không thể thay đổi tháng trước.',
   READING_INVALID: () => 'Chỉ số cuối phải lớn hơn hoặc bằng chỉ số đầu.',
+  DUPLICATE_DEPOSIT: () => 'Hợp đồng đã thu cọc ban đầu. Hãy tải lại sổ cọc.',
+  DUPLICATE_DEDUCTION: () => 'Ticket này đã được trừ cọc cho hợp đồng.',
+  DUPLICATE_REFUND: () => 'Hợp đồng đã hoàn cọc, không thể hoàn lần nữa.',
+  REFUND_EXCEEDS_BALANCE: () => 'Số tiền hoàn vượt số dư cọc hiện tại.',
+  NO_TOPUP_REQUIRED: () =>
+    'Hợp đồng này không còn thiếu tiền cọc nên không cần nộp bù.',
+  TOPUP_EXCEEDS_REQUIRED: () =>
+    'Số tiền nộp bù vượt số cọc còn thiếu. Hãy nhập đúng số tiền còn thiếu.',
+  CONTRACT_NOT_ACTIVE: () =>
+    'Hợp đồng chưa hoặc không còn hiệu lực cho thao tác này.',
   DUPLICATE_INVOICE: () => 'Sinh viên/phòng đã có hóa đơn của kỳ này.',
   CONTRACT_EXISTS: () => 'Sinh viên đã có hợp đồng đang chờ hoặc đang ở.',
   INVALID_STATE_TRANSITION: () =>
@@ -128,6 +138,22 @@ const messages: Record<string, (d: Details) => string> = {
     'Bạn đã gửi lựa chọn cho kỳ hè này. Hãy mở lựa chọn hiện có để theo dõi.',
   STORAGE_RECORD_EXISTS: () =>
     'Đã có phiếu gửi đồ chưa nhận lại. Hãy hoàn tất phiếu đó trước khi tạo phiếu mới.',
+  TICKET_ALREADY_CONCLUDED: () =>
+    'Ticket đã được kết luận nguyên nhân và chi phí. Hãy tải lại chi tiết ticket.',
+  COMMON_AREA_NO_CHARGE: () =>
+    'Ticket khu vực chung không tính chi phí cho sinh viên.',
+  COST_INVALID: (d) =>
+    `Chi phí kết luận không hợp lệ${d.repairCost ? ` (${String(d.repairCost)})` : ''}. Hư hỏng do sử dụng cần chi phí lớn hơn 0; hao mòn tự nhiên cần ghi chú và không có chi phí.`,
+  CHARGED_STUDENTS_INVALID: () =>
+    'Chọn ít nhất một sinh viên đang ở trong phòng lúc tạo ticket; không chọn người ngoài danh sách.',
+  NO_OCCUPANT_TO_CHARGE: () =>
+    'Không có sinh viên nào ở trong phòng tại thời điểm tạo ticket để trừ cọc.',
+  MOVE_OUT_WARNINGS_NOT_ACKNOWLEDGED: () =>
+    'Còn công nợ hoặc ticket chưa kết luận chi phí. Hãy xem cảnh báo và xác nhận trước khi trả phòng.',
+  SUMMER_CHOICE_NOT_APPROVED: () =>
+    'Lựa chọn tạm rời hè chưa được duyệt. Hãy chờ Staff duyệt lựa chọn trước khi gửi đồ.',
+  TEMP_LEAVE_NOT_EXTENDED: () =>
+    'Hợp đồng chưa được gia hạn sang năm học sau. Hãy hoàn tất gia hạn trước khi tạo phiếu gửi đồ.',
   DEPOSIT_INVALID: () =>
     'Giao dịch tiền cọc không hợp lệ. Hãy kiểm tra loại giao dịch và số tiền rồi thử lại.',
   RATE_EXISTS: (d) =>

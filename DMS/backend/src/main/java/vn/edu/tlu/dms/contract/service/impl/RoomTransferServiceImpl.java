@@ -111,6 +111,7 @@ public class RoomTransferServiceImpl implements RoomTransferService {
     @Override
     public TransferDetail approve(Long id, Long targetBedId) {
         guard.requirePermission(Permission.ROOM_TRANSFER_APPROVE);
+        guard.requireRole(Role.STAFF);
         Context context = load(id, true);
         requireAction(context, BusinessAction.APPROVE);
         // Khóa giường → sinh viên trong BedOccupancyService, sau đó mới cập nhật yêu cầu.
@@ -141,6 +142,7 @@ public class RoomTransferServiceImpl implements RoomTransferService {
     @Override
     public TransferDetail reject(Long id, String reason) {
         guard.requirePermission(Permission.ROOM_TRANSFER_APPROVE);
+        guard.requireRole(Role.STAFF);
         if (reason == null || reason.isBlank()) {
             throw BusinessException.invalid(ApiField.REASON, ValidationMessage.REQUIRED);
         }

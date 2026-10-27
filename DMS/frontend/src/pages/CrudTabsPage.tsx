@@ -1,5 +1,5 @@
 import { Action, permissionFor } from '../constants/authorization'
-import { Tabs } from 'antd'
+import { Tabs } from '../components/ui/Surface'
 import CrudPage from './CrudPage'
 import { useMe } from '../features/account/useMe'
 import { resources } from '../features/crud/resources'

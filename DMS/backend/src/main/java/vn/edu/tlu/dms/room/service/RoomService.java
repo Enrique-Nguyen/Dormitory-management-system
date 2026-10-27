@@ -67,4 +67,15 @@ public interface RoomService {
      */
     List<AvailableRoom> findAvailableBeds(
             Long applicationId, Long transferRequestId, Long buildingId, Long roomTypeId);
+
+    /**
+     * Như {@link #findAvailableBeds(Long, Long, Long, Long)} nhưng hỗ trợ thêm nguồn phiếu gửi đồ
+     * khi sinh viên tạm rời hè nhận lại giường. Truyền đúng một trong ba nguồn.
+     */
+    List<AvailableRoom> findAvailableBeds(
+            Long applicationId,
+            Long transferRequestId,
+            Long storageRecordId,
+            Long buildingId,
+            Long roomTypeId);
 }

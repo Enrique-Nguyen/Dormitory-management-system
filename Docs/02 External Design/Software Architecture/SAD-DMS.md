@@ -1,13 +1,14 @@
 # Tài liệu kiến trúc phần mềm (SAD) — DMS
 
-> **Phiên bản 1.5**, 21/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.12 (mục 2, 4, 6, 7, 10), `DB-Design-DMS.md` v0.8, `DMS-UI-UX-Design.md` (mục 27), đề xuất đề tài (mục 4, 10, 13)
+> **Phiên bản 1.6**, 22/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.13 (mục 2, 4, 6, 7, 10), `DB-Design-DMS.md` v0.8, `DMS-UI-UX-Design.md` (mục 27), đề xuất đề tài (mục 4, 10, 13)
 > Trạng thái: bản 1.0 được duyệt ngày 10/10/2026; bản 1.1 đồng bộ cấu trúc Service/Impl và luồng xác thực đã triển khai ngày 13/10/2026; bản 1.4 đồng bộ kết quả sửa lỗi từ code review.
 
 ### Lịch sử thay đổi
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 1.6 | 22/10/2026 | TV5: kiến trúc sổ cọc với khóa dòng FOR UPDATE, luồng khấu trừ cọc âm theo ticket MISUSE, khôi phục số dư theo FIFO; tách truy vấn DebtQuery chống phụ thuộc vòng giữa billing và contract; đồng bộ kiến trúc KPI Staff Dashboard không vi phạm ranh giới module ArchUnit |
 | 1.5 | 21/10/2026 | TV1: triển khai import Excel có giới hạn giải nén và bù trừ danh tính khi rollback; SystemJobService dùng REQUIRES_NEW qua TransactionTemplate, SYSTEM không giả danh Admin; hủy hợp đồng phát sự kiện trạng thái đồng bộ. Nhắc cọc mỗi giờ theo NFR-REL-03; cron cấu hình môi trường, giữ ngưỡng nghiệp vụ trong system_config |
 | 0.1 | 10/10/2026 | Bản đầu tiên: gom các quyết định kiến trúc rải rác ở SRS, đề xuất, UI và CSDL; bổ sung ranh giới module, đồng thời, bảo mật, triển khai |
 | 0.2 | 10/10/2026 | Theo thẩm định: tách sự kiện trạng thái (cùng transaction) và sự kiện thông báo (sau commit); quan hệ chéo module chỉ lưu ID; job dùng `TransactionTemplate` và khóa lại từng bản ghi; lọc phạm vi danh sách ngay trong SQL; thứ tự ghi ảnh và dọn file khi rollback; chốt Q-ARC-01..06 |

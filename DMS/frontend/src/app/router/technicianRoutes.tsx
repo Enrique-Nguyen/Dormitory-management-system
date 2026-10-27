@@ -1,6 +1,8 @@
 import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
 import CrudPage from '../../pages/CrudPage'
+import NotificationInboxPage from '../../pages/NotificationInboxPage'
+import TaskDetailPage from '../../pages/technician/TaskDetailPage'
 import RequireRole from '../guards/RequireRole'
 import HomeRedirect from '../guards/HomeRedirect'
 import TechnicianLayout from '../layouts/TechnicianLayout'
@@ -15,9 +17,9 @@ export const technicianRoutes: RouteObject = {
       children: [
         { index: true, element: <HomeRedirect /> },
         { path: 'tasks', element: <CrudPage resource="maintenance" /> },
-        { path: 'tasks/:id', element: <CrudPage resource="maintenance" /> },
+        { path: 'tasks/:id', element: <TaskDetailPage /> },
         { path: 'profile', element: <CrudPage resource="profile" /> },
-        { path: 'notifications', element: <CrudPage resource="inbox" /> },
+        { path: 'notifications', element: <NotificationInboxPage /> },
       ],
     },
   ],

@@ -56,4 +56,11 @@ public final class InvoiceDtos {
             LocalDate billingMonth,
             @Min(0) Long totalAmount,
             LocalDate dueDate) {}
+
+    public record BatchIssueResult(int totalCreated, int totalSkipped, long totalAmount) {}
+
+    public record RoomFeeBatchIssueRequest(@NotNull @Positive Long semesterId) {}
+
+    public record UtilityBatchIssueRequest(
+            @Positive Long managementUnitId, @NotNull LocalDate billingMonth) {}
 }

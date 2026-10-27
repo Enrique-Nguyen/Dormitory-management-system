@@ -1,4 +1,9 @@
 import {
+  ConfirmPaymentModal,
+  DepositLedgerModal,
+} from '../features/billing'
+import { CreateTicketModal } from '../features/maintenance'
+import {
   Input,
   InputNumber,
   SearchInput,
@@ -7,6 +12,7 @@ import {
   TextArea,
 } from '../components/ui/FormControls'
 import {
+  Alert,
   Button,
   Card,
   FilterBar,
@@ -22,6 +28,7 @@ import {
 } from '../constants/authorization'
 import {
   DeleteOutlined,
+  DollarCircleOutlined,
   EditOutlined,
   EyeOutlined,
   GlobalOutlined,
@@ -31,7 +38,6 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   App,
-  Alert,
   Flex,
   Form,
   Result,
@@ -64,7 +70,7 @@ import {
   writeCrudRecord,
 } from '../features/crud/api'
 import { resources } from '../features/crud/resources'
-import { crudValueLabels } from '../constants/statusConfig'
+import { crudValueLabels, InvoiceStatus } from '../constants/statusConfig'
 import type { CrudField, CrudRecord } from '../features/crud/types'
 import { api } from '../services/api/client'
 import { hasPermission } from '../services/api/auth'
@@ -199,6 +205,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     null,
   )
   const [activeRecord, setActiveRecord] = useState<CrudRecord | null>(null)
+  const [maintenanceCreateOpen, setMaintenanceCreateOpen] = useState(false)
   const isViewMode = modalMode === 'view'
   const editing =
     modalMode === 'edit'
@@ -237,12 +244,16 @@ export default function CrudPage({ resource }: { resource: string }) {
     !config.singleton &&
     !config.noCreate
   const canWrite = canCreate || canUpdate || canDelete
+  const [ledgerRecord, setLedgerRecord] = useState<CrudRecord | null>(null)
+  const [paymentRecord, setPaymentRecord] = useState<CrudRecord | null>(null)
   const idKey = config.idKey ?? 'id'
   const writeEndpoint =
     resource === 'students' && role === Role.ADMIN
       ? '/admin/students'
       : (config.writeEndpoint ?? config.endpoint)
   const detailEndpoint = config.detailEndpoint ?? config.endpoint
+  /** Xóa dùng endpoint riêng khi backend không mở DELETE ở endpoint ghi. */
+  const deleteEndpoint = config.deleteEndpoint ?? writeEndpoint
   function changeQuery(patch: Partial<typeof query>) {
     setSearchParams((previous) =>
       updateCrudQuery(previous, resource, { ...query, ...patch }),
@@ -444,7 +455,7 @@ export default function CrudPage({ resource }: { resource: string }) {
       canDelete &&
       canChangeRow(row) &&
       !config.singleton &&
-      resource !== 'configs' &&
+      !config.noDelete &&
       !(resource === 'users' && (row.locked === true || row.id === me?.id))
     )
   }
@@ -466,6 +477,14 @@ export default function CrudPage({ resource }: { resource: string }) {
           : Permission.STUDENT_RESET_PASSWORD,
       ) &&
       row.id !== me?.id
+    )
+  }
+  function canConfirmInvoicePayment(row: CrudRecord) {
+    // Trùng điều kiện allowedActions của GET /api/invoices/{id}: chỉ hóa đơn chưa thu.
+    return (
+      resource === 'invoices' &&
+      canUpdate &&
+      row.status === InvoiceStatus.UNPAID
     )
   }
   function showTemporaryPassword(result: unknown, username?: unknown) {
@@ -633,7 +652,7 @@ export default function CrudPage({ resource }: { resource: string }) {
         }
         try {
           await writeCrudRecord(
-            `${writeEndpoint}/${row[idKey]}${config.deleteAction ? `/${config.deleteAction}` : ''}`,
+            `${deleteEndpoint}/${row[idKey]}${config.deleteAction ? `/${config.deleteAction}` : ''}`,
             config.deleteAction ? 'post' : 'delete',
             config.deleteAction === 'lock' ? { reason } : undefined,
           )
@@ -721,16 +740,17 @@ export default function CrudPage({ resource }: { resource: string }) {
     })
   }
   async function showDetail(row: CrudRecord) {
+    if (resource === 'deposits' || resource === 'myDeposits') {
+      setLedgerRecord(row)
+      return
+    }
     try {
       const selected =
         config.singleton ||
         config.useListRecordForEdit ||
         config.inlineDetail
           ? row
-          : resource === 'deposits'
-            ? ((await api.get(`/contracts/${row.id}/deposit`))
-                .data as CrudRecord)
-            : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
+          : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
                 .data as CrudRecord)
       setActiveRecord(selected)
       setModalMode('view')
@@ -819,7 +839,8 @@ export default function CrudPage({ resource }: { resource: string }) {
               <Button
                 type="primary"
                 onClick={() => {
-                  void openEditor()
+                  if (resource === 'maintenance') setMaintenanceCreateOpen(true)
+                  else void openEditor()
                 }}
               >
                 Thêm mới
@@ -1025,6 +1046,17 @@ export default function CrudPage({ resource }: { resource: string }) {
                           />
                         </Tooltip>
                       )}
+                    {canConfirmInvoicePayment(row) && (
+                      <Tooltip title="Xác nhận đã thu tiền">
+                        <Button
+                          size="small"
+                          type="primary"
+                          icon={<DollarCircleOutlined />}
+                          onClick={() => setPaymentRecord(row)}
+                          aria-label="Xác nhận đã thu tiền"
+                        />
+                      </Tooltip>
+                    )}
                   </Space>
                 ),
               },
@@ -1201,6 +1233,43 @@ export default function CrudPage({ resource }: { resource: string }) {
         </Form>
         {isViewMode && activeRecord && (
           <>
+            {resource === 'contracts' &&
+              Array.isArray(activeRecord.allowedActions) &&
+              ((activeRecord.allowedActions as string[]).includes('move-out') ||
+                (activeRecord.allowedActions as string[]).includes(
+                  'create-storage-record',
+                )) && (
+                <Space wrap style={{ marginTop: 16 }}>
+                  {(activeRecord.allowedActions as string[]).includes(
+                    'move-out',
+                  ) && (
+                    <Button
+                      type="primary"
+                      danger
+                      onClick={() =>
+                        navigate(
+                          `${location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/contracts/${String(activeRecord.id)}/move-out`,
+                        )
+                      }
+                    >
+                      Làm thủ tục trả phòng
+                    </Button>
+                  )}
+                  {(activeRecord.allowedActions as string[]).includes(
+                    'create-storage-record',
+                  ) && (
+                    <Button
+                      onClick={() =>
+                        navigate(
+                          `${location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/storage?contractId=${String(activeRecord.id)}`,
+                        )
+                      }
+                    >
+                      Tạo phiếu gửi đồ
+                    </Button>
+                  )}
+                </Space>
+              )}
             {resource === 'maintenance' &&
               hasPermission(me, Permission.MAINTENANCE_UPDATE) &&
               Array.isArray(activeRecord.allowedActions) && (
@@ -1252,6 +1321,28 @@ export default function CrudPage({ resource }: { resource: string }) {
           </>
         )}
       </Modal>
+      {ledgerRecord && <DepositLedgerModal contractId={Number(ledgerRecord.contractId)}
+        contractCode={String(ledgerRecord.contractCode)} studentName={String(ledgerRecord.studentName)}
+        open onClose={() => setLedgerRecord(null)} readOnly={resource === 'myDeposits'} />}
+      {paymentRecord && (
+        <ConfirmPaymentModal
+          invoiceId={Number(paymentRecord[idKey])}
+          invoiceCode={String(paymentRecord.code ?? '')}
+          totalAmount={Number(paymentRecord.totalAmount ?? 0)}
+          open
+          onClose={() => setPaymentRecord(null)}
+        />
+      )}
+      {resource === 'maintenance' && (
+        <CreateTicketModal
+          open={maintenanceCreateOpen}
+          onClose={() => setMaintenanceCreateOpen(false)}
+          onCreated={() => {
+            setMaintenanceCreateOpen(false)
+            void refetch()
+          }}
+        />
+      )}
     </>
   )
 }

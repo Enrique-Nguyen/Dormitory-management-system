@@ -36,13 +36,43 @@ public interface ContractCrudService {
     Object searchStayRequestsByPage(boolean extension, SearchRequest input, boolean mine);
 
     /**
-     * Lấy chi tiết yêu cầu gia hạn sau khi kiểm tra quyền xem hợp đồng. Chi tiết yêu cầu chuyển
-     * phòng do {@code RoomTransferService} trả vì kèm giường hiện tại, lịch sử và allowedActions.
+     * Lấy chi tiết yêu cầu gia hạn sau khi kiểm tra quyền xem hợp đồng, kèm ngày cũ/mới, hành động
+     * được phép và timeline. Chi tiết yêu cầu chuyển phòng do {@code RoomTransferService} trả vì
+     * kèm giường hiện tại, lịch sử và allowedActions.
      *
      * @param id mã định danh yêu cầu gia hạn
      * @return thông tin yêu cầu được phép truy cập
      */
-    Object getExtensionRequest(Long id);
+    ContractDtos.ExtensionDetail getExtensionDetail(Long id);
+
+    /**
+     * Duyệt yêu cầu gia hạn PENDING của Staff/Admin đúng đơn vị trong một transaction: khóa yêu
+     * cầu và hợp đồng, kiểm tra ngày mới sau ngày hiện tại và không chồng hợp đồng PENDING/ACTIVE
+     * khác của sinh viên, cập nhật endDate, trạng thái yêu cầu, lịch sử và audit.
+     *
+     * @param id mã định danh yêu cầu gia hạn
+     * @return chi tiết yêu cầu sau khi duyệt
+     */
+    ContractDtos.ExtensionDetail approveExtension(Long id);
+
+    /**
+     * Từ chối yêu cầu gia hạn PENDING của Staff/Admin đúng đơn vị; lý do bắt buộc và được lưu cùng
+     * trạng thái, lịch sử và audit.
+     *
+     * @param id mã định danh yêu cầu gia hạn
+     * @param reason lý do từ chối
+     * @return chi tiết yêu cầu sau khi từ chối
+     */
+    ContractDtos.ExtensionDetail rejectExtension(Long id, String reason);
+
+    /**
+     * Hủy yêu cầu gia hạn PENDING của sinh viên chủ sở hữu hoặc ADMIN; không xóa cứng và giữ
+     * timeline của yêu cầu.
+     *
+     * @param id mã định danh yêu cầu gia hạn
+     * @return chi tiết yêu cầu sau khi hủy
+     */
+    ContractDtos.ExtensionDetail cancelExtension(Long id);
 
     /**
      * Lưu chung yêu cầu: không có id tạo PENDING trên hợp đồng ACTIVE; có id sửa yêu cầu PENDING.
