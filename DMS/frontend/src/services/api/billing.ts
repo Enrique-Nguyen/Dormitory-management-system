@@ -106,6 +106,27 @@ export interface StaffDashboardSummary {
     contractsExpiringSoon: number
     contractsOverdueMoveout: number
     ticketsByStatus: Record<string, number>
+    ticketsRequiringAction?: number
+  }
+  infrastructure?: {
+    buildings: number
+    rooms: number
+    roomsByStatus: Record<string, number>
+  }
+  registration?: {
+    totalApplications: number
+    pendingApplications: number
+    pendingSummerChoices: number
+    applicationsByStatus: Record<string, number>
+  }
+  residency?: {
+    activeContracts: number
+    pendingActivation: number
+    pendingExtensions: number
+    pendingTransfers: number
+    storageRecords: number
+    storedPackages: number
+    contractsByStatus: Record<string, number>
   }
 }
 

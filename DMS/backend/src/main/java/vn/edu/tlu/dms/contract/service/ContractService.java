@@ -4,6 +4,8 @@ import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.contract.api.ContractDtos;
 
+import java.util.Map;
+
 /** Khai báo thao tác tra cứu hợp đồng theo chủ sở hữu hoặc phạm vi đơn vị quản lý. */
 public interface ContractService {
 
@@ -39,6 +41,17 @@ public interface ContractService {
      * @return true nếu còn hợp đồng sống tham chiếu đơn này
      */
     boolean hasLiveContractForApplication(Long applicationId);
+
+    /** Đếm hợp đồng, yêu cầu gia hạn/chuyển phòng đang chờ và đồ chưa nhận theo đơn vị. */
+    DashboardResidency getDashboardSummary(Long managementUnitId);
+
+    /** Số liệu lưu trú chỉ đọc; không thực hiện duyệt yêu cầu hoặc thay đổi chỗ ở. */
+    record DashboardResidency(
+            Map<String, Long> contractsByStatus,
+            long pendingExtensions,
+            long pendingTransfers,
+            long storageRecords,
+            long storedPackages) {}
 
     /** Đếm hợp đồng ACTIVE sắp hết hạn và quá hạn trả phòng trong phạm vi đơn vị đã xác định. */
     ExpirySummary getExpirySummary(Long managementUnitId, int expiringDays);

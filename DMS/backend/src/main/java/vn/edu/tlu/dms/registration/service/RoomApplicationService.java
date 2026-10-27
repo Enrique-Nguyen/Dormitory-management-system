@@ -5,8 +5,17 @@ import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Input;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Response;
 
+import java.util.Map;
+
 /** Hợp đồng đơn đăng ký phòng; logic nằm trong RoomApplicationServiceImpl. */
 public interface RoomApplicationService {
+
+    /** Đếm đơn theo trạng thái và lựa chọn hè chờ duyệt trong phạm vi Dashboard đã xác định. */
+    DashboardRegistration getDashboardSummary(Long managementUnitId);
+
+    /** Dữ liệu tổng hợp chỉ đọc của phân hệ đăng ký. */
+    record DashboardRegistration(
+            Map<String, Long> applicationsByStatus, long pendingSummerChoices) {}
 
     /**
      * Tìm kiếm/phân trang theo đợt, trạng thái, từ khóa và sắp xếp sau khi lọc phạm vi. mine do

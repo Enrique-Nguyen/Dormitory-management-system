@@ -14,6 +14,8 @@ import vn.edu.tlu.dms.room.repository.RoomTypeRepository;
 import vn.edu.tlu.dms.room.repository.SemesterRepository;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -110,6 +112,32 @@ public class RoomReferenceServiceImpl implements RoomReferenceService {
         if (rows.isEmpty()) {
             throw BusinessException.notFound();
         }
+    }
+
+    @Override
+    public DashboardInfrastructure getDashboardInfrastructure(Long managementUnitId) {
+        Long buildingCount =
+                jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM building WHERE (CAST(? AS bigint) IS NULL OR"
+                            + " management_unit_id=?)",
+                        Long.class,
+                        managementUnitId,
+                        managementUnitId);
+        Map<String, Long> counts = new LinkedHashMap<>();
+        jdbc.query(
+                """
+                SELECT r.status,COUNT(*) AS cnt FROM room r
+                JOIN building bd ON bd.id=r.building_id
+                WHERE (CAST(? AS bigint) IS NULL OR bd.management_unit_id=?)
+                GROUP BY r.status ORDER BY r.status
+                """,
+                rs -> {
+                    counts.put(rs.getString("status"), rs.getLong("cnt"));
+                },
+                managementUnitId,
+                managementUnitId);
+        return new DashboardInfrastructure(
+                buildingCount == null ? 0 : buildingCount, Map.copyOf(counts));
     }
 
     /** Tính sức chứa và lấp đầy trên cùng phạm vi giường hoạt động, tách giường bảo trì. */

@@ -17,6 +17,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.SummerStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
@@ -46,7 +47,9 @@ import vn.edu.tlu.dms.room.service.RoomReferenceService;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -106,6 +109,36 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         this.jdbc = jdbc;
         this.contracts = contracts;
         this.entityManager = entityManager;
+    }
+
+    @Override
+    public DashboardRegistration getDashboardSummary(Long managementUnitId) {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        jdbc.query(
+                """
+                SELECT status,COUNT(*) AS cnt FROM room_application
+                WHERE (CAST(? AS bigint) IS NULL OR preferred_unit_id=?)
+                GROUP BY status ORDER BY status
+                """,
+                rs -> {
+                    counts.put(rs.getString("status"), rs.getLong("cnt"));
+                },
+                managementUnitId,
+                managementUnitId);
+        Long pendingSummer =
+                jdbc.queryForObject(
+                        """
+                        SELECT COUNT(*) FROM summer_choice sc
+                        JOIN dormitory_contract c ON c.id=sc.contract_id
+                        JOIN room_application ap ON ap.id=c.application_id
+                        WHERE sc.status=? AND (CAST(? AS bigint) IS NULL OR ap.preferred_unit_id=?)
+                        """,
+                        Long.class,
+                        SummerStatus.PENDING,
+                        managementUnitId,
+                        managementUnitId);
+        return new DashboardRegistration(
+                Map.copyOf(counts), pendingSummer == null ? 0 : pendingSummer);
     }
 
     @Override
@@ -293,9 +326,9 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
     }
 
     /**
-     * Kiểm tra mọi trạng thái đơn (kể cả ASSIGNED). Không cần khóa hợp đồng: đơn đã bị khóa
-     * FOR UPDATE ở {@code loadAccessibleApplication}, còn tạo hợp đồng cũng khóa cùng hàng đơn rồi
-     * kiểm tra trạng thái nên hai thao tác luôn tuần tự.
+     * Kiểm tra mọi trạng thái đơn (kể cả ASSIGNED). Không cần khóa hợp đồng: đơn đã bị khóa FOR
+     * UPDATE ở {@code loadAccessibleApplication}, còn tạo hợp đồng cũng khóa cùng hàng đơn rồi kiểm
+     * tra trạng thái nên hai thao tác luôn tuần tự.
      */
     private boolean hasLiveContract(RoomApplication a) {
         return contracts.hasLiveContractForApplication(a.getId());
