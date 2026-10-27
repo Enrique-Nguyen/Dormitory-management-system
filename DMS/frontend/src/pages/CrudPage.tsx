@@ -1,7 +1,5 @@
-import {
-  ConfirmPaymentModal,
-  DepositLedgerModal,
-} from '../features/billing'
+import { ConfirmPaymentModal, DepositLedgerModal } from '../features/billing'
+import { EmptyState, InvoiceStatus, StatusBadge } from '../components'
 import { CreateTicketModal } from '../features/maintenance'
 import {
   Input,
@@ -33,6 +31,7 @@ import {
   EyeOutlined,
   GlobalOutlined,
   KeyOutlined,
+  ReloadOutlined,
   UnlockOutlined,
 } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -69,13 +68,19 @@ import {
   validationFieldErrors,
   writeCrudRecord,
 } from '../features/crud/api'
-import { resources } from '../features/crud/resources'
-import { crudValueLabels, InvoiceStatus } from '../constants/statusConfig'
-import type { CrudField, CrudRecord } from '../features/crud/types'
+import { resources, billingUiLabels } from '../features/crud/resources'
+import { BillingAction, crudValueLabels, InvoiceStatus as InvoiceState } from '../constants/statusConfig'
+import type { CrudColumn, CrudField, CrudRecord } from '../features/crud/types'
 import { api } from '../services/api/client'
 import { hasPermission } from '../services/api/auth'
 import { errorMessage } from '../utils/errorMessages'
-import { formatDate, formatDateTime } from '../utils/format'
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatMonth,
+  formatNumber,
+} from '../utils/format'
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler'
 
 function display(value: unknown): string {
@@ -93,6 +98,35 @@ function display(value: unknown): string {
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value))
     return formatDate(value)
   return crudValueLabels[String(value)] ?? String(value)
+}
+
+/** Cột số/tiền/ngày dùng định dạng chung; trạng thái hóa đơn và hợp đồng dùng badge có nhãn. */
+function renderColumnCell(
+  resource: string,
+  column: CrudColumn,
+  row: CrudRecord,
+) {
+  if (['invoices', 'myInvoices'].includes(resource) && column.key === 'status')
+    return (
+      <InvoiceStatus
+        status={String(row.status)}
+        dueDate={row.dueDate as string | null}
+      />
+    )
+  if (['deposits', 'myDeposits'].includes(resource) && column.key === 'status')
+    return <StatusBadge entity="contract" status={String(row.status)} />
+  const raw = readValue(row, column.key)
+  if (column.format === 'money' || column.format === 'number') {
+    const value = typeof raw === 'number' ? raw : Number(raw)
+    if (raw == null || raw === '' || !Number.isFinite(value)) return '—'
+    return column.format === 'money'
+      ? formatMoney(value)
+      : formatNumber(value)
+  }
+  if (column.format === 'date') return formatDate(raw as string | null)
+  if (column.format === 'datetime') return formatDateTime(raw as string | null)
+  if (column.format === 'month') return formatMonth(raw as string | null)
+  return <span>{display(raw)}</span>
 }
 
 function hasPeriodOpened(value: unknown) {
@@ -244,14 +278,25 @@ export default function CrudPage({ resource }: { resource: string }) {
     !config.singleton &&
     !config.noCreate
   const canWrite = canCreate || canUpdate || canDelete
+  const [paymentInvoice, setPaymentInvoice] = useState<CrudRecord | null>(null)
   const [ledgerRecord, setLedgerRecord] = useState<CrudRecord | null>(null)
-  const [paymentRecord, setPaymentRecord] = useState<CrudRecord | null>(null)
   const idKey = config.idKey ?? 'id'
   const writeEndpoint =
     resource === 'students' && role === Role.ADMIN
       ? '/admin/students'
       : (config.writeEndpoint ?? config.endpoint)
   const detailEndpoint = config.detailEndpoint ?? config.endpoint
+  const invoiceResource = resource === 'invoices' || resource === 'myInvoices'
+  const canConfirmPayment =
+    !!activeRecord &&
+    resource === 'invoices' &&
+    hasPermission(me, Permission.INVOICE_UPDATE) &&
+    Array.isArray(activeRecord.allowedActions) &&
+    activeRecord.allowedActions.includes(BillingAction.CONFIRM_PAYMENT)
+  const invoiceItems =
+    invoiceResource && Array.isArray(activeRecord?.items)
+      ? (activeRecord.items as CrudRecord[])
+      : []
   /** Xóa dùng endpoint riêng khi backend không mở DELETE ở endpoint ghi. */
   const deleteEndpoint = config.deleteEndpoint ?? writeEndpoint
   function changeQuery(patch: Partial<typeof query>) {
@@ -435,6 +480,10 @@ export default function CrudPage({ resource }: { resource: string }) {
 
   /** Quyền thao tác không thay thế điều kiện trạng thái hoặc người sở hữu bản ghi. */
   function canChangeRow(row: CrudRecord) {
+    if (
+      resource === 'readings' &&
+      (row.invoiced === true || row.hasFollowingMonth === true)
+    ) return false
     return (
       (!config.editStates || config.editStates.includes(String(row.status))) &&
       (!config.rowOwned ||
@@ -484,7 +533,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     return (
       resource === 'invoices' &&
       canUpdate &&
-      row.status === InvoiceStatus.UNPAID
+      row.status === InvoiceState.UNPAID
     )
   }
   function showTemporaryPassword(result: unknown, username?: unknown) {
@@ -811,6 +860,82 @@ export default function CrudPage({ resource }: { resource: string }) {
     })
   }
 
+  /** Trường hiển thị trong form; giữ nguyên điều kiện ẩn theo nghiệp vụ của màn hiện tại. */
+  const formFields = fields
+    .filter(visible)
+    .filter(
+      (field) =>
+        !(
+          resource === 'maintenance' &&
+          role === Role.STUDENT &&
+          field.name === 'roomId'
+        ),
+    )
+  const sectionedFieldNames = new Set(
+    config.formSections?.flatMap((section) => section.fields) ?? [],
+  )
+  const remainingFields = formFields.filter(
+    (field) => !sectionedFieldNames.has(field.name),
+  )
+
+  function renderField(field: CrudField) {
+    return field.kind === 'select' ? (
+      <Form.Item
+        key={field.name}
+        label={field.label}
+        required={!isViewMode && field.required}
+        extra={!isViewMode ? field.hint : undefined}
+      >
+        <LookupInput
+          field={field}
+          record={activeRecord ?? undefined}
+          disabled={
+            isViewMode ||
+            (resource === 'users' &&
+              field.name === 'role' &&
+              editing?.id === me?.id)
+          }
+        />
+      </Form.Item>
+    ) : (
+      <Form.Item
+        key={field.name}
+        name={field.name}
+        label={field.label}
+        className={
+          field.kind === 'textarea' ? 'dms-form-span-full' : undefined
+        }
+        extra={!isViewMode ? field.hint : undefined}
+        valuePropName={field.kind === 'boolean' ? 'checked' : 'value'}
+        rules={
+          isViewMode
+            ? []
+            : [
+                {
+                  required: field.required,
+                  whitespace:
+                    field.required &&
+                    !['number', 'boolean', 'date', 'datetime'].includes(
+                      field.kind ?? '',
+                    ),
+                  message: `Nhập ${field.label.toLowerCase()}`,
+                },
+                ...(field.maxLength
+                  ? [
+                      {
+                        max: field.maxLength,
+                        message: `Tối đa ${field.maxLength} ký tự`,
+                      },
+                    ]
+                  : []),
+              ]
+        }
+      >
+        {renderCrudInput(field)}
+      </Form.Item>
+    )
+  }
+
   if (!canRead)
     return (
       <Result
@@ -821,19 +946,20 @@ export default function CrudPage({ resource }: { resource: string }) {
     )
 
   return (
-    <>
+    <div className={config.finance ? 'dms-finance-page' : undefined}>
       <PageHeader
         title={config.title}
-        subtitle="Tìm kiếm và quản lý dữ liệu"
+        subtitle={config.subtitle ?? 'Tìm kiếm và quản lý dữ liệu'}
         extra={
           <Space>
             <Button
+              icon={<ReloadOutlined />}
               loading={isFetching}
               onClick={() => {
                 void refetch()
               }}
             >
-              Tải lại
+              Làm mới
             </Button>
             {canCreate && (
               <Button
@@ -843,7 +969,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                   else void openEditor()
                 }}
               >
-                Thêm mới
+                {config.createLabel ?? 'Thêm mới'}
               </Button>
             )}
           </Space>
@@ -857,13 +983,17 @@ export default function CrudPage({ resource }: { resource: string }) {
           showIcon
         />
       )}
-      <Card>
+      <Card className={config.finance ? 'dms-finance-card' : undefined}>
         {!config.singleton && (
-          <div className="dms-toolbar">
+          <div
+            className={
+              'dms-toolbar' + (config.finance ? ' dms-finance-toolbar' : '')
+            }
+          >
             {!config.singleton && (
               <SearchInput
                 aria-label={`Tìm kiếm ${config.title.toLowerCase()}`}
-                placeholder="Nhập từ khóa tìm kiếm"
+                placeholder={config.searchPlaceholder ?? 'Nhập từ khóa tìm kiếm'}
                 allowClear
                 enterButton="Tìm kiếm"
                 key={`${resource}:${search}`}
@@ -924,6 +1054,7 @@ export default function CrudPage({ resource }: { resource: string }) {
         {error ? (
           <Alert
             type="error"
+            showIcon
             title={errorMessage(error)}
             action={
               <Button
@@ -940,6 +1071,18 @@ export default function CrudPage({ resource }: { resource: string }) {
             loading={isLoading}
             rowKey={(row) => String(row[idKey] ?? JSON.stringify(row))}
             dataSource={rows}
+            locale={
+              config.emptyTitle
+                ? {
+                    emptyText: (
+                      <EmptyState
+                        title={config.emptyTitle}
+                        description={config.emptyHint}
+                      />
+                    ),
+                  }
+                : undefined
+            }
             pagination={
               config.singleton
                 ? false
@@ -961,9 +1104,21 @@ export default function CrudPage({ resource }: { resource: string }) {
               ...config.columns.map((column) => ({
                 title: column.label,
                 key: column.key,
-                render: (_: unknown, row: CrudRecord) => (
-                  <span>{display(readValue(row, column.key))}</span>
-                ),
+                align:
+                  column.align ??
+                  (column.format === 'money' || column.format === 'number'
+                    ? 'right'
+                    : undefined),
+                className: [
+                  column.format === 'money' || column.format === 'number'
+                    ? 'dms-table-col-number'
+                    : '',
+                  column.key === 'status' ? 'dms-table-col-status' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ') || undefined,
+                render: (_: unknown, row: CrudRecord) =>
+                  renderColumnCell(resource, column, row),
               })),
               {
                 title: 'Thao tác',
@@ -1052,7 +1207,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                           size="small"
                           type="primary"
                           icon={<DollarCircleOutlined />}
-                          onClick={() => setPaymentRecord(row)}
+                          onClick={() => setPaymentInvoice(row)}
                           aria-label="Xác nhận đã thu tiền"
                         />
                       </Tooltip>
@@ -1080,6 +1235,7 @@ export default function CrudPage({ resource }: { resource: string }) {
         okText="Lưu"
         cancelText="Đóng"
         width={780}
+        className={config.finance ? 'dms-finance-modal' : undefined}
         footer={
           modalMode === 'view' ? (
             <Flex
@@ -1104,9 +1260,17 @@ export default function CrudPage({ resource }: { resource: string }) {
               </Space>
               <Space>
                 <Button onClick={closeModal}>Đóng</Button>
-                {activeRecord && canEditRow(activeRecord) && (
+                {canConfirmPayment && activeRecord && (
                   <Button
                     type="primary"
+                    onClick={() => setPaymentInvoice(activeRecord)}
+                  >
+                    {billingUiLabels.confirmPayment}
+                  </Button>
+                )}
+                {activeRecord && canEditRow(activeRecord) && (
+                  <Button
+                    type={canConfirmPayment ? 'default' : 'primary'}
                     icon={<EditOutlined />}
                     onClick={() => {
                       setModalMode('edit')
@@ -1133,6 +1297,97 @@ export default function CrudPage({ resource }: { resource: string }) {
           )
         }
       >
+        {isViewMode && invoiceResource && activeRecord ? (
+          <div className="dms-invoice-detail">
+            <div className="dms-invoice-detail-head">
+              <div className="dms-wrap">
+                <span className="dms-detail-eyebrow">{config.title}</span>
+                <h3 className="dms-detail-code">
+                  {String(activeRecord.code ?? '—')}
+                </h3>
+                <div className="dms-invoice-meta">
+                  <InvoiceStatus
+                    status={String(activeRecord.status)}
+                    dueDate={activeRecord.dueDate as string | null}
+                  />
+                  <span>{display(activeRecord.type)}</span>
+                  {activeRecord.billingMonth ? (
+                    <span>
+                      {billingUiLabels.invoiceMonth}:{' '}
+                      <strong>
+                        {formatMonth(activeRecord.billingMonth as string)}
+                      </strong>
+                    </span>
+                  ) : null}
+                  <span>
+                    {billingUiLabels.invoiceDue}:{' '}
+                    <strong>{formatDate(activeRecord.dueDate as string)}</strong>
+                  </span>
+                  {activeRecord.paidAt ? (
+                    <span>
+                      {billingUiLabels.invoicePaidAt}:{' '}
+                      <strong>
+                        {formatDateTime(activeRecord.paidAt as string)}
+                      </strong>
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              <div className="dms-invoice-detail-amount">
+                <span>{billingUiLabels.invoiceTotal}</span>
+                <strong>
+                  {formatMoney(Number(activeRecord.totalAmount ?? 0))}
+                </strong>
+              </div>
+            </div>
+            <Card title={billingUiLabels.invoiceItems}>
+              {invoiceItems.length > 0 ? (
+                <Table<CrudRecord>
+                  dataSource={invoiceItems}
+                  rowKey={(row) => String(row.id ?? JSON.stringify(row))}
+                  pagination={false}
+                  size="small"
+                  scroll={{ x: 560 }}
+                  columns={[
+                    {
+                      title: billingUiLabels.itemType,
+                      key: 'itemType',
+                      render: (_, row) => display(row.itemType),
+                    },
+                    {
+                      title: billingUiLabels.quantity,
+                      dataIndex: 'quantity',
+                      align: 'right',
+                      className: 'dms-table-col-number',
+                      render: (value) => formatNumber(Number(value ?? 0)),
+                    },
+                    {
+                      title: billingUiLabels.unitPrice,
+                      dataIndex: 'unitPrice',
+                      align: 'right',
+                      className: 'dms-table-col-number',
+                      render: (value) => formatMoney(Number(value ?? 0)),
+                    },
+                    {
+                      title: billingUiLabels.amount,
+                      dataIndex: 'amount',
+                      align: 'right',
+                      className: 'dms-table-col-number',
+                      render: (value) => formatMoney(Number(value ?? 0)),
+                    },
+                    {
+                      title: billingUiLabels.note,
+                      dataIndex: 'note',
+                      render: (value) => display(value),
+                    },
+                  ]}
+                />
+              ) : (
+                <EmptyState title={billingUiLabels.invoiceNoItems} />
+              )}
+            </Card>
+          </div>
+        ) : (
         <Form
           form={form}
           key={
@@ -1150,87 +1405,66 @@ export default function CrudPage({ resource }: { resource: string }) {
           }}
           preserve={false}
         >
-          <FormGrid
-            className={
-              fields.filter(visible).length < 3
-                ? 'dms-form-grid-single'
-                : undefined
-            }
-          >
-            {fields
-              .filter(visible)
-              .filter(
-                (field) =>
-                  !(
-                    resource === 'maintenance' &&
-                    role === Role.STUDENT &&
-                    field.name === 'roomId'
-                  ),
-              )
-              .map((field) =>
-                field.kind === 'select' ? (
-                  <Form.Item
-                    key={field.name}
-                    label={field.label}
-                    required={!isViewMode && field.required}
+          {config.formSections ? (
+            <div className="dms-form-sections">
+              {config.formSections.map((section) => {
+                const sectionFields = formFields.filter((field) =>
+                  section.fields.includes(field.name),
+                )
+                if (sectionFields.length === 0) return null
+                return (
+                  <section
+                    className="dms-form-section"
+                    key={section.title}
+                    aria-label={section.title}
                   >
-                    <LookupInput
-                      field={field}
-                      record={activeRecord ?? undefined}
-                      disabled={
-                        isViewMode ||
-                        (resource === 'users' &&
-                          field.name === 'role' &&
-                          editing?.id === me?.id)
+                    <div className="dms-form-section-head">
+                      <h3 className="dms-form-section-title">
+                        {section.title}
+                      </h3>
+                      {section.note && (
+                        <span className="dms-form-section-note">
+                          {section.note}
+                        </span>
+                      )}
+                    </div>
+                    <FormGrid
+                      className={
+                        sectionFields.length === 1
+                          ? 'dms-form-grid-single'
+                          : undefined
                       }
-                    />
-                  </Form.Item>
-                ) : (
-                  <Form.Item
-                    key={field.name}
-                    name={field.name}
-                    label={field.label}
+                    >
+                      {sectionFields.map(renderField)}
+                    </FormGrid>
+                  </section>
+                )
+              })}
+              {remainingFields.length > 0 && (
+                <section className="dms-form-section" aria-label="Khác">
+                  <FormGrid
                     className={
-                      field.kind === 'textarea'
-                        ? 'dms-form-span-full'
+                      remainingFields.length < 3
+                        ? 'dms-form-grid-single'
                         : undefined
                     }
-                    valuePropName={
-                      field.kind === 'boolean' ? 'checked' : 'value'
-                    }
-                    rules={
-                      isViewMode
-                        ? []
-                        : [
-                            {
-                              required: field.required,
-                              whitespace:
-                                field.required &&
-                                ![
-                                  'number',
-                                  'boolean',
-                                  'date',
-                                  'datetime',
-                                ].includes(field.kind ?? ''),
-                              message: `Nhập ${field.label.toLowerCase()}`,
-                            },
-                            ...(field.maxLength
-                              ? [
-                                  {
-                                    max: field.maxLength,
-                                    message: `Tối đa ${field.maxLength} ký tự`,
-                                  },
-                                ]
-                              : []),
-                          ]
-                    }
                   >
-                    {renderCrudInput(field)}
-                  </Form.Item>
-                ),
+                    {remainingFields.map(renderField)}
+                  </FormGrid>
+                </section>
               )}
-          </FormGrid>
+            </div>
+          ) : (
+            <FormGrid
+              className={
+                formFields.length < 3 ? 'dms-form-grid-single' : undefined
+              }
+            >
+              {formFields.map(renderField)}
+            </FormGrid>
+          )}
         </Form>
+        )}
         {isViewMode && activeRecord && (
           <>
             {resource === 'contracts' &&
@@ -1298,6 +1532,7 @@ export default function CrudPage({ resource }: { resource: string }) {
               )}
             {['items', 'transactions', 'timeline'].map(
               (key) =>
+                !(key === 'items' && invoiceResource) &&
                 Array.isArray(activeRecord[key]) && (
                   <Card
                     key={key}
@@ -1321,16 +1556,41 @@ export default function CrudPage({ resource }: { resource: string }) {
           </>
         )}
       </Modal>
-      {ledgerRecord && <DepositLedgerModal contractId={Number(ledgerRecord.contractId)}
-        contractCode={String(ledgerRecord.contractCode)} studentName={String(ledgerRecord.studentName)}
-        open onClose={() => setLedgerRecord(null)} readOnly={resource === 'myDeposits'} />}
-      {paymentRecord && (
+      {paymentInvoice && (
         <ConfirmPaymentModal
-          invoiceId={Number(paymentRecord[idKey])}
-          invoiceCode={String(paymentRecord.code ?? '')}
-          totalAmount={Number(paymentRecord.totalAmount ?? 0)}
+          invoiceId={Number(paymentInvoice.id)}
+          invoiceCode={paymentInvoice.code == null ? undefined : String(paymentInvoice.code)}
+          totalAmount={
+            paymentInvoice.totalAmount == null
+              ? undefined
+              : Number(paymentInvoice.totalAmount)
+          }
           open
-          onClose={() => setPaymentRecord(null)}
+          onClose={() => setPaymentInvoice(null)}
+          onSuccess={() => {
+            if (activeRecord?.[idKey] === paymentInvoice[idKey]) {
+              void showDetail(paymentInvoice)
+            }
+            void refresh()
+          }}
+        />
+      )}
+      {ledgerRecord && (
+        <DepositLedgerModal
+          contractId={Number(ledgerRecord.contractId)}
+          contractCode={
+            ledgerRecord.contractCode == null
+              ? undefined
+              : String(ledgerRecord.contractCode)
+          }
+          studentName={
+            ledgerRecord.studentName == null
+              ? undefined
+              : String(ledgerRecord.studentName)
+          }
+          open
+          onClose={() => setLedgerRecord(null)}
+          readOnly={resource === 'myDeposits'}
         />
       )}
       {resource === 'maintenance' && (
@@ -1343,6 +1603,6 @@ export default function CrudPage({ resource }: { resource: string }) {
           }}
         />
       )}
-    </>
+    </div>
   )
 }

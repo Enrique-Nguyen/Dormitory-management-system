@@ -5,7 +5,7 @@ import { Skeleton } from 'antd'
 export default function PageSkeleton({ rows = 4 }: { rows?: number }) {
   return (
     <Card aria-busy="true" aria-label="Đang tải">
-      <Skeleton active paragraph={{ rows }} />
+      <Skeleton active paragraph={{ rows }} className="dms-skeleton" />
     </Card>
   )
 }

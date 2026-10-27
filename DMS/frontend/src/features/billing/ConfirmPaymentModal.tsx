@@ -1,8 +1,9 @@
 import { App, Form } from 'antd'
-import { Modal, Radio, RadioGroup, Input, Alert, FormGrid } from '../../components'
+import { BankOutlined, CheckCircleOutlined, DollarOutlined } from '@ant-design/icons'
+import { Alert, Input, Modal, Radio, RadioGroup } from '../../components'
 import { PaymentMethod } from '../../constants/statusConfig'
 import { validationFieldErrors } from '../crud/api'
-import { CheckCircleOutlined, DollarOutlined, BankOutlined } from '@ant-design/icons'
+import { billingUiLabels } from '../crud/resources'
 import { formatMoney } from '../../utils/format'
 import { useConfirmPayment } from './useBilling'
 
@@ -12,6 +13,7 @@ interface Props {
   totalAmount?: number
   open: boolean
   onClose: () => void
+  onSuccess?: () => void
 }
 
 export default function ConfirmPaymentModal({
@@ -20,21 +22,28 @@ export default function ConfirmPaymentModal({
   totalAmount,
   open,
   onClose,
+  onSuccess,
 }: Props) {
   const { message } = App.useApp()
   const [form] = Form.useForm()
   const confirmPayment = useConfirmPayment(invoiceId)
 
   const handleSubmit = async () => {
+    if (confirmPayment.isPending) return
     try {
       const values = await form.validateFields()
       await confirmPayment.mutateAsync({
         paymentMethod: values.paymentMethod,
-        payerName: values.payerName,
+        payerName: String(values.payerName).trim(),
       })
-      message.success(`Đã xác nhận thu tiền hóa đơn ${invoiceCode ?? ''} thành công!`)
+      message.success(
+        totalAmount != null
+          ? `Đã xác nhận thu ${formatMoney(totalAmount)} cho hóa đơn ${invoiceCode ?? ''}.`
+          : `Đã xác nhận thanh toán hóa đơn ${invoiceCode ?? ''}.`,
+      )
       form.resetFields()
       onClose()
+      onSuccess?.()
     } catch (error) {
       form.setFields(validationFieldErrors(error).map((issue) => ({ name: issue.field, errors: [issue.message] })))
     }
@@ -43,52 +52,74 @@ export default function ConfirmPaymentModal({
   return (
     <Modal
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CheckCircleOutlined style={{ color: 'var(--color-success)', fontSize: 20 }} />
-          <span style={{ fontWeight: 600 }}>
-            Xác nhận thanh toán {invoiceCode ? `(${invoiceCode})` : ''}
-          </span>
-        </div>
+        <span className="dms-modal-title">
+          <CheckCircleOutlined className="dms-modal-title-icon" aria-hidden="true" />
+          {billingUiLabels.paymentTitle}
+        </span>
       }
       open={open}
-      onCancel={onClose}
+      onCancel={() => { if (!confirmPayment.isPending) onClose() }}
+      closable={!confirmPayment.isPending}
+      mask={{ closable: !confirmPayment.isPending }}
+      cancelButtonProps={{ disabled: confirmPayment.isPending }}
       onOk={handleSubmit}
       confirmLoading={confirmPayment.isPending}
-      okText="Xác nhận đã thu"
-      cancelText="Hủy bỏ"
+      okText={billingUiLabels.confirmReceived}
+      cancelText={billingUiLabels.cancel}
       destroyOnHidden
     >
-      {totalAmount != null && (
-        <Alert
-          title={`Số tiền cần thu: ${formatMoney(totalAmount)}`}
-          type="info"
-          showIcon
-          style={{ marginBottom: 16, fontWeight: 600 }}
-        />
-      )}
+      <div className="dms-modal-summary">
+        <div>
+          <span className="dms-modal-summary-label">{billingUiLabels.amountDue}</span>
+          <strong className="dms-modal-summary-value">
+            {totalAmount != null ? formatMoney(totalAmount) : '—'}
+          </strong>
+        </div>
+        {!!invoiceCode && (
+          <span className="dms-modal-summary-code">
+            {billingUiLabels.invoiceCode}: <strong>{invoiceCode}</strong>
+          </span>
+        )}
+      </div>
 
-      <Form form={form} layout="vertical" initialValues={{ paymentMethod: PaymentMethod.TRANSFER }}>
-        <FormGrid>
+      <Form form={form} layout="vertical" disabled={confirmPayment.isPending} initialValues={{ paymentMethod: PaymentMethod.TRANSFER }}>
         <Form.Item
           name="paymentMethod"
-          label="Phương thức thanh toán"
-          rules={[{ required: true, message: 'Vui lòng chọn phương thức' }]}
+          label={billingUiLabels.paymentMethod}
+          rules={[{ required: true, message: 'Vui lòng chọn phương thức thanh toán' }]}
         >
-          <RadioGroup buttonStyle="solid" style={{ width: '100%', display: 'flex' }}>
-            <Radio value={PaymentMethod.TRANSFER} style={{ flex: 1, textAlign: 'center' }}>
-              <BankOutlined /> Chuyển khoản ngân hàng
+          <RadioGroup className="dms-choice-grid">
+            <Radio value={PaymentMethod.TRANSFER} className="dms-choice">
+              <span className="dms-choice-title">
+                <BankOutlined aria-hidden="true" />
+                {billingUiLabels.transfer}
+              </span>
+              <span className="dms-choice-hint">{billingUiLabels.transferHint}</span>
             </Radio>
-            <Radio value={PaymentMethod.CASH} style={{ flex: 1, textAlign: 'center' }}>
-              <DollarOutlined /> Tiền mặt
+            <Radio value={PaymentMethod.CASH} className="dms-choice">
+              <span className="dms-choice-title">
+                <DollarOutlined aria-hidden="true" />
+                {billingUiLabels.cash}
+              </span>
+              <span className="dms-choice-hint">{billingUiLabels.cashHint}</span>
             </Radio>
           </RadioGroup>
         </Form.Item>
 
-        <Form.Item name="payerName" label="Họ tên người nộp tiền" rules={[{ required: true, whitespace: true, message: 'Vui lòng nhập người nộp tiền' }, { max: 100 }]}>
-          <Input placeholder="Ví dụ: Nguyễn Văn A (Trưởng phòng)..." />
+        <Form.Item
+          name="payerName"
+          label={billingUiLabels.payerName}
+          extra={billingUiLabels.payerHint}
+          rules={[
+            { required: true, whitespace: true, message: 'Vui lòng nhập người nộp tiền' },
+            { max: 100, message: 'Tối đa 100 ký tự' },
+          ]}
+        >
+          <Input placeholder={billingUiLabels.payerPlaceholder} />
         </Form.Item>
-      </FormGrid>
       </Form>
+
+      <Alert type="info" showIcon title={billingUiLabels.paymentNote} />
     </Modal>
   )
 }
