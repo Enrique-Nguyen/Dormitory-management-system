@@ -21,6 +21,26 @@ public final class MaintenanceRequestPolicy {
 
     private MaintenanceRequestPolicy() {}
 
+    /** Nguyên nhân kết luận ticket; giá trị trùng CHECK cause của bảng maintenance_request. */
+    public enum Cause {
+        WEAR,
+        MISUSE;
+
+        /** Trả null khi giá trị không phải mã nguyên nhân hợp lệ để Service báo lỗi thống nhất. */
+        public static Cause from(String value) {
+            if (value == null) {
+                return null;
+            }
+            String normalized = value.trim();
+            for (Cause cause : values()) {
+                if (cause.name().equals(normalized)) {
+                    return cause;
+                }
+            }
+            return null;
+        }
+    }
+
     public static List<String> allowedActions(
             MaintenanceRequest request, Actor actor, boolean staffCanAccept) {
         // ADMIN thực hiện mọi hành động phù hợp trạng thái; lịch sử vẫn ghi chính ADMIN.
@@ -36,6 +56,8 @@ public final class MaintenanceRequestPolicy {
                         List.of(BusinessAction.ADD_NOTE, BusinessAction.RESOLVE);
                 case MaintenanceStatus.RESOLVED ->
                         List.of(BusinessAction.ACCEPT, BusinessAction.REOPEN);
+                case MaintenanceStatus.CLOSED ->
+                        canConclude(request) ? List.of(BusinessAction.CONCLUDE) : List.of();
                 default -> List.of();
             };
         }
@@ -59,8 +81,19 @@ public final class MaintenanceRequestPolicy {
                                     || actor.is(Role.STAFF) && staffCanAccept
                             ? List.of(BusinessAction.ACCEPT, BusinessAction.REOPEN)
                             : List.of();
+            case MaintenanceStatus.CLOSED ->
+                    actor.is(Role.STAFF) && canConclude(request)
+                            ? List.of(BusinessAction.CONCLUDE)
+                            : List.of();
             default -> List.of();
         };
+    }
+
+    /** Chỉ ticket của phòng đã CLOSED và chưa có nguyên nhân mới được kết luận chi phí. */
+    private static boolean canConclude(MaintenanceRequest request) {
+        return MaintenanceStatus.CLOSED.equals(request.getStatus())
+                && request.getRoomId() != null
+                && request.getCause() == null;
     }
 
     public static void requireAction(

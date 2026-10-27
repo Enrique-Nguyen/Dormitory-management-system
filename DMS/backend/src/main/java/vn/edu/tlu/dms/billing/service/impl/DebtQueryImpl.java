@@ -10,6 +10,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceType;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Cài đặt truy vấn chỉ đọc về công nợ của sinh viên và phòng (SAD 4.1, 4.2). Không khóa bản ghi và
@@ -78,6 +79,46 @@ public class DebtQueryImpl implements DebtQuery {
 
         long utility = unpaidUtility != null ? unpaidUtility : 0L;
         return new RoomDebt(roomId, utility, utility > 0);
+    }
+
+    @Override
+    public List<UnpaidInvoice> findUnpaidRoomFeeInvoices(Long studentId) {
+        return jdbc.query(
+                """
+                SELECT id, code, total_amount, due_date
+                FROM invoice
+                WHERE student_id = ? AND type = ? AND status = ?
+                ORDER BY due_date, id
+                """,
+                (rs, i) ->
+                        new UnpaidInvoice(
+                                rs.getLong("id"),
+                                rs.getString("code"),
+                                rs.getLong("total_amount"),
+                                rs.getObject("due_date", java.time.LocalDate.class)),
+                studentId,
+                InvoiceType.ROOM_FEE,
+                InvoiceStatus.UNPAID);
+    }
+
+    @Override
+    public List<UnpaidInvoice> findUnpaidUtilityInvoices(Long roomId) {
+        return jdbc.query(
+                """
+                SELECT id, code, total_amount, due_date
+                FROM invoice
+                WHERE room_id = ? AND type = ? AND status = ?
+                ORDER BY due_date, id
+                """,
+                (rs, i) ->
+                        new UnpaidInvoice(
+                                rs.getLong("id"),
+                                rs.getString("code"),
+                                rs.getLong("total_amount"),
+                                rs.getObject("due_date", java.time.LocalDate.class)),
+                roomId,
+                InvoiceType.UTILITY,
+                InvoiceStatus.UNPAID);
     }
 
     /** Dùng cùng phạm vi với danh sách hóa đơn, theo đơn vị và học kỳ của từng hóa đơn. */

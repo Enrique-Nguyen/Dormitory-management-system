@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.dto.PageResponse;
+import vn.edu.tlu.dms.common.dto.ReasonRequest;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.registration.api.RegistrationPeriodDtos.Response;
@@ -67,6 +68,25 @@ public class SummerCrudController {
     @GetMapping("/api/summer-choices/{id}")
     public Object getChoice(@PathVariable Long id) {
         return service.getChoice(id);
+    }
+
+    @RequirePrivilege(Permission.SUMMER_REGISTRATION_READ)
+    @GetMapping("/api/me/summer-choice")
+    public Object getMyCurrentChoice() {
+        // Luôn lấy sinh viên hiện tại từ server, không nhận chủ sở hữu do client khai báo.
+        return service.getMyCurrentChoice();
+    }
+
+    @RequirePrivilege(Permission.SUMMER_REGISTRATION_UPDATE)
+    @PostMapping("/api/summer-choices/{id}/approve")
+    public Object approveChoice(@PathVariable Long id) {
+        return service.approve(id);
+    }
+
+    @RequirePrivilege(Permission.SUMMER_REGISTRATION_UPDATE)
+    @PostMapping("/api/summer-choices/{id}/reject")
+    public Object rejectChoice(@PathVariable Long id, @Valid @RequestBody ReasonRequest input) {
+        return service.reject(id, input.reason());
     }
 
     @RequirePrivilege({

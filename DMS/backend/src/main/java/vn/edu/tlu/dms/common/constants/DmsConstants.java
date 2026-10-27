@@ -31,9 +31,16 @@ public final class DmsConstants {
         public static final String BOOTSTRAP_USERNAME_IN_USE = "BOOTSTRAP_USERNAME_IN_USE";
         public static final String CONCURRENT_UPDATE = "CONCURRENT_UPDATE";
         public static final String CONFIG_VALUE_INVALID = "CONFIG_VALUE_INVALID";
+        public static final String CONTRACT_ACTIVATION_EXPIRED = "CONTRACT_ACTIVATION_EXPIRED";
+        public static final String CONTRACT_AUTO_CANCELLED = "CONTRACT_AUTO_CANCELLED";
         public static final String CONTRACT_EXISTS = "CONTRACT_EXISTS";
         public static final String CONTRACT_NOT_ACTIVE = "CONTRACT_NOT_ACTIVE";
+        public static final String CONTRACT_PERIOD_OVERLAP = "CONTRACT_PERIOD_OVERLAP";
+        public static final String COMMON_AREA_NO_CHARGE = "COMMON_AREA_NO_CHARGE";
+        public static final String COST_INVALID = "COST_INVALID";
+        public static final String CHARGED_STUDENTS_INVALID = "CHARGED_STUDENTS_INVALID";
         public static final String CROSS_UNIT_ONLY_STAFF = "CROSS_UNIT_ONLY_STAFF";
+        public static final String DEPOSIT_AMOUNT_MISMATCH = "DEPOSIT_AMOUNT_MISMATCH";
         public static final String DEPOSIT_INVALID = "DEPOSIT_INVALID";
         public static final String DUPLICATE_DEDUCTION = "DUPLICATE_DEDUCTION";
         public static final String DUPLICATE_DEPOSIT = "DUPLICATE_DEPOSIT";
@@ -55,6 +62,12 @@ public final class DmsConstants {
         public static final String LEADER_ALREADY_ASSIGNED = "LEADER_ALREADY_ASSIGNED";
         public static final String LEADER_NOT_STAYING = "LEADER_NOT_STAYING";
         public static final String METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED";
+        public static final String NO_TOPUP_REQUIRED = "NO_TOPUP_REQUIRED";
+        public static final String NO_HOLD_ASSIGNMENT = "NO_HOLD_ASSIGNMENT";
+        public static final String APPLICATION_NOT_APPROVED = "APPLICATION_NOT_APPROVED";
+        public static final String MOVE_OUT_WARNINGS_NOT_ACKNOWLEDGED =
+                "MOVE_OUT_WARNINGS_NOT_ACKNOWLEDGED";
+        public static final String NO_OCCUPANT_TO_CHARGE = "NO_OCCUPANT_TO_CHARGE";
         public static final String NOT_FOUND = "NOT_FOUND";
         public static final String NOT_STAYING = "NOT_STAYING";
         public static final String PERIOD_NOT_OPEN = "PERIOD_NOT_OPEN";
@@ -80,8 +93,12 @@ public final class DmsConstants {
         public static final String STUDENT_CODE_EXISTS = "STUDENT_CODE_EXISTS";
         public static final String STUDENT_HAS_ACTIVE_CONTRACT = "STUDENT_HAS_ACTIVE_CONTRACT";
         public static final String SUMMER_CHOICE_EXISTS = "SUMMER_CHOICE_EXISTS";
+        public static final String SUMMER_CHOICE_NOT_APPROVED = "SUMMER_CHOICE_NOT_APPROVED";
         public static final String TECHNICIAN_OUT_OF_UNIT = "TECHNICIAN_OUT_OF_UNIT";
+        public static final String TEMP_LEAVE_NOT_EXTENDED = "TEMP_LEAVE_NOT_EXTENDED";
+        public static final String TICKET_ALREADY_CONCLUDED = "TICKET_ALREADY_CONCLUDED";
         public static final String TICKET_LOCATION_INVALID = "TICKET_LOCATION_INVALID";
+        public static final String TOPUP_EXCEEDS_REQUIRED = "TOPUP_EXCEEDS_REQUIRED";
         public static final String TRANSFER_CROSS_UNIT = "TRANSFER_CROSS_UNIT";
         public static final String UNAUTHENTICATED = "UNAUTHENTICATED";
         public static final String UNIT_NOT_IN_PERIOD = "UNIT_NOT_IN_PERIOD";
@@ -105,6 +122,8 @@ public final class DmsConstants {
         public static final String FORM = "form";
         public static final String SORT = "sort";
         public static final String PAGE = "page";
+        public static final String SIZE = "size";
+        public static final String QUERY = "q";
         public static final String FIELD_ERRORS = "fieldErrors";
         public static final String FIELD = "field";
         public static final String MESSAGE = "message";
@@ -131,6 +150,40 @@ public final class DmsConstants {
         public static final String TYPE = "type";
         public static final String STATUS = "status";
         public static final String CONTRACT_ID = "contractId";
+        public static final String CAUSE = "cause";
+        public static final String REPAIR_COST = "repairCost";
+        public static final String CHARGED_STUDENT_IDS = "chargedStudentIds";
+        public static final String ASSET_CONDITION = "assetCondition";
+        public static final String ASSET_NOTE = "assetNote";
+        public static final String MOVE_OUT_DATE = "moveOutDate";
+        public static final String ACKNOWLEDGED_WARNINGS = "acknowledgedWarnings";
+        public static final String PACKAGE_COUNT = "packageCount";
+        public static final String DESCRIPTION = "description";
+        public static final String LOCATION = "location";
+        public static final String DEPOSITED_AT = "depositedAt";
+        public static final String RETURNED_AT = "returnedAt";
+        public static final String PAPER_CONTRACT_SIGNED = "paperContractSigned";
+        public static final String DEPOSIT_AMOUNT = "depositAmount";
+        public static final String PAYMENT_METHOD = "paymentMethod";
+        public static final String VERIFIED = "verified";
+        public static final String NEW_END_DATE = "newEndDate";
+        public static final String OLD_END_DATE = "oldEndDate";
+        public static final String START_DATE = "startDate";
+        public static final String END_DATE = "endDate";
+        public static final String STUDENT_ID = "studentId";
+        public static final String CONTRACT_CODE = "contractCode";
+        public static final String CHOICE = "choice";
+        public static final String DECIDED_BY = "decidedBy";
+        public static final String STUDENT_NAME = "studentName";
+        public static final String SEMESTER_NAME = "semesterName";
+        public static final String CONTRACT_STATUS = "contractStatus";
+        public static final String CONTRACT_START_DATE = "contractStartDate";
+        public static final String CONTRACT_END_DATE = "contractEndDate";
+        public static final String DECISION_REASON = "decisionReason";
+        public static final String PRIORITY_SCORE = "priorityScore";
+        public static final String ACTIVATED_AT = "activatedAt";
+        public static final String APPLICATION_ID = "applicationId";
+        public static final String NOTE = "note";
 
         private ApiField() {}
     }
@@ -207,6 +260,52 @@ public final class DmsConstants {
                 "Mã ticket sửa chữa không được để trống";
         public static final String INVOICE_TYPE_INVALID = "Loại hóa đơn không hợp lệ";
         public static final String INVOICE_STATUS_INVALID = "Trạng thái hóa đơn không hợp lệ";
+        public static final String CAUSE_INVALID = "Nguyên nhân phải là WEAR hoặc MISUSE";
+        public static final String REPAIR_COST_POSITIVE = "Chi phí sửa chữa phải lớn hơn 0";
+        public static final String WEAR_NOTE_REQUIRED = "Hao mòn tự nhiên cần ghi chú";
+        public static final String CHARGED_STUDENT_REQUIRED =
+                "Phải chọn ít nhất một sinh viên chịu trách nhiệm";
+        public static final String CHARGED_NOTE_REQUIRED =
+                "Bỏ bớt sinh viên chịu trách nhiệm cần ghi lý do";
+        public static final String ASSET_CONDITION_INVALID = "Tình trạng tài sản phải là OK hoặc DAMAGED";
+        public static final String ASSET_NOTE_REQUIRED = "Tài sản hư hỏng cần ghi chú";
+        public static final String MOVE_OUT_DATE_REQUIRED = "Ngày trả phòng không được để trống";
+        public static final String PACKAGE_COUNT_POSITIVE = "Số kiện phải lớn hơn 0";
+        public static final String STORAGE_DESCRIPTION_REQUIRED = "Mô tả đồ gửi không được để trống";
+        public static final String STORAGE_LOCATION_REQUIRED = "Vị trí kho không được để trống";
+        public static final String DEPOSITED_DATE_REQUIRED = "Ngày gửi đồ không được để trống";
+        public static final String RETURNED_DATE_REQUIRED = "Ngày nhận lại đồ không được để trống";
+        public static final String BED_REQUIRED = "Cần chọn giường nhận lại đồ";
+        public static final String PAPER_CONTRACT_REQUIRED =
+                "Cần xác nhận đã ký giấy hợp đồng";
+        public static final String DEPOSIT_AMOUNT_REQUIRED = "Số tiền cọc không được để trống";
+        public static final String DEPOSIT_AMOUNT_MISMATCH =
+                "Số tiền cọc không đúng với mức cọc của tòa";
+        public static final String PAYMENT_METHOD_INVALID = "Hình thức thanh toán không hợp lệ";
+        public static final String CONTRACT_ACTIVATION_EXPIRED =
+                "Hợp đồng đã quá hạn kích hoạt";
+        public static final String CONTRACT_PERIOD_OVERLAP =
+                "Thời gian gia hạn chồng với hợp đồng khác của sinh viên";
+        public static final String BED_REQUIRED_FOR_ASSIGN = "Cần chọn giường để phân";
+        public static final String PRIORITY_VERIFIED_REQUIRED = "Cần xác nhận đúng hoặc không đúng";
+        public static final String END_DATE_AFTER_START = "Ngày kết thúc phải sau ngày bắt đầu";
+        public static final String EXTENSION_DATE_AFTER_CURRENT =
+                "Ngày gia hạn phải sau ngày kết thúc hiện tại";
+        public static final String REJECT_REASON_REQUIRED = "Cần lý do từ chối";
+        public static final String RELEASE_HOLD_REASON_REQUIRED =
+                "Cần lý do để hủy giữ chỗ (tối thiểu 5 ký tự)";
+        public static final String STUDENT_IMMUTABLE = "Không đổi sinh viên của đơn đã tạo";
+        public static final String STUDENT_REQUIRED_FOR_ADMIN =
+                "ADMIN cần chọn sinh viên cần tạo đơn";
+        public static final String STUDENT_ACCOUNT_REQUIRED =
+                "Tài khoản được chọn phải là sinh viên";
+        public static final String SUMMER_SEMESTER_REQUIRED = "Chọn học kỳ hè";
+        public static final String SUMMER_CHOICE_EDIT = "Chỉ sửa lựa chọn";
+        public static final String SUMMER_CHOICE_INVALID = "Lựa chọn không hợp lệ";
+        public static final String RECORD_INVALID = "Chọn bản ghi hợp lệ";
+        public static final String PENDING_TYPE_INVALID = "Loại yêu cầu không hợp lệ";
+        public static final String SUMMER_SEMESTER_AFTER_CONTRACT =
+                "Học kỳ hè phải kết thúc sau ngày hết hạn hợp đồng";
 
         private ValidationMessage() {}
     }
@@ -733,6 +832,15 @@ public final class DmsConstants {
         public static final String RESOLVE = "resolve";
         public static final String ACCEPT = "accept";
         public static final String REOPEN = "reopen";
+        public static final String CONCLUDE = "conclude";
+        public static final String ACTIVATE = "activate";
+        public static final String RELEASE_HOLD = "release-hold";
+        public static final String VERIFY_PRIORITY = "verify-priority";
+        public static final String CREATE_EXTENSION_REQUEST = "create-extension-request";
+        public static final String CREATE_TRANSFER_REQUEST = "create-transfer-request";
+        public static final String MOVE_OUT = "move-out";
+        public static final String CREATE_STORAGE_RECORD = "create-storage-record";
+        public static final String RETURN_STORAGE = "return-storage";
 
         public static final String CONFIRM_PAYMENT = "confirm-payment";
         public static final String DEPOSIT_TOPUP = "deposit-topup";
@@ -788,6 +896,7 @@ public final class DmsConstants {
     public static final class PlacementSource {
         public static final String APPLICATION = "applicationId";
         public static final String TRANSFER_REQUEST = "transferRequestId";
+        public static final String STORAGE_RECORD = "storageRecordId";
 
         private PlacementSource() {}
     }
@@ -860,6 +969,7 @@ public final class DmsConstants {
     public static final class SummerStatus {
         public static final String PENDING = "PENDING";
         public static final String APPROVED = "APPROVED";
+        public static final String REJECTED = "REJECTED";
 
         private SummerStatus() {}
     }
@@ -976,6 +1086,10 @@ public final class DmsConstants {
         public static final String BED_HELD = "BED_HELD";
         public static final String INVOICE_ISSUED = "INVOICE_ISSUED";
         public static final String TICKET_STATUS_CHANGED = "TICKET_STATUS_CHANGED";
+        public static final String DEPOSIT_DEDUCTED = "DEPOSIT_DEDUCTED";
+        public static final String CONTRACT_EXPIRING = "CONTRACT_EXPIRING";
+        public static final String CONTRACT_MOVED_OUT = "CONTRACT_MOVED_OUT";
+        public static final String STORAGE_RECORD_CHANGED = "STORAGE_RECORD_CHANGED";
 
         private NotificationSource() {}
     }
@@ -1006,6 +1120,7 @@ public final class DmsConstants {
         public static final String CONTRACT_ACTIVATION_DAYS = "contract.activation_days";
         public static final String CONTRACT_EXPIRING_DAYS = "contract.expiring_days";
         public static final String MAINTENANCE_AUTOCLOSE_DAYS = "maintenance.autoclose_days";
+        public static final String DEPOSIT_TOPUP_DUE_DAYS = "deposit.topup_due_days";
 
         private ConfigKey() {}
     }
@@ -1064,6 +1179,18 @@ public final class DmsConstants {
         public static final String DEPOSIT_TOPUP = "DEPOSIT_TOPUP";
         public static final String DEPOSIT_REFUND = "DEPOSIT_REFUND";
         public static final String INVOICE_BATCH_ISSUE = "INVOICE_BATCH_ISSUE";
+        public static final String MAINTENANCE_CONCLUDE = "MAINTENANCE_CONCLUDE";
+        public static final String CONTRACT_MOVE_OUT = "CONTRACT_MOVE_OUT";
+        public static final String STORAGE_CREATE = "STORAGE_CREATE";
+        public static final String STORAGE_RETURN = "STORAGE_RETURN";
+        public static final String CONTRACT_ACTIVATE = "CONTRACT_ACTIVATE";
+        public static final String CONTRACT_EXTENSION_APPROVE = "CONTRACT_EXTENSION_APPROVE";
+        public static final String CONTRACT_EXTENSION_REJECT = "CONTRACT_EXTENSION_REJECT";
+        public static final String APPLICATION_ASSIGN = "APPLICATION_ASSIGN";
+        public static final String APPLICATION_RELEASE_HOLD = "APPLICATION_RELEASE_HOLD";
+        public static final String APPLICATION_PRIORITY_VERIFY = "APPLICATION_PRIORITY_VERIFY";
+        public static final String SUMMER_CHOICE_APPROVE = "SUMMER_CHOICE_APPROVE";
+        public static final String SUMMER_CHOICE_REJECT = "SUMMER_CHOICE_REJECT";
 
         private AuditAction() {}
     }
@@ -1077,8 +1204,11 @@ public final class DmsConstants {
         public static final String DEPOSIT_TRANSACTION = "DEPOSIT_TRANSACTION";
         public static final String INVOICE = "INVOICE";
         public static final String MAINTENANCE = "MAINTENANCE";
+        public static final String MOVE_OUT = "MOVE_OUT";
         public static final String NOTIFICATION = "NOTIFICATION";
         public static final String ROOM = "ROOM";
+        public static final String STORAGE = "STORAGE";
+        public static final String SUMMER_CHOICE = "SUMMER_CHOICE";
         public static final String TRANSFER = "TRANSFER";
         public static final String USER = "USER";
         public static final String UTILITY_RATE = "UTILITY_RATE";

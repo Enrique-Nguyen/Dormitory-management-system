@@ -24,11 +24,13 @@ import vn.edu.tlu.dms.billing.service.DepositService;
 import vn.edu.tlu.dms.billing.service.InvoiceService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.SemesterType;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.notification.service.DashboardService;
+import vn.edu.tlu.dms.support.FutureSemesterFixture;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -62,14 +64,20 @@ class DepositIntegrationTest {
     private Long ticketId;
     private Long semesterId;
     private Long roomId;
+    private String suffix;
 
     @BeforeEach
     void setup() {
-        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        suffix = UUID.randomUUID().toString().substring(0, 8);
 
-        // Lấy đơn vị quản lý K1 có sẵn
+        // Đơn vị riêng cho test: các phép đếm theo phạm vi đơn vị (phát hành hóa đơn, điện nước,
+        // dashboard) chỉ thấy đúng dữ liệu do test tạo, kể cả khi CSDL local đã có dữ liệu mẫu.
         unitId =
-                jdbc.queryForObject("SELECT id FROM management_unit WHERE code = 'K1'", Long.class);
+                jdbc.queryForObject(
+                        "INSERT INTO management_unit(code, name) VALUES(?, ?) RETURNING id",
+                        Long.class,
+                        "U" + suffix,
+                        "Đơn vị test " + suffix);
 
         // Tạo cán bộ BQL
         staffId =
@@ -99,15 +107,9 @@ class DepositIntegrationTest {
                 studentId,
                 suffix);
 
-        // Tạo học kỳ và đợt đăng ký
-        semesterId =
-                jdbc.queryForObject(
-                        """
-                        INSERT INTO semester(academic_year, type, name, start_date, end_date)
-                        VALUES('2099-2100', 'HK1', 'Học kỳ 1', '2099-09-01', '2099-12-31')
-                        RETURNING id
-                        """,
-                        Long.class);
+        // Tạo học kỳ và đợt đăng ký. Học kỳ cấp phát động để không trùng
+        // UNIQUE(academic_year, type) và không chồng daterange với học kỳ đã tồn tại.
+        semesterId = FutureSemesterFixture.insert(jdbc, SemesterType.HK1, "Học kỳ 1 " + suffix);
 
         Long periodId =
                 jdbc.queryForObject(
@@ -433,14 +435,20 @@ class DepositIntegrationTest {
     @Test
     void summerFeeRequiresApprovedStayChoice() {
         prepareStay();
-        jdbc.update("UPDATE semester SET type='SUMMER' WHERE id=?", semesterId);
-        assertThat(invoiceService.issueRoomFee(semesterId).totalCreated()).isZero();
+        // Học kỳ hè riêng cấp phát động (thay vì đổi loại của học kỳ fixture) để không đụng
+        // UNIQUE(academic_year, type) với học kỳ hè đã có trong CSDL.
+        Long summerId =
+                FutureSemesterFixture.insert(jdbc, SemesterType.SUMMER, "Học kỳ hè " + suffix);
+        jdbc.update(
+                "UPDATE semester SET start_date=CURRENT_DATE-10,end_date=CURRENT_DATE+30 WHERE id=?",
+                summerId);
+        assertThat(invoiceService.issueRoomFee(summerId).totalCreated()).isZero();
         jdbc.update(
                 "INSERT INTO summer_choice(contract_id,semester_id,choice,status)"
                     + " VALUES(?,?,'STAY','APPROVED')",
                 contractId,
-                semesterId);
-        assertThat(invoiceService.issueRoomFee(semesterId).totalAmount()).isEqualTo(500000L);
+                summerId);
+        assertThat(invoiceService.issueRoomFee(summerId).totalAmount()).isEqualTo(500000L);
     }
 
     @Test
@@ -497,10 +505,17 @@ class DepositIntegrationTest {
     }
 
     private LocalDate billingMonth() {
-        return LocalDate.now().withDayOfMonth(1);
+        // Tháng điện nước đặt ở tương lai để không đụng UNIQUE(meter_type, effective_from) của
+        // utility_rate và các hóa đơn UTILITY đã lập theo tháng hiện tại khi CSDL có dữ liệu mẫu.
+        // Đơn giá test chèn vẫn là đơn giá mới nhất áp dụng cho tháng này.
+        return LocalDate.now().withDayOfMonth(1).plusMonths(24);
     }
 
     private void prepareStay() {
+        // issueRoomFee chỉ chạy khi học kỳ bao trùm CURRENT_DATE. Trên CSDL đã có học kỳ đang chạy
+        // (dữ liệu mẫu) thì kéo học kỳ của test về hôm nay sẽ phạm ràng buộc chồng daterange, nên
+        // ràng buộc được gỡ trong transaction của test và tự phục hồi khi rollback.
+        jdbc.execute("ALTER TABLE semester DROP CONSTRAINT semester_daterange_excl");
         jdbc.update(
                 "UPDATE semester SET start_date=CURRENT_DATE-10,end_date=CURRENT_DATE+30 WHERE"
                     + " id=?",

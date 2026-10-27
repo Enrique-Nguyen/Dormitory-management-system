@@ -13,7 +13,9 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import vn.edu.tlu.dms.billing.service.DepositReminderLookup;
+import vn.edu.tlu.dms.common.constants.DmsConstants.SemesterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SystemJob;
+import vn.edu.tlu.dms.support.FutureSemesterFixture;
 import vn.edu.tlu.dms.common.service.SystemJobService;
 import vn.edu.tlu.dms.common.service.SystemJobService.Change;
 import vn.edu.tlu.dms.contract.service.ContractLifecycleService;
@@ -92,15 +94,9 @@ class SystemJobsIntegrationTest {
                         building,
                         type);
         bed = id("INSERT INTO bed(room_id,code) VALUES(?,'1') RETURNING id", room);
-        int year = YEARS.getAndIncrement();
         Long semester =
-                id(
-                        "INSERT INTO semester(name,academic_year,type,start_date,end_date)"
-                                + " VALUES(?,?,'HK1',?::date,?::date) RETURNING id",
-                        "Job " + suffix,
-                        year + "-" + (year + 1),
-                        year + "-09-01",
-                        (year + 1) + "-01-31");
+                FutureSemesterFixture.insert(
+                        jdbc, SemesterType.HK1, "Job " + suffix, 500);
         Long period =
                 id(
                         "INSERT INTO"

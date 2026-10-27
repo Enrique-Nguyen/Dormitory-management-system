@@ -30,6 +30,8 @@ export interface CrudResource {
   endpoint: string
   writeEndpoint?: string
   detailEndpoint?: string
+  /** Đường dẫn xóa khi backend chỉ mở xóa ở endpoint khác endpoint ghi. */
+  deleteEndpoint?: string
   fields: CrudField[]
   /** Giá trị gợi ý của form tạo; dữ liệu nghiệp vụ chính thức vẫn do API kiểm tra. */
   createDefaults?: Record<string, unknown>
@@ -44,6 +46,8 @@ export interface CrudResource {
   editStates?: string[]
   deleteLabel?: string
   deleteAction?: string
+  /** Tài nguyên chỉ có ghi sửa (cấu hình, bản ghi sẵn): không xóa dù được cấp quyền DELETE. */
+  noDelete?: boolean
   createFormat?: 'multipart'
   singleton?: boolean
   idKey?: string

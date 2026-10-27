@@ -37,9 +37,11 @@ public class BedController {
     public List<AvailableRoom> findAvailableBeds(
             @RequestParam(required = false) Long applicationId,
             @RequestParam(required = false) Long transferRequestId,
+            @RequestParam(required = false) Long storageRecordId,
             @RequestParam(required = false) Long buildingId,
             @RequestParam(required = false) Long roomTypeId) {
-        return service.findAvailableBeds(applicationId, transferRequestId, buildingId, roomTypeId);
+        return service.findAvailableBeds(
+                applicationId, transferRequestId, storageRecordId, buildingId, roomTypeId);
     }
 
     @RequirePrivilege({Permission.BED_CREATE, Permission.BED_UPDATE})

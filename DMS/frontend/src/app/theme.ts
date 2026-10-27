@@ -18,6 +18,9 @@ const colors = {
   border: '#dce2e8',
   borderLight: '#edf0f3',
   borderStrong: '#bcc7d3',
+  /** Viền ô nhập/Chọn/Ngày: đậm hơn viền khung một bậc để phân biệt control với layout. */
+  controlBorder: '#cbd5e1',
+  controlBorderHover: '#94a3b8',
   success: '#397453',
   successBg: '#f0f7f2',
   successBorder: '#c9dfd0',
@@ -36,6 +39,8 @@ const shadows = {
   small: '0 1px 2px rgb(24 39 56 / 4%)',
   medium: '0 4px 16px rgb(24 39 56 / 7%)',
   large: '0 16px 48px rgb(24 39 56 / 12%)',
+  /** Bóng hất ngược lên cho thanh điều hướng cố định dưới màn hình. */
+  floatUp: '0 -4px 12px rgb(24 39 56 / 5%)',
 } as const
 
 const cssVariables = {
@@ -55,6 +60,8 @@ const cssVariables = {
   '--color-border': colors.border,
   '--color-border-light': colors.borderLight,
   '--color-border-strong': colors.borderStrong,
+  '--color-control-border': colors.controlBorder,
+  '--color-control-border-hover': colors.controlBorderHover,
   '--color-success': colors.success,
   '--color-success-bg': colors.successBg,
   '--color-success-border': colors.successBorder,
@@ -76,6 +83,7 @@ const cssVariables = {
   '--shadow-xl': shadows.large,
   '--shadow-card': shadows.small,
   '--shadow-card-hover': shadows.medium,
+  '--shadow-float-up': shadows.floatUp,
 } as const
 
 /** Gắn tại html để modal/drawer được portal ra body vẫn nhận đúng bộ màu. */

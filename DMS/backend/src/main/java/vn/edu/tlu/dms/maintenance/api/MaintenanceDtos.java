@@ -11,6 +11,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceCategory;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceSeverity;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -39,7 +40,34 @@ public final class MaintenanceDtos {
         }
     }
 
+    /** Nội dung kết luận ticket; Service kiểm tra nghiệp vụ theo nguyên nhân WEAR hoặc MISUSE. */
+    public record Conclude(
+            String cause,
+            Long repairCost,
+            List<Long> chargedStudentIds,
+            @Size(max = 500) String note) {
+
+        public Conclude {
+            if (cause != null) {
+                cause = cause.trim();
+            }
+            if (note != null) {
+                note = note.trim();
+            }
+        }
+    }
+
     public record Photo(Long id, String url) {}
+
+    /** Thông tin tối thiểu của sinh viên, không lộ entity của module account. */
+    public record StudentRef(Long id, String studentCode, String fullName, String gender) {}
+
+    /** Sinh viên đang ở trong phòng tại thời điểm tạo ticket và trạng thái hợp đồng tương ứng. */
+    public record ChargeableStudent(StudentRef student, Long contractId, String contractStatus) {}
+
+    /** Một khoản trừ cọc đã ghi cho sinh viên khi kết luận ticket hư hỏng do sử dụng. */
+    public record Deduction(
+            Long contractId, StudentRef student, Long amount, LocalDate topUpDueDate) {}
 
     public record Response(
             Long id,
@@ -55,6 +83,11 @@ public final class MaintenanceDtos {
             Long assignedTo,
             OffsetDateTime createdAt,
             List<Photo> photos,
+            String cause,
+            Long repairCost,
+            String costNote,
+            boolean concluded,
+            List<Deduction> deductions,
             List<String> allowedActions,
             List<StatusHistoryService.Entry> timeline) {}
 }

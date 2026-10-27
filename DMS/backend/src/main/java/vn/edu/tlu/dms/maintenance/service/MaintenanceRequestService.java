@@ -4,6 +4,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
+import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.ChargeableStudent;
+import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Conclude;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Response;
 import vn.edu.tlu.dms.maintenance.api.MaintenanceDtos.Save;
 
@@ -46,6 +48,24 @@ public interface MaintenanceRequestService {
      * @return thông tin yêu cầu sau thao tác
      */
     Response performMaintenanceAction(Long id, String action, String reason);
+
+    /**
+     * Lấy sinh viên đang ở trong phòng tại thời điểm tạo ticket để chọn người chịu trừ cọc.
+     *
+     * @param id mã yêu cầu sửa chữa của phòng, đã CLOSED và chưa kết luận
+     * @return danh sách ứng viên kèm hợp đồng và trạng thái hợp đồng
+     */
+    List<ChargeableStudent> findChargeableStudents(Long id);
+
+    /**
+     * Kết luận nguyên nhân và chi phí cho ticket của phòng đã CLOSED; ticket hư hỏng do sử dụng
+     * được trừ cọc của các sinh viên được chọn trong cùng transaction.
+     *
+     * @param id mã yêu cầu sửa chữa
+     * @param input nguyên nhân, chi phí, danh sách sinh viên chịu trách nhiệm và ghi chú
+     * @return chi tiết ticket kèm các khoản trừ cọc vừa ghi
+     */
+    Response conclude(Long id, Conclude input);
 
     /** Kiểm tra quyền xem yêu cầu rồi trả đường dẫn của ảnh thuộc đúng yêu cầu đó. */
     Path getAuthorizedPhotoFile(Long id, Long photoId);

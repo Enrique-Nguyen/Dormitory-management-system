@@ -237,6 +237,13 @@ public class DepositServiceImpl implements DepositService {
         if (!ContractStatus.ACTIVE.equals(balance.status())) {
             throw BusinessException.conflict(ErrorCode.CONTRACT_NOT_ACTIVE);
         }
+        long topupNeeded = balance.topupNeeded() == null ? 0L : balance.topupNeeded();
+        if (topupNeeded <= 0) {
+            throw BusinessException.conflict(ErrorCode.NO_TOPUP_REQUIRED);
+        }
+        if (amount > topupNeeded) {
+            throw BusinessException.conflict(ErrorCode.TOPUP_EXCEEDS_REQUIRED);
+        }
 
         Long actorId = currentUser.get().id();
         OffsetDateTime now = OffsetDateTime.now();
@@ -331,6 +338,23 @@ public class DepositServiceImpl implements DepositService {
                 .orElseThrow(BusinessException::notFound);
     }
 
+    /**
+     * Đọc sổ cọc qua cùng luồng kiểm tra quyền/phạm vi của getBalance và gói gọn vào record của tầng
+     * Service, bao gồm khoản cần bù và trạng thái bù quá hạn từ v_deposit_balance.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public BalanceView getBalanceView(Long contractId) {
+        DepositDtos.Balance balance = getBalance(contractId);
+        return new BalanceView(
+                balance.contractId(),
+                balance.balance(),
+                balance.depositRequired(),
+                balance.status(),
+                balance.topupNeeded(),
+                Boolean.TRUE.equals(balance.topupOverdue()));
+    }
+
     /** Đọc lịch sử sổ cọc theo thời gian sau khi kiểm tra hợp đồng và phạm vi. */
     @Override
     @Transactional(readOnly = true)
@@ -342,6 +366,28 @@ public class DepositServiceImpl implements DepositService {
 
         return transactionRepository.findByContractIdOrderByCreatedAtAscIdAsc(contractId).stream()
                 .map(this::toTransactionDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DepositEntry> listEntries(Long contractId) {
+        scopeGuard.requirePermission(Permission.DEPOSIT_READ);
+        scopeGuard.requireRole(Role.STAFF, Role.STUDENT);
+        checkContractReadScope(contractId);
+        return transactionRepository.findByContractIdOrderByCreatedAtAscIdAsc(contractId).stream()
+                .map(
+                        transaction ->
+                                new DepositEntry(
+                                        transaction.getId(),
+                                        transaction.getContractId(),
+                                        transaction.getType(),
+                                        transaction.getAmount(),
+                                        transaction.getMaintenanceRequestId(),
+                                        transaction.getDueDate(),
+                                        transaction.getConfirmedBy(),
+                                        transaction.getCreatedAt(),
+                                        transaction.getNote()))
                 .toList();
     }
 

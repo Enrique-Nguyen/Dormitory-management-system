@@ -74,6 +74,7 @@ export interface AvailableRoom {
 export interface AvailableBedsParams {
   applicationId?: number
   transferRequestId?: number
+  storageRecordId?: number
   buildingId?: number
   roomTypeId?: number
 }

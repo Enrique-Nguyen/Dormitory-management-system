@@ -7,6 +7,7 @@ import { useConfirm } from '../../components/ui/useConfirm'
 import { Alert, Button, Card, Tag } from '../../components/ui/Surface'
 import { Permission } from '../../constants/authorization'
 import { StudentImportResult } from '../../constants/statusConfig'
+import { CRUD_DEFAULT_PAGE_SIZE, CRUD_PAGE_SIZES } from '../crud/api'
 import { studentImportLabels as labels } from '../crud/resources'
 import { useMe } from './useMe'
 import { hasPermission } from '../../services/api/auth'
@@ -98,7 +99,7 @@ export default function StudentImportPanel() {
 
   return (
     <Space direction="vertical" size="large" className="dms-full-width">
-      <Alert type="info" showIcon message={labels.instructions} description={labels.format} />
+      <Alert type="info" showIcon title={labels.instructions} description={labels.format} />
       <Card>
         <Flex gap={12} wrap align="center">
           <Upload accept=".xlsx" maxCount={1} disabled={busy || !canImport}
@@ -134,10 +135,10 @@ export default function StudentImportPanel() {
             [labels.created, result.createdRows],
           ] as const).map(([label, count]) => <Typography.Text key={label}>{label}: <strong>{count}</strong></Typography.Text>)}
         </Flex>
-        {result.createdAccounts.length > 0 && <Alert type="success" showIcon message={labels.credentialWarning}
+        {result.createdAccounts.length > 0 && <Alert type="success" showIcon title={labels.credentialWarning}
           action={<Button onClick={downloadAccounts} icon={<DownloadOutlined />}>{labels.credentials}</Button>} />}
         <DataTable<ImportRow> rowKey="rowNumber" showStt={false} dataSource={result.rows}
-          pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: [20, 50, 100] }}
+          pagination={{ pageSize: CRUD_DEFAULT_PAGE_SIZE, showSizeChanger: true, pageSizeOptions: CRUD_PAGE_SIZES }}
           columns={[
             { title: labels.row, dataIndex: 'rowNumber', width: 110 },
             { title: labels.studentCode, dataIndex: 'studentCode' },

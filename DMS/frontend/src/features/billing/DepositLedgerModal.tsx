@@ -31,6 +31,7 @@ export default function DepositLedgerModal({ contractId, contractCode, studentNa
   const canWrite = !readOnly && hasPermission(me, Permission.DEPOSIT_CREATE)
   const canTopup = canWrite && balance?.allowedActions.includes(BillingAction.DEPOSIT_TOPUP)
   const canRefund = canWrite && balance?.allowedActions.includes(BillingAction.DEPOSIT_REFUND)
+  const maxAmount = action === 'topup' ? balance?.topupNeeded : balance?.balance
   const save = async () => {
     try {
       const values = await form.validateFields()
@@ -79,8 +80,17 @@ export default function DepositLedgerModal({ contractId, contractCode, studentNa
       destroyOnHidden okText="Xác nhận" cancelText="Hủy"
       afterOpenChange={(visible) => { if (visible) { form.resetFields(); form.setFieldsValue({ amount: action === 'topup' ? balance?.topupNeeded : balance?.balance }) } }}>
       <Form form={form} layout="vertical"><FormGrid>
-        <Form.Item name="amount" label="Số tiền (đ)" rules={[{ required: true, message: 'Vui lòng nhập số tiền' }, { type: 'number', min: 1, message: 'Số tiền phải lớn hơn 0' }]}>
-          <InputNumber precision={0} min={1} style={{ width: '100%' }} />
+        <Form.Item
+          name="amount"
+          label="Số tiền (đ)"
+          extra={
+            maxAmount
+              ? `Tối đa ${formatMoney(maxAmount)}${action === 'topup' ? ' (số cọc còn thiếu)' : ' (số dư hiện tại)'}`
+              : undefined
+          }
+          rules={[{ required: true, message: 'Vui lòng nhập số tiền' }, { type: 'number', min: 1, message: 'Số tiền phải lớn hơn 0' }]}
+        >
+          <InputNumber precision={0} min={1} max={maxAmount} style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item name="note" label="Ghi chú" className="dms-form-span-full" rules={[{ max: 500 }]}>
           <TextArea rows={3} />

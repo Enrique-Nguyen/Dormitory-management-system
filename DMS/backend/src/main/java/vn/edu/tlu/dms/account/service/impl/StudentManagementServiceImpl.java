@@ -377,6 +377,9 @@ public class StudentManagementServiceImpl implements StudentManagementService {
     @Override
     public PageResponse<Map<String, Object>> searchTechniciansByPage(SearchRequest input) {
         guard.requirePermission(Permission.MAINTENANCE_UPDATE);
+        // STUDENT cũng có MAINTENANCE_UPDATE (gửi/sửa ticket) nên phải khóa vai trò ở tầng service
+        // để không lộ danh sách kỹ thuật viên cho sinh viên.
+        guard.requireRole(Role.STAFF, Role.ADMIN);
         String sql =
                 "SELECT u.id,u.full_name,u.username, (SELECT count(*) FROM maintenance_request m"
                         + " WHERE m.assigned_to=u.id AND m.status IN (?,?)) AS"

@@ -542,23 +542,49 @@ public class RoomServiceImpl implements RoomService {
     @Override
     public List<AvailableRoom> findAvailableBeds(
             Long applicationId, Long transferRequestId, Long buildingId, Long roomTypeId) {
+        return findAvailableBeds(applicationId, transferRequestId, null, buildingId, roomTypeId);
+    }
+
+    @Override
+    public List<AvailableRoom> findAvailableBeds(
+            Long applicationId,
+            Long transferRequestId,
+            Long storageRecordId,
+            Long buildingId,
+            Long roomTypeId) {
         guard.requirePermission(Permission.BED_READ);
-        if ((applicationId == null) == (transferRequestId == null)) {
+        long sources =
+                java.util.stream.Stream.of(applicationId, transferRequestId, storageRecordId)
+                        .filter(java.util.Objects::nonNull)
+                        .count();
+        if (sources != 1) {
             throw BusinessException.invalid(
                     PlacementSource.APPLICATION,
-                    "Truyền đúng một trong applicationId hoặc transferRequestId");
+                    "Truyền đúng một trong applicationId, transferRequestId hoặc storageRecordId");
         }
-        String source =
-                applicationId != null
-                        ? PlacementSource.APPLICATION
-                        : PlacementSource.TRANSFER_REQUEST;
-        Long sourceId = applicationId != null ? applicationId : transferRequestId;
+        String source;
+        Long sourceId;
+        if (applicationId != null) {
+            source = PlacementSource.APPLICATION;
+            sourceId = applicationId;
+        } else if (transferRequestId != null) {
+            source = PlacementSource.TRANSFER_REQUEST;
+            sourceId = transferRequestId;
+        } else {
+            source = PlacementSource.STORAGE_RECORD;
+            sourceId = storageRecordId;
+        }
         PlacementContext context =
                 placementLookups.stream()
                         .filter(lookup -> lookup.source().equals(source))
                         .findFirst()
                         .flatMap(lookup -> lookup.find(sourceId))
                         .orElseThrow(BusinessException::notFound);
+        var actor = current.get();
+        if (actor.is(Role.STUDENT) && !context.studentId().equals(actor.id())) {
+            // Sinh viên chỉ được dò giường cho chính đơn/yêu cầu của mình.
+            throw BusinessException.notFound();
+        }
         Long unitId = context.preferredUnitId();
         if (unitId == null) {
             // BR-05: chỉ giường cùng đơn vị với giường hiện tại của hợp đồng.

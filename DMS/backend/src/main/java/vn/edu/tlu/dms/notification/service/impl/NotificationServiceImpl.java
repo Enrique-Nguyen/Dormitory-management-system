@@ -23,6 +23,7 @@ import vn.edu.tlu.dms.notification.service.NotificationService;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -80,7 +81,13 @@ public class NotificationServiceImpl implements NotificationService {
                         .collect(Collectors.joining(", "));
         Long userId = currentUser.get().id();
         var actor = currentUser.get();
-        String portal = actor.is(Role.STUDENT) ? "/student" : actor.isAdmin() ? "/admin" : "/staff";
+        // KTV dùng cổng /technician; nếu gán nhầm /staff thì liên kết thông báo không mở được.
+        String portal =
+                actor.is(Role.STUDENT)
+                        ? "/student"
+                        : actor.is(Role.TECHNICIAN)
+                                ? "/technician"
+                                : actor.isAdmin() ? "/admin" : "/staff";
         String filter = unread == null ? "" : unread ? " AND NOT is_read" : " AND is_read";
         filter += " AND (title ILIKE ? OR body ILIKE ?)";
         String pattern = LikePattern.contains(keyword.trim());
@@ -210,31 +217,111 @@ public class NotificationServiceImpl implements NotificationService {
                         """,
                         (row, index) -> row.getLong(1),
                         (Object) unitIds.toArray(new Long[0]));
-        for (Long studentId : studentIds) {
+        createUserNotifications(
+                studentIds,
+                "Mở đợt đăng ký hè",
+                periodName,
+                NotificationSource.SUMMER_PERIOD_OPENED,
+                periodId,
+                actorId);
+    }
+
+    /**
+     * Tạo thông báo USER trong transaction mới để listener gọi sau commit; lỗi ở đây chỉ được
+     * listener ghi log và không làm rollback nghiệp vụ đã lưu.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Override()
+    public void notifyUsers(
+            List<Long> userIds, String title, String body, String source, Long sourceId) {
+        createUserNotifications(userIds, title, body, source, sourceId, null);
+    }
+
+    /**
+     * Lọc người nhận null/trùng và bỏ qua nội dung thiếu. Khi có sourceId, kiểm tra bản ghi cùng
+     * người nhận, nguồn, mã nguồn và tiêu đề trước khi thêm để sự kiện phát lặp không tạo trùng.
+     * Ticket đổi trạng thái khác nhau dùng tiêu đề khác nhau nên vẫn nhận đủ thông báo.
+     */
+    private void createUserNotifications(
+            List<Long> userIds,
+            String title,
+            String body,
+            String source,
+            Long sourceId,
+            Long createdBy) {
+        if (userIds == null || userIds.isEmpty() || title == null || title.isBlank()) {
+            return;
+        }
+        if (body == null || body.isBlank() || source == null || source.isBlank()) {
+            return;
+        }
+        List<Long> recipients = userIds.stream().filter(Objects::nonNull).distinct().toList();
+        if (recipients.isEmpty()) {
+            return;
+        }
+        String normalizedTitle = title.trim();
+        String normalizedBody = body.trim();
+        for (Long userId : recipients) {
+            if (sourceId != null && notificationExists(userId, source, sourceId, normalizedTitle)) {
+                continue;
+            }
             Notification notification = new Notification();
             notification.setScope(NotificationScope.USER);
-            notification.setUserId(studentId);
-            notification.setTitle("Mở đợt đăng ký hè");
-            notification.setBody(periodName);
-            notification.setSourceType(NotificationSource.SUMMER_PERIOD_OPENED);
-            notification.setSourceId(periodId);
-            notification.setCreatedBy(actorId);
+            notification.setUserId(userId);
+            notification.setTitle(normalizedTitle);
+            notification.setBody(normalizedBody);
+            notification.setSourceType(source);
+            notification.setSourceId(sourceId);
+            notification.setCreatedBy(createdBy);
             notification.setCreatedAt(OffsetDateTime.now());
             repository.save(notification);
         }
         repository.flush();
     }
 
-    private String notificationLink(String portal, String source, Long id) {
-        if (source == null || id == null) {
+    private boolean notificationExists(Long userId, String source, Long sourceId, String title) {
+        Boolean exists =
+                jdbc.queryForObject(
+                        "SELECT EXISTS (SELECT 1 FROM notification WHERE user_id=?"
+                                + " AND source_type=? AND source_id=? AND title=?)",
+                        Boolean.class,
+                        userId,
+                        source,
+                        sourceId,
+                        title);
+        return Boolean.TRUE.equals(exists);
+    }
+
+    /**
+     * Dựng liên kết mở đúng màn nghiệp vụ từ mã nguồn, mã bản ghi và cổng của người đọc. Liên kết
+     * không lưu trong CSDL; thông báo không gắn bản ghi hoặc nguồn thủ công trả null để giao diện
+     * không hiện nút mở. Package-private để kiểm thử trực tiếp quy tắc dựng liên kết.
+     *
+     * @param portal tiền tố cổng theo vai trò người đọc, ví dụ /student hoặc /technician
+     * @param source mã nguồn thông báo trong NotificationSource
+     * @param id mã bản ghi nghiệp vụ; có thể null
+     * @return đường dẫn frontend hoặc null nếu không xác định được màn đích
+     */
+    String notificationLink(String portal, String source, Long id) {
+        if (source == null) {
             return null;
         }
         return switch (source) {
             case NotificationSource.SUMMER_PERIOD_OPENED -> portal + "/summer";
             case NotificationSource.APPLICATION_APPROVED, NotificationSource.BED_HELD ->
-                    portal + "/applications/" + id;
+                    id == null ? null : portal + "/applications/" + id;
             case NotificationSource.INVOICE_ISSUED -> portal + "/invoices";
-            case NotificationSource.TICKET_STATUS_CHANGED -> portal + "/maintenance/" + id;
+            case NotificationSource.TICKET_STATUS_CHANGED ->
+                    id == null
+                            ? null
+                            : portal.equals("/technician")
+                                    ? portal + "/tasks/" + id
+                                    : portal + "/maintenance/" + id;
+            case NotificationSource.DEPOSIT_DEDUCTED -> portal + "/deposit";
+            case NotificationSource.CONTRACT_EXPIRING,
+                    NotificationSource.CONTRACT_MOVED_OUT ->
+                    id == null ? portal + "/contracts" : portal + "/contracts/" + id;
+            case NotificationSource.STORAGE_RECORD_CHANGED -> portal + "/contracts";
             default -> null;
         };
     }

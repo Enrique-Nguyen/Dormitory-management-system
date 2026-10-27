@@ -128,7 +128,7 @@ export default function ConfirmDialog({
       closable={!submitting}
       footer={null}
       destroyOnHidden
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Body
         {...rest}
