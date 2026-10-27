@@ -1,6 +1,7 @@
 package vn.edu.tlu.dms.room.service;
 
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.Optional;
 
 public interface RoomReferenceService {
@@ -45,6 +46,12 @@ public interface RoomReferenceService {
 
     /** Tổng hợp giường khai thác và phòng thiếu trưởng phòng theo đơn vị cho Dashboard. */
     DashboardCapacity getDashboardCapacity(Long managementUnitId);
+
+    /** Đếm tòa nhà và phòng theo trạng thái trong phạm vi thống kê của Dashboard. */
+    DashboardInfrastructure getDashboardInfrastructure(Long managementUnitId);
+
+    /** Số lượng cơ sở vật chất hiện có; phòng không có giường vẫn được tính. */
+    record DashboardInfrastructure(long buildings, Map<String, Long> roomsByStatus) {}
 
     /** Các chỉ số được tính trên cùng tập giường đang khai thác; HOLD không tính là đang ở. */
     record DashboardCapacity(
