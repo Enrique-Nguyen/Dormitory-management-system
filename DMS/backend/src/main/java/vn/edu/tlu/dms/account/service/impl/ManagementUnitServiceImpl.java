@@ -25,8 +25,6 @@ public class ManagementUnitServiceImpl
 
     private final ScopeGuard guard;
 
-    private final CurrentUser currentUser;
-
     public ManagementUnitServiceImpl(
             ManagementUnitRepository repository,
             ScopeGuard guard,
@@ -34,7 +32,6 @@ public class ManagementUnitServiceImpl
             AuditService auditService) {
         super(repository, auditService, currentUser);
         this.guard = guard;
-        this.currentUser = currentUser;
     }
 
     @Override
