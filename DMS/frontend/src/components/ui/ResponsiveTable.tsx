@@ -1,9 +1,8 @@
-import { Card } from './Surface'
+import { Card, Skeleton } from './Surface'
 import Table from './DataTable'
 import {
   Flex,
   Pagination,
-  Skeleton,
   type TableColumnsType,
   type TablePaginationConfig,
 } from 'antd'

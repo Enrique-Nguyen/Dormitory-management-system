@@ -1,6 +1,6 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.10**, 27/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.11**, 28/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.11 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
 > DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak, ma trận quyền động V5, quyền V6 và ghi chú xác minh diện ưu tiên V7; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
@@ -19,6 +19,7 @@
 | 0.9 | 25/10/2026 | PR #13: thống nhất ánh xạ unique index sổ cọc sang mã lỗi chuyên biệt, phân biệt FK/CHECK; tra cứu PENDING bằng LEFT JOIN từ hợp đồng, giữ nguyên V1–V6. |
 | 0.8 | 15/10/2026 | Bổ sung Flyway V6 cấp quyền ROOM_TRANSFER_APPROVE cho STAFF (STAFF=73, ADMIN=106); ghi chú JPA/Service: status_history entity_type='TRANSFER', lịch sử trưởng phòng từ audit_log (ROOM_LEADER_CHANGE), missingLeader tính động khi đọc |
 | 0.10 | 27/10/2026 | Flyway V7 thêm `application_priority.note VARCHAR(500)` lưu ghi chú của Staff khi xác nhận diện ưu tiên (FR-REG-06, hoàn thiện TV3); cột trả về ở `priorities[].note`. Kiểm tra quyền theo vai trò cho `POST /api/transfer-requests/{id}/approve\|reject` và phạm vi `GET /api/beds/available` ghi ở SAD/API Spec, không đổi schema |
+| 0.11 | 28/10/2026 | Đồng bộ snapshot `DB-DMS-schema.sql` với Flyway (theo `AUDIT-REPORT-DMS.md`): seed `STAFF` của `role_permission_matrix` thêm `ROOM_TRANSFER_APPROVE` (V6, 73 quyền); thêm `COMMENT ON COLUMN application_priority.note` (V7); đầu tệp ghi rõ snapshot gồm V3–V7. Không đổi migration đã chạy |
 
 ---
 

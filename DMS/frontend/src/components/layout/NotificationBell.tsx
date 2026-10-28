@@ -1,5 +1,5 @@
 import { BellOutlined } from '@ant-design/icons'
-import { Badge } from 'antd'
+import { Badge } from '../ui/Surface'
 import { Link } from 'react-router'
 import { useUnreadCount } from '../../features/notification/useUnreadCount'
 

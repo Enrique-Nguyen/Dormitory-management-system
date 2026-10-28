@@ -8,6 +8,20 @@ export const Role = {
 
 export type Role = (typeof Role)[keyof typeof Role]
 
+/**
+ * Mã lỗi (API Spec mục 5) mà client rẽ nhánh xử lý phiên/quyền; khớp DmsConstants.ErrorCode.
+ * Câu hiển thị cho mọi mã vẫn nằm ở utils/errorMessages.ts.
+ */
+export const ErrorCode = {
+  PASSWORD_CHANGE_REQUIRED: 'PASSWORD_CHANGE_REQUIRED',
+  ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
+  SESSION_REVOKED: 'SESSION_REVOKED',
+  FORBIDDEN: 'FORBIDDEN',
+  PERMISSION_MATRIX_STALE: 'PERMISSION_MATRIX_STALE',
+} as const
+
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode]
+
 /** READ dùng cho cả tìm kiếm và xem chi tiết; từng thao tác ghi có quyền riêng. */
 export const Action = {
   READ: 'READ',

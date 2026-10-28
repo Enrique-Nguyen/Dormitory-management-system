@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Form, message, type TableColumnsType } from 'antd'
+import { App, Form, type TableColumnsType } from 'antd'
 import { PlusOutlined, ReloadOutlined, RollbackOutlined } from '@ant-design/icons'
 import {
   Alert,
@@ -34,6 +34,7 @@ interface Props {
 interface LedgerForm { amount: number; note?: string }
 
 export default function DepositLedgerModal({ contractId, contractCode, studentName, open, onClose, readOnly = false }: Props) {
+  const { message } = App.useApp()
   const { data: me } = useMe()
   const { data: balance, isLoading: loadingBalance, error: balanceError, refetch: refetchBalance } = useDepositBalance(open ? contractId : undefined)
   const { data: transactions, isLoading: loadingTxs, error: transactionError, refetch: refetchTransactions } = useDepositTransactions(open ? contractId : undefined)

@@ -28,18 +28,6 @@ public final class ContractDtos {
         private Label() {}
     }
 
-    /**
-     * Nguồn yêu cầu gia hạn và loại đối tượng timeline tương ứng; giá trị khớp CHECK của
-     * contract_extension_request.source và status_history.entity_type.
-     */
-    public static final class ExtensionSource {
-        public static final String STUDENT = "STUDENT";
-        public static final String SUMMER_STAY = "SUMMER_STAY";
-        public static final String ENTITY_TYPE = "EXTENSION";
-
-        private ExtensionSource() {}
-    }
-
     /** Không có id là tạo; có id là sửa đúng hợp đồng PENDING đã tồn tại. */
     public record Save(
             @Positive Long id,

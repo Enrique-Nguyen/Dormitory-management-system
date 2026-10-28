@@ -18,6 +18,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.StayRequestStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
+import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
@@ -208,7 +209,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
         requireNoAssignment(id);
         validateDates(input, row);
         if (input.containsKey("applicationId")) {
-            throw BusinessException.invalid("applicationId", "Không đổi nguồn đơn của hợp đồng");
+            throw BusinessException.invalid(ApiField.APPLICATION_ID, ValidationMessage.CONTRACT_APPLICATION_IMMUTABLE);
         }
         return updateRecord("dormitory_contract", id, CONTRACT, input);
     }
@@ -255,15 +256,15 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                             input.getOrDefault("endDate", old == null ? "" : old.get("endDate"))
                                     .toString());
             if (!end.isAfter(start)) {
-                throw BusinessException.invalid("endDate", "Ngày kết thúc phải sau ngày bắt đầu");
+                throw BusinessException.invalid(ApiField.END_DATE, ValidationMessage.END_DATE_AFTER_START);
             }
         } catch (DateTimeParseException | NullPointerException e) {
-            throw BusinessException.invalid("startDate", "Ngày dùng yyyy-MM-dd");
+            throw BusinessException.invalid(ApiField.START_DATE, ValidationMessage.DATE_FORMAT_ISO);
         }
     }
 
     @Override
-    public Object searchStayRequestsByPage(boolean extension, SearchRequest input, boolean mine) {
+    public PageResponse<Map<String, Object>> searchStayRequestsByPage(boolean extension, SearchRequest input, boolean mine) {
         guard.requirePermission(
                 extension ? Permission.CONTRACT_EXTENSION_READ : Permission.ROOM_TRANSFER_READ);
         guard.requireRole(Role.STUDENT, Role.STAFF);
@@ -357,7 +358,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                         StayRequestStatus.PENDING);
         requireUpdated(updated);
         history.record(
-                ContractDtos.ExtensionSource.ENTITY_TYPE,
+                EntityType.EXTENSION,
                 id,
                 StayRequestStatus.PENDING,
                 StayRequestStatus.APPROVED,
@@ -366,7 +367,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
         audit.record(
                 actor.id(),
                 AuditAction.CONTRACT_EXTENSION_APPROVE,
-                ContractDtos.ExtensionSource.ENTITY_TYPE,
+                EntityType.EXTENSION,
                 id,
                 extensionAuditBefore(row, StayRequestStatus.PENDING),
                 extensionAuditAfter(contract.endDate(), row.newEndDate(), StayRequestStatus.APPROVED),
@@ -399,7 +400,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                         StayRequestStatus.PENDING);
         requireUpdated(updated);
         history.record(
-                ContractDtos.ExtensionSource.ENTITY_TYPE,
+                EntityType.EXTENSION,
                 id,
                 StayRequestStatus.PENDING,
                 StayRequestStatus.REJECTED,
@@ -408,7 +409,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
         audit.record(
                 actor.id(),
                 AuditAction.CONTRACT_EXTENSION_REJECT,
-                ContractDtos.ExtensionSource.ENTITY_TYPE,
+                EntityType.EXTENSION,
                 id,
                 extensionAuditBefore(row, StayRequestStatus.PENDING),
                 extensionAuditAfter(
@@ -433,7 +434,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                         StayRequestStatus.PENDING);
         requireUpdated(updated);
         history.record(
-                ContractDtos.ExtensionSource.ENTITY_TYPE,
+                EntityType.EXTENSION,
                 id,
                 StayRequestStatus.PENDING,
                 StayRequestStatus.CANCELLED,
@@ -567,7 +568,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                 row.decisionReason(),
                 row.createdAt(),
                 actions,
-                history.list(ContractDtos.ExtensionSource.ENTITY_TYPE, row.id()));
+                history.list(EntityType.EXTENSION, row.id()));
     }
 
     /** PENDING có approve/reject cho Staff/Admin đúng đơn vị và cancel cho sinh viên chủ sở hữu. */
@@ -660,7 +661,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
         putIfPresent(values, "reason", input.reason());
         if (!extension && input.newEndDate() != null) {
             throw BusinessException.invalid(
-                    "newEndDate", "Yêu cầu chuyển phòng không nhận ngày gia hạn");
+                    ApiField.NEW_END_DATE, ValidationMessage.TRANSFER_NO_END_DATE);
         }
         return input.id() == null
                 ? createStayRequest(extension, values)
@@ -698,7 +699,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
         if (extension) {
             Long requestId = ((Number) ((Map<?, ?>) created).get("id")).longValue();
             history.record(
-                    ContractDtos.ExtensionSource.ENTITY_TYPE,
+                    EntityType.EXTENSION,
                     requestId,
                     null,
                     StayRequestStatus.PENDING,
@@ -713,7 +714,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
                 extension ? Permission.CONTRACT_EXTENSION_UPDATE : Permission.ROOM_TRANSFER_UPDATE);
         var row = loadPendingRequest(extension, id);
         if (input.containsKey("contractId")) {
-            throw BusinessException.invalid("contractId", "Không đổi hợp đồng");
+            throw BusinessException.invalid(ApiField.CONTRACT_ID, ValidationMessage.CONTRACT_IMMUTABLE);
         }
         if (extension && input.containsKey("newEndDate")) {
             validateExtension(input, row.get("oldEndDate"));
@@ -754,10 +755,10 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
         try {
             if (!LocalDate.parse(input.get("newEndDate").toString()).isAfter((LocalDate) old)) {
                 throw BusinessException.invalid(
-                        "newEndDate", "Ngày gia hạn phải sau ngày kết thúc hiện tại");
+                        ApiField.NEW_END_DATE, ValidationMessage.EXTENSION_DATE_AFTER_CURRENT);
             }
         } catch (DateTimeParseException | NullPointerException e) {
-            throw BusinessException.invalid("newEndDate", "Ngày không hợp lệ");
+            throw BusinessException.invalid(ApiField.NEW_END_DATE, ValidationMessage.DATE_INVALID);
         }
     }
 
@@ -779,7 +780,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
             }
             return value;
         } catch (RuntimeException e) {
-            throw BusinessException.invalid(field, "Chọn bản ghi hợp lệ");
+            throw BusinessException.invalid(field, ValidationMessage.RECORD_INVALID);
         }
     }
 

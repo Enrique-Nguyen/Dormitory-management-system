@@ -18,6 +18,7 @@ import {
   useConfirm,
 } from '../../components'
 import { Permission, Role } from '../../constants/authorization'
+import { assetConditionLabels } from '../../constants/statusConfig'
 import { hasPermission } from '../../services/api/auth'
 import {
   AssetCondition,
@@ -472,9 +473,11 @@ export default function MoveOutModal({
                           }
                         }}
                       >
-                        <Radio value={AssetCondition.OK}>Bình thường</Radio>
+                        <Radio value={AssetCondition.OK}>
+                          {assetConditionLabels[AssetCondition.OK]}
+                        </Radio>
                         <Radio value={AssetCondition.DAMAGED}>
-                          Có hư hỏng
+                          {assetConditionLabels[AssetCondition.DAMAGED]}
                         </Radio>
                       </RadioGroup>
                     )}

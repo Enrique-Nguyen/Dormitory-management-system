@@ -8,7 +8,9 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.PhotoUpload;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.maintenance.domain.MaintenancePhoto;
 import vn.edu.tlu.dms.maintenance.repository.MaintenancePhotoRepository;
@@ -47,14 +49,14 @@ public class MaintenancePhotoServiceImpl implements MaintenancePhotoService {
         if (photos == null || photos.isEmpty()) {
             return;
         }
-        if (photos.size() > 3) {
+        if (photos.size() > PhotoUpload.MAX_COUNT) {
             throw new BusinessException(
-                    ErrorCode.PHOTO_INVALID, HttpStatus.BAD_REQUEST, Map.of("reason", "COUNT"));
+                    ErrorCode.PHOTO_INVALID, HttpStatus.BAD_REQUEST, Map.of(ApiField.REASON, PhotoUpload.REASON_COUNT));
         }
         for (MultipartFile photo : photos) {
-            if (photo.isEmpty() || photo.getSize() > 5L * 1024 * 1024) {
+            if (photo.isEmpty() || photo.getSize() > PhotoUpload.MAX_BYTES) {
                 throw new BusinessException(
-                        ErrorCode.PHOTO_INVALID, HttpStatus.BAD_REQUEST, Map.of("reason", "SIZE"));
+                        ErrorCode.PHOTO_INVALID, HttpStatus.BAD_REQUEST, Map.of(ApiField.REASON, PhotoUpload.REASON_SIZE));
             }
             Path target = null;
             try {
@@ -64,7 +66,7 @@ public class MaintenancePhotoServiceImpl implements MaintenancePhotoService {
                     throw new BusinessException(
                             ErrorCode.PHOTO_INVALID,
                             HttpStatus.BAD_REQUEST,
-                            Map.of("reason", "TYPE"));
+                            Map.of(ApiField.REASON, PhotoUpload.REASON_TYPE));
                 }
                 Files.createDirectories(uploadDirectory);
                 target = uploadDirectory.resolve(UUID.randomUUID() + "." + extension);

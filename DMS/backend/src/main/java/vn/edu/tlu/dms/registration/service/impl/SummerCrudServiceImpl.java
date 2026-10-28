@@ -139,14 +139,14 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
     }
 
     @Override()
-    public Object getChoice(Long id) {
+    public Map<String, Object> getChoice(Long id) {
         guard.requirePermission(Permission.SUMMER_REGISTRATION_READ);
         var row = loadChoice(id);
         return toDetail(row);
     }
 
     @Override()
-    public Object getMyCurrentChoice() {
+    public Map<String, Object> getMyCurrentChoice() {
         guard.requirePermission(Permission.SUMMER_REGISTRATION_READ);
         guard.requireRole(Role.STUDENT);
         var ids =

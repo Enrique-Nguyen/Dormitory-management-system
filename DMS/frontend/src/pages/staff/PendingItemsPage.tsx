@@ -12,10 +12,13 @@ import {
   Select,
   Tag,
 } from '../../components'
-import { portalPath } from '../../constants/navigation'
+import {
+  pendingItemDetailSegments,
+  portalPath,
+} from '../../constants/navigation'
+import { pendingItemTypeLabels } from '../../constants/statusConfig'
 import { CRUD_DEFAULT_PAGE_SIZE, CRUD_PAGE_SIZES } from '../../features/crud/api'
 import {
-  PendingItemType,
   pendingItemEntityId,
   pendingItemStudent,
   pendingItemTypeKey,
@@ -26,20 +29,14 @@ import { formatDateTime } from '../../utils/format'
 import { useMe } from '../../features/account/useMe'
 import { usePendingItems } from '../../features/contract/useContract'
 
-/** Nhãn và đoạn đường dẫn chi tiết cho từng loại việc; mã loại khớp API. */
-const TYPE_META: Record<string, { label: string; segment: string }> = {
-  [PendingItemType.APPLICATION]: {
-    label: 'Đơn đăng ký',
-    segment: 'applications',
-  },
-  [PendingItemType.EXTENSION]: { label: 'Gia hạn', segment: 'extensions' },
-  [PendingItemType.TRANSFER]: { label: 'Chuyển phòng', segment: 'transfers' },
-  [PendingItemType.SUMMER]: { label: 'Lựa chọn hè', segment: 'summer' },
-  [PendingItemType.CONTRACT]: {
-    label: 'Hợp đồng chờ kích hoạt',
-    segment: 'contracts',
-  },
-}
+/** Nhãn đọc từ statusConfig, đoạn đường dẫn đọc từ navigation; mã loại khớp API. */
+const TYPE_META: Record<string, { label: string; segment: string }> =
+  Object.fromEntries(
+    Object.entries(pendingItemTypeLabels).map(([code, label]) => [
+      code,
+      { label: label ?? code, segment: pendingItemDetailSegments[code] ?? '' },
+    ]),
+  )
 
 function typeMeta(type: string | null | undefined) {
   return (

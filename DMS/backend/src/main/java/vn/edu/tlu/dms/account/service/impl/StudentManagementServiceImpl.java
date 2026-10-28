@@ -262,7 +262,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
             return String.valueOf(stored);
         }
         if (requested.isBlank()) {
-            throw BusinessException.invalid(field, "Không để trống");
+            throw BusinessException.invalid(field, ValidationMessage.NOT_BLANK);
         }
         return requested.trim();
     }

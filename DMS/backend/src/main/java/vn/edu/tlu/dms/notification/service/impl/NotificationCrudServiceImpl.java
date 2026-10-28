@@ -164,7 +164,7 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
                         ? left.longValue() == right.longValue()
                         : Objects.equals(supplied, stored);
         if (supplied != null && !equal) {
-            throw BusinessException.invalid(field, "Không đổi phạm vi thông báo đã đăng");
+            throw BusinessException.invalid(field, ValidationMessage.NOTIFICATION_SCOPE_IMMUTABLE);
         }
     }
 
@@ -223,7 +223,7 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
                 };
         if (!valid) {
             throw BusinessException.invalid(
-                    "scope", "Các trường vị trí không khớp phạm vi thông báo");
+                    ApiField.SCOPE, ValidationMessage.NOTIFICATION_SCOPE_MISMATCH);
         }
         switch (input.scope()) {
             case NotificationScope.ALL -> {
@@ -245,7 +245,7 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
                     guard.requireUnit(rooms.getBuildingManagementUnitId(input.buildingId()));
             case NotificationScope.ROOM ->
                     guard.requireUnit(rooms.getRoomLocation(input.roomId()).unitId());
-            default -> throw BusinessException.invalid("scope", "Phạm vi không hỗ trợ");
+            default -> throw BusinessException.invalid(ApiField.SCOPE, ValidationMessage.SCOPE_UNSUPPORTED);
         }
     }
 

@@ -61,7 +61,7 @@ public class UtilityRateServiceImpl implements UtilityRateService {
         scopeGuard.requireRole(Role.STAFF);
         String meterType = input.meterType();
         if (meterType != null && !meterType.matches(MeterType.PATTERN)) {
-            throw BusinessException.invalid("meterType", "Loại đồng hồ không hợp lệ");
+            throw BusinessException.invalid(ApiField.METER_TYPE, ValidationMessage.METER_TYPE_INVALID);
         }
         String keyword = "%" + input.q().trim() + "%";
         var args = new ArrayList<Object>();
@@ -94,7 +94,7 @@ public class UtilityRateServiceImpl implements UtilityRateService {
     @Transactional
     public UtilityRateDtos.Response saveOrUpdate(UtilityRateDtos.Save input) {
         if (input == null) {
-            throw BusinessException.invalid("input", "Thông tin đơn giá không được để trống");
+            throw BusinessException.invalid(ApiField.INPUT, ValidationMessage.RATE_INPUT_REQUIRED);
         }
         scopeGuard.requirePermission(
                 input.id() == null
@@ -173,13 +173,13 @@ public class UtilityRateServiceImpl implements UtilityRateService {
 
     private void validateValues(String meterType, Long unitPrice, LocalDate effectiveFrom) {
         if (meterType == null || !meterType.matches(MeterType.PATTERN)) {
-            throw BusinessException.invalid("meterType", "Phải chọn loại đồng hồ hợp lệ");
+            throw BusinessException.invalid(ApiField.METER_TYPE, ValidationMessage.METER_TYPE_REQUIRED);
         }
         if (unitPrice == null || unitPrice <= 0) {
-            throw BusinessException.invalid("unitPrice", "Đơn giá phải lớn hơn 0");
+            throw BusinessException.invalid(ApiField.UNIT_PRICE, ValidationMessage.UNIT_PRICE_POSITIVE);
         }
         if (effectiveFrom == null) {
-            throw BusinessException.invalid("effectiveFrom", "Phải nhập ngày hiệu lực");
+            throw BusinessException.invalid(ApiField.EFFECTIVE_FROM, ValidationMessage.EFFECTIVE_FROM_REQUIRED);
         }
     }
 

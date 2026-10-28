@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { queryClient } from '../../app/queryClient'
+import { ErrorCode } from '../../constants/authorization'
 import { CHANGE_PASSWORD_PATH } from '../../constants/navigation'
 import { keycloak, loginPath } from './auth'
 
@@ -54,7 +55,7 @@ api.interceptors.response.use(
     // Để hàm logout xử lý phản hồi thu hồi token trước khi chuyển sang Keycloak.
     if (endpoint === '/auth/logout') return Promise.reject(error)
 
-    if (code === 'PASSWORD_CHANGE_REQUIRED') {
+    if (code === ErrorCode.PASSWORD_CHANGE_REQUIRED) {
       clearBusinessCache()
       if (endpoint !== '/auth/me')
         void queryClient.invalidateQueries({ queryKey: ['me'] })
@@ -65,7 +66,7 @@ api.interceptors.response.use(
         navigatingToAuthentication = true
         window.location.assign(CHANGE_PASSWORD_PATH)
       }
-    } else if (status === 401 || code === 'ACCOUNT_LOCKED') {
+    } else if (status === 401 || code === ErrorCode.ACCOUNT_LOCKED) {
       if (status === 401) keycloak.clearToken()
       clearBusinessCache()
       // /me chưa có phiên là bình thường tại login; guard xử lý lỗi khi ở cổng riêng.
@@ -77,9 +78,9 @@ api.interceptors.response.use(
         navigatingToAuthentication = true
         queryClient.clear()
         const reason =
-          code === 'ACCOUNT_LOCKED'
+          code === ErrorCode.ACCOUNT_LOCKED
             ? 'locked'
-            : code === 'SESSION_REVOKED'
+            : code === ErrorCode.SESSION_REVOKED
               ? 'revoked'
               : 'expired'
         window.location.assign(
@@ -88,7 +89,7 @@ api.interceptors.response.use(
       }
     } else if (
       status === 403 &&
-      code === 'FORBIDDEN' &&
+      code === ErrorCode.FORBIDDEN &&
       endpoint !== '/auth/me'
     ) {
       // Quyền có thể vừa bị thu hồi; làm mới menu/nút nhưng không tự gửi lại request đã bị từ chối.

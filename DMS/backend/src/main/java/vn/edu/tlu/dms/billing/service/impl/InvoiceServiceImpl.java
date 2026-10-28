@@ -436,7 +436,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                         .orElseThrow(
                                 () ->
                                         BusinessException.invalid(
-                                                "rate", ValidationMessage.ELECTRIC_RATE_REQUIRED));
+                                                ApiField.RATE, ValidationMessage.ELECTRIC_RATE_REQUIRED));
 
         Long waterRate =
                 jdbc
@@ -454,7 +454,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                         .orElseThrow(
                                 () ->
                                         BusinessException.invalid(
-                                                "rate", ValidationMessage.WATER_RATE_REQUIRED));
+                                                ApiField.RATE, ValidationMessage.WATER_RATE_REQUIRED));
 
         String unitCondition = effectiveUnitId != null ? "bd.management_unit_id = ?" : "TRUE";
         List<Object> args = new ArrayList<>();

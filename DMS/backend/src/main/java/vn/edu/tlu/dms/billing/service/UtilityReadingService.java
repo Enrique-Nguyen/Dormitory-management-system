@@ -18,7 +18,7 @@ public interface UtilityReadingService {
      * loại đồng hồ hoặc tháng; từ chối dữ liệu đã lập hóa đơn/tháng sau. Dữ liệu chưa gửi giữ
      * nguyên, không mặc định chỉ số cuối về 0.
      */
-    Object saveOrUpdate(Input input);
+    Map<String, Object> saveOrUpdate(Input input);
 
     /**
      * Đọc chi tiết và allowedActions sau khi kiểm quyền, không tồn tại/ngoài đơn vị trả NOT_FOUND.

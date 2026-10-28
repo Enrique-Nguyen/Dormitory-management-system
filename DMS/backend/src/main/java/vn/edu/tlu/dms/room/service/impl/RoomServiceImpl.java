@@ -276,7 +276,7 @@ public class RoomServiceImpl implements RoomService {
         lockRoomBedsInAscendingOrder(id);
         var r = findAccessibleRoom(id, true);
         if (input.buildingId() != null && !input.buildingId().equals(r.getBuildingId())) {
-            throw BusinessException.invalid("buildingId", "Không chuyển phòng sang tòa khác");
+            throw BusinessException.invalid(ApiField.BUILDING_ID, ValidationMessage.ROOM_BUILDING_IMMUTABLE);
         }
         boolean typeChanged =
                 input.roomTypeId() != null && !input.roomTypeId().equals(r.getRoomTypeId());
@@ -376,7 +376,7 @@ public class RoomServiceImpl implements RoomService {
         var bed = lockAndFindBed(id);
         findAccessibleRoom(bed.getRoomId(), true);
         if (input.roomId() != null && !input.roomId().equals(bed.getRoomId())) {
-            throw BusinessException.invalid("roomId", "Không chuyển giường sang phòng khác");
+            throw BusinessException.invalid(ApiField.ROOM_ID, ValidationMessage.BED_ROOM_IMMUTABLE);
         }
         String previous = bed.getCode();
         if (input.code() != null) {
@@ -560,7 +560,7 @@ public class RoomServiceImpl implements RoomService {
         if (sources != 1) {
             throw BusinessException.invalid(
                     PlacementSource.APPLICATION,
-                    "Truyền đúng một trong applicationId, transferRequestId hoặc storageRecordId");
+                    ValidationMessage.PLACEMENT_SOURCE_EXACTLY_ONE);
         }
         String source;
         Long sourceId;
