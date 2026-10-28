@@ -47,7 +47,9 @@ export default function LoginPage() {
             Hệ thống Quản lý Ký túc xá · Đại học Thủy Lợi
           </p>
         </div>
-        <p>Bấm đăng nhập để tiếp tục tới trang xác thực của hệ thống.</p>
+        <p className="dms-auth-note">
+          Bấm đăng nhập để tiếp tục tới trang xác thực của hệ thống.
+        </p>
         {isPending && <Spin style={{ display: 'block', marginBottom: 16 }} />}
         {(loginError || (error && keycloak.authenticated)) && (
           <Alert

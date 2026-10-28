@@ -573,6 +573,47 @@ public class ContractServiceImpl implements ContractService {
                 normalizeNote(reason));
     }
 
+    @Override
+    public DashboardResidency getDashboardSummary(Long managementUnitId) {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        jdbc.query(
+                """
+                SELECT c.status,COUNT(*) AS cnt FROM dormitory_contract c
+                JOIN room_application ap ON ap.id=c.application_id
+                WHERE (CAST(? AS bigint) IS NULL OR ap.preferred_unit_id=?)
+                GROUP BY c.status ORDER BY c.status
+                """,
+                rs -> {
+                    counts.put(rs.getString("status"), rs.getLong("cnt"));
+                },
+                managementUnitId,
+                managementUnitId);
+        return jdbc.queryForObject(
+                """
+                WITH scoped_contract AS (
+                    SELECT c.id FROM dormitory_contract c
+                    JOIN room_application ap ON ap.id=c.application_id
+                    WHERE (CAST(? AS bigint) IS NULL OR ap.preferred_unit_id=?)
+                )
+                SELECT
+                    (SELECT COUNT(*) FROM contract_extension_request e JOIN scoped_contract c ON c.id=e.contract_id WHERE e.status=?) AS extensions,
+                    (SELECT COUNT(*) FROM room_transfer_request t JOIN scoped_contract c ON c.id=t.contract_id WHERE t.status=?) AS transfers,
+                    (SELECT COUNT(*) FROM storage_record s JOIN scoped_contract c ON c.id=s.contract_id WHERE s.returned_at IS NULL) AS records,
+                    (SELECT COALESCE(SUM(s.package_count),0) FROM storage_record s JOIN scoped_contract c ON c.id=s.contract_id WHERE s.returned_at IS NULL) AS packages
+                """,
+                (rs, index) ->
+                        new DashboardResidency(
+                                Map.copyOf(counts),
+                                rs.getLong("extensions"),
+                                rs.getLong("transfers"),
+                                rs.getLong("records"),
+                                rs.getLong("packages")),
+                managementUnitId,
+                managementUnitId,
+                StayRequestStatus.PENDING,
+                StayRequestStatus.PENDING);
+    }
+
     /** Tổng hợp theo đơn vị của hợp đồng; ngưỡng ngày do ConfigService cung cấp. */
     @Override
     public ExpirySummary getExpirySummary(Long managementUnitId, int expiringDays) {

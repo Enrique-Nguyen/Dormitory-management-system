@@ -12,7 +12,10 @@ public final class DashboardDtos {
             String unitName,
             CapacityStats capacity,
             FinancialStats finance,
-            OperationsStats operations) {}
+            OperationsStats operations,
+            InfrastructureStats infrastructure,
+            RegistrationStats registration,
+            ResidencyStats residency) {}
 
     public record CapacityStats(
             long operationalBeds,
@@ -31,5 +34,24 @@ public final class DashboardDtos {
             long roomsMissingLeader,
             long contractsExpiringSoon,
             long contractsOverdueMoveout,
-            Map<String, Long> ticketsByStatus) {}
+            Map<String, Long> ticketsByStatus,
+            long ticketsRequiringAction) {}
+
+    public record InfrastructureStats(
+            long buildings, long rooms, Map<String, Long> roomsByStatus) {}
+
+    public record RegistrationStats(
+            long totalApplications,
+            long pendingApplications,
+            long pendingSummerChoices,
+            Map<String, Long> applicationsByStatus) {}
+
+    public record ResidencyStats(
+            long activeContracts,
+            long pendingActivation,
+            long pendingExtensions,
+            long pendingTransfers,
+            long storageRecords,
+            long storedPackages,
+            Map<String, Long> contractsByStatus) {}
 }

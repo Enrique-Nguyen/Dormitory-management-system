@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { App, Form } from 'antd'
+import { FileAddOutlined, HomeOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Alert, DatePicker, FormGrid, Modal, Radio, RadioGroup, Select } from '../../components'
@@ -8,6 +9,8 @@ import { Permission } from '../../constants/authorization'
 import { hasPermission } from '../../services/api/auth'
 import { useMe } from '../account/useMe'
 import { getLookupRecords, validationFieldErrors } from '../crud/api'
+import { billingUiLabels } from '../crud/resources'
+import { formatMoney, formatNumber } from '../../utils/format'
 import { useIssueRoomFeeInvoices, useIssueUtilityInvoices } from './useBilling'
 
 interface Props {
@@ -25,12 +28,19 @@ export default function IssueInvoicesModal({ open, onClose, currentUnitId }: Pro
   const roomFee = useIssueRoomFeeInvoices()
   const utility = useIssueUtilityInvoices()
   const canIssue = hasPermission(me, Permission.INVOICE_CREATE)
-  const { data: semesters = [], isLoading: loadingSemesters } = useQuery({
+  const { data: semesters = [], isLoading: loadingSemesters, isError: semestersError } = useQuery({
     queryKey: ['crud-lookup', '/semesters'],
     queryFn: () => getLookupRecords('/semesters'),
     enabled: open && issueType === InvoiceType.ROOM_FEE && hasPermission(me, Permission.SEMESTER_READ),
   })
+  const pending = roomFee.isPending || utility.isPending
+  const semesterHint = semestersError
+    ? billingUiLabels.issueSemesterLoadError
+    : !loadingSemesters && semesters.length === 0
+      ? billingUiLabels.issueNoSemesters
+      : undefined
   const handleSubmit = async () => {
+    if (!canIssue || pending) return
     try {
       const values = await form.validateFields()
       const result = issueType === InvoiceType.ROOM_FEE
@@ -39,8 +49,11 @@ export default function IssueInvoicesModal({ open, onClose, currentUnitId }: Pro
             managementUnitId: currentUnitId ?? undefined,
             billingMonth: values.billingMonth.startOf('month').format('YYYY-MM-DD'),
           })
-      message.success('Đã tạo ' + result.totalCreated + ' hóa đơn, bỏ qua ' + result.totalSkipped
-        + '; tổng tiền ' + result.totalAmount.toLocaleString('vi-VN') + ' đ.')
+      message.success(
+        'Đã tạo ' + formatNumber(result.totalCreated) + ' hóa đơn, bỏ qua '
+        + formatNumber(result.totalSkipped) + '; tổng tiền '
+        + formatMoney(result.totalAmount) + '.',
+      )
       form.resetFields()
       onClose()
     } catch (error) {
@@ -50,31 +63,89 @@ export default function IssueInvoicesModal({ open, onClose, currentUnitId }: Pro
     }
   }
   return (
-    <Modal title="Phát hành hóa đơn hàng loạt" open={open} onCancel={onClose}
-      onOk={handleSubmit} confirmLoading={roomFee.isPending || utility.isPending}
-      okButtonProps={{ disabled: !canIssue }} okText="Xác nhận phát hành" cancelText="Hủy" destroyOnHidden>
-      <RadioGroup value={issueType} onChange={(event) => setIssueType(event.target.value)}>
-        <Radio value={InvoiceType.ROOM_FEE}>Tiền phòng học kỳ</Radio>
-        <Radio value={InvoiceType.UTILITY}>Điện nước tháng</Radio>
-      </RadioGroup>
-      <Alert type="info" showIcon style={{ marginBlock: 16 }}
-        title={issueType === InvoiceType.ROOM_FEE
-          ? 'Phát hành trong học kỳ hiện tại theo giá trên phân phòng đang ở. Hóa đơn đã có được bỏ qua.'
-          : 'Phát hành cho phòng đang có người ở trong phạm vi quản lý. Phòng thiếu chỉ số điện hoặc nước được bỏ qua.'} />
-      <Form form={form} layout="vertical" initialValues={{ billingMonth: dayjs().subtract(1, 'month').startOf('month') }}>
-        <FormGrid>
+    <Modal
+      title={
+        <span className="dms-modal-title">
+          <FileAddOutlined className="dms-modal-title-icon" aria-hidden="true" />
+          {billingUiLabels.issueTitle}
+        </span>
+      }
+      open={open}
+      onCancel={() => { if (!pending) onClose() }}
+      closable={!pending}
+      mask={{ closable: !pending }}
+      cancelButtonProps={{ disabled: pending }}
+      onOk={handleSubmit}
+      confirmLoading={pending}
+      okButtonProps={{ disabled: !canIssue }}
+      okText={billingUiLabels.issueSubmit}
+      cancelText={billingUiLabels.cancel}
+      destroyOnHidden
+    >
+      <p className="dms-modal-lead">{billingUiLabels.issueLead}</p>
+      <div className="dms-modal-section">
+        <span id="issue-type-label" className="dms-modal-section-label">
+          {billingUiLabels.issueTypeLabel}
+        </span>
+        <RadioGroup
+          aria-labelledby="issue-type-label"
+          className="dms-choice-grid"
+          value={issueType}
+          disabled={pending}
+          onChange={(event) => {
+            setIssueType(event.target.value)
+            form.resetFields()
+          }}
+        >
+          <Radio value={InvoiceType.ROOM_FEE} className="dms-choice">
+            <span className="dms-choice-title">
+              <HomeOutlined aria-hidden="true" />
+              {billingUiLabels.issueRoomFee}
+            </span>
+            <span className="dms-choice-hint">{billingUiLabels.issueRoomFeeHint}</span>
+          </Radio>
+          <Radio value={InvoiceType.UTILITY} className="dms-choice">
+            <span className="dms-choice-title">
+              <ThunderboltOutlined aria-hidden="true" />
+              {billingUiLabels.issueUtility}
+            </span>
+            <span className="dms-choice-hint">{billingUiLabels.issueUtilityHint}</span>
+          </Radio>
+        </RadioGroup>
+      </div>
+      <Form form={form} layout="vertical" disabled={pending} initialValues={{ billingMonth: dayjs().subtract(1, 'month').startOf('month') }}>
+        <FormGrid className="dms-form-grid-single">
           {issueType === InvoiceType.ROOM_FEE ? (
-            <Form.Item name="semesterId" label="Học kỳ" rules={[{ required: true, message: 'Vui lòng chọn học kỳ' }]}>
-              <Select loading={loadingSemesters} placeholder="Chọn học kỳ"
-                options={semesters.map((semester) => ({ value: Number(semester.id), label: String(semester.name) }))} />
+            <Form.Item
+              name="semesterId"
+              label={billingUiLabels.issueSemester}
+              extra={semesterHint}
+              rules={[{ required: true, message: 'Vui lòng chọn học kỳ' }]}
+            >
+              <Select
+                loading={loadingSemesters}
+                placeholder={billingUiLabels.issueChooseSemester}
+                aria-label={billingUiLabels.issueSemester}
+                options={semesters.map((semester) => ({ value: Number(semester.id), label: String(semester.name) }))}
+              />
             </Form.Item>
           ) : (
-            <Form.Item name="billingMonth" label="Tháng điện nước" rules={[{ required: true, message: 'Vui lòng chọn tháng' }]}>
-              <DatePicker picker="month" format="MM/YYYY" style={{ width: '100%' }} />
+            <Form.Item
+              name="billingMonth"
+              label={billingUiLabels.issueMonth}
+              rules={[{ required: true, message: 'Vui lòng chọn tháng' }]}
+            >
+              <DatePicker
+                picker="month"
+                format="MM/YYYY"
+                placeholder={billingUiLabels.issueChooseMonth}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           )}
         </FormGrid>
       </Form>
+      <Alert type="info" showIcon title={billingUiLabels.issueNote} style={{ marginTop: 4 }} />
     </Modal>
   )
 }

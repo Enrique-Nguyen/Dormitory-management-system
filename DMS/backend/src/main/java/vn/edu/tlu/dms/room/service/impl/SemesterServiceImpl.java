@@ -30,8 +30,6 @@ public class SemesterServiceImpl
 
     private final ScopeGuard guard;
 
-    private final CurrentUser currentUser;
-
     public SemesterServiceImpl(
             SemesterRepository repository,
             ScopeGuard guard,
@@ -39,7 +37,6 @@ public class SemesterServiceImpl
             AuditService auditService) {
         super(repository, auditService, currentUser);
         this.guard = guard;
-        this.currentUser = currentUser;
     }
 
     @Override

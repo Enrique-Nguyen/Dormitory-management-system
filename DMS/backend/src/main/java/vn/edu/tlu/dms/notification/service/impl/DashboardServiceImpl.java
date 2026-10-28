@@ -4,7 +4,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.billing.service.DebtQuery;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ConfigKey;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
@@ -15,7 +18,10 @@ import vn.edu.tlu.dms.contract.service.ContractService;
 import vn.edu.tlu.dms.maintenance.service.MaintenanceRequestService;
 import vn.edu.tlu.dms.notification.api.DashboardDtos;
 import vn.edu.tlu.dms.notification.service.DashboardService;
+import vn.edu.tlu.dms.registration.service.RoomApplicationService;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
+
+import java.util.Set;
 
 /** Tổng hợp Dashboard qua Service công khai của từng module theo SAD 4.2. */
 @Service
@@ -28,6 +34,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final DebtQuery debts;
     private final ContractService contracts;
     private final MaintenanceRequestService maintenance;
+    private final RoomApplicationService applications;
 
     public DashboardServiceImpl(
             ScopeGuard guard,
@@ -36,7 +43,8 @@ public class DashboardServiceImpl implements DashboardService {
             RoomReferenceService rooms,
             DebtQuery debts,
             ContractService contracts,
-            MaintenanceRequestService maintenance) {
+            MaintenanceRequestService maintenance,
+            RoomApplicationService applications) {
         this.guard = guard;
         this.current = current;
         this.config = config;
@@ -44,6 +52,7 @@ public class DashboardServiceImpl implements DashboardService {
         this.debts = debts;
         this.contracts = contracts;
         this.maintenance = maintenance;
+        this.applications = applications;
     }
 
     /** Xác định phạm vi phía server rồi ghép số liệu; quyền tổng hợp chỉ áp dụng cho đọc. */
@@ -60,6 +69,21 @@ public class DashboardServiceImpl implements DashboardService {
         }
         var capacity = rooms.getDashboardCapacity(unitId);
         var finance = debts.getFinanceSummary(unitId);
+        var infrastructure = rooms.getDashboardInfrastructure(unitId);
+        var registration = applications.getDashboardSummary(unitId);
+        var residency = contracts.getDashboardSummary(unitId);
+        var ticketsByStatus = maintenance.countByStatus(unitId);
+        Set<String> pendingTicketStatuses =
+                Set.of(
+                        MaintenanceStatus.OPEN,
+                        MaintenanceStatus.ASSIGNED,
+                        MaintenanceStatus.IN_PROGRESS,
+                        MaintenanceStatus.RESOLVED);
+        long ticketsRequiringAction =
+                ticketsByStatus.entrySet().stream()
+                        .filter(entry -> pendingTicketStatuses.contains(entry.getKey()))
+                        .mapToLong(entry -> entry.getValue())
+                        .sum();
         var expiry =
                 contracts.getExpirySummary(
                         unitId, config.positiveInt(ConfigKey.CONTRACT_EXPIRING_DAYS));
@@ -86,6 +110,30 @@ public class DashboardServiceImpl implements DashboardService {
                         capacity.roomsMissingLeader(),
                         expiry.expiringSoon(),
                         expiry.overdueMoveout(),
-                        maintenance.countByStatus(unitId)));
+                        ticketsByStatus,
+                        ticketsRequiringAction),
+                new DashboardDtos.InfrastructureStats(
+                        infrastructure.buildings(),
+                        infrastructure.roomsByStatus().values().stream()
+                                .mapToLong(Long::longValue)
+                                .sum(),
+                        infrastructure.roomsByStatus()),
+                new DashboardDtos.RegistrationStats(
+                        registration.applicationsByStatus().values().stream()
+                                .mapToLong(Long::longValue)
+                                .sum(),
+                        registration
+                                .applicationsByStatus()
+                                .getOrDefault(ApplicationStatus.SUBMITTED, 0L),
+                        registration.pendingSummerChoices(),
+                        registration.applicationsByStatus()),
+                new DashboardDtos.ResidencyStats(
+                        residency.contractsByStatus().getOrDefault(ContractStatus.ACTIVE, 0L),
+                        residency.contractsByStatus().getOrDefault(ContractStatus.PENDING, 0L),
+                        residency.pendingExtensions(),
+                        residency.pendingTransfers(),
+                        residency.storageRecords(),
+                        residency.storedPackages(),
+                        residency.contractsByStatus()));
     }
 }

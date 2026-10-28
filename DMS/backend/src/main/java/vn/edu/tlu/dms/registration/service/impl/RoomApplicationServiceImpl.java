@@ -21,6 +21,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.SummerStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
@@ -148,6 +149,36 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         this.configs = configs;
         this.audit = audit;
         this.entityManager = entityManager;
+    }
+
+    @Override
+    public DashboardRegistration getDashboardSummary(Long managementUnitId) {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        jdbc.query(
+                """
+                SELECT status,COUNT(*) AS cnt FROM room_application
+                WHERE (CAST(? AS bigint) IS NULL OR preferred_unit_id=?)
+                GROUP BY status ORDER BY status
+                """,
+                rs -> {
+                    counts.put(rs.getString("status"), rs.getLong("cnt"));
+                },
+                managementUnitId,
+                managementUnitId);
+        Long pendingSummer =
+                jdbc.queryForObject(
+                        """
+                        SELECT COUNT(*) FROM summer_choice sc
+                        JOIN dormitory_contract c ON c.id=sc.contract_id
+                        JOIN room_application ap ON ap.id=c.application_id
+                        WHERE sc.status=? AND (CAST(? AS bigint) IS NULL OR ap.preferred_unit_id=?)
+                        """,
+                        Long.class,
+                        SummerStatus.PENDING,
+                        managementUnitId,
+                        managementUnitId);
+        return new DashboardRegistration(
+                Map.copyOf(counts), pendingSummer == null ? 0 : pendingSummer);
     }
 
     @Override

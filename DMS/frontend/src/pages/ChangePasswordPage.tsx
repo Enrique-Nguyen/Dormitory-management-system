@@ -1,5 +1,4 @@
-import { Alert, Button, Card } from '../components/ui/Surface'
-import { Typography } from 'antd'
+import { Alert, Button } from '../components/ui/Surface'
 import { useState } from 'react'
 import { changeKeycloakPassword } from '../services/api/auth'
 import { errorMessage } from '../utils/errorMessages'
@@ -20,11 +19,17 @@ export default function ChangePasswordPage() {
 
   return (
     <main className="dms-auth-page dms-touch">
-      <Card>
-        <Typography.Title level={3}>Đổi mật khẩu</Typography.Title>
-        <Typography.Paragraph>
+      <div className="dms-auth-card">
+        <div className="dms-auth-header">
+          <div className="dms-auth-logo-badge">DMS</div>
+          <h1 className="dms-auth-title">Đổi mật khẩu</h1>
+          <p className="dms-auth-subtitle">
+            Hệ thống Quản lý Ký túc xá · Đại học Thủy Lợi
+          </p>
+        </div>
+        <p className="dms-auth-note">
           Bạn sẽ được chuyển tới trang bảo mật để đổi mật khẩu đăng nhập.
-        </Typography.Paragraph>
+        </p>
         {error && (
           <Alert
             type="error"
@@ -41,7 +46,10 @@ export default function ChangePasswordPage() {
         >
           Tiếp tục đổi mật khẩu
         </Button>
-      </Card>
+        <div className="dms-auth-footer">
+          Ký túc xá Đại học Thủy Lợi · Hỗ trợ kỹ thuật
+        </div>
+      </div>
     </main>
   )
 }

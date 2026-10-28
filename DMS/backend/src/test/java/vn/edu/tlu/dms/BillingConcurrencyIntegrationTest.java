@@ -37,7 +37,7 @@ class BillingConcurrencyIntegrationTest {
     @Autowired InvoiceService invoiceService;
     @Autowired JdbcTemplate jdbc;
     @MockitoBean CurrentUser currentUser;
-    private Long staffId, studentId, unitId, contractId, ticketId, semesterId, roomId;
+    private Long staffId, studentId, unitId, contractId, semesterId, roomId;
     private Long createdSemesterId;
     private String suffix;
 
@@ -148,19 +148,6 @@ class BillingConcurrencyIntegrationTest {
                         Long.class,
                         buildingId,
                         roomTypeId);
-
-        // Tạo ticket sửa chữa
-        ticketId =
-                jdbc.queryForObject(
-                        """
-                        INSERT INTO maintenance_request(code, requester_id, room_id, category, severity, description, status, cause, repair_cost)
-                        VALUES(?, ?, ?, 'WATER', 'MEDIUM', 'Hỏng vòi nước', 'CLOSED', 'MISUSE', 100000)
-                        RETURNING id
-                        """,
-                        Long.class,
-                        "TK-" + suffix,
-                        studentId,
-                        roomId);
 
         // Giả lập actor là Staff có quyền
         when(currentUser.get()).thenReturn(new Actor(staffId, Role.STAFF, unitId, false, false));

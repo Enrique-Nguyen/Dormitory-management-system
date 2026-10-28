@@ -28,8 +28,6 @@ public class RoomTypeServiceImpl
 
     private final ScopeGuard guard;
 
-    private final CurrentUser currentUser;
-
     private final RoomRepository rooms;
 
     public RoomTypeServiceImpl(
@@ -40,7 +38,6 @@ public class RoomTypeServiceImpl
             AuditService auditService) {
         super(repository, auditService, currentUser);
         this.guard = guard;
-        this.currentUser = currentUser;
         this.rooms = rooms;
     }
 

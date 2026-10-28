@@ -298,6 +298,10 @@ public class DepositServiceImpl implements DepositService {
         if (amount > balance.balance()) {
             throw BusinessException.conflict(ErrorCode.REFUND_EXCEEDS_BALANCE);
         }
+        if (!amount.equals(balance.balance())) {
+            throw BusinessException.invalid(
+                    ApiField.AMOUNT, ValidationMessage.REFUND_FULL_BALANCE_REQUIRED);
+        }
 
         Long actorId = currentUser.get().id();
         OffsetDateTime now = OffsetDateTime.now();
@@ -418,7 +422,10 @@ public class DepositServiceImpl implements DepositService {
                                                 ((Number) row.get("contractId")).longValue(),
                                                 ((Number) row.get("studentId")).longValue(),
                                                 (String) row.get("status"),
-                                                ((Number) row.get("depositRequired")).longValue(),
+                                                row.get("depositRequired") == null
+                                                        ? null
+                                                        : ((Number) row.get("depositRequired"))
+                                                                .longValue(),
                                                 ((Number) row.get("balance")).longValue(),
                                                 ((Number) row.get("topupNeeded")).longValue(),
                                                 row.get("oldestUnpaidDue") == null
@@ -453,7 +460,7 @@ public class DepositServiceImpl implements DepositService {
                 rs.getLong("contract_id"),
                 rs.getLong("student_id"),
                 rs.getString("status"),
-                rs.getLong("deposit_required"),
+                rs.getObject("deposit_required", Long.class),
                 rs.getLong("balance"),
                 rs.getLong("topup_needed"),
                 rs.getObject("oldest_unpaid_due", LocalDate.class),

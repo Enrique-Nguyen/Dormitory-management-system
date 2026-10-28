@@ -75,7 +75,15 @@ export default function DataTable<RecordType extends object>({
     )
 
     // Tạo hoặc sử dụng cột STT
-    let sttCol = existingStt
+    let sttCol: TableColumnType<RecordType> | undefined = existingStt
+      ? {
+          ...existingStt,
+          align: 'center' as const,
+          className: ['dms-table-col-stt', existingStt.className]
+            .filter(Boolean)
+            .join(' '),
+        }
+      : undefined
     if (!sttCol && showStt) {
       sttCol = {
         title: sttTitle,
@@ -98,6 +106,7 @@ export default function DataTable<RecordType extends object>({
     const cleanActionCol = actionCol
       ? ({
           ...actionCol,
+          align: 'left',
           fixed: actionCol.fixed === 'right' ? undefined : actionCol.fixed,
           className: `dms-table-col-actions ${(actionCol as any).className ?? ''}`.trim(),
         } as TableColumnType<RecordType>)
