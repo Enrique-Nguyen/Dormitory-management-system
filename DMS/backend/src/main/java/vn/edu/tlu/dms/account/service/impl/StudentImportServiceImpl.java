@@ -426,7 +426,7 @@ public class StudentImportServiceImpl implements StudentImportService {
         return new BusinessException(
                 ErrorCode.IMPORT_FILE_INVALID,
                 HttpStatus.BAD_REQUEST,
-                Map.of("missingColumns", missing, "maxRows", StudentImport.MAX_ROWS));
+                Map.of(ApiField.MISSING_COLUMNS, missing, ApiField.MAX_ROWS, StudentImport.MAX_ROWS));
     }
 
     private record ParsedRow(int number, Save data, List<CellError> errors) {}

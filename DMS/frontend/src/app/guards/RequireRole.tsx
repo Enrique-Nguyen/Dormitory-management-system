@@ -1,5 +1,5 @@
 import { Button } from '../../components/ui/Surface'
-import { Role } from '../../constants/authorization'
+import { ErrorCode, Role } from '../../constants/authorization'
 import { Result, Spin } from 'antd'
 import axios from 'axios'
 import { Navigate, Outlet, useLocation } from 'react-router'
@@ -48,14 +48,14 @@ export default function RequireRole({
     // Lỗi kết nối cho thử lại; chỉ thiếu phiên/khóa thực sự mới đưa về đăng nhập.
     if (
       !error ||
-      code === 'SESSION_REVOKED' ||
-      code === 'ACCOUNT_LOCKED' ||
+      code === ErrorCode.SESSION_REVOKED ||
+      code === ErrorCode.ACCOUNT_LOCKED ||
       (axios.isAxiosError(error) && error.response?.status === 401)
     ) {
       const reason =
-        code === 'ACCOUNT_LOCKED'
+        code === ErrorCode.ACCOUNT_LOCKED
           ? 'locked'
-          : code === 'SESSION_REVOKED'
+          : code === ErrorCode.SESSION_REVOKED
             ? 'revoked'
             : me
               ? 'expired'

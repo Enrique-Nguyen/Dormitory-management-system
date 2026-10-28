@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Form, message } from 'antd'
+import { App, Form } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Alert, DatePicker, FormGrid, Modal, Radio, RadioGroup, Select } from '../../components'
@@ -19,6 +19,7 @@ interface IssueForm { semesterId: number; billingMonth: Dayjs }
 
 export default function IssueInvoicesModal({ open, onClose, currentUnitId }: Props) {
   const [issueType, setIssueType] = useState<string>(InvoiceType.ROOM_FEE)
+  const { message } = App.useApp()
   const [form] = Form.useForm<IssueForm>()
   const { data: me } = useMe()
   const roomFee = useIssueRoomFeeInvoices()

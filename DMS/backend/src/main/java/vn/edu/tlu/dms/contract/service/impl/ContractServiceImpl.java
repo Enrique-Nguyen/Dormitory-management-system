@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.billing.service.DepositService;
 import vn.edu.tlu.dms.billing.service.DepositService.BalanceView;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ExtensionSource;
 import vn.edu.tlu.dms.common.constants.DmsConstants;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
@@ -541,7 +542,7 @@ public class ContractServiceImpl implements ContractService {
                         """,
                         Long.class,
                         contractId,
-                        ContractDtos.ExtensionSource.SUMMER_STAY,
+                        ExtensionSource.SUMMER_STAY,
                         oldEndDate,
                         newEndDate,
                         normalizeNote(reason),
@@ -551,7 +552,7 @@ public class ContractServiceImpl implements ContractService {
                         now);
         extendEndDate(contractId, newEndDate, reason);
         historyService.record(
-                ContractDtos.ExtensionSource.ENTITY_TYPE,
+                EntityType.EXTENSION,
                 requestId,
                 null,
                 StayRequestStatus.APPROVED,
@@ -565,7 +566,7 @@ public class ContractServiceImpl implements ContractService {
         audit.record(
                 actorId,
                 AuditAction.CONTRACT_EXTENSION_APPROVE,
-                ContractDtos.ExtensionSource.ENTITY_TYPE,
+                EntityType.EXTENSION,
                 requestId,
                 null,
                 after,

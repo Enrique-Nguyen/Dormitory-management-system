@@ -205,7 +205,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                 throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
             }
             if (input.closeAt() == null || !input.closeAt().isAfter(period.getCloseAt())) {
-                throw BusinessException.invalid("closeAt", "Chỉ được gia hạn ngày đóng");
+                throw BusinessException.invalid(ApiField.CLOSE_AT, ValidationMessage.PERIOD_EXTEND_CLOSE_ONLY);
             }
             period.setCloseAt(input.closeAt());
         } else {
@@ -248,7 +248,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                         || input.openAt() == null
                         || input.closeAt() == null
                         || input.unitIds() == null)) {
-            throw BusinessException.invalid("period", "Thiếu trường bắt buộc của đợt đăng ký");
+            throw BusinessException.invalid(ApiField.PERIOD, ValidationMessage.PERIOD_INPUT_REQUIRED);
         }
         if (input.semesterId() != null) {
             p.setSemesterId(input.semesterId());
@@ -258,7 +258,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         }
         if (input.name() != null) {
             if (input.name().isBlank()) {
-                throw BusinessException.invalid("name", "Không để trống tên");
+                throw BusinessException.invalid(ApiField.NAME, ValidationMessage.NAME_REQUIRED);
             }
             p.setName(input.name().trim());
         }
@@ -269,12 +269,12 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
             p.setCloseAt(input.closeAt());
         }
         if (!p.getCloseAt().isAfter(p.getOpenAt())) {
-            throw BusinessException.invalid("closeAt", "Ngày đóng phải sau ngày mở");
+            throw BusinessException.invalid(ApiField.CLOSE_AT, ValidationMessage.CLOSE_AFTER_OPEN);
         }
         var semester = rooms.getSemesterReference(p.getSemesterId());
         if (p.getKind().equals(RegistrationKind.SUMMER)
                 && !semester.type().equals(SemesterType.SUMMER)) {
-            throw BusinessException.invalid("semesterId", "Đợt hè phải dùng học kỳ hè");
+            throw BusinessException.invalid(ApiField.SEMESTER_ID, ValidationMessage.SUMMER_PERIOD_SEMESTER);
         }
     }
 
@@ -282,7 +282,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         List<Long> chosenUnits = input.unitIds() == null ? periodUnitIds(id) : input.unitIds();
         if (chosenUnits.isEmpty() || new HashSet<>(chosenUnits).size() != chosenUnits.size()) {
             throw BusinessException.invalid(
-                    "unitIds", "Danh sách đơn vị phải khác rỗng và không trùng");
+                    ApiField.UNIT_IDS, ValidationMessage.UNIT_IDS_INVALID);
         }
         for (Long unitId : chosenUnits) {
             accounts.requireUnit(unitId);
@@ -299,7 +299,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                                 .toList()
                         : input.quotas();
         if (kind.equals(RegistrationKind.SUMMER) && !chosenQuotas.isEmpty()) {
-            throw BusinessException.invalid("quotas", "Đợt hè không có chỉ tiêu");
+            throw BusinessException.invalid(ApiField.QUOTAS, ValidationMessage.SUMMER_NO_QUOTA);
         }
         Set<Long> seen = new HashSet<>();
         for (var quota : chosenQuotas) {
@@ -307,7 +307,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                     || !chosenUnits.contains(
                             rooms.getBuildingManagementUnitId(quota.buildingId()))) {
                 throw BusinessException.invalid(
-                        "quotas", "Tòa phải thuộc đơn vị áp dụng và không được trùng");
+                        ApiField.QUOTAS, ValidationMessage.QUOTA_BUILDING_INVALID);
             }
         }
         if (input.unitIds() != null) {

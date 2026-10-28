@@ -96,7 +96,7 @@ public class UserServiceImpl implements UserService {
         Boolean locked = input.locked();
         guard.requirePermission(Permission.USER_READ);
         if (managementUnitId != null && managementUnitId <= 0) {
-            throw BusinessException.invalid("managementUnitId", "ID đơn vị phải lớn hơn 0");
+            throw BusinessException.invalid(ApiField.MANAGEMENT_UNIT_ID, ValidationMessage.UNIT_ID_POSITIVE);
         }
         var pageable =
                 PageQuery.of(
@@ -160,7 +160,7 @@ public class UserServiceImpl implements UserService {
         // Tên đăng nhập bất biến ở API tài khoản; mã sinh viên có luồng kiểm soát riêng.
         if (input.username() != null) {
             throw BusinessException.invalid(
-                    "username", "Không được cập nhật tên đăng nhập qua API tài khoản");
+                    ApiField.USERNAME, ValidationMessage.USERNAME_IMMUTABLE);
         }
         return update(
                 input.id(),
@@ -182,7 +182,7 @@ public class UserServiceImpl implements UserService {
         if (unitRole) {
             references.requireUnit(input.managementUnitId());
         } else if (input.managementUnitId() != null) {
-            throw BusinessException.invalid("managementUnitId", "Admin không gắn đơn vị");
+            throw BusinessException.invalid(ApiField.MANAGEMENT_UNIT_ID, ValidationMessage.ADMIN_NO_UNIT);
         }
         var u = new AppUser();
         String temporary = generateTemporaryPassword();
@@ -220,10 +220,10 @@ public class UserServiceImpl implements UserService {
         Long previousUnitId = u.getManagementUnitId();
         if (input.role() != null && !input.role().equals(previousRole)) {
             if (Role.STUDENT.equals(previousRole)) {
-                throw BusinessException.invalid("role", "Hồ sơ sinh viên giữ vai trò STUDENT");
+                throw BusinessException.invalid(ApiField.ROLE, ValidationMessage.STUDENT_ROLE_FIXED);
             }
             if (id.equals(current.get().id())) {
-                throw BusinessException.invalid("role", "Không đổi vai trò tài khoản đang sử dụng");
+                throw BusinessException.invalid(ApiField.ROLE, ValidationMessage.ROLE_IN_USE_IMMUTABLE);
             }
             u.setRole(input.role());
             if (Role.ADMIN.equals(input.role())) {
@@ -232,7 +232,7 @@ public class UserServiceImpl implements UserService {
                 u.setCrossUnitAccess(false);
             } else if (u.getManagementUnitId() == null && input.managementUnitId() == null) {
                 throw BusinessException.invalid(
-                        "managementUnitId", "Staff/KTV phải có đơn vị quản lý");
+                        ApiField.MANAGEMENT_UNIT_ID, ValidationMessage.UNIT_REQUIRED_FOR_ROLE);
             }
             if (!Role.STAFF.equals(input.role())) {
                 u.setCrossUnitAccess(false);
@@ -246,7 +246,7 @@ public class UserServiceImpl implements UserService {
         }
         if (input.managementUnitId() != null && !Role.ADMIN.equals(input.role())) {
             if (!Set.of(Role.STAFF, Role.TECHNICIAN).contains(u.getRole())) {
-                throw BusinessException.invalid("managementUnitId", "Vai trò không có đơn vị");
+                throw BusinessException.invalid(ApiField.MANAGEMENT_UNIT_ID, ValidationMessage.ROLE_HAS_NO_UNIT);
             }
             references.requireUnit(input.managementUnitId());
             u.setManagementUnitId(input.managementUnitId());
@@ -275,7 +275,7 @@ public class UserServiceImpl implements UserService {
                 || input.dateOfBirth() != null
                 || input.faculty() != null
                 || input.cohort() != null) {
-            throw BusinessException.invalid("studentCode", "Chỉ áp dụng cho sinh viên");
+            throw BusinessException.invalid(ApiField.STUDENT_CODE, ValidationMessage.STUDENT_ONLY);
         }
         // Phiên đã mở giữ thông tin đăng nhập/phạm vi cũ, nên phải đăng nhập lại khi đổi chúng.
         if (!Objects.equals(previousUsername, u.getUsername())
@@ -301,7 +301,7 @@ public class UserServiceImpl implements UserService {
     public void lock(Long id, String reason) {
         guard.requirePermission(Permission.USER_LOCK);
         if (id.equals(current.get().id())) {
-            throw BusinessException.invalid(ApiField.ID, "Không tự khóa tài khoản đang dùng");
+            throw BusinessException.invalid(ApiField.ID, ValidationMessage.SELF_LOCK_FORBIDDEN);
         }
         var u = authService.lockAccount(id);
         u.setLocked(true);
@@ -399,7 +399,7 @@ public class UserServiceImpl implements UserService {
             }
             students.saveAndFlush(p);
         } else if (input.hometown() != null || input.emergencyContact() != null) {
-            throw BusinessException.invalid("hometown", "Chỉ áp dụng cho sinh viên");
+            throw BusinessException.invalid(ApiField.HOMETOWN, ValidationMessage.STUDENT_ONLY);
         }
         users.saveAndFlush(u);
         return toUserProfileResponse(u);
@@ -441,7 +441,7 @@ public class UserServiceImpl implements UserService {
     private void rejectStudentFieldOnCreate(String field, Object value) {
         if (value != null) {
             throw BusinessException.invalid(
-                    field, "Trường hồ sơ sinh viên không áp dụng khi tạo tài khoản cán bộ");
+                    field, ValidationMessage.STUDENT_FIELD_NOT_FOR_STAFF);
         }
     }
 

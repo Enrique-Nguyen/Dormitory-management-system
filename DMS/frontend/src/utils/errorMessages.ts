@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type { ApiError } from '../services/api/client'
-import { formatDate, formatDateTime } from './format'
+import { formatDate, formatDateTime, formatMoney } from './format'
 
 // errorCode → câu tiếng Việt (UI 27.2, danh mục mã ở API Spec mục 5). Không parse chuỗi message.
 // Mỗi câu nói rõ nguyên nhân → cách xử lý (Rule 06). Thêm mã vào đây cùng lúc với danh mục API Spec.
@@ -166,6 +166,24 @@ const messages: Record<string, (d: Details) => string> = {
     'Tài khoản này đã được liên kết với một danh tính đăng nhập khác. Hãy kiểm tra lại với quản trị viên.',
   BOOTSTRAP_USERNAME_IN_USE: () =>
     'Tên đăng nhập khởi tạo đã tồn tại trên hệ thống định danh. Hãy dùng tên khác hoặc liên hệ quản trị viên.',
+  // 5.6 Hợp đồng và kích hoạt
+  DEPOSIT_AMOUNT_MISMATCH: (d) =>
+    typeof d.required === 'number' && d.required > 0
+      ? `Tiền cọc phải đúng ${formatMoney(d.required)} theo mức cọc của tòa. Hãy sửa số tiền rồi xác nhận lại.`
+      : 'Tiền cọc không khớp mức cọc của tòa. Hãy tải lại hợp đồng để lấy mức cọc hiện hành.',
+  CONTRACT_ACTIVATION_EXPIRED: () =>
+    'Hợp đồng đã quá hạn kích hoạt nên không nhận phòng được. Giữ chỗ sẽ bị hủy; hãy lập lại quyền ở cho sinh viên.',
+  CONTRACT_AUTO_CANCELLED: () =>
+    'Hợp đồng đã được hệ thống tự hủy do quá hạn kích hoạt. Hãy tải lại danh sách hợp đồng.',
+  CONTRACT_PERIOD_OVERLAP: (d) =>
+    `Khoảng thời gian mới trùng với hợp đồng${typeof d.contractCode === 'string' ? ` ${d.contractCode}` : ' khác'} của sinh viên. Hãy chọn ngày kết thúc khác.`,
+  APPLICATION_NOT_APPROVED: () =>
+    'Đơn đăng ký chưa được duyệt nên chưa tạo được hợp đồng. Hãy duyệt đơn trước.',
+  NO_HOLD_ASSIGNMENT: () =>
+    'Không còn giữ chỗ (HOLD) nào cho hồ sơ này. Hãy phân lại giường trước khi xác nhận.',
+  // 5.7 Hóa đơn
+  ADJUSTMENT_INVALID: (d) =>
+    `Điều chỉnh hóa đơn không hợp lệ${typeof d.totalAfter === 'number' ? ` (tổng sau điều chỉnh ${formatMoney(d.totalAfter)})` : ''}. Chỉ điều chỉnh hóa đơn đã thanh toán và tổng tiền không được âm.`,
 }
 
 export function errorMessage(error: unknown): string {

@@ -14,8 +14,12 @@ import {
 import { useEffect, useState } from 'react'
 import { useBlocker, useSearchParams } from 'react-router'
 import PageHeader from '../../components/layout/PageHeader'
-import { Action, Permission, Role } from '../../constants/authorization'
-import { roleLabel, rolePermissionLabels } from '../../constants/navigation'
+import { Action, ErrorCode, Permission, Role } from '../../constants/authorization'
+import {
+  roleLabel,
+  rolePermissionActionLabels as actionLabels,
+  rolePermissionLabels,
+} from '../../constants/navigation'
 import { meQueryKey, useMe } from '../../features/account/useMe'
 import { validationFieldErrors } from '../../features/crud/api'
 import { hasPermission } from '../../services/api/auth'
@@ -55,12 +59,6 @@ interface PermissionDraft {
 
 const matrixQueryKey = (role: Role) => ['role-permission-matrix', role] as const
 const crudActions = [Action.READ, Action.CREATE, Action.UPDATE, Action.DELETE]
-const actionLabels: Record<string, string> = {
-  [Action.READ]: 'Xem / Tìm kiếm',
-  [Action.CREATE]: 'Thêm',
-  [Action.UPDATE]: 'Sửa',
-  [Action.DELETE]: 'Xóa',
-}
 
 function knownPrivilege(privilege: MatrixPrivilege): boolean {
   return Object.hasOwn(Permission, privilege.code)
@@ -158,7 +156,7 @@ export default function RolePermissionsPage() {
         .map((field) => field.message)
         .join(' ')
       setSaveFeedback(feedback || errorMessage(failure))
-      if (errorCodeOf(failure) === 'PERMISSION_MATRIX_STALE') {
+      if (errorCodeOf(failure) === ErrorCode.PERMISSION_MATRIX_STALE) {
         // Bản cũ không được gửi lại: tải bản mới rồi để người dùng chủ động tick và lưu.
         setDraft(null)
         void matrixQuery.refetch()

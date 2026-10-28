@@ -68,7 +68,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
         guard.requirePermission(Permission.UTILITY_READING_READ);
         guard.requireRole(Role.STAFF);
         if (input.meterType() != null && !input.meterType().matches(MeterType.PATTERN)) {
-            throw BusinessException.invalid("meterType", "Loại đồng hồ không hợp lệ");
+            throw BusinessException.invalid(ApiField.METER_TYPE, ValidationMessage.METER_TYPE_INVALID);
         }
         var args = new ArrayList<Object>();
         String scope = current.get().canReadAllUnits() ? "TRUE" : "bd.management_unit_id=?";
@@ -169,9 +169,9 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
 
     @Transactional
     @Override
-    public Object saveOrUpdate(Input input) {
+    public Map<String, Object> saveOrUpdate(Input input) {
         if (input == null) {
-            throw BusinessException.invalid("input", "Phải nhập thông tin chỉ số");
+            throw BusinessException.invalid(ApiField.INPUT, ValidationMessage.READING_INPUT_REQUIRED);
         }
         Long id = input.id();
         guard.requirePermission(
@@ -201,13 +201,13 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
                     || input.billingMonth() != null
                             && !Objects.equals(input.billingMonth(), before.get("billingMonth"))) {
                 throw BusinessException.invalid(
-                        "roomId", "Không đổi phòng, loại đồng hồ hoặc kỳ của bản ghi");
+                        ApiField.ROOM_ID, ValidationMessage.READING_KEY_IMMUTABLE);
             }
             input = mergeInput(input, before);
             validateRequiredInput(input);
         }
         if (input.billingMonth().getDayOfMonth() != 1) {
-            throw BusinessException.invalid("billingMonth", "Dùng ngày đầu tháng");
+            throw BusinessException.invalid(ApiField.BILLING_MONTH, ValidationMessage.FIRST_DAY_OF_MONTH);
         }
         if (id == null) {
             requireNoFollowingMonth(input.roomId(), input.meterType(), input.billingMonth());
@@ -222,13 +222,13 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
                         input.billingMonth().minusMonths(1));
         Integer start = previous.isEmpty() ? input.startReading() : previous.get(0);
         if (start == null) {
-            throw BusinessException.invalid("startReading", "Tháng đầu phải nhập chỉ số đầu");
+            throw BusinessException.invalid(ApiField.START_READING, ValidationMessage.START_READING_REQUIRED);
         }
         if (input.oldMeterFinal() == null
                 && (input.newMeterStart() != null
                         || input.replacementReason() != null
                                 && !input.replacementReason().isBlank())) {
-            throw BusinessException.invalid("oldMeterFinal", "Thiếu chỉ số chốt đồng hồ cũ");
+            throw BusinessException.invalid(ApiField.OLD_METER_FINAL, ValidationMessage.OLD_METER_FINAL_REQUIRED);
         }
         String replacement = input.oldMeterFinal() == null ? null : input.replacementReason();
         if (input.oldMeterFinal() == null
@@ -339,16 +339,16 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
     /** Nhánh tạo và dữ liệu sửa sau merge đều phải đủ trường và đúng giới hạn. */
     private void validateRequiredInput(Input input) {
         if (input.roomId() == null || input.roomId() <= 0) {
-            throw BusinessException.invalid("roomId", "Phải chọn phòng hợp lệ");
+            throw BusinessException.invalid(ApiField.ROOM_ID, ValidationMessage.ROOM_REQUIRED);
         }
         if (input.meterType() == null || !input.meterType().matches(MeterType.PATTERN)) {
-            throw BusinessException.invalid("meterType", "Phải chọn loại đồng hồ hợp lệ");
+            throw BusinessException.invalid(ApiField.METER_TYPE, ValidationMessage.METER_TYPE_REQUIRED);
         }
         if (input.billingMonth() == null) {
-            throw BusinessException.invalid("billingMonth", "Phải chọn kỳ ghi chỉ số");
+            throw BusinessException.invalid(ApiField.BILLING_MONTH, ValidationMessage.READING_MONTH_REQUIRED);
         }
         if (input.endReading() == null) {
-            throw BusinessException.invalid("endReading", "Phải nhập chỉ số cuối");
+            throw BusinessException.invalid(ApiField.END_READING, ValidationMessage.END_READING_REQUIRED);
         }
         nonNegative("startReading", input.startReading());
         nonNegative("endReading", input.endReading());
@@ -358,7 +358,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
 
     private void nonNegative(String field, Integer value) {
         if (value != null && value < 0) {
-            throw BusinessException.invalid(field, "Chỉ số không được âm");
+            throw BusinessException.invalid(field, ValidationMessage.READING_NOT_NEGATIVE);
         }
     }
 }

@@ -18,6 +18,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ExtensionSource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SemesterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.StayRequestStatus;
@@ -150,7 +151,7 @@ class ContractExtensionIntegrationTest {
                                 + " VALUES(?,?,?,?,?,?) RETURNING id",
                         Long.class,
                         contractId,
-                        ContractDtos.ExtensionSource.STUDENT,
+                        ExtensionSource.STUDENT,
                         CONTRACT_END,
                         EXTENDED_END,
                         "Ở thêm học kỳ hè",

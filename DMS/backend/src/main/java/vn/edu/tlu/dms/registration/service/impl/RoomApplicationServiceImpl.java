@@ -230,7 +230,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         guard.requirePermission(Permission.ROOM_APPLICATION_CREATE);
         guard.requireRole(Role.STUDENT);
         if (input.periodId() == null || input.preferredUnitId() == null) {
-            throw BusinessException.invalid("periodId", "Thiếu đợt hoặc đơn vị nguyện vọng");
+            throw BusinessException.invalid(ApiField.PERIOD_ID, ValidationMessage.PERIOD_UNIT_REQUIRED);
         }
         Long studentId = resolveApplicationStudent(input.studentId());
         rooms.lockStudentProfile(studentId);
@@ -270,7 +270,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                     ApiField.STUDENT_ID, ValidationMessage.STUDENT_IMMUTABLE);
         }
         if (input.periodId() != null && !input.periodId().equals(a.getPeriodId())) {
-            throw BusinessException.invalid("periodId", "Không đổi đợt của đơn đã tạo");
+            throw BusinessException.invalid(ApiField.PERIOD_ID, ValidationMessage.APPLICATION_PERIOD_IMMUTABLE);
         }
         if (input.preferredUnitId() != null) {
             a.setPreferredUnitId(input.preferredUnitId());
@@ -326,7 +326,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                     case BusinessAction.APPROVE -> ApplicationStatus.APPROVED;
                     case BusinessAction.REJECT -> ApplicationStatus.REJECTED;
                     case BusinessAction.CANCEL -> ApplicationStatus.CANCELLED;
-                    default -> throw BusinessException.invalid("action", "Hành động không hỗ trợ");
+                    default -> throw BusinessException.invalid(ApiField.ACTION, ValidationMessage.ACTION_UNSUPPORTED);
                 });
         a.setStatusReason(reason);
         applications.saveAndFlush(a);
@@ -609,7 +609,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
     private void replaceApplicationPriorities(Long id, List<Long> ids) {
         List<Long> selected = ids == null ? List.of() : ids;
         if (new HashSet<>(selected).size() != selected.size()) {
-            throw BusinessException.invalid("priorityCategoryIds", "Không khai trùng diện ưu tiên");
+            throw BusinessException.invalid(ApiField.PRIORITY_CATEGORY_IDS, ValidationMessage.PRIORITY_DUPLICATE);
         }
         for (Long categoryId : selected) {
             if (!categories.exists(

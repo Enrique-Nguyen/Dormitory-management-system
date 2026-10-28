@@ -71,7 +71,7 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
     @Override
     public Object saveOrUpdate(InvoiceDtos.Save input) {
         if (input == null) {
-            throw BusinessException.invalid("input", "Dữ liệu hóa đơn không được để trống");
+            throw BusinessException.invalid(ApiField.INPUT, ValidationMessage.INVOICE_INPUT_REQUIRED);
         }
         if (input.id() == null) {
             guard.requirePermission(Permission.INVOICE_CREATE);
@@ -95,13 +95,13 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
                     || input.roomId() != null
                     || input.billingMonth() != null) {
                 throw BusinessException.invalid(
-                        ApiField.FORM, "Chỉ sửa tổng tiền/hạn đóng của hồ sơ chưa phát hành");
+                        ApiField.FORM, ValidationMessage.INVOICE_EDIT_UNISSUED_ONLY);
             }
             Map<String, Object> map = new HashMap<>();
             if (input.totalAmount() != null) map.put("totalAmount", input.totalAmount());
             if (input.dueDate() != null) map.put("dueDate", input.dueDate());
             if (map.isEmpty()) {
-                throw BusinessException.invalid(ApiField.FORM, "Thiếu thông tin cập nhật");
+                throw BusinessException.invalid(ApiField.FORM, ValidationMessage.UPDATE_INPUT_REQUIRED);
             }
             return updateUnpaidInvoiceRecord(input.id(), map);
         }
@@ -136,7 +136,7 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
         var row = loadEditable(id);
         if (input.keySet().stream().anyMatch(k -> !Set.of("totalAmount", "dueDate").contains(k))) {
             throw BusinessException.invalid(
-                    ApiField.FORM, "Chỉ sửa tổng tiền/hạn đóng của hồ sơ chưa phát hành");
+                    ApiField.FORM, ValidationMessage.INVOICE_EDIT_UNISSUED_ONLY);
         }
         var merged = new HashMap<>(row);
         merged.putAll(input);
@@ -194,7 +194,7 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
                 throw BusinessException.notFound();
             }
         } else {
-            throw BusinessException.invalid("type", "Chọn ROOM_FEE hoặc UTILITY");
+            throw BusinessException.invalid(ApiField.TYPE, ValidationMessage.INVOICE_TYPE_CHOICE);
         }
     }
 
@@ -203,29 +203,29 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
         if (InvoiceType.ROOM_FEE.equals(input.get("type"))) {
             rooms.getSemesterReference(number(input, "semesterId"));
             if (input.get("roomId") != null || input.get("billingMonth") != null) {
-                throw BusinessException.invalid("type", "Phí phòng chỉ gắn sinh viên/học kỳ");
+                throw BusinessException.invalid(ApiField.TYPE, ValidationMessage.ROOM_FEE_TARGET);
             }
         } else {
             if (input.get("studentId") != null || input.get("semesterId") != null) {
-                throw BusinessException.invalid("type", "Điện nước chỉ gắn phòng/tháng");
+                throw BusinessException.invalid(ApiField.TYPE, ValidationMessage.UTILITY_TARGET);
             }
             try {
                 if (LocalDate.parse(input.get("billingMonth").toString()).getDayOfMonth() != 1) {
-                    throw BusinessException.invalid("billingMonth", "Dùng ngày đầu tháng");
+                    throw BusinessException.invalid(ApiField.BILLING_MONTH, ValidationMessage.FIRST_DAY_OF_MONTH);
                 }
             } catch (RuntimeException e) {
-                throw BusinessException.invalid("billingMonth", "Nhập ngày đầu tháng hợp lệ");
+                throw BusinessException.invalid(ApiField.BILLING_MONTH, ValidationMessage.FIRST_DAY_OF_MONTH_VALID);
             }
         }
         if (number(input, "totalAmount") < 0) {
-            throw BusinessException.invalid("totalAmount", "Số tiền không được âm");
+            throw BusinessException.invalid(ApiField.TOTAL_AMOUNT, ValidationMessage.AMOUNT_NOT_NEGATIVE);
         }
         try {
             if (LocalDate.parse(input.get("dueDate").toString()).isBefore(LocalDate.now())) {
-                throw BusinessException.invalid("dueDate", "Hạn đóng không được trước hôm nay");
+                throw BusinessException.invalid(ApiField.DUE_DATE, ValidationMessage.DUE_DATE_NOT_PAST);
             }
         } catch (RuntimeException e) {
-            throw BusinessException.invalid("dueDate", "Hạn đóng phải từ hôm nay");
+            throw BusinessException.invalid(ApiField.DUE_DATE, ValidationMessage.DUE_DATE_FROM_TODAY);
         }
     }
 
@@ -233,7 +233,7 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
         try {
             return Long.valueOf(input.get(field).toString());
         } catch (RuntimeException e) {
-            throw BusinessException.invalid(field, "Giá trị số bắt buộc");
+            throw BusinessException.invalid(field, ValidationMessage.NUMBER_REQUIRED);
         }
     }
 }

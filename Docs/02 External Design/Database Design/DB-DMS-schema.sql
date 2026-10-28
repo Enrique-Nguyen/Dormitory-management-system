@@ -3,8 +3,8 @@
 -- Lược đồ nghiệp vụ, bản 0.6 (15/10/2026): Keycloak và ma trận quyền động
 -- DBMS: PostgreSQL 16
 -- Căn cứ: SRS-DMS.md v0.10. Giải thích chi tiết: DB-Design-DMS.md v0.6
--- Đây là snapshot bảng nghiệp vụ hiện tại, gồm bổ sung của migration V3–V5.
--- Ứng dụng nâng cấp bằng Flyway V1–V5; V2 tạo bảng Spring Session riêng.
+-- Đây là snapshot bảng nghiệp vụ hiện tại, gồm bổ sung của migration V3–V7.
+-- Ứng dụng nâng cấp bằng Flyway V1–V7; V2 tạo bảng Spring Session riêng.
 --
 -- Quy ước:
 --   * Tên bảng, cột: snake_case, số ít.
@@ -200,6 +200,8 @@ CREATE TABLE application_priority (
     note            VARCHAR(500),            -- V7: ghi chú xác minh của Staff
     PRIMARY KEY (application_id, category_id)
 );
+COMMENT ON COLUMN application_priority.note IS
+    'Ghi chú xác minh của Staff khi duyệt diện ưu tiên (null: chưa xác nhận)';
 
 -- ---------------------------------------------------------------------
 -- 4. Hợp đồng, phân phòng, sổ cọc
@@ -809,7 +811,7 @@ CREATE TABLE role_permission_matrix (
     CONSTRAINT ck_role_permission_matrix_version CHECK (version >= 0)
 );
 
--- Giữ nguyên quyền trước khi chuyển sang ma trận động: Staff 72, Student 35, Technician 11.
+-- Quyền mặc định sau V6: Staff 73 (V5 72 + ROOM_TRANSFER_APPROVE), Student 35, Technician 11.
 -- Đây là dữ liệu khởi tạo bất biến của migration; runtime đọc quyền đang lưu trong bảng.
 INSERT INTO role_permission_matrix(role, permissions) VALUES
     ('STAFF', '[
@@ -858,6 +860,7 @@ INSERT INTO role_permission_matrix(role, permissions) VALUES
     "ROOM_CREATE",
     "ROOM_DELETE",
     "ROOM_READ",
+    "ROOM_TRANSFER_APPROVE",
     "ROOM_TRANSFER_READ",
     "ROOM_TRANSFER_UPDATE",
     "ROOM_TYPE_CREATE",

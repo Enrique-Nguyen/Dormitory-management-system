@@ -1,4 +1,4 @@
-import { Permission, Role } from './authorization'
+import { Action, Permission, Role } from './authorization'
 import {
   AuditOutlined,
   BankOutlined,
@@ -14,6 +14,7 @@ import {
   ReconciliationOutlined,
   SafetyOutlined,
   SolutionOutlined,
+  SunOutlined,
   TeamOutlined,
   ThunderboltOutlined,
   ToolOutlined,
@@ -45,6 +46,23 @@ export const rolePermissionLabels = {
   grantedCount: 'quyền được cấp',
   adminFullAccess: 'Tự động cấp toàn quyền',
 } as const
+
+/** Nhãn cột thao tác CRUD trong ma trận quyền. */
+export const rolePermissionActionLabels: Record<string, string> = {
+  [Action.READ]: 'Xem / Tìm kiếm',
+  [Action.CREATE]: 'Thêm',
+  [Action.UPDATE]: 'Sửa',
+  [Action.DELETE]: 'Xóa',
+}
+
+/** Đoạn đường dẫn chi tiết (dưới /staff) của từng loại việc chờ xử lý; mã loại khớp API. */
+export const pendingItemDetailSegments: Record<string, string> = {
+  APPLICATION: 'applications',
+  EXTENSION: 'extensions',
+  TRANSFER: 'transfers',
+  SUMMER_CHOICE: 'summer',
+  CONTRACT: 'contracts',
+}
 
 export const commonUiLabels = {
   search: 'Tìm kiếm',
@@ -214,7 +232,7 @@ export const staffNav: NavGroup[] = [
       item('Phòng & Giường', STAFF_ROOMS_PATH, HomeOutlined),
       item('Sinh viên', '/staff/students', TeamOutlined),
       item('Hợp đồng', STAFF_CONTRACTS_PATH, SolutionOutlined),
-      item('Kỳ hè', STAFF_SUMMER_PATH, InboxOutlined),
+      item('Kỳ hè', STAFF_SUMMER_PATH, SunOutlined),
       item('Kho gửi đồ', '/staff/storage', InboxOutlined),
     ],
   },
@@ -301,7 +319,7 @@ export const studentMoreNav: NavItem[] = [
     ClockCircleOutlined,
   ),
   item('Tiền cọc', '/student/deposit', WalletOutlined),
-  item('Kỳ hè', '/student/summer', CalendarOutlined),
+  item('Kỳ hè', '/student/summer', SunOutlined),
   item('Thông báo', '/student/notifications', BellOutlined),
   item('Hồ sơ', '/student/profile', UserOutlined),
 ]

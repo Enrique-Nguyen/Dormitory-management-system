@@ -137,7 +137,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
             Long contractId, String endReason, Long actorId, String note) {
         if (!AssignmentEndReason.RELEASE.contains(endReason)) {
             throw BusinessException.invalid(
-                    ApiField.END_REASON, "Lý do đóng phân phòng không hợp lệ");
+                    ApiField.END_REASON, ValidationMessage.END_REASON_INVALID);
         }
         var open = findOpenRow(contractId);
         if (open.isEmpty()) {

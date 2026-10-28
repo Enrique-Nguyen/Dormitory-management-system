@@ -118,7 +118,7 @@ public class ConfigServiceImpl implements ConfigService {
     public ConfigValue saveOrUpdate(String key, String value) {
         guard.requirePermission(Permission.CONFIG_UPDATE);
         if (key == null || key.isBlank()) {
-            throw BusinessException.invalid("key", "Phải chọn khóa cấu hình đã tồn tại");
+            throw BusinessException.invalid(ApiField.KEY, ValidationMessage.CONFIG_KEY_EXISTING);
         }
         var row = repository.findById(key).orElseThrow(BusinessException::notFound);
         try {

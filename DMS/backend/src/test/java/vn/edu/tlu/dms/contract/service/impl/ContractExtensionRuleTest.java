@@ -15,7 +15,9 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ExtensionSource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.StayRequestStatus;
@@ -27,7 +29,6 @@ import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.ConfigService;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
-import vn.edu.tlu.dms.contract.api.ContractDtos;
 import vn.edu.tlu.dms.contract.service.ContractService;
 import vn.edu.tlu.dms.room.service.OccupancyQuery;
 import vn.edu.tlu.dms.support.BusinessFailures;
@@ -86,7 +87,7 @@ class ContractExtensionRuleTest {
                 .contains("| " + StayRequestStatus.PENDING);
         verify(fixture.history)
                 .record(
-                        eq(ContractDtos.ExtensionSource.ENTITY_TYPE),
+                        eq(EntityType.EXTENSION),
                         eq(REQUEST_ID),
                         eq(StayRequestStatus.PENDING),
                         eq(StayRequestStatus.APPROVED),
@@ -96,7 +97,7 @@ class ContractExtensionRuleTest {
                 .record(
                         eq(STAFF_ID),
                         eq(AuditAction.CONTRACT_EXTENSION_APPROVE),
-                        eq(ContractDtos.ExtensionSource.ENTITY_TYPE),
+                        eq(EntityType.EXTENSION),
                         eq(REQUEST_ID),
                         any(),
                         any(),
@@ -355,7 +356,7 @@ class ContractExtensionRuleTest {
                     "student_id", STUDENT_ID,
                     "student_code", "20650001",
                     "full_name", "Nguyễn Văn A",
-                    "source", ContractDtos.ExtensionSource.STUDENT,
+                    "source", ExtensionSource.STUDENT,
                     "old_end_date", contractEndDate,
                     "new_end_date", requestNewEndDate,
                     "reason", REASON,

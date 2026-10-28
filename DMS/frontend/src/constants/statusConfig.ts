@@ -17,6 +17,9 @@ import {
   WarningOutlined,
 } from '@ant-design/icons'
 import type { ComponentType } from 'react'
+import type { AssetCondition } from '../services/api/checkout'
+import type { PendingItemType } from '../services/api/contract'
+import type { MaintenanceCause } from '../services/api/maintenance'
 
 /** Mã kết quả import dùng chung với API, nhãn nằm trong registry resources. */
 export const StudentImportResult = { ERROR: 'ERROR', EXISTS: 'EXISTS' } as const
@@ -50,7 +53,7 @@ export interface StatusStyle {
 }
 
 export type StatusEntity =
-  'application' | 'contract' | 'ticket' | 'invoice' | 'request'
+  'application' | 'contract' | 'ticket' | 'invoice' | 'request' | 'storage'
 
 const s = (label: string, color: StatusColor, icon: IconType): StatusStyle => ({
   label,
@@ -94,7 +97,15 @@ export const statusConfig: Record<StatusEntity, Record<string, StatusStyle>> = {
     REJECTED: s('Bị từ chối', 'red', CloseCircleOutlined),
     CANCELLED: s('Đã hủy', 'gray', StopOutlined),
   },
+  // Phiếu gửi đồ: suy từ returned_at (null = đang gửi), khóa theo StorageState
+  storage: {
+    STORED: s('Đang gửi', 'orange', ClockCircleOutlined),
+    RETURNED: s('Đã nhận', 'green', CheckCircleOutlined),
+  },
 }
+
+/** Trạng thái hiển thị của phiếu gửi đồ; CSDL chỉ lưu returned_at. */
+export const StorageState = { STORED: 'STORED', RETURNED: 'RETURNED' } as const
 
 const unknownStatus = (status: string): StatusStyle => ({
   label: status,
@@ -246,6 +257,57 @@ export const crudValueLabels: Record<string, string> = {
   STAY: 'Ở hè',
   TEMP_LEAVE: 'Tạm rời hè',
   LEAVE: 'Rời KTX',
+}
+
+/** Mã hành động ticket sửa chữa, khớp DmsConstants.BusinessAction và allowedActions (API Spec 4.11). */
+export const MaintenanceAction = {
+  ASSIGN: 'assign',
+  REJECT: 'reject',
+  ACCEPT: 'accept',
+  REOPEN: 'reopen',
+  CANCEL: 'cancel',
+  START: 'start',
+  ADD_NOTE: 'add-note',
+  RESOLVE: 'resolve',
+  CONCLUDE: 'conclude',
+} as const
+
+export type MaintenanceAction =
+  (typeof MaintenanceAction)[keyof typeof MaintenanceAction]
+
+export const maintenanceActionLabels: Record<MaintenanceAction, string> = {
+  [MaintenanceAction.ASSIGN]: 'Giao kỹ thuật viên',
+  [MaintenanceAction.REJECT]: 'Từ chối',
+  [MaintenanceAction.ACCEPT]: 'Nghiệm thu',
+  [MaintenanceAction.REOPEN]: 'Mở lại',
+  [MaintenanceAction.CANCEL]: 'Hủy ticket',
+  [MaintenanceAction.START]: 'Bắt đầu sửa chữa',
+  [MaintenanceAction.ADD_NOTE]: 'Ghi chú tiến độ',
+  [MaintenanceAction.RESOLVE]: 'Hoàn thành sửa chữa',
+  [MaintenanceAction.CONCLUDE]: 'Kết luận xử lý',
+}
+
+/** Nguyên nhân kết luận ticket. */
+export const maintenanceCauseLabels: Record<MaintenanceCause, string> = {
+  WEAR: 'Hao mòn tự nhiên',
+  MISUSE: 'Do sử dụng sai',
+}
+
+/** Tình trạng tài sản khi trả phòng. */
+export const assetConditionLabels: Record<AssetCondition, string> = {
+  OK: 'Bình thường',
+  DAMAGED: 'Có hư hỏng',
+}
+
+type PendingItemTypeCode = (typeof PendingItemType)[keyof typeof PendingItemType]
+
+/** Nhãn loại việc trong hộp yêu cầu chờ xử lý; thứ tự khai báo là thứ tự bộ lọc. */
+export const pendingItemTypeLabels: Partial<Record<PendingItemTypeCode, string>> = {
+  APPLICATION: 'Đơn đăng ký',
+  EXTENSION: 'Gia hạn',
+  TRANSFER: 'Chuyển phòng',
+  SUMMER_CHOICE: 'Lựa chọn hè',
+  CONTRACT: 'Hợp đồng chờ kích hoạt',
 }
 
 /** Mã nghiệp vụ billing giữ nguyên hợp đồng API. */

@@ -8,9 +8,10 @@ import {
   FilterBar,
   PageHeader,
   SearchInput,
-  Tag,
+  StatusBadge,
 } from '../../components'
 import { Permission } from '../../constants/authorization'
+import { StorageState } from '../../constants/statusConfig'
 import { CRUD_DEFAULT_PAGE_SIZE, CRUD_PAGE_SIZES } from '../../features/crud/api'
 import { StorageModal, useStorageRecords } from '../../features/contract'
 import { useMe } from '../../features/account/useMe'
@@ -138,12 +139,12 @@ export default function StoragePage() {
               key: 'storageStatus',
               dataIndex: 'returnedAt',
               width: 120,
-              render: (value: string | null | undefined) =>
-                value ? (
-                  <Tag color="green">Đã nhận</Tag>
-                ) : (
-                  <Tag color="orange">Đang gửi</Tag>
-                ),
+              render: (value: string | null | undefined) => (
+                <StatusBadge
+                  entity="storage"
+                  status={value ? StorageState.RETURNED : StorageState.STORED}
+                />
+              ),
             },
             ...(canUpdate
               ? [

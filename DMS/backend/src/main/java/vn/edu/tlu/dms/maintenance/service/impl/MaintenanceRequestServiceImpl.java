@@ -199,7 +199,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             return createMaintenanceRequest(input, files);
         }
         if (files != null && files.stream().anyMatch(f -> f != null && !f.isEmpty())) {
-            throw BusinessException.invalid("photos", "Không hỗ trợ cập nhật ảnh khi sửa yêu cầu");
+            throw BusinessException.invalid(ApiField.PHOTOS, ValidationMessage.PHOTO_UPDATE_UNSUPPORTED);
         }
         // Khóa trước, nạp lại dữ liệu thật rồi mới kiểm tra OPEN/chủ sở hữu, tránh ghi theo dữ liệu
         // cũ.
@@ -211,7 +211,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
         if (input.roomId() != null || input.buildingId() != null || input.floor() != null) {
-            throw BusinessException.invalid("roomId", "Không đổi vị trí của yêu cầu đã tạo");
+            throw BusinessException.invalid(ApiField.ROOM_ID, ValidationMessage.MAINTENANCE_LOCATION_IMMUTABLE);
         }
         if (input.category() == null && input.severity() == null && input.description() == null) {
             throw BusinessException.invalid(ApiField.FORM, ValidationMessage.NOTHING_TO_UPDATE);
@@ -334,13 +334,13 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                 BusinessAction.RESOLVE)
                         .contains(action)
                 && (reason == null || reason.trim().length() < 5)) {
-            throw BusinessException.invalid("reason", "Cần lý do hoặc ghi chú tối thiểu 5 ký tự");
+            throw BusinessException.invalid(ApiField.REASON, ValidationMessage.REASON_MIN_5);
         }
         if (action.equals(BusinessAction.ACCEPT)
                 && (actor.is(Role.STAFF) || actor.isAdmin())
                 && !actor.id().equals(request.getRequesterId())
                 && (reason == null || reason.trim().length() < 5)) {
-            throw BusinessException.invalid("reason", "Nghiệm thu thay sinh viên cần lý do");
+            throw BusinessException.invalid(ApiField.REASON, ValidationMessage.PROXY_ACCEPT_REASON_REQUIRED);
         }
         String next =
                 switch (action) {
@@ -350,7 +350,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                             MaintenanceStatus.IN_PROGRESS;
                     case BusinessAction.RESOLVE -> MaintenanceStatus.RESOLVED;
                     case BusinessAction.ACCEPT -> MaintenanceStatus.CLOSED;
-                    default -> throw BusinessException.invalid("action", "Hành động không hỗ trợ");
+                    default -> throw BusinessException.invalid(ApiField.ACTION, ValidationMessage.ACTION_UNSUPPORTED);
                 };
         if (next.equals(MaintenanceStatus.RESOLVED)) {
             request.setResolvedAt(OffsetDateTime.now());

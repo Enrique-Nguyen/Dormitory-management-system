@@ -1,21 +1,12 @@
 import { crudValueLabels } from '../../constants/statusConfig'
 import type { MaintenanceCause as MaintenanceCauseCode } from '../../services/api/maintenance'
 
-// Mã hành động khớp DmsConstants.BusinessAction và allowedActions của backend (API Spec 4.11).
-export const MaintenanceAction = {
-  ASSIGN: 'assign',
-  REJECT: 'reject',
-  ACCEPT: 'accept',
-  REOPEN: 'reopen',
-  CANCEL: 'cancel',
-  START: 'start',
-  ADD_NOTE: 'add-note',
-  RESOLVE: 'resolve',
-  CONCLUDE: 'conclude',
-} as const
-
-export type MaintenanceAction =
-  (typeof MaintenanceAction)[keyof typeof MaintenanceAction]
+// Mã hành động và nhãn khai một lần trong statusConfig.ts; re-export để feature dùng chung một nguồn.
+export {
+  MaintenanceAction,
+  maintenanceActionLabels,
+  maintenanceCauseLabels,
+} from '../../constants/statusConfig'
 
 export const MaintenanceCause = {
   WEAR: 'WEAR',
@@ -49,24 +40,6 @@ export const maintenanceCategoryOptions = maintenanceCategoryCodes.map(
 export const maintenanceSeverityOptions = maintenanceSeverityCodes.map(
   (value) => ({ value, label: crudValueLabels[value] ?? value }),
 )
-
-// Nguyên nhân kết luận chưa có trong registry; main agent chuyển sang statusConfig.ts khi tích hợp.
-export const maintenanceCauseLabels: Record<MaintenanceCauseCode, string> = {
-  WEAR: 'Hao mòn tự nhiên',
-  MISUSE: 'Do sử dụng sai',
-}
-
-export const maintenanceActionLabels: Record<string, string> = {
-  [MaintenanceAction.ASSIGN]: 'Giao kỹ thuật viên',
-  [MaintenanceAction.REJECT]: 'Từ chối',
-  [MaintenanceAction.ACCEPT]: 'Nghiệm thu',
-  [MaintenanceAction.REOPEN]: 'Mở lại',
-  [MaintenanceAction.CANCEL]: 'Hủy ticket',
-  [MaintenanceAction.START]: 'Bắt đầu sửa chữa',
-  [MaintenanceAction.ADD_NOTE]: 'Ghi chú tiến độ',
-  [MaintenanceAction.RESOLVE]: 'Hoàn thành sửa chữa',
-  [MaintenanceAction.CONCLUDE]: 'Kết luận xử lý',
-}
 
 /** Giới hạn ảnh đúng SRS/SAD: tối đa 3 ảnh JPEG/PNG/WebP, mỗi ảnh ≤ 5 MB. */
 export const maintenancePhotoRules = {

@@ -3,6 +3,8 @@ package vn.edu.tlu.dms.room.service.impl;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.constants.DmsConstants;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
@@ -116,11 +118,11 @@ public class SemesterServiceImpl
             entity.setEndDate(input.endDate());
         }
         if (!entity.getEndDate().isAfter(entity.getStartDate())) {
-            throw BusinessException.invalid("endDate", "Ngày kết thúc phải sau ngày bắt đầu");
+            throw BusinessException.invalid(ApiField.END_DATE, ValidationMessage.END_DATE_AFTER_START);
         }
         String[] years = entity.getAcademicYear().split("-");
         if (Integer.parseInt(years[1]) != Integer.parseInt(years[0]) + 1) {
-            throw BusinessException.invalid("academicYear", "Hai năm phải liền nhau");
+            throw BusinessException.invalid(ApiField.ACADEMIC_YEAR, ValidationMessage.ACADEMIC_YEAR_CONSECUTIVE);
         }
     }
 
