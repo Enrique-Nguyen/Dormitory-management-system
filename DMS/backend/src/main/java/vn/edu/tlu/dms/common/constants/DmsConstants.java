@@ -222,6 +222,7 @@ public final class DmsConstants {
     public static final class StudentImport {
         public static final long MAX_BYTES = 5L * 1024 * 1024;
         public static final int MAX_ROWS = 5000;
+        public static final int MAX_HEADER_COLUMNS = 100;
         public static final long MAX_UNCOMPRESSED_BYTES = 50L * 1024 * 1024;
         public static final int MAX_ZIP_ENTRIES = 200;
         public static final String FILE_NAME = "mau-import-sinh-vien.xlsx";

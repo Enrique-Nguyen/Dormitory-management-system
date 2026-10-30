@@ -152,7 +152,7 @@ class StudentImportIntegrationTest {
     void writesOnlyValidRowsSkipsExistingAndAllDuplicateOccurrences() throws Exception {
         jdbc.update(
                 "INSERT INTO app_user(username,full_name,role)"
-                    + " VALUES('9900100002','Existing','ADMIN')");
+                        + " VALUES('9900100002','Existing','ADMIN')");
         String[] invalidPhone = valid("9900100003");
         invalidPhone[6] = "123";
         var source =
@@ -188,7 +188,7 @@ class StudentImportIntegrationTest {
         assertThat(
                         jdbc.queryForList(
                                         "SELECT old_value::text,new_value::text FROM audit_log"
-                                            + " WHERE actor_id=?",
+                                                + " WHERE actor_id=?",
                                         adminId)
                                 .toString())
                 .doesNotContain(password, "temporaryPassword");
@@ -347,9 +347,106 @@ class StudentImportIntegrationTest {
         var original = file(valid("9900100001"));
         try (var workbook = new XSSFWorkbook(original.getInputStream());
                 var out = new ByteArrayOutputStream()) {
-            workbook.getSheetAt(0).createRow(5001).createCell(0).setCellValue("9900199999");
+            for (int index = 2; index <= 5001; index++) {
+                workbook.getSheetAt(0).createRow(index).createCell(0).setCellValue("9900199999");
+            }
             workbook.write(out);
             upload(new MockMultipartFile("file", "too-many.xlsx", null, out.toByteArray()), false)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("errorCode").value("IMPORT_FILE_INVALID"));
+            verifyNoInteractions(identities);
+        }
+    }
+
+    @Test
+    void ignoresFormattedEmptyRowsBeyondTheDataLimitAndKeepsExcelRowNumbers() throws Exception {
+        var original = file(valid("9900100001"));
+        try (var workbook = new XSSFWorkbook(original.getInputStream());
+                var out = new ByteArrayOutputStream()) {
+            var sheet = workbook.getSheetAt(0);
+            var empty = sheet.createRow(10000).createCell(0);
+            var style = workbook.createCellStyle();
+            style.setDataFormat(workbook.createDataFormat().getFormat("@"));
+            empty.setCellStyle(style);
+            sheet.getRow(0).createCell(1000).setCellStyle(style);
+            sheet.createRow(10001).createCell(0).setCellValue("BAD");
+            workbook.write(out);
+            upload(new MockMultipartFile("file", "formatted.xlsx", null, out.toByteArray()), true)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("totalRows").value(2))
+                    .andExpect(jsonPath("validRows").value(1))
+                    .andExpect(jsonPath("errorRows").value(1))
+                    .andExpect(jsonPath("rows[0].rowNumber").value(10002));
+        }
+    }
+
+    @Test
+    void acceptsUnicodeSpacesAndDecomposedVietnameseFromCopiedExcelHeaders() throws Exception {
+        var original = file(valid("9900100001"));
+        try (var workbook = new XSSFWorkbook(original.getInputStream());
+                var out = new ByteArrayOutputStream()) {
+            var sheet = workbook.getSheetAt(0);
+            for (var cell : sheet.getRow(0)) {
+                cell.setCellValue(
+                        java.text.Normalizer.normalize(
+                                "\uFEFF"
+                                        + cell.getStringCellValue().replace(' ', '\u00A0')
+                                        + "\u00A0",
+                                java.text.Normalizer.Form.NFD));
+            }
+            sheet.getRow(1)
+                    .getCell(2)
+                    .setCellValue(
+                            java.text.Normalizer.normalize("Nữ", java.text.Normalizer.Form.NFD));
+            workbook.write(out);
+            upload(new MockMultipartFile("file", "copied.xlsx", null, out.toByteArray()), false)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("createdRows").value(1));
+            assertThat(
+                            jdbc.queryForObject(
+                                    "SELECT gender FROM student_profile WHERE"
+                                        + " student_code='9900100001'",
+                                    String.class))
+                    .isEqualTo("F");
+        }
+    }
+
+    @Test
+    void acceptsExactlyFiveThousandNonemptyRowsWithoutCountingStyledRows() throws Exception {
+        try (var workbook = new XSSFWorkbook();
+                var out = new ByteArrayOutputStream()) {
+            var sheet = workbook.createSheet("Sinh viên");
+            var header = sheet.createRow(0);
+            for (int column = 0; column < StudentImport.HEADERS.size(); column++) {
+                header.createCell(column).setCellValue(StudentImport.HEADERS.get(column));
+            }
+            for (int index = 1; index <= StudentImport.MAX_ROWS; index++) {
+                var row = sheet.createRow(index);
+                String[] values =
+                        valid("990011" + String.format(java.util.Locale.ROOT, "%04d", index));
+                for (int column = 0; column < values.length; column++) {
+                    row.createCell(column).setCellValue(values[column]);
+                }
+            }
+            sheet.createRow(10000).createCell(0).setBlank();
+            workbook.write(out);
+            upload(new MockMultipartFile("file", "full.xlsx", null, out.toByteArray()), true)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("totalRows").value(5000))
+                    .andExpect(jsonPath("validRows").value(5000))
+                    .andExpect(jsonPath("createdRows").value(0));
+            verifyNoInteractions(identities);
+        }
+    }
+
+    @Test
+    void duplicateHeadersAfterUnicodeNormalizationAreStillRejected() throws Exception {
+        var original = file(valid("9900100001"));
+        try (var workbook = new XSSFWorkbook(original.getInputStream());
+                var out = new ByteArrayOutputStream()) {
+            workbook.getSheetAt(0).getRow(0).createCell(7).setCellValue("Ma\u0303\u00A0SV");
+            workbook.write(out);
+            upload(new MockMultipartFile("file", "duplicate.xlsx", null, out.toByteArray()), false)
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("errorCode").value("IMPORT_FILE_INVALID"));
             verifyNoInteractions(identities);
@@ -380,7 +477,7 @@ class StudentImportIntegrationTest {
         assertThat(
                         jdbc.queryForObject(
                                 "SELECT count(*) FROM app_user WHERE username IN"
-                                    + " ('9900190001','9900190002')",
+                                        + " ('9900190001','9900190002')",
                                 Long.class))
                 .isZero();
         assertThat(
