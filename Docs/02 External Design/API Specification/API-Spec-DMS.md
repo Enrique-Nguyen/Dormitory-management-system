@@ -1,6 +1,6 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.17**, 25/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.18**, 30/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.13 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.9, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
@@ -8,6 +8,7 @@
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.18 | 30/10/2026 | TV1: sửa đọc file import đúng cấu trúc có khoảng trắng Unicode/chữ tiếng Việt tổ hợp, mã SV kiểu số dài và dòng trống đã định dạng; giới hạn 5.000 dòng có dữ liệu, không làm tròn/đoán lại mã. Giữ nguyên endpoint, JSON và transaction |
 | 0.17 | 25/10/2026 | Sửa theo review PR #13: đồng bộ contract phát hành/Dashboard/sổ cọc; quyền ghi theo đơn vị; cấu hình hạn đóng; khóa chống phát hành trùng; thống nhất mã lỗi cọc và tra cứu PENDING. Công nợ sinh viên/phòng hiện chỉ là Service nội bộ, chưa mở REST endpoint. |
 | 0.16 | 22/10/2026 | TV5: hoàn thiện API sổ cọc (thu cọc, trừ cọc, bù cọc, hoàn cọc), tra cứu công nợ sinh viên và phòng, phát hành hóa đơn tự động (tiền phòng & điện nước), xác nhận thanh toán và tổng hợp KPI Staff Dashboard |
 | 0.15 | 21/10/2026 | TV1: import sinh viên hai bước đã triển khai, bổ sung createdAccounts trả mật khẩu một lần và no-store; đọc chi tiết audit trước/sau, hiển thị SYSTEM; lỗi bảo mật có requestId. Staff không được đổi mã SV/họ tên/giới tính |
@@ -876,7 +877,7 @@ Một transaction: chiếm giường qua `BedOccupancyService` (mở phân phòn
 - `result`: `CREATED` (bước 2), `VALID` (bước 1), `EXISTS`, `ERROR`. File sai cấu trúc (thiếu cột, không phải xlsx): `400 IMPORT_FILE_INVALID`, `details.missingColumns`.
 - Response bổ sung `createdAccounts: [{id, username, temporaryPassword}]`, chỉ có phần tử khi `dryRun=false` tạo thành công. `validRows` không bao gồm dòng lỗi/đã tồn tại. Cả preview/ghi đều có `Cache-Control: no-store`; không cache hoặc ghi mật khẩu vào audit/log/storage. Giao diện giữ kết quả trong bộ nhớ và cho tải tài khoản vừa tạo một lần; mất bản tải thì reset theo FR-ACC-07.
 - Không gửi `dryRun` mặc định là `true`. Khi ghi, server kiểm tra lại toàn bộ và mã đã tồn tại; cùng lô là một transaction. Keycloak lỗi làm rollback toàn lô và xóa các danh tính vừa tạo bằng transaction synchronization; không chiếm tài khoản Keycloak đã có. Thao tác ghi đồng thời với CRUD có thể trả 409; client phải kiểm tra lại, không tự retry ghi.
-- Từ chối công thức/ô lỗi/boolean ở các trường nhập, sai lịch hoặc tuổi, thiếu tiêu đề, tiêu đề trùng, hơn 5.000 dòng và archive giải nén hơn 50 MB/200 entry. Số điện thoại không bắt buộc nên có thể thiếu cột này. Dòng trống được bỏ qua; `rowNumber` vẫn là số dòng Excel. Mã SV/tài khoản cán bộ đã tồn tại đều được bỏ qua để tránh trùng username.
+- Từ chối công thức/ô lỗi/boolean ở các trường nhập, sai lịch hoặc tuổi, thiếu tiêu đề, tiêu đề trùng sau chuẩn hóa, hơn 5.000 dòng có dữ liệu và archive giải nén hơn 50 MB/200 entry. Số điện thoại không bắt buộc nên có thể thiếu cột này. Dòng trống hoặc chỉ có định dạng được bỏ qua, kể cả sau dòng 5.000; `rowNumber` vẫn là số dòng Excel gốc. Ô tiêu đề trống có định dạng không được tính vào giới hạn 100 tiêu đề có nội dung. Mã SV/tài khoản cán bộ đã tồn tại đều được bỏ qua để tránh trùng username.
 - Mức Could `resultFile=true` (SAD 9) **chưa triển khai**. Response hiện là JSON; không công bố file Excel báo cáo kết quả. Định dạng cột nhập ở mục 7.1.
 
 ### 4.11. Tạo ticket kèm ảnh
@@ -1247,11 +1248,11 @@ Mã hành động không đổi trạng thái (mục 2.6) và endpoint tương �
 
 ### 7.1. File import sinh viên
 
-Sheet đầu tiên; dòng 1 là tiêu đề, đúng tên cột (không phân biệt hoa thường, bỏ khoảng trắng hai đầu); thứ tự cột tùy ý.
+Sheet đầu tiên; dòng 1 là tiêu đề, đúng tên cột (không phân biệt hoa thường, bỏ khoảng trắng hai đầu); thứ tự cột tùy ý. Chuẩn hóa Unicode NFC, khoảng trắng Unicode (kể cả NBSP) và bỏ BOM đầu tiêu đề để nhận tên cột khi sao chép từ nguồn khác. Vẫn từ chối hai tiêu đề trở thành trùng sau chuẩn hóa; không tự đoán tên cột khác hoặc bỏ qua dòng tiêu đề.
 
 | Cột | Bắt buộc | Quy tắc | Trường |
 |---|---|---|---|
-| `Mã SV` | Có | 6–20 ký tự chữ số; trùng trong file → lỗi cả hai dòng; đã có trong hệ thống → `EXISTS` | `studentCode`, `username` |
+| `Mã SV` | Có | 6–20 ký tự chữ số; trùng trong file → lỗi cả hai dòng; đã có trong hệ thống → `EXISTS`. Ô số nguyên tối đa 15 chữ số được đọc từ giá trị gốc, không lấy chuỗi số mũ/dấu phân nhóm; giữ format đệm 0 tường minh. Ô số có phần thập phân hoặc quá 15 chữ số → `INVALID`; mã dài hơn phải lưu kiểu Text để Excel không làm mất độ chính xác | `studentCode`, `username` |
 | `Họ tên` | Có | 2–100 ký tự | `fullName` |
 | `Giới tính` | Có | `Nam` / `Nữ` (hoặc `M` / `F`) | `gender` |
 | `Ngày sinh` | Có | Ô kiểu ngày hoặc `dd/MM/yyyy`; tuổi 15–60 | `dateOfBirth` |
@@ -1259,7 +1260,7 @@ Sheet đầu tiên; dòng 1 là tiêu đề, đúng tên cột (không phân bi�
 | `Khóa` | Có | Dạng `K` + số (`K65`) | `cohort` |
 | `Số điện thoại` | Không | 10 số, bắt đầu bằng 0 | `phone` |
 
-Mã lỗi theo ô: `REQUIRED`, `PATTERN`, `DUPLICATE_IN_FILE`, `INVALID`. Giới hạn 5.000 dòng mỗi file.
+Mã lỗi theo ô: `REQUIRED`, `PATTERN`, `DUPLICATE_IN_FILE`, `INVALID`. Giới hạn 5.000 dòng có dữ liệu mỗi file. Đặt mã có số 0 đầu và số điện thoại ở dạng Text; không khôi phục số 0 hoặc các chữ số đã bị Excel làm mất.
 
 ### 7.2. File xuất công nợ
 
