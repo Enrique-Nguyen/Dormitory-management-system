@@ -359,6 +359,30 @@ class StudentImportIntegrationTest {
     }
 
     @Test
+    void readsLongNumericStudentCodeWithoutScientificNotation() throws Exception {
+        var original = file(valid("990010123456"), valid("990010123457"));
+        try (var workbook = new XSSFWorkbook(original.getInputStream());
+                var out = new ByteArrayOutputStream()) {
+            workbook.getSheetAt(0).getRow(1).getCell(0).setCellValue(990010123456d);
+            var scientific = workbook.getSheetAt(0).getRow(2).getCell(0);
+            scientific.setCellValue(990010123457d);
+            var style = workbook.createCellStyle();
+            style.setDataFormat(workbook.createDataFormat().getFormat("0.00E+00"));
+            scientific.setCellStyle(style);
+            workbook.write(out);
+            upload(
+                            new MockMultipartFile(
+                                    "file", "numeric-code.xlsx", null, out.toByteArray()),
+                            false)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("validRows").value(2))
+                    .andExpect(jsonPath("createdRows").value(2))
+                    .andExpect(jsonPath("createdAccounts[0].username").value("990010123456"))
+                    .andExpect(jsonPath("createdAccounts[1].username").value("990010123457"));
+        }
+    }
+
+    @Test
     void ignoresFormattedEmptyRowsBeyondTheDataLimitAndKeepsExcelRowNumbers() throws Exception {
         var original = file(valid("9900100001"));
         try (var workbook = new XSSFWorkbook(original.getInputStream());
@@ -408,6 +432,36 @@ class StudentImportIntegrationTest {
                                         + " student_code='9900100001'",
                                     String.class))
                     .isEqualTo("F");
+        }
+    }
+
+    @Test
+    void keepsExplicitLeadingZerosAndRejectsRoundedOrOverPrecisionNumericCodes() throws Exception {
+        var original =
+                file(
+                        valid("0000100001"),
+                        valid("9900100002"),
+                        valid("9900100003"),
+                        valid("00009900101234567890"));
+        try (var workbook = new XSSFWorkbook(original.getInputStream());
+                var out = new ByteArrayOutputStream()) {
+            var sheet = workbook.getSheetAt(0);
+            var format = workbook.createCellStyle();
+            format.setDataFormat(workbook.createDataFormat().getFormat("0000000000"));
+            sheet.getRow(1).getCell(0).setCellValue(100001d);
+            sheet.getRow(1).getCell(0).setCellStyle(format);
+            sheet.getRow(2).getCell(0).setCellValue(9900100002.4d);
+            sheet.getRow(2).getCell(0).setCellStyle(format);
+            sheet.getRow(3).getCell(0).setCellValue(9900101234567890d);
+            workbook.write(out);
+            upload(new MockMultipartFile("file", "precision.xlsx", null, out.toByteArray()), false)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("totalRows").value(4))
+                    .andExpect(jsonPath("createdRows").value(2))
+                    .andExpect(jsonPath("errorRows").value(2))
+                    .andExpect(jsonPath("createdAccounts[0].username").value("0000100001"))
+                    .andExpect(
+                            jsonPath("createdAccounts[1].username").value("00009900101234567890"));
         }
     }
 

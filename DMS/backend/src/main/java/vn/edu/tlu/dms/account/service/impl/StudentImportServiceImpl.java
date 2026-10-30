@@ -31,6 +31,7 @@ import vn.edu.tlu.dms.common.service.AuditService;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -182,7 +183,24 @@ public class StudentImportServiceImpl implements StudentImportService {
                                 columns.get(
                                         StudentImport.HEADERS.get(col).toLowerCase(Locale.ROOT));
                         Cell cell = position == null ? null : row.getCell(position);
-                        values.put(field, normalizeText(text(cell, formatter)));
+                        String value =
+                                ApiField.STUDENT_CODE.equals(field)
+                                        ? studentCode(cell, formatter)
+                                        : text(cell, formatter);
+                        values.put(field, normalizeText(value));
+                        if (ApiField.STUDENT_CODE.equals(field)
+                                && cell != null
+                                && cell.getCellType() == CellType.NUMERIC) {
+                            BigDecimal numeric =
+                                    BigDecimal.valueOf(cell.getNumericCellValue())
+                                            .stripTrailingZeros();
+                            // Không đoán lại mã đã bị Excel làm tròn hoặc bỏ phần thập phân.
+                            if (numeric.scale() > 0
+                                    || numeric.toBigInteger().abs().toString().length()
+                                            > StudentImport.MAX_NUMERIC_CODE_DIGITS) {
+                                errors.add(new CellError(field, StudentImport.INVALID));
+                            }
+                        }
                         if (cell != null
                                 && (cell.getCellType() == CellType.FORMULA
                                         || cell.getCellType() == CellType.ERROR
@@ -275,6 +293,19 @@ public class StudentImportServiceImpl implements StudentImportService {
                                 normalized.appendCodePoint(
                                         Character.isSpaceChar(code) ? ' ' : code));
         return Normalizer.normalize(normalized, Normalizer.Form.NFC).strip();
+    }
+
+    /** Không dùng số mũ/dấu phân nhóm của ô số làm mã; giữ format đệm 0 tường minh. */
+    private static String studentCode(Cell cell, DataFormatter formatter) {
+        String formatted = text(cell, formatter);
+        if (cell != null
+                && cell.getCellType() == CellType.NUMERIC
+                && !formatted.matches("[0-9]+")) {
+            return BigDecimal.valueOf(cell.getNumericCellValue())
+                    .stripTrailingZeros()
+                    .toPlainString();
+        }
+        return formatted;
     }
 
     /** Giới hạn giải nén trước khi POI dựng object, chặn file ZIP nhỏ nhưng bung ra quá lớn. */
