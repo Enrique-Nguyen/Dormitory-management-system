@@ -8,8 +8,14 @@ import { formatDate, formatDateTime, formatMoney } from './format'
 type Details = Record<string, unknown>
 
 const messages: Record<string, (d: Details) => string> = {
-  IMPORT_FILE_INVALID: () =>
-    'File import không hợp lệ. Dùng file mẫu .xlsx, kiểm tra tên cột và giới hạn 5.000 dòng; không dùng công thức.',
+  IMPORT_FILE_INVALID: (d) => {
+    const missing = Array.isArray(d.missingColumns)
+      ? d.missingColumns.filter((value): value is string => typeof value === 'string')
+      : []
+    return missing.length
+      ? `File import thiếu cột: ${missing.join(', ')}. Dùng tên cột trong file mẫu.`
+      : 'File import không hợp lệ. Dùng file mẫu .xlsx, kiểm tra tên cột và giới hạn 5.000 dòng có dữ liệu; bỏ các tiêu đề trùng.'
+  },
   // 5.1 Chung
   IDENTITY_NOT_LINKED: () =>
     'Tài khoản đăng nhập chưa được cấp hồ sơ DMS. Liên hệ quản trị viên.',
