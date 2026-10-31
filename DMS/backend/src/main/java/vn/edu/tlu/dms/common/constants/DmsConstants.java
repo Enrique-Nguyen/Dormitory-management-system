@@ -188,6 +188,9 @@ public final class DmsConstants {
         public static final String MANAGEMENT_UNIT_ID = "managementUnitId";
         public static final String USERNAME = "username";
         public static final String HOMETOWN = "hometown";
+        public static final String THEME_MODE = "themeMode";
+        public static final String THEME_PRESET = "themePreset";
+        public static final String TABLE_DENSE = "tableDense";
         public static final String INPUT = "input";
         public static final String TOTAL_AMOUNT = "totalAmount";
         public static final String RATE = "rate";
@@ -352,6 +355,14 @@ public final class DmsConstants {
                 "Học kỳ hè phải kết thúc sau ngày hết hạn hợp đồng";
 
         public static final String NOT_BLANK = "Không để trống";
+        public static final String PREFERENCE_MODE_INVALID =
+                "Chế độ giao diện phải là light hoặc dark";
+        public static final String PREFERENCE_PRESET_INVALID =
+                "Tông màu phải là blue, indigo, teal, emerald, violet hoặc amber";
+        public static final String PREFERENCE_TABLE_DENSE_REQUIRED =
+                "Phải chọn mật độ bảng (dày hoặc gọn)";
+        public static final String PREFERENCE_VERSION_REQUIRED =
+                "Thiếu version khi cập nhật sở thích đã có";
         public static final String UNIT_ID_POSITIVE = "ID đơn vị phải lớn hơn 0";
         public static final String USERNAME_IMMUTABLE =
                 "Không được cập nhật tên đăng nhập qua API tài khoản";
@@ -390,6 +401,7 @@ public final class DmsConstants {
         public static final String OLD_METER_FINAL_REQUIRED = "Thiếu chỉ số chốt đồng hồ cũ";
         public static final String ROOM_REQUIRED = "Phải chọn phòng hợp lệ";
         public static final String READING_MONTH_REQUIRED = "Phải chọn kỳ ghi chỉ số";
+        public static final String READING_PREVIOUS_MONTH_REQUIRED = "Phải nhập chỉ số kỳ trước trước khi nhập kỳ này";
         public static final String END_READING_REQUIRED = "Phải nhập chỉ số cuối";
         public static final String READING_NOT_NEGATIVE = "Chỉ số không được âm";
         public static final String FIELD_NOT_WRITABLE = "Trường không được phép ghi";
@@ -1120,6 +1132,51 @@ public final class DmsConstants {
         public static final String PATTERN = M + "|" + F;
 
         private Gender() {}
+    }
+
+    /**
+     * Sở thích giao diện theo tài khoản; giá trị khớp CHECK của bảng {@code user_preference} và
+     * hợp đồng API. Chỉ nhận các mã đã duyệt, không nhận CSS/màu tùy ý từ client.
+     */
+    public static final class Preference {
+        public static final String MODE_LIGHT = "light";
+        public static final String MODE_DARK = "dark";
+        public static final String MODE_PATTERN = MODE_LIGHT + "|" + MODE_DARK;
+        public static final Set<String> MODES = Set.of(MODE_LIGHT, MODE_DARK);
+
+        public static final String PRESET_BLUE = "blue";
+        public static final String PRESET_INDIGO = "indigo";
+        public static final String PRESET_TEAL = "teal";
+        public static final String PRESET_EMERALD = "emerald";
+        public static final String PRESET_VIOLET = "violet";
+        public static final String PRESET_AMBER = "amber";
+        public static final String PRESET_PATTERN =
+                PRESET_BLUE
+                        + "|"
+                        + PRESET_INDIGO
+                        + "|"
+                        + PRESET_TEAL
+                        + "|"
+                        + PRESET_EMERALD
+                        + "|"
+                        + PRESET_VIOLET
+                        + "|"
+                        + PRESET_AMBER;
+        public static final Set<String> PRESETS =
+                Set.of(
+                        PRESET_BLUE,
+                        PRESET_INDIGO,
+                        PRESET_TEAL,
+                        PRESET_EMERALD,
+                        PRESET_VIOLET,
+                        PRESET_AMBER);
+
+        public static final String DEFAULT_MODE = MODE_LIGHT;
+        public static final String DEFAULT_PRESET = PRESET_BLUE;
+        public static final boolean DEFAULT_TABLE_DENSE = false;
+        public static final long INITIAL_VERSION = 0L;
+
+        private Preference() {}
     }
 
     /** Loại học kỳ; SUMMER dùng cho học kỳ hè. */
