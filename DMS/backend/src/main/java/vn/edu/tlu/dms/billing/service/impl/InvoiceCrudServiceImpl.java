@@ -176,6 +176,8 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
         } else if (InvoiceType.ROOM_FEE.equals(input.get("type"))) {
             // ADMIN không bị giới hạn đơn vị, nhưng người nhận hóa đơn phải là sinh viên thật.
             Long studentId = number(input, "studentId");
+            Long semesterId = number(input, "semesterId");
+            rooms.getSemesterReference(semesterId);
             if (!Boolean.TRUE.equals(
                     jdbc.queryForObject(
                             "SELECT EXISTS(SELECT 1 FROM student_profile WHERE user_id=?)",
@@ -183,14 +185,33 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
                             studentId))) {
                 throw BusinessException.notFound();
             }
+            // Cùng phạm vi học kỳ với InvoiceRepository.STAFF_UNIT_SCOPE; quyền tổng hợp chỉ để đọc.
             if (!current.get().isAdmin()
                     && !Boolean.TRUE.equals(
                             jdbc.queryForObject(
-                                    "SELECT EXISTS(SELECT 1 FROM room_application WHERE"
-                                            + " student_id=? AND preferred_unit_id=?)",
+                                    """
+                                    SELECT EXISTS (
+                                        SELECT 1 FROM room_assignment_history a
+                                        JOIN bed b ON b.id = a.bed_id
+                                        JOIN room r ON r.id = b.room_id
+                                        JOIN building bd ON bd.id = r.building_id
+                                        JOIN semester s ON s.id = ?
+                                        WHERE a.student_id = ? AND bd.management_unit_id = ?
+                                            AND a.started_at < s.end_date + 1
+                                            AND (a.ended_at IS NULL OR a.ended_at >= s.start_date))
+                                    OR EXISTS (
+                                        SELECT 1 FROM room_application ap
+                                        JOIN registration_period rp ON rp.id = ap.period_id
+                                        WHERE ap.student_id = ? AND ap.preferred_unit_id = ?
+                                            AND rp.semester_id = ?)
+                                    """,
                                     Boolean.class,
-                                    number(input, "studentId"),
-                                    current.get().unitId()))) {
+                                    semesterId,
+                                    studentId,
+                                    current.get().unitId(),
+                                    studentId,
+                                    current.get().unitId(),
+                                    semesterId))) {
                 throw BusinessException.notFound();
             }
         } else {
@@ -201,7 +222,6 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
     private void validate(Map<String, Object> input) {
         requireScope(input);
         if (InvoiceType.ROOM_FEE.equals(input.get("type"))) {
-            rooms.getSemesterReference(number(input, "semesterId"));
             if (input.get("roomId") != null || input.get("billingMonth") != null) {
                 throw BusinessException.invalid(ApiField.TYPE, ValidationMessage.ROOM_FEE_TARGET);
             }
