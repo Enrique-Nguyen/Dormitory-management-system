@@ -37,14 +37,15 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   App,
-  Flex,
   Form,
   Result,
   Space,
+  Tag,
   Tooltip,
   Typography,
 } from 'antd'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import RecordDetailContent, { hasRecordDetailContent } from '../features/crud/RecordDetailContent'
 import {
   useLocation,
   useNavigate,
@@ -68,8 +69,8 @@ import {
   validationFieldErrors,
   writeCrudRecord,
 } from '../features/crud/api'
-import { resources, billingUiLabels } from '../features/crud/resources'
-import { BillingAction, crudValueLabels, InvoiceStatus as InvoiceState } from '../constants/statusConfig'
+import { resources, billingUiLabels, crudDetailUiLabels, crudReferenceLabels, crudSecretFieldNames } from '../features/crud/resources'
+import { crudValueLabels, InvoiceStatus as InvoiceState } from '../constants/statusConfig'
 import type { CrudColumn, CrudField, CrudRecord } from '../features/crud/types'
 import { api } from '../services/api/client'
 import { hasPermission } from '../services/api/auth'
@@ -126,7 +127,122 @@ function renderColumnCell(
   if (column.format === 'date') return formatDate(raw as string | null)
   if (column.format === 'datetime') return formatDateTime(raw as string | null)
   if (column.format === 'month') return formatMonth(raw as string | null)
+  if (raw != null && typeof raw === 'object') {
+    return <pre className="dms-detail-json">{JSON.stringify(raw, null, 2)}</pre>
+  }
   return <span>{display(raw)}</span>
+}
+
+/**
+ * Hiển thị giá trị trong chế độ Xem (View mode) chuẩn HR-V5:
+ * Trình bày rõ ràng với badge, tag, định dạng tiền, số, ngày tháng, text wrap
+ * thay vì các ô input xám disabled khó đọc.
+ */
+function referenceLabel(field: CrudField, record: CrudRecord, value?: unknown): unknown {
+  if (field.name === "priorityCategoryIds" && Array.isArray(record.priorities)) {
+    const priority = (record.priorities as CrudRecord[]).find((item) =>
+      String(item.categoryId ?? readValue(item, "category.id")) === String(value))
+    if (priority) return priority.name ?? priority.categoryName ?? readValue(priority, 'category.name')
+  }
+  for (const key of crudReferenceLabels[field.name] ?? []) {
+    const label = readValue(record, key)
+    if (label != null && label !== "") return label
+  }
+  const reference = record[field.name.replace(/Id$/, "")]
+    ?? (field.name === "managementUnitId" ? record.unit : undefined)
+  return (reference && typeof reference === "object"
+    ? readValue(reference as CrudRecord, field.lookupLabel ?? "name")
+    : undefined)
+    ?? (field.lookupLabel?.includes(".") ? readValue(record, field.lookupLabel) : undefined)
+}
+
+function renderViewFieldValue(field: CrudField, record: CrudRecord) {
+  const value = readValue(record, field.name)
+  if (field.lookup) {
+    const values = Array.isArray(value) ? value : [value]
+    return <span>{values.map((item) => {
+      const label = referenceLabel(field, record, item)
+      return label != null ? display(label) : item == null ? "—" : "#" + String(item)
+    }).join(", ") || "—"}</span>
+  }
+  if (value == null || value === "") return <span>—</span>
+  if (field.kind === "boolean" || typeof value === "boolean") {
+    return <Tag color={value ? "success" : "default"}>{display(value)}</Tag>
+  }
+
+  // Danh mục tùy chọn options
+  if (field.options) {
+    const matched = field.options.find(
+      (opt) => String(opt.value) === String(value),
+    )
+    if (matched) {
+      const label = crudValueLabels[matched.label] ?? matched.label
+      return (
+        <Tag color="blue" style={{ marginInlineEnd: 0, fontWeight: 500 }}>
+          {label}
+        </Tag>
+      )
+    }
+  }
+
+  // Ngày tháng
+  if (field.kind === 'date') {
+    return <span>{formatDate(String(value))}</span>
+  }
+  if (field.kind === 'datetime') {
+    return <span>{formatDateTime(String(value))}</span>
+  }
+
+  // Số lượng & tiền tệ
+  if (field.kind === 'number' || typeof value === 'number') {
+    const num = Number(value)
+    const isMoney = /amount|price|cost|fee|total|deposit|balance/i.test(
+      field.name,
+    )
+    return (
+      <span
+        style={{
+          fontFamily: 'var(--font-mono, monospace)',
+          fontWeight: 600,
+        }}
+      >
+        {isMoney ? formatMoney(num) : formatNumber(num)}
+      </span>
+    )
+  }
+
+  // Đoạn văn dài textarea
+  if (field.kind === 'textarea') {
+    return (
+      <div
+        style={{
+          whiteSpace: 'pre-wrap',
+          lineHeight: 1.6,
+          color: 'var(--color-heading)',
+          padding: '8px 12px',
+          background: 'var(--color-surface-hover)',
+          borderRadius: 'var(--radius-sm)',
+          border: '1px solid var(--color-border-light)',
+        }}
+      >
+        {String(value)}
+      </div>
+    )
+  }
+
+  // Mã / ID / Số điện thoại / Email: cho phép sao chép nhanh
+  const isCodeOrId = /code|id|username|studentCode|phone|email/i.test(
+    field.name,
+  )
+  if (isCodeOrId && typeof value === 'string') {
+    return (
+      <Typography.Text copyable={{ tooltips: ['Sao chép', 'Đã chép'] }}>
+        {String(value)}
+      </Typography.Text>
+    )
+  }
+
+  return <span>{display(value)}</span>
 }
 
 function hasPeriodOpened(value: unknown) {
@@ -160,17 +276,16 @@ function LookupInput({
         ...option,
         label: crudValueLabels[option.label] ?? option.label,
       }))
-  if (field.lookup && disabled) {
+  if (field.lookup) {
     const values: unknown[] = Array.isArray(selected) ? selected : selected == null ? [] : [selected]
-    const reference = record?.[field.name.replace(/Id$/, '')]
-      ?? (field.name === 'managementUnitId' ? record?.unit : undefined)
-    const label = readValue((reference ?? {}) as CrudRecord, field.lookupLabel ?? 'name')
-      ?? (field.lookupLabel?.includes('.') ? readValue(record ?? {}, field.lookupLabel) : undefined)
-    const cachedOptions = options
-    options = values
-      .filter((value): value is string | number => typeof value === 'string' || typeof value === 'number')
-      .map((value) => cachedOptions?.find((option) => String(option.value) === String(value))
-        ?? { value, label: label == null ? `#${value}` : `${display(label)} (#${value})` })
+    const retained = values
+      .filter((value): value is string | number => typeof value === "string" || typeof value === "number")
+      .filter((value) => !options?.some((option) => String(option.value) === String(value)))
+      .map((value) => {
+        const label = referenceLabel(field, record ?? {}, value)
+        return { value, label: label == null ? "#" + value : display(label) + " (#" + value + ")" }
+      })
+    options = [...(options ?? []), ...retained]
   }
   // Form.Item truyền value/onChange qua wrapper nên Select phải nằm trực tiếp trong component này.
   return (
@@ -200,26 +315,34 @@ function LookupInput({
 }
 
 /** Form.Item phải bọc control trực tiếp để value/onChange được nối vào Form. */
-function renderCrudInput(field: CrudField) {
+function renderCrudInput(field: CrudField, disabled?: boolean) {
   switch (field.kind) {
     case 'number':
       return (
         <InputNumber
+          disabled={disabled}
           min={field.min ?? 0}
           max={field.max}
           style={{ width: '100%' }}
         />
       )
     case 'date':
-      return <Input type="date" />
+      return <Input type="date" disabled={disabled} />
     case 'datetime':
-      return <Input type="datetime-local" />
+      return <Input type="datetime-local" disabled={disabled} />
     case 'textarea':
-      return <TextArea rows={4} maxLength={field.maxLength} showCount />
+      return (
+        <TextArea
+          rows={4}
+          maxLength={field.maxLength}
+          showCount
+          disabled={disabled}
+        />
+      )
     case 'boolean':
-      return <Switch />
+      return <Switch disabled={disabled} />
     default:
-      return <Input maxLength={field.maxLength} />
+      return <Input maxLength={field.maxLength} disabled={disabled} />
   }
 }
 
@@ -235,7 +358,7 @@ export default function CrudPage({ resource }: { resource: string }) {
   const query = readCrudQuery(searchParams, resource, config)
   const { search, page, size, filters: activeFilters } = query
   const handleApiError = useApiErrorHandler()
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view' | null>(
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view' | 'workflow' | null>(
     null,
   )
   const [activeRecord, setActiveRecord] = useState<CrudRecord | null>(null)
@@ -249,8 +372,11 @@ export default function CrudPage({ resource }: { resource: string }) {
         : modalMode === 'view'
           ? activeRecord
           : undefined
-  const detail = activeRecord ?? undefined
   const [busy, setBusy] = useState(false)
+  const busyRef = useRef(false)
+  const confirmationPendingRef = useRef(false)
+  const modalRequestRef = useRef(0)
+  useEffect(() => () => { modalRequestRef.current += 1 }, [resource])
   const [form] = Form.useForm()
   const [filterForm] = Form.useForm()
   const scopeValue = Form.useWatch('scope', form)
@@ -287,12 +413,6 @@ export default function CrudPage({ resource }: { resource: string }) {
       : (config.writeEndpoint ?? config.endpoint)
   const detailEndpoint = config.detailEndpoint ?? config.endpoint
   const invoiceResource = resource === 'invoices' || resource === 'myInvoices'
-  const canConfirmPayment =
-    !!activeRecord &&
-    resource === 'invoices' &&
-    hasPermission(me, Permission.INVOICE_UPDATE) &&
-    Array.isArray(activeRecord.allowedActions) &&
-    activeRecord.allowedActions.includes(BillingAction.CONFIRM_PAYMENT)
   const invoiceItems =
     invoiceResource && Array.isArray(activeRecord?.items)
       ? (activeRecord.items as CrudRecord[])
@@ -306,6 +426,7 @@ export default function CrudPage({ resource }: { resource: string }) {
   }
   const filterSignature = JSON.stringify(activeFilters)
   useEffect(() => {
+    if (!config.filters?.length || config.singleton) return
     filterForm.resetFields()
     const initial: Record<string, string | number> = {
       ...JSON.parse(filterSignature),
@@ -352,16 +473,14 @@ export default function CrudPage({ resource }: { resource: string }) {
         { replace: true },
       )
   }, [total, size, page, resource, config, isFetching, error, setSearchParams])
-  const baseFields =
-    modalMode === 'create'
-      ? (config.createFields ?? config.fields).filter(
-          (field) => !field.editOnly,
-        )
-      : modalMode === 'edit'
-        ? (config.editFields ?? config.fields).filter(
-            (field) => !field.createOnly,
-          )
-        : config.fields
+  const writableFields = (modalMode === "create"
+    ? (config.createFields ?? config.fields).filter((field) => !field.editOnly)
+    : (config.editFields ?? config.fields).filter((field) => !field.createOnly))
+  const baseFields = modalMode === "create"
+    ? writableFields
+    : [...new Map([...config.fields, ...(config.createFields ?? []), ...(config.editFields ?? [])]
+        .filter((field) => !field.sensitive && !crudSecretFieldNames.has(field.name))
+        .map((field) => [field.name, field])).values()]
   const fields = baseFields
     .filter(
       (field) =>
@@ -401,9 +520,21 @@ export default function CrudPage({ resource }: { resource: string }) {
           }
         : field,
     )
+  const writeFields = writableFields
+    .filter((field) => fields.some((candidate) => candidate.name === field.name))
+    .map((field) => ({ ...field, ...fields.find((candidate) => candidate.name === field.name) }))
+  const isWritableField = (field: CrudField) =>
+    (modalMode === 'create' || modalMode === 'edit') &&
+    writeFields.some((candidate) => candidate.name === field.name) &&
+    !(modalMode === "edit" && resource === "users" && field.name === "role" && editing?.id === me?.id) &&
+    !(modalMode === "edit" && config.closeAtOnlyAfterOpen && editing && hasPeriodOpened(editing.openAt) && field.name !== "closeAt")
   const visible = (field: CrudField) =>
     !field.visibleWhen ||
-    (field.visibleWhen.field === 'scope' ? scopeValue : typeValue) ===
+    (isViewMode
+      ? activeRecord?.[field.visibleWhen.field]
+      : (field.visibleWhen.field === 'scope' ? scopeValue : typeValue)
+        ?? activeRecord?.[field.visibleWhen.field]
+        ?? config.createDefaults?.[field.visibleWhen.field]) ===
       field.visibleWhen.value
 
   const createDefaults = useMemo(
@@ -426,30 +557,19 @@ export default function CrudPage({ resource }: { resource: string }) {
     return undefined
   }, [modalMode, activeRecord, config, resource, createDefaults])
 
-  const populateForm = useCallback(
-    (selected: CrudRecord) => {
-      const initial = getRecordFormValues(selected, config, resource)
-      form.setFieldsValue(initial)
-    },
-    [config, resource, form],
-  )
-
-  // Đồng bộ dữ liệu form khi modal/record mở, đóng hoặc chuyển chế độ xem sang sửa
   useEffect(() => {
-    if (modalMode === 'edit' || modalMode === 'view') {
-      if (activeRecord) {
-        populateForm(activeRecord)
-      }
-    } else if (modalMode === 'create') {
-      form.resetFields()
-      form.setFieldsValue(createDefaults)
+    if ((modalMode === 'create' || modalMode === 'edit') && formInitialValues) {
+      form.setFieldsValue(formInitialValues)
     }
-  }, [modalMode, activeRecord, populateForm, form, createDefaults])
+  }, [modalMode, formInitialValues, form])
 
   function closeModal() {
+    if (busyRef.current) return
+    modalRequestRef.current += 1
     setModalMode(null)
     setActiveRecord(null)
-    form.resetFields()
+    if (modalMode === 'edit' || modalMode === 'create') form.resetFields()
+    if (modalMode === 'workflow') void refresh()
     if (routeId) {
       navigate(
         { pathname: '..', search: location.search },
@@ -461,10 +581,11 @@ export default function CrudPage({ resource }: { resource: string }) {
   useEffect(() => {
     if (!routeId || !canRead) return
     let cancelled = false
+    const request = ++modalRequestRef.current
     api
       .get(`${detailEndpoint}/${routeId}`)
       .then((response) => {
-        if (!cancelled) {
+        if (!cancelled && request === modalRequestRef.current && !busyRef.current) {
           const item = response.data as CrudRecord
           setActiveRecord(item)
           setModalMode('view')
@@ -476,7 +597,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     return () => {
       cancelled = true
     }
-  }, [routeId, detailEndpoint, handleApiError, canRead, populateForm])
+  }, [routeId, detailEndpoint, handleApiError, canRead])
 
   /** Quyền thao tác không thay thế điều kiện trạng thái hoặc người sở hữu bản ghi. */
   function canChangeRow(row: CrudRecord) {
@@ -592,6 +713,8 @@ export default function CrudPage({ resource }: { resource: string }) {
     })
   }
   async function openEditor(row?: CrudRecord) {
+    if (busyRef.current) return
+    const request = ++modalRequestRef.current
     if (row ? !canEditRow(row) : !canCreate) return
     if (!row) {
       setActiveRecord(null)
@@ -606,6 +729,7 @@ export default function CrudPage({ resource }: { resource: string }) {
           ? row
           : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
               .data as CrudRecord)
+      if (request !== modalRequestRef.current || busyRef.current) return
       setActiveRecord(selected)
       setModalMode('edit')
     } catch (e) {
@@ -613,11 +737,14 @@ export default function CrudPage({ resource }: { resource: string }) {
     }
   }
   async function saveRecord(values: Record<string, unknown>) {
+    if (busyRef.current || !['create', 'edit'].includes(modalMode ?? '')) return
     if (editing ? !canEditRow(editing) : !canCreate) return
+    busyRef.current = true
+    const request = modalRequestRef.current
     setBusy(true)
     try {
       const payload: Record<string, unknown> = {}
-      for (const field of fields.filter(visible)) {
+      for (const field of writeFields.filter(visible).filter(isWritableField)) {
         const value = values[field.name]
         // Chuỗi rỗng xóa nội dung tùy chọn; trường bỏ qua giữ nguyên giá trị khi sửa.
         if (
@@ -633,7 +760,7 @@ export default function CrudPage({ resource }: { resource: string }) {
             : value
       }
       // Các DTO sửa chỉ số/thông báo cần giữ lại định danh/phạm vi đã chọn khi tạo.
-      if (editing && config.keepCreateOnlyOnEdit)
+      if (editing && config.keepCreateOnlyOnEdit && ['readings', 'notifications'].includes(resource))
         for (const field of config.fields.filter((f) => f.createOnly))
           if (editing[field.name] != null)
             payload[field.name] = editing[field.name]
@@ -657,13 +784,16 @@ export default function CrudPage({ resource }: { resource: string }) {
         body = multipart
       }
       const result = await saveOrUpdate(writeEndpoint, body)
+      if (request !== modalRequestRef.current) return
       if (
         !showTemporaryPassword(result, payload.username ?? payload.studentCode)
       )
         void message.success('Đã lưu')
+      busyRef.current = false
       closeModal()
       await refresh()
     } catch (e) {
+      if (request !== modalRequestRef.current) return
       form.setFields(
         validationFieldErrors(e).map((item) => ({
           name: item.field,
@@ -672,6 +802,7 @@ export default function CrudPage({ resource }: { resource: string }) {
       )
       handleApiError(e)
     } finally {
+      busyRef.current = false
       setBusy(false)
     }
   }
@@ -715,6 +846,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     })
   }
   function submitRecord(values: Record<string, unknown>) {
+    if (busyRef.current || confirmationPendingRef.current) return
     const identityChanged =
       resource === 'users' &&
       editing &&
@@ -725,13 +857,22 @@ export default function CrudPage({ resource }: { resource: string }) {
       void saveRecord(values)
       return
     }
+    const request = modalRequestRef.current
+    confirmationPendingRef.current = true
     modal.confirm({
       title: 'Thay đổi vai trò hoặc đơn vị tài khoản?',
       content:
         'Phiên đăng nhập cũ của tài khoản này sẽ mất hiệu lực. Người dùng cần đăng nhập lại để nhận quyền và phạm vi mới.',
       okText: 'Lưu thay đổi',
       cancelText: 'Hủy',
-      onOk: () => saveRecord(values),
+      onCancel: () => { confirmationPendingRef.current = false },
+      onOk: async () => {
+        try {
+          if (request === modalRequestRef.current) await saveRecord(values)
+        } finally {
+          confirmationPendingRef.current = false
+        }
+      },
     })
   }
 
@@ -789,6 +930,8 @@ export default function CrudPage({ resource }: { resource: string }) {
     })
   }
   async function showDetail(row: CrudRecord) {
+    if (busyRef.current) return
+    const request = ++modalRequestRef.current
     if (resource === 'deposits' || resource === 'myDeposits') {
       setLedgerRecord(row)
       return
@@ -801,71 +944,20 @@ export default function CrudPage({ resource }: { resource: string }) {
           ? row
           : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
                 .data as CrudRecord)
+      if (request !== modalRequestRef.current || busyRef.current) return
       setActiveRecord(selected)
       setModalMode('view')
     } catch (e) {
       handleApiError(e)
     }
   }
-  /** KTV cập nhật tiến độ ticket được giao; không sửa nội dung báo hỏng của người tạo. */
-  function updateMaintenanceProgress(action: string) {
-    if (
-      !detail ||
-      !hasPermission(me, Permission.MAINTENANCE_UPDATE) ||
-      !Array.isArray(detail.allowedActions) ||
-      !detail.allowedActions.includes(action)
-    )
-      return
-    const target = detail.id
-    let note = ''
-    modal.confirm({
-      title: {
-        start: 'Bắt đầu sửa chữa?',
-        'add-note': 'Thêm ghi chú tiến độ',
-        resolve: 'Hoàn thành sửa chữa',
-      }[action],
-      content:
-        action === 'start' ? (
-          'Cập nhật trạng thái ticket được giao.'
-        ) : (
-          <TextArea
-            placeholder="Ghi chú (từ 5 đến 500 ký tự)"
-            maxLength={500}
-            onChange={(event) => {
-              note = event.target.value
-            }}
-          />
-        ),
-      okText: 'Cập nhật',
-      cancelText: 'Đóng',
-      onOk: async () => {
-        if (action !== 'start' && note.trim().length < 5) {
-          void message.error('Nhập ghi chú ít nhất 5 ký tự')
-          throw new Error('Thiếu ghi chú')
-        }
-        try {
-          const updated = (await writeCrudRecord(
-            `/maintenance-requests/${target}/${action === 'add-note' ? 'notes' : action}`,
-            'post',
-            action === 'start' ? undefined : { note: note.trim() },
-          )) as CrudRecord
-          setActiveRecord(updated)
-          populateForm(updated)
-          await refresh()
-        } catch (failure) {
-          handleApiError(failure)
-          throw failure
-        }
-      },
-    })
-  }
-
   /** Trường hiển thị trong form; giữ nguyên điều kiện ẩn theo nghiệp vụ của màn hiện tại. */
   const formFields = fields
     .filter(visible)
     .filter(
       (field) =>
         !(
+          modalMode === 'create' &&
           resource === 'maintenance' &&
           role === Role.STUDENT &&
           field.name === 'roomId'
@@ -878,23 +970,33 @@ export default function CrudPage({ resource }: { resource: string }) {
     (field) => !sectionedFieldNames.has(field.name),
   )
 
+  const displayRecord = activeRecord
+    ? { ...activeRecord, ...getRecordFormValues(activeRecord, config, resource) }
+    : {}
+  const detailColumns = [...new Map([...config.columns, ...(config.detailColumns ?? [])]
+    .filter((column) => !crudSecretFieldNames.has(column.key))
+    .filter((column) => !formFields.some((field) => field.name === column.key))
+    .map((column) => [column.key, column])).values()]
+
   function renderField(field: CrudField) {
+    const isFieldDisabled = !isWritableField(field)
+    if (isFieldDisabled) return (
+      <Form.Item key={field.name} label={field.label}>
+        {renderViewFieldValue(field, displayRecord)}
+      </Form.Item>
+    )
+
     return field.kind === 'select' ? (
       <Form.Item
         key={field.name}
         label={field.label}
-        required={!isViewMode && field.required}
-        extra={!isViewMode ? field.hint : undefined}
+        required={!isFieldDisabled && field.required}
+        extra={!isFieldDisabled ? field.hint : undefined}
       >
         <LookupInput
           field={field}
           record={activeRecord ?? undefined}
-          disabled={
-            isViewMode ||
-            (resource === 'users' &&
-              field.name === 'role' &&
-              editing?.id === me?.id)
-          }
+          disabled={busy || isFieldDisabled}
         />
       </Form.Item>
     ) : (
@@ -905,10 +1007,10 @@ export default function CrudPage({ resource }: { resource: string }) {
         className={
           field.kind === 'textarea' ? 'dms-form-span-full' : undefined
         }
-        extra={!isViewMode ? field.hint : undefined}
+        extra={!isFieldDisabled ? field.hint : undefined}
         valuePropName={field.kind === 'boolean' ? 'checked' : 'value'}
         rules={
-          isViewMode
+          isFieldDisabled
             ? []
             : [
                 {
@@ -931,7 +1033,7 @@ export default function CrudPage({ resource }: { resource: string }) {
               ]
         }
       >
-        {renderCrudInput(field)}
+        {renderCrudInput(field, busy || isFieldDisabled)}
       </Form.Item>
     )
   }
@@ -1131,9 +1233,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                         size="small"
                         icon={<EyeOutlined />}
                         onClick={() => {
-                          const route = role && config.detailRoutes?.[role]
-                          if (route) navigate(`${route}/${String(row[idKey])}`)
-                          else void showDetail(row)
+                          void showDetail(row)
                         }}
                         aria-label="Xem chi tiết"
                       />
@@ -1221,83 +1321,194 @@ export default function CrudPage({ resource }: { resource: string }) {
       </Card>
       <Modal
         title={
-          modalMode === 'view'
+          modalMode === 'workflow'
+            ? crudDetailUiLabels.workflow
+            : modalMode === 'view'
             ? `Chi tiết ${config.title.toLowerCase()}`
             : `${modalMode === 'edit' ? 'Sửa' : 'Thêm'} ${config.title.toLowerCase()}`
         }
         open={modalMode !== null}
-        destroyOnHidden
+        forceRender
         onCancel={closeModal}
         confirmLoading={busy}
         closable={!busy}
+        keyboard={!busy}
         mask={{ closable: !busy }}
         cancelButtonProps={{ disabled: busy }}
         okText="Lưu"
         cancelText="Đóng"
-        width={780}
+        width={hasRecordDetailContent(resource) ? 1080 : 780}
+        style={{ top: 24 }}
+        styles={{ body: { maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto', overflowX: 'hidden' } }}
         className={config.finance ? 'dms-finance-modal' : undefined}
         footer={
-          modalMode === 'view' ? (
-            <Flex
-              justify="space-between"
-              align="center"
-              style={{ width: '100%' }}
-            >
-              <Space>
-                {activeRecord && canDeleteRow(activeRecord) && (
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={() => {
-                      const rowToDelete = activeRecord
-                      closeModal()
-                      deleteRecord(rowToDelete)
-                    }}
-                  >
-                    {config.deleteLabel ?? 'Xóa'}
-                  </Button>
-                )}
-              </Space>
-              <Space>
-                <Button onClick={closeModal}>Đóng</Button>
-                {canConfirmPayment && activeRecord && (
-                  <Button
-                    type="primary"
-                    onClick={() => setPaymentInvoice(activeRecord)}
-                  >
-                    {billingUiLabels.confirmPayment}
-                  </Button>
-                )}
-                {activeRecord && canEditRow(activeRecord) && (
-                  <Button
-                    type={canConfirmPayment ? 'default' : 'primary'}
-                    icon={<EditOutlined />}
-                    onClick={() => {
-                      setModalMode('edit')
-                    }}
-                  >
-                    Chuyển sang sửa
-                  </Button>
-                )}
-              </Space>
-            </Flex>
-          ) : (
-            <Space>
-              <Button onClick={closeModal} disabled={busy}>
-                Đóng
+          <Space>
+            <Button onClick={closeModal} disabled={busy}>Đóng</Button>
+            {isViewMode && activeRecord && hasRecordDetailContent(resource) && (
+              <Button onClick={() => setModalMode('workflow')}>{crudDetailUiLabels.workflow}</Button>
+            )}
+            {isViewMode && activeRecord && canEditRow(activeRecord) && (
+              <Button type="primary" icon={<EditOutlined />} onClick={() => setModalMode("edit")}>
+                Chuyển sang sửa
               </Button>
-              <Button
-                type="primary"
-                loading={busy}
-                onClick={() => form.submit()}
-              >
-                Lưu
-              </Button>
-            </Space>
-          )
+            )}
+            {(modalMode === "create" || modalMode === "edit") && (
+              <Button type="primary" loading={busy} onClick={() => form.submit()}>Lưu</Button>
+            )}
+          </Space>
         }
       >
-        {isViewMode && invoiceResource && activeRecord ? (
+        {activeRecord && !invoiceResource && !hasRecordDetailContent(resource) && (
+          <div className="dms-record-context-card">
+            <div className="dms-context-header">
+              <div className="dms-context-badge-group">
+                <span className="dms-context-tag-resource">{config.title}</span>
+                <span className="dms-context-code">
+                  {String(
+                    activeRecord.code ??
+                      activeRecord.contractCode ??
+                      activeRecord.studentCode ??
+                      activeRecord.roomCode ??
+                      `#${activeRecord.id ?? ''}`,
+                  )}
+                </span>
+                {Boolean(activeRecord.status) && (
+                  <StatusBadge
+                    entity={
+                      ['summer', 'extensions', 'transfers'].includes(resource)
+                        ? 'request'
+                        : resource === 'contracts' || resource === 'myContracts'
+                          ? 'contract'
+                          : resource === 'maintenance' ||
+                              resource === 'myMaintenance'
+                            ? 'ticket'
+                            : resource === 'invoices' ||
+                                resource === 'myInvoices'
+                              ? 'invoice'
+                              : resource === 'storage'
+                                ? 'storage'
+                                : 'application'
+                    }
+                    status={String(activeRecord.status)}
+                  />
+                )}
+              </div>
+              {Boolean(activeRecord.submittedAt || activeRecord.createdAt) && (
+                <span className="dms-context-timestamp">
+                  Gửi lúc:{' '}
+                  {formatDateTime(
+                    String(resource === 'summer' ? activeRecord.createdAt : activeRecord.submittedAt ?? activeRecord.createdAt),
+                  )}
+                </span>
+              )}
+            </div>
+
+            <div className="dms-context-meta-row">
+              {Boolean(
+                activeRecord.fullName ||
+                  activeRecord.studentName ||
+                  (activeRecord.student as any)?.fullName,
+              ) && (
+                <div className="dms-context-meta-item">
+                  <span className="dms-context-meta-label">Sinh viên:</span>
+                  <strong>
+                    {String(
+                      activeRecord.fullName ??
+                        activeRecord.studentName ??
+                        (activeRecord.student as any)?.fullName,
+                    )}
+                    {Boolean(
+                      activeRecord.studentCode ||
+                        (activeRecord.student as any)?.studentCode,
+                    ) && (
+                      <span
+                        style={{
+                          fontWeight: 400,
+                          color: 'var(--color-text-muted)',
+                        }}
+                      >
+                        {' '}(
+                        {String(
+                          activeRecord.studentCode ??
+                            (activeRecord.student as any)?.studentCode,
+                        )}
+                        )
+                      </span>
+                    )}
+                  </strong>
+                </div>
+              )}
+              {Boolean(
+                activeRecord.contractCode &&
+                  activeRecord.code !== activeRecord.contractCode,
+              ) && (
+                <div className="dms-context-meta-item">
+                  <span className="dms-context-meta-label">Hợp đồng:</span>
+                  <strong>{String(activeRecord.contractCode)}</strong>
+                </div>
+              )}
+              {Boolean(
+                activeRecord.semesterName ||
+                  (activeRecord.semester as any)?.name,
+              ) && (
+                <div className="dms-context-meta-item">
+                  <span className="dms-context-meta-label">Học kỳ:</span>
+                  <strong>
+                    {String(
+                      activeRecord.semesterName ??
+                        (activeRecord.semester as any)?.name,
+                    )}
+                  </strong>
+                </div>
+              )}
+              {Boolean(
+                activeRecord.roomCode ||
+                  (activeRecord.room as any)?.code,
+              ) && (
+                <div className="dms-context-meta-item">
+                  <span className="dms-context-meta-label">Phòng:</span>
+                  <strong>
+                    {String(
+                      activeRecord.roomCode ??
+                        (activeRecord.room as any)?.code,
+                    )}
+                  </strong>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {activeRecord && hasRecordDetailContent(resource) && (
+          <RecordDetailContent
+            key={resource + ":" + String(activeRecord[idKey]) + ":" + modalMode}
+            resource={resource}
+            recordId={Number(activeRecord[idKey])}
+            role={role}
+            readOnly={modalMode !== "workflow"}
+          />
+        )}
+        {activeRecord && modalMode !== 'workflow' && !hasRecordDetailContent(resource) && (
+          <>
+            <div className="dms-view-grid">
+              {detailColumns.map((column) => (
+                <div key={column.key} className="dms-view-field">
+                  <div className="dms-view-label">{column.label}</div>
+                  <div className="dms-view-value">{renderColumnCell(resource, column, activeRecord)}</div>
+                </div>
+              ))}
+            </div>
+            {['items', 'transactions', 'timeline'].map((key) =>
+                !(key === "items" && invoiceResource) && Array.isArray(activeRecord[key]) ? (
+                  <Card key={key} title={crudDetailUiLabels.collections[key as keyof typeof crudDetailUiLabels.collections]}>
+                    {(activeRecord[key] as CrudRecord[]).map((item, index) => (
+                      <Typography.Paragraph key={index}>{display(item)}</Typography.Paragraph>
+                    ))}
+                  </Card>
+                ) : null,
+              )}
+          </>
+        )}
+        {modalMode !== 'workflow' && invoiceResource && activeRecord ? (
           <div className="dms-invoice-detail">
             <div className="dms-invoice-detail-head">
               <div className="dms-wrap">
@@ -1387,174 +1598,80 @@ export default function CrudPage({ resource }: { resource: string }) {
               )}
             </Card>
           </div>
-        ) : (
-        <Form
-          form={form}
-          key={
-            modalMode && activeRecord
-              ? `${resource}-${modalMode}-${String(activeRecord[idKey] ?? activeRecord.id ?? 'record')}`
-              : modalMode === 'create'
-                ? `${resource}-create`
-                : `${resource}-idle`
-          }
-          layout="vertical"
-          disabled={isViewMode}
-          initialValues={formInitialValues}
-          onFinish={(values) => {
-            submitRecord(values)
-          }}
-          preserve={false}
-        >
-          {config.formSections ? (
-            <div className="dms-form-sections">
-              {config.formSections.map((section) => {
-                const sectionFields = formFields.filter((field) =>
-                  section.fields.includes(field.name),
-                )
-                if (sectionFields.length === 0) return null
-                return (
-                  <section
-                    className="dms-form-section"
-                    key={section.title}
-                    aria-label={section.title}
-                  >
-                    <div className="dms-form-section-head">
-                      <h3 className="dms-form-section-title">
-                        {section.title}
-                      </h3>
-                      {section.note && (
-                        <span className="dms-form-section-note">
-                          {section.note}
-                        </span>
-                      )}
-                    </div>
+        ) : null}
+          <Form
+            form={form}
+            component={modalMode === 'create' || modalMode === 'edit' ? 'form' : 'div'}
+            style={modalMode === null || modalMode === 'workflow' ? { display: 'none' } : undefined}
+            key={resource}
+            disabled={busy}
+            layout="vertical"
+            initialValues={formInitialValues}
+            onFinish={(values) => {
+              submitRecord(values)
+            }}
+            preserve={false}
+          >
+            {config.formSections ? (
+              <div className="dms-form-sections">
+                {config.formSections.map((section) => {
+                  const sectionFields = formFields.filter((field) =>
+                    section.fields.includes(field.name),
+                  )
+                  if (sectionFields.length === 0) return null
+                  return (
+                    <section
+                      className="dms-form-section"
+                      key={section.title}
+                      aria-label={section.title}
+                    >
+                      <div className="dms-form-section-head">
+                        <h3 className="dms-form-section-title">
+                          {section.title}
+                        </h3>
+                        {section.note && (
+                          <span className="dms-form-section-note">
+                            {section.note}
+                          </span>
+                        )}
+                      </div>
+                      <FormGrid
+                        className={
+                          sectionFields.length === 1
+                            ? 'dms-form-grid-single'
+                            : undefined
+                        }
+                      >
+                        {sectionFields.map(renderField)}
+                      </FormGrid>
+                    </section>
+                  )
+                })}
+                {remainingFields.length > 0 && (
+                  <section className="dms-form-section" aria-label="Khác">
                     <FormGrid
                       className={
-                        sectionFields.length === 1
+                        remainingFields.length < 3
                           ? 'dms-form-grid-single'
                           : undefined
                       }
                     >
-                      {sectionFields.map(renderField)}
+                      {remainingFields.map(renderField)}
                     </FormGrid>
                   </section>
-                )
-              })}
-              {remainingFields.length > 0 && (
-                <section className="dms-form-section" aria-label="Khác">
-                  <FormGrid
-                    className={
-                      remainingFields.length < 3
-                        ? 'dms-form-grid-single'
-                        : undefined
-                    }
-                  >
-                    {remainingFields.map(renderField)}
-                  </FormGrid>
-                </section>
-              )}
-            </div>
-          ) : (
-            <FormGrid
-              className={
-                formFields.length < 3 ? 'dms-form-grid-single' : undefined
-              }
-            >
-              {formFields.map(renderField)}
-            </FormGrid>
-          )}
-        </Form>
-        )}
-        {isViewMode && activeRecord && (
-          <>
-            {resource === 'contracts' &&
-              Array.isArray(activeRecord.allowedActions) &&
-              ((activeRecord.allowedActions as string[]).includes('move-out') ||
-                (activeRecord.allowedActions as string[]).includes(
-                  'create-storage-record',
-                )) && (
-                <Space wrap style={{ marginTop: 16 }}>
-                  {(activeRecord.allowedActions as string[]).includes(
-                    'move-out',
-                  ) && (
-                    <Button
-                      type="primary"
-                      danger
-                      onClick={() =>
-                        navigate(
-                          `${location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/contracts/${String(activeRecord.id)}/move-out`,
-                        )
-                      }
-                    >
-                      Làm thủ tục trả phòng
-                    </Button>
-                  )}
-                  {(activeRecord.allowedActions as string[]).includes(
-                    'create-storage-record',
-                  ) && (
-                    <Button
-                      onClick={() =>
-                        navigate(
-                          `${location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/storage?contractId=${String(activeRecord.id)}`,
-                        )
-                      }
-                    >
-                      Tạo phiếu gửi đồ
-                    </Button>
-                  )}
-                </Space>
-              )}
-            {resource === 'maintenance' &&
-              hasPermission(me, Permission.MAINTENANCE_UPDATE) &&
-              Array.isArray(activeRecord.allowedActions) && (
-                <Space wrap style={{ marginTop: 16 }}>
-                  {['start', 'add-note', 'resolve']
-                    .filter((action) =>
-                      (activeRecord.allowedActions as string[]).includes(
-                        action,
-                      ),
-                    )
-                    .map((action) => (
-                      <Button
-                        key={action}
-                        onClick={() => updateMaintenanceProgress(action)}
-                      >
-                        {
-                          {
-                            start: 'Bắt đầu',
-                            'add-note': 'Ghi chú tiến độ',
-                            resolve: 'Hoàn thành',
-                          }[action]
-                        }
-                      </Button>
-                    ))}
-                </Space>
-              )}
-            {['items', 'transactions', 'timeline'].map(
-              (key) =>
-                !(key === 'items' && invoiceResource) &&
-                Array.isArray(activeRecord[key]) && (
-                  <Card
-                    key={key}
-                    title={
-                      {
-                        items: 'Dòng hóa đơn',
-                        transactions: 'Giao dịch cọc',
-                        timeline: 'Lịch sử',
-                      }[key]
-                    }
-                    style={{ marginTop: 16 }}
-                  >
-                    {(activeRecord[key] as CrudRecord[]).map((item, index) => (
-                      <Typography.Paragraph key={index}>
-                        {display(item)}
-                      </Typography.Paragraph>
-                    ))}
-                  </Card>
-                ),
+                )}
+              </div>
+            ) : (
+              <FormGrid
+                className={
+                  formFields.length < 3 ? 'dms-form-grid-single' : undefined
+                }
+              >
+                {formFields.map(renderField)}
+              </FormGrid>
             )}
-          </>
-        )}
+          </Form>
+
       </Modal>
       {paymentInvoice && (
         <ConfirmPaymentModal
@@ -1590,7 +1707,7 @@ export default function CrudPage({ resource }: { resource: string }) {
           }
           open
           onClose={() => setLedgerRecord(null)}
-          readOnly={resource === 'myDeposits'}
+          readOnly
         />
       )}
       {resource === 'maintenance' && (

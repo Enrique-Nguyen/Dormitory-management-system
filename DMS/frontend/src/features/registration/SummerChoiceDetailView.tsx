@@ -121,6 +121,8 @@ function choiceExplanation(choice: string) {
 export interface SummerChoiceDetailViewProps {
   role?: Role
   summerChoiceId?: number
+  embedded?: boolean
+  readOnly?: boolean
 }
 
 /**
@@ -131,17 +133,11 @@ export interface SummerChoiceDetailViewProps {
 export default function SummerChoiceDetailView({
   role,
   summerChoiceId,
+  embedded = false,
+  readOnly = false,
 }: SummerChoiceDetailViewProps = {}) {
   const params = useParams()
-  const routeId = Number(params.id ?? params.summerChoiceId)
-  const id =
-    summerChoiceId != null &&
-    Number.isSafeInteger(summerChoiceId) &&
-    summerChoiceId > 0
-      ? summerChoiceId
-      : Number.isSafeInteger(routeId) && routeId > 0
-        ? routeId
-        : 0
+  const id = summerChoiceId ?? Number(params.id ?? params.summerChoiceId)
   const { data: me } = useMe()
   const navigate = useNavigate()
   const { message } = App.useApp()
@@ -176,19 +172,21 @@ export default function SummerChoiceDetailView({
       <>
         <PageHeader
           title="Không tìm thấy lựa chọn kỳ hè"
-          breadcrumb={[{ label: 'Kỳ hè', to: listPath }]}
+          breadcrumb={embedded ? undefined : [{ label: 'Kỳ hè', to: listPath }]}
         />
         <EmptyState
           title="Không tìm thấy lựa chọn kỳ hè"
           description={
-            id > 0
+            Number.isSafeInteger(id) && id > 0
               ? errorMessage(detailQuery.error)
               : 'Đường dẫn lựa chọn không hợp lệ.'
           }
           action={
-            <Button type="primary" onClick={() => navigate(listPath)}>
-              Quay lại danh sách
-            </Button>
+            !embedded && (
+              <Button type="primary" onClick={() => navigate(listPath)}>
+                Quay lại danh sách
+              </Button>
+            )
           }
         />
       </>
@@ -255,6 +253,7 @@ export default function SummerChoiceDetailView({
 
   const actions: Record<string, ActionDef> = {}
   if (
+    !readOnly &&
     !studentOnly &&
     hasPermission(me, Permission.SUMMER_REGISTRATION_UPDATE)
   ) {
@@ -303,7 +302,7 @@ export default function SummerChoiceDetailView({
       },
     }
   }
-  if (studentOnly && hasPermission(me, Permission.SUMMER_REGISTRATION_UPDATE)) {
+  if (!readOnly && !embedded && studentOnly && hasPermission(me, Permission.SUMMER_REGISTRATION_UPDATE)) {
     actions[SummerChoiceAction.EDIT] = {
       label: 'Sửa lựa chọn',
       icon: <EditOutlined />,
@@ -312,12 +311,14 @@ export default function SummerChoiceDetailView({
   }
 
   const canCreateStorage =
+    !readOnly &&
     !studentOnly &&
     detail.status === SummerChoiceStatus.APPROVED &&
     detail.choice === SummerChoice.TEMP_LEAVE &&
     contractId != null &&
     hasPermission(me, Permission.STORAGE_CREATE)
   const canMoveOut =
+    !readOnly &&
     !studentOnly &&
     detail.status === SummerChoiceStatus.APPROVED &&
     detail.choice === SummerChoice.LEAVE &&
@@ -340,16 +341,16 @@ export default function SummerChoiceDetailView({
         ]
           .filter(Boolean)
           .join(' · ')}
-        breadcrumb={[
+        breadcrumb={embedded ? undefined : [
           { label: 'Kỳ hè', to: listPath },
           { label: `Lựa chọn #${detail.id}` },
         ]}
-        extra={
+        extra={(!embedded || !readOnly) && (
           <Flex gap={8} wrap justify="flex-end">
-            <Button onClick={() => navigate(listPath)}>Danh sách</Button>
-            <ActionBar allowedActions={allowedActions} actions={actions} />
+            {!embedded && <Button onClick={() => navigate(listPath)}>Danh sách</Button>}
+            {!readOnly && <ActionBar allowedActions={allowedActions} actions={actions} />}
           </Flex>
-        }
+        )}
       />
 
       {pending && (
@@ -383,12 +384,12 @@ export default function SummerChoiceDetailView({
                   key: 'contract',
                   label: 'Hợp đồng',
                   children:
-                    contractPath && contractId != null ? (
+                    !embedded && contractPath && contractId != null ? (
                       <Link to={contractPath}>
                         {contractCode || `Hợp đồng #${contractId}`}
                       </Link>
                     ) : (
-                      contractCode
+                      contractCode || (contractId != null ? `Hợp đồng #${contractId}` : '—')
                     ),
                 },
                 {
@@ -468,7 +469,7 @@ export default function SummerChoiceDetailView({
                 Làm thủ tục trả phòng
               </Button>
             )}
-            {!studentOnly &&
+            {!embedded && !studentOnly &&
               detail.status === SummerChoiceStatus.APPROVED &&
               detail.choice === SummerChoice.STAY &&
               contractPath && (

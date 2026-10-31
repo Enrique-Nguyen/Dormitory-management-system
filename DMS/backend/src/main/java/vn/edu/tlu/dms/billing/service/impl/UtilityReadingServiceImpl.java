@@ -227,6 +227,23 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
                         input.roomId(),
                         input.meterType(),
                         input.billingMonth().minusMonths(1));
+        if (id == null && previous.isEmpty()
+                && Boolean.TRUE.equals(
+                        jdbc.queryForObject(
+                                "SELECT EXISTS(SELECT 1 FROM utility_reading WHERE room_id=? AND"
+                                        + " meter_type=? AND billing_month<?) AND NOT EXISTS(SELECT 1"
+                                        + " FROM utility_reading WHERE room_id=? AND meter_type=?"
+                                        + " AND billing_month=?)",
+                                Boolean.class,
+                                input.roomId(),
+                                input.meterType(),
+                                input.billingMonth(),
+                                input.roomId(),
+                                input.meterType(),
+                                input.billingMonth()))) {
+            throw BusinessException.invalid(
+                    ApiField.BILLING_MONTH, ValidationMessage.READING_PREVIOUS_MONTH_REQUIRED);
+        }
         Integer start = previous.isEmpty() ? input.startReading() : previous.get(0);
         if (start == null) {
             throw BusinessException.invalid(ApiField.START_READING, ValidationMessage.START_READING_REQUIRED);

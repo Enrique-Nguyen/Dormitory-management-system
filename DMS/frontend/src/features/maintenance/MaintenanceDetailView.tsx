@@ -118,13 +118,26 @@ const deductionColumns: TableColumnsType<MaintenanceDeduction> = [
   },
 ]
 
+export interface MaintenanceDetailViewProps {
+  role?: Role
+  ticketId?: number
+  embedded?: boolean
+  readOnly?: boolean
+}
+
 /**
  * Trang chi tiết ticket dùng chung cho Sinh viên, Quản lý và Kỹ thuật viên.
  * Chỉ hiện hành động backend trả trong allowedActions; quyền cập nhật/xóa được kiểm tra
  * thêm từ /auth/me. Không tự dựng lại bảng chuyển trạng thái.
  */
-export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
-  const id = Number(useParams().id)
+export default function MaintenanceDetailView({
+  role,
+  ticketId,
+  embedded = false,
+  readOnly = false,
+}: MaintenanceDetailViewProps = {}) {
+  const params = useParams()
+  const id = ticketId ?? Number(params.id)
   const ticket = useMaintenanceDetail(id)
   const { data: me } = useMe()
   const actorRole = role ?? me?.role
@@ -154,7 +167,7 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
       <>
         <PageHeader
           title="Không tìm thấy ticket"
-          breadcrumb={[{ label: list.label, to: list.path }]}
+          breadcrumb={embedded ? undefined : [{ label: list.label, to: list.path }]}
         />
         <EmptyState
           title="Không tìm thấy yêu cầu sửa chữa"
@@ -164,9 +177,11 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
               : errorMessage(ticket.error)
           }
           action={
-            <Button type="primary" onClick={() => navigate(list.path)}>
-              Quay lại danh sách
-            </Button>
+            !embedded && (
+              <Button type="primary" onClick={() => navigate(list.path)}>
+                Quay lại danh sách
+              </Button>
+            )
           }
         />
       </>
@@ -178,8 +193,8 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
   const timeline = detail.timeline ?? []
   const deductions = detail.deductions ?? []
   const concluded = detail.concluded ?? detail.cause != null
-  const canUpdate = hasPermission(me, Permission.MAINTENANCE_UPDATE)
-  const canDelete = hasPermission(me, Permission.MAINTENANCE_DELETE)
+  const canUpdate = !readOnly && hasPermission(me, Permission.MAINTENANCE_UPDATE)
+  const canDelete = !readOnly && hasPermission(me, Permission.MAINTENANCE_DELETE)
   const canConclude =
     canUpdate &&
     (actorRole === Role.STAFF || actorRole === Role.ADMIN) &&
@@ -414,11 +429,11 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
           maintenanceValueLabel(detail.severity),
           locationLabel(detail),
         ].join(' · ')}
-        breadcrumb={[
+        breadcrumb={embedded ? undefined : [
           { label: list.label, to: list.path },
           { label: detail.code || `#${detail.id}` },
         ]}
-        extra={
+        extra={(!embedded || !readOnly) && (
           <div
             style={{
               display: 'flex',
@@ -428,15 +443,19 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
               gap: 'var(--space-2)',
             }}
           >
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate(list.path)}
-            >
-              Quay lại danh sách
-            </Button>
-            <ActionBar allowedActions={allowedActions} actions={actions} />
+            {!embedded && (
+              <Button
+                icon={<ArrowLeftOutlined />}
+                onClick={() => navigate(list.path)}
+              >
+                Quay lại danh sách
+              </Button>
+            )}
+            {!readOnly && (
+              <ActionBar allowedActions={allowedActions} actions={actions} />
+            )}
           </div>
-        }
+        )}
       />
 
       <div className="dms-split-view">
@@ -547,12 +566,14 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
         </div>
       </div>
 
-      <AssignTechnicianModal
-        ticketId={id}
-        open={assignOpen}
-        onClose={() => setAssignOpen(false)}
-      />
-      {noteAction ? (
+      {canUpdate && allowedActions.includes(MaintenanceAction.ASSIGN) && assignOpen && (
+        <AssignTechnicianModal
+          ticketId={id}
+          open
+          onClose={() => setAssignOpen(false)}
+        />
+      )}
+      {canUpdate && noteAction && allowedActions.includes(noteAction) ? (
         <TicketNoteModal
           open
           title={noteTitle}
@@ -568,11 +589,13 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
           onClose={() => setNoteAction(null)}
         />
       ) : null}
-      <ConcludeTicketModal
-        ticketId={id}
-        open={concludeOpen}
-        onClose={() => setConcludeOpen(false)}
-      />
+      {canConclude && concludeOpen && (
+        <ConcludeTicketModal
+          ticketId={id}
+          open
+          onClose={() => setConcludeOpen(false)}
+        />
+      )}
     </>
   )
 }

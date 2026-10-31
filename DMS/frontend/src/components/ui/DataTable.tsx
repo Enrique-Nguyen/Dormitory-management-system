@@ -1,6 +1,7 @@
 import { Table, type TableProps } from 'antd'
 import type { TableColumnType } from 'antd'
 import EmptyState from './EmptyState'
+import { useAppTheme } from '../../app/themeStore'
 
 export interface DataTableProps<RecordType extends object>
   extends TableProps<RecordType> {
@@ -55,7 +56,7 @@ function isSttColumn(col: any): boolean {
  */
 export default function DataTable<RecordType extends object>({
   className = '',
-  size = 'middle',
+  size,
   pagination = false,
   scroll,
   locale,
@@ -65,6 +66,8 @@ export default function DataTable<RecordType extends object>({
   sttWidth = 64,
   ...props
 }: DataTableProps<RecordType>) {
+  const { tableDense } = useAppTheme()
+  const effectiveSize = size ?? (tableDense ? 'small' : 'middle')
   let processedColumns = columns
 
   if (columns && columns.length > 0) {
@@ -124,7 +127,7 @@ export default function DataTable<RecordType extends object>({
       <Table<RecordType>
         {...props}
         className={`dms-data-table ${className}`}
-        size={size}
+        size={effectiveSize}
         pagination={pagination}
         columns={processedColumns}
         scroll={{ x: 'max-content', ...scroll }}

@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Phiên bản | **0.13** |
-| Ngày | 22/10/2026 |
+| Phiên bản | **0.14** |
+| Ngày | 31/10/2026 |
 | Học phần | Chuyên đề CNTT, lớp 65CNTT, Nhóm 3 |
 | Giảng viên | Hoàng Quốc Dũng |
 | Thành viên | Nguyễn Văn Séc, Nguyễn Phú Nguyên, Lê Đức Nguyên, Nguyễn Văn Quyền, Nguyễn Tiến Lộc |
@@ -15,6 +15,7 @@
 
 | Phiên bản | Ngày | Người thực hiện | Nội dung |
 |---|---|---|---|
+| 0.14 | 31/10/2026 | Nhóm 3 | Theo quyết định DEC-BIL-01: khi đã có lịch sử chỉ số, phải nhập đủ kỳ liên tiếp; không tạo kỳ mới nếu còn thiếu kỳ liền trước. Kỳ đầu vẫn nhập chỉ số đầu, thay đồng hồ theo quy tắc hiện hành. |
 | 0.13 | 22/10/2026 | TV5 Nguyễn Tiến Lộc | Đồng bộ phân hệ 6 & 7: chuẩn hóa nghiệp vụ sổ cọc (thu cọc ban đầu, trừ cọc FIFO, bù cọc, hoàn cọc), tra cứu công nợ sinh viên/phòng, tự động phát hành hóa đơn phòng và điện nước theo đợt/chỉ số, cùng tổng hợp KPI Staff Dashboard |
 | 0.12 | 21/10/2026 | TV1 Nguyễn Văn Séc | Đồng bộ phần tài khoản và khung chung: làm rõ lỗi JWT, giữ FR-ACC-05 hai bước và trả mật khẩu tạm một lần; khung job SYSTEM có transaction riêng từng ID, nhắc bù cọc ít nhất mỗi giờ theo NFR-REL-03. Không đổi luồng nghiệp vụ của các module khác |
 | 0.1 | 07/10/2026 | Nhóm 3 | Bản đầu tiên, dựng từ tài liệu đề xuất đã chốt |
@@ -280,7 +281,7 @@ Có hai loại hóa đơn và một sổ cọc:
 | Mã | Yêu cầu | Vai trò | Ưu tiên |
 |---|---|---|---|
 | FR-BIL-01 | Staff cấu hình đơn giá điện (đ/kWh), nước (đ/m³), có ngày hiệu lực | Staff | Must |
-| FR-BIL-02 | Staff nhập chỉ số cuối kỳ theo phòng và loại đồng hồ; chỉ số đầu kỳ tự lấy từ chỉ số cuối kỳ trước. Từ chối nếu cuối < đầu | Staff | Must |
+| FR-BIL-02 | Staff nhập chỉ số cuối kỳ theo phòng và loại đồng hồ; chỉ số đầu kỳ tự lấy từ chỉ số cuối kỳ trước. Với kỳ đầu chưa có lịch sử, Staff nhập chỉ số đầu; khi đã có lịch sử phải nhập đủ các kỳ liên tiếp, không tạo kỳ mới nếu thiếu kỳ liền trước. Từ chối nếu cuối < đầu, trừ trường hợp thay đồng hồ có ghi nhận theo FR-BIL-03 | Staff | Must |
 | FR-BIL-03 | Staff ghi nhận thay / reset đồng hồ (chỉ số cũ chốt, chỉ số mới bắt đầu, lý do) | Staff | Should |
 | FR-BIL-04 | Staff phát hành **hóa đơn điện nước theo phòng** cho kỳ điện nước: tiền điện = tiêu thụ × đơn giá điện, tiền nước = tiêu thụ × đơn giá nước; đơn giá chụp vào dòng hóa đơn. Hóa đơn gửi đến **trưởng phòng**; mọi thành viên đang ở trong phòng xem được. Hệ thống **không** chia cho từng sinh viên | Staff | Must |
 | FR-BIL-05 | Staff phát hành **hóa đơn phí phòng theo học kỳ** cho từng sinh viên đang ở trong học kỳ đó (với học kỳ hè: chỉ sinh viên đã đăng ký ở hè): số tiền = đơn giá học kỳ trên phân phòng hiệu lực tại ngày phát hành, **đủ cả học kỳ** kể cả khi vào ở hoặc rời đi giữa kỳ; chuyển phòng giữa kỳ không thu thêm hay hoàn chênh lệch. Đơn giá chụp vào dòng hóa đơn. Phạm vi Staff xem và phát hành xác định theo `semester_id` của hóa đơn (sinh viên có lịch sử ở tại đơn vị trong kỳ hoặc nộp đơn vào đơn vị cho đợt thuộc kỳ) | Staff | Must |
@@ -312,7 +313,7 @@ Có hai loại hóa đơn và một sổ cọc:
 |---|---|---|
 | **BR-01 Sức chứa** | Mỗi giường có tối đa một phân phòng hiệu lực (giữ chỗ hoặc đang ở). Không phân vào phòng Bảo trì / Ngừng, giường Hỏng. Giới tính sinh viên phải khớp giới tính phòng | CSDL: `UNIQUE(bed_id) WHERE ended_at IS NULL`. Service: khóa giường (`SELECT … FOR UPDATE`), kiểm tra lại sau khi khóa |
 | **BR-02 Hợp đồng** | Mỗi sinh viên có tối đa một phân phòng hiệu lực và tối đa một hợp đồng PENDING / ACTIVE. Khoảng lưu trú của một sinh viên không chồng nhau. Hợp đồng ACTIVE luôn có một phân phòng đang ở, **trừ khi** đang tạm rời hè (có phiếu gửi đồ chưa nhận lại). Hợp đồng chỉ chuyển EXPIRED / TERMINATED qua thủ tục trả phòng | CSDL: `UNIQUE(student_id) WHERE ended_at IS NULL` trên phân phòng. Service: khóa bản ghi sinh viên khi thay đổi |
-| **BR-03 Điện nước** | Chỉ số cuối ≥ đầu; đầu kỳ nối tiếp cuối kỳ trước trừ khi có ghi nhận thay đồng hồ; một chỉ số cho mỗi (phòng, loại đồng hồ, kỳ); hóa đơn điện nước thuộc về phòng, không chia cho sinh viên | CSDL: `UNIQUE(room_id, meter_type, period)`, `CHECK(end_reading >= start_reading)` |
+| **BR-03 Điện nước** | Chỉ số cuối ≥ đầu; đầu kỳ nối tiếp cuối kỳ trước trừ khi có ghi nhận thay đồng hồ; sau kỳ đầu phải nhập đủ các kỳ liên tiếp, không tạo kỳ mới nếu thiếu kỳ liền trước; một chỉ số cho mỗi (phòng, loại đồng hồ, kỳ); hóa đơn điện nước thuộc về phòng, không chia cho sinh viên | CSDL: `UNIQUE(room_id, meter_type, period)`, `CHECK(end_reading >= start_reading)`; service kiểm tra kỳ liền trước trong transaction |
 | **BR-04 Hóa đơn** | Một hóa đơn phí phòng cho mỗi (sinh viên, học kỳ); một hóa đơn điện nước cho mỗi (phòng, kỳ điện nước). Hóa đơn đã thanh toán không sửa | CSDL: hai partial unique index theo loại hóa đơn. Service: chặn sửa khi đã thanh toán |
 | **BR-05 Chuyển phòng** | Giường đích trống và **cùng đơn vị** với giường nguồn; đóng phân phòng cũ và mở mới trong một transaction; hợp đồng không thay đổi | Service: khóa hai giường theo thứ tự `bed_id` tăng dần |
 | **BR-06 Sửa chữa** | Sinh viên chỉ tạo ticket cho phòng đang ở; chỉ KTV được giao cập nhật xử lý; chỉ đóng sau RESOLVED; KTV không tự đóng | Service: kiểm tra chuyển trạng thái theo bảng ở mục 10 |

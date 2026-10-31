@@ -1,9 +1,13 @@
 package vn.edu.tlu.dms;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -11,22 +15,46 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import vn.edu.tlu.dms.billing.service.DepositReminderLookup;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentEndReason;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentKind;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.KeycloakClaim;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SemesterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SystemJob;
-import vn.edu.tlu.dms.support.FutureSemesterFixture;
+import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.service.SystemJobService;
 import vn.edu.tlu.dms.common.service.SystemJobService.Change;
 import vn.edu.tlu.dms.contract.service.ContractLifecycleService;
 import vn.edu.tlu.dms.maintenance.service.MaintenanceLifecycleService;
 import vn.edu.tlu.dms.notification.service.SystemReminderService;
+import vn.edu.tlu.dms.registration.api.ApplicationDtos.Response;
+import vn.edu.tlu.dms.registration.service.RoomApplicationService;
+import vn.edu.tlu.dms.support.FutureSemesterFixture;
 
+import java.sql.SQLException;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 /** Transaction commit thật trên container riêng, audit thật append-only, không gọi Keycloak. */
 @SpringBootTest(properties = "dms.jobs.enabled=false")
@@ -39,8 +67,11 @@ class SystemJobsIntegrationTest {
     @Autowired MaintenanceLifecycleService maintenance;
     @Autowired SystemReminderService reminders;
     @Autowired DepositReminderLookup deposits;
+    @Autowired RoomApplicationService applications;
+    @Autowired PlatformTransactionManager transactionManager;
 
     private static final AtomicInteger YEARS = new AtomicInteger(2900);
+    private static final String RELEASE_REASON = "Release hold for reassignment";
     private String suffix;
     private Long actor;
     private Long tech;
@@ -160,32 +191,53 @@ class SystemJobsIntegrationTest {
                             () -> List.of(contract),
                             id -> {
                                 var change = contracts.cancelExpiredPending(id);
-                                var blocked = pool.submit(this::isStudentLockBlocked);
+                                var studentBlocked =
+                                        pool.submit(
+                                                () ->
+                                                        isLockBlocked(
+                                                                "SELECT user_id FROM student_profile"
+                                                                        + " WHERE user_id=? FOR UPDATE NOWAIT",
+                                                                student));
+                                var applicationBlocked =
+                                        pool.submit(
+                                                () ->
+                                                        isLockBlocked(
+                                                                "SELECT id FROM room_application WHERE"
+                                                                        + " id=? FOR UPDATE NOWAIT",
+                                                                application));
                                 try {
-                                    assertThat(blocked.get(10, TimeUnit.SECONDS)).isTrue();
+                                    assertThat(studentBlocked.get(10, TimeUnit.SECONDS)).isTrue();
+                                    assertThat(applicationBlocked.get(10, TimeUnit.SECONDS)).isTrue();
                                 } catch (Exception error) {
                                     throw new IllegalStateException(error);
                                 }
                                 return change;
                             });
-            assertThat(result.processed()).isEqualTo(1);
+            assertThat(result).isEqualTo(new SystemJobService.RunResult(1, 0, 0));
+            assertThat(contractStatus()).isEqualTo(ContractStatus.CANCELLED);
+            assertThat(applicationStatus()).isEqualTo(ApplicationStatus.CANCELLED);
+            assertThat(count("SELECT count(*) FROM room_assignment_history WHERE contract_id=?", contract))
+                    .isZero();
+            assertThat(historyCount(EntityType.CONTRACT, contract)).isEqualTo(1);
+            assertThat(historyCount(EntityType.APPLICATION, application)).isEqualTo(1);
+            assertThat(auditCount(AuditAction.CONTRACT_AUTO_CANCEL, EntityType.CONTRACT, contract, null))
+                    .isEqualTo(1);
+            assertThat(auditCount(AuditAction.APPLICATION_AUTO_CANCEL, EntityType.APPLICATION, application, null))
+                    .isEqualTo(1);
         } finally {
             pool.shutdownNow();
         }
     }
 
-    private boolean isStudentLockBlocked() throws java.sql.SQLException {
+    private boolean isLockBlocked(String sql, Long id) throws SQLException {
         try (var connection = jdbc.getDataSource().getConnection()) {
             connection.setReadOnly(false);
             connection.setAutoCommit(false);
-            try (var statement =
-                    connection.prepareStatement(
-                            "SELECT user_id FROM student_profile WHERE user_id=? FOR UPDATE"
-                                + " NOWAIT")) {
-                statement.setLong(1, student);
+            try (var statement = connection.prepareStatement(sql)) {
+                statement.setLong(1, id);
                 statement.executeQuery();
                 return false;
-            } catch (java.sql.SQLException error) {
+            } catch (SQLException error) {
                 if ("55P03".equals(error.getSQLState())) {
                     return true;
                 }
@@ -193,6 +245,218 @@ class SystemJobsIntegrationTest {
             } finally {
                 connection.rollback();
             }
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void interactiveCancellationWinsBeforeExpiryLocksResources(boolean cancelApplication)
+            throws Exception {
+        var jwt = adminJwt();
+        var manualBackend = new CompletableFuture<Integer>();
+        var jobBackend = new CompletableFuture<Integer>();
+        var allowManual = new CountDownLatch(1);
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var manual =
+                    pool.submit(
+                            () ->
+                                    asAdmin(
+                                            jwt,
+                                            () ->
+                                                    new TransactionTemplate(transactionManager)
+                                                            .execute(
+                                                                    transaction -> {
+                                                                        jdbc.queryForObject(
+                                                                                "SELECT id FROM room_application"
+                                                                                        + " WHERE id=? FOR UPDATE",
+                                                                                Long.class,
+                                                                                application);
+                                                                        manualBackend.complete(backendPid());
+                                                                        awaitLatch(allowManual);
+                                                                        return cancelOrRelease(cancelApplication);
+                                                                    })));
+            int manualPid = manualBackend.get(10, TimeUnit.SECONDS);
+            var job =
+                    pool.submit(
+                            () ->
+                                    jobs.run(
+                                            SystemJob.CANCEL_PENDING,
+                                            () -> List.of(contract),
+                                            id -> {
+                                                jobBackend.complete(backendPid());
+                                                return contracts.cancelExpiredPending(id);
+                                            }));
+            int jobPid = jobBackend.get(10, TimeUnit.SECONDS);
+            awaitBlockedBy(jobPid, manualPid);
+            assertWaitingOnApplication(jobPid);
+            assertThat(
+                            isLockBlocked(
+                                    "SELECT id FROM room_application WHERE id=? FOR UPDATE NOWAIT",
+                                    application))
+                    .isTrue();
+            assertThat(isLockBlocked("SELECT id FROM bed WHERE id=? FOR UPDATE NOWAIT", bed))
+                    .isFalse();
+            assertThat(
+                            isLockBlocked(
+                                    "SELECT user_id FROM student_profile WHERE user_id=? FOR UPDATE NOWAIT",
+                                    student))
+                    .isFalse();
+            assertThat(
+                            isLockBlocked(
+                                    "SELECT id FROM dormitory_contract WHERE id=? FOR UPDATE NOWAIT",
+                                    contract))
+                    .isFalse();
+            assertThat(historyCount(EntityType.APPLICATION, application)).isZero();
+            assertThat(historyCount(EntityType.CONTRACT, contract)).isZero();
+            allowManual.countDown();
+            assertThat(manual.get(15, TimeUnit.SECONDS).status())
+                    .isEqualTo(
+                            cancelApplication ? ApplicationStatus.CANCELLED : ApplicationStatus.APPROVED);
+            assertThat(job.get(15, TimeUnit.SECONDS))
+                    .isEqualTo(new SystemJobService.RunResult(0, 1, 0));
+            assertCancellationOutcome(false, cancelApplication);
+        } finally {
+            allowManual.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void expiryWinsBeforeInteractiveCancellation(boolean cancelApplication) throws Exception {
+        var jwt = adminJwt();
+        var manualBackend = new CompletableFuture<Integer>();
+        var jobBackend = new CompletableFuture<Integer>();
+        var allowJobCommit = new CountDownLatch(1);
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var job =
+                    pool.submit(
+                            () ->
+                                    jobs.run(
+                                            SystemJob.CANCEL_PENDING,
+                                            () -> List.of(contract),
+                                            id -> {
+                                                var change = contracts.cancelExpiredPending(id);
+                                                jobBackend.complete(backendPid());
+                                                awaitLatch(allowJobCommit);
+                                                return change;
+                                            }));
+            int jobPid = jobBackend.get(10, TimeUnit.SECONDS);
+            var manual =
+                    pool.submit(
+                            () ->
+                                    asAdmin(
+                                            jwt,
+                                            () ->
+                                                    new TransactionTemplate(transactionManager)
+                                                            .execute(
+                                                                    transaction -> {
+                                                                        manualBackend.complete(backendPid());
+                                                                        return cancelOrRelease(cancelApplication);
+                                                                    })));
+            int manualPid = manualBackend.get(10, TimeUnit.SECONDS);
+            awaitBlockedBy(manualPid, jobPid);
+            assertWaitingOnApplication(manualPid);
+            allowJobCommit.countDown();
+            assertThat(job.get(15, TimeUnit.SECONDS))
+                    .isEqualTo(new SystemJobService.RunResult(1, 0, 0));
+            assertThatThrownBy(() -> manual.get(15, TimeUnit.SECONDS))
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(BusinessException.class)
+                    .satisfies(
+                            error ->
+                                    assertThat(((BusinessException) error.getCause()).getErrorCode())
+                                            .isEqualTo(ErrorCode.INVALID_STATE_TRANSITION));
+            assertCancellationOutcome(true, cancelApplication);
+        } finally {
+            allowJobCommit.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void rechecksContractAfterWaitingForBed(boolean activateContract) throws Exception {
+        var holderBackend = new CompletableFuture<Integer>();
+        var jobBackend = new CompletableFuture<Integer>();
+        var allowChange = new CountDownLatch(1);
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var holder =
+                    pool.submit(
+                            () ->
+                                    new TransactionTemplate(transactionManager)
+                                            .executeWithoutResult(
+                                                    transaction -> {
+                                                        jdbc.queryForObject(
+                                                                "SELECT id FROM bed WHERE id=? FOR UPDATE",
+                                                                Long.class,
+                                                                bed);
+                                                        holderBackend.complete(backendPid());
+                                                        awaitLatch(allowChange);
+                                                        if (activateContract) {
+                                                            activate();
+                                                        } else {
+                                                            jdbc.update(
+                                                                    "UPDATE dormitory_contract SET"
+                                                                            + " activation_deadline=CURRENT_TIMESTAMP"
+                                                                            + "+INTERVAL '1 day' WHERE id=?",
+                                                                    contract);
+                                                        }
+                                                    }));
+            int holderPid = holderBackend.get(10, TimeUnit.SECONDS);
+            var job =
+                    pool.submit(
+                            () ->
+                                    jobs.run(
+                                            SystemJob.CANCEL_PENDING,
+                                            () -> List.of(contract),
+                                            id -> {
+                                                jobBackend.complete(backendPid());
+                                                return contracts.cancelExpiredPending(id);
+                                            }));
+            int jobPid = jobBackend.get(10, TimeUnit.SECONDS);
+            awaitBlockedBy(jobPid, holderPid);
+            assertThat(
+                            isLockBlocked(
+                                    "SELECT id FROM room_application WHERE id=? FOR UPDATE NOWAIT",
+                                    application))
+                    .isTrue();
+            assertThat(
+                            isLockBlocked(
+                                    "SELECT user_id FROM student_profile WHERE user_id=? FOR UPDATE NOWAIT",
+                                    student))
+                    .isFalse();
+            assertThat(
+                            isLockBlocked(
+                                    "SELECT id FROM dormitory_contract WHERE id=? FOR UPDATE NOWAIT",
+                                    contract))
+                    .isFalse();
+            allowChange.countDown();
+            holder.get(15, TimeUnit.SECONDS);
+            assertThat(job.get(15, TimeUnit.SECONDS))
+                    .isEqualTo(new SystemJobService.RunResult(0, 1, 0));
+            assertThat(contractStatus())
+                    .isEqualTo(activateContract ? ContractStatus.ACTIVE : ContractStatus.PENDING);
+            assertThat(applicationStatus()).isEqualTo(ApplicationStatus.ASSIGNED);
+            assertThat(
+                            jdbc.queryForObject(
+                                    "SELECT kind FROM room_assignment_history WHERE contract_id=?"
+                                            + " AND ended_at IS NULL",
+                                    String.class,
+                                    contract))
+                    .isEqualTo(activateContract ? AssignmentKind.STAY : AssignmentKind.HOLD);
+            assertThat(historyCount(EntityType.APPLICATION, application)).isZero();
+            assertThat(historyCount(EntityType.CONTRACT, contract)).isZero();
+            assertThat(auditCount(AuditAction.CONTRACT_AUTO_CANCEL, EntityType.CONTRACT, contract, null))
+                    .isZero();
+            assertThat(auditCount(AuditAction.APPLICATION_AUTO_CANCEL, EntityType.APPLICATION, application, null))
+                    .isZero();
+        } finally {
+            allowChange.countDown();
+            pool.shutdownNow();
         }
     }
 
@@ -298,6 +562,11 @@ class SystemJobsIntegrationTest {
                                 Long.class,
                                 contract))
                 .isZero();
+        assertThat(applicationStatus()).isEqualTo(ApplicationStatus.SUBMITTED);
+        assertThat(historyCount(EntityType.APPLICATION, application)).isZero();
+        assertThat(historyCount(EntityType.CONTRACT, contract)).isZero();
+        assertAudit(AuditAction.APPLICATION_AUTO_CANCEL, EntityType.APPLICATION, application, null, 0);
+        assertAudit(AuditAction.CONTRACT_AUTO_CANCEL, EntityType.CONTRACT, contract, null, 0);
     }
 
     @Test
@@ -342,6 +611,187 @@ class SystemJobsIntegrationTest {
             MDC.remove("requestId");
             SecurityContextHolder.clearContext();
         }
+    }
+
+    private Jwt adminJwt() {
+        String subject = "job-admin-" + suffix;
+        jdbc.update("UPDATE app_user SET keycloak_user_id=? WHERE id=?", subject, actor);
+        Long version =
+                jdbc.queryForObject(
+                        "SELECT security_version FROM app_user WHERE id=?", Long.class, actor);
+        return Jwt.withTokenValue("test-token")
+                .header("alg", "none")
+                .subject(subject)
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(3600))
+                .claim(KeycloakClaim.REALM_ACCESS, Map.of(KeycloakClaim.ROLES, List.of(Role.ADMIN)))
+                .claim(KeycloakClaim.SECURITY_VERSION, version)
+                .build();
+    }
+
+    private <T> T asAdmin(Jwt jwt, Supplier<T> operation) {
+        SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt));
+        try {
+            return operation.get();
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    private Response cancelOrRelease(boolean cancelApplication) {
+        return cancelApplication
+                ? applications.performApplicationAction(application, BusinessAction.CANCEL, null)
+                : applications.releaseHold(application, RELEASE_REASON);
+    }
+
+    private int backendPid() {
+        return jdbc.queryForObject("SELECT pg_backend_pid()", Integer.class);
+    }
+
+    private void awaitBlockedBy(int waitingPid, int blockerPid) {
+        await().atMost(10, TimeUnit.SECONDS)
+                .until(
+                        () ->
+                                Boolean.TRUE.equals(
+                                        jdbc.queryForObject(
+                                                "SELECT ? = ANY(pg_blocking_pids(?))",
+                                                Boolean.class,
+                                                blockerPid,
+                                                waitingPid)));
+    }
+
+    private void assertWaitingOnApplication(int pid) {
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT query FROM pg_stat_activity WHERE pid=?", String.class, pid))
+                .contains("room_application")
+                .contains("FOR UPDATE");
+    }
+
+    private void awaitLatch(CountDownLatch latch) {
+        try {
+            if (!latch.await(15, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Timed out waiting for concurrent transaction");
+            }
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(error);
+        }
+    }
+
+    private String applicationStatus() {
+        return jdbc.queryForObject(
+                "SELECT status FROM room_application WHERE id=?", String.class, application);
+    }
+
+    private String contractStatus() {
+        return jdbc.queryForObject(
+                "SELECT status FROM dormitory_contract WHERE id=?", String.class, contract);
+    }
+
+    private long count(String sql, Object... args) {
+        return jdbc.queryForObject(sql, Long.class, args);
+    }
+
+    private long historyCount(String type, Long id) {
+        return count(
+                "SELECT count(*) FROM status_history WHERE entity_type=? AND entity_id=?", type, id);
+    }
+
+    private long auditCount(String action, String type, Long id, Long actorId) {
+        return count(
+                "SELECT count(*) FROM audit_log WHERE action=? AND entity_type=? AND entity_id=?"
+                        + " AND actor_id IS NOT DISTINCT FROM ?",
+                action,
+                type,
+                id,
+                actorId);
+    }
+
+    private void assertAudit(String action, String type, Long id, Long actorId, int expected) {
+        assertThat(
+                        count(
+                                "SELECT count(*) FROM audit_log WHERE action=? AND entity_type=?"
+                                        + " AND entity_id=?",
+                                action,
+                                type,
+                                id))
+                .isEqualTo(expected);
+        assertThat(auditCount(action, type, id, actorId)).isEqualTo(expected);
+    }
+
+    private void assertTransition(
+            String type, Long id, String before, String after, Long actorId) {
+        assertThat(historyCount(type, id)).isEqualTo(1);
+        assertThat(
+                        count(
+                                "SELECT count(*) FROM status_history WHERE entity_type=? AND entity_id=?"
+                                        + " AND from_status=? AND to_status=?"
+                                        + " AND actor_id IS NOT DISTINCT FROM ?",
+                                type,
+                                id,
+                                before,
+                                after,
+                                actorId))
+                .isEqualTo(1);
+    }
+
+    private void assertCancellationOutcome(boolean automatic, boolean cancelApplication) {
+        Long expectedActor = automatic ? null : actor;
+        String expectedApplication =
+                automatic || cancelApplication
+                        ? ApplicationStatus.CANCELLED
+                        : ApplicationStatus.APPROVED;
+        assertThat(applicationStatus()).isEqualTo(expectedApplication);
+        assertThat(contractStatus()).isEqualTo(ContractStatus.CANCELLED);
+        assertThat(count("SELECT count(*) FROM room_assignment_history WHERE contract_id=?", contract))
+                .isEqualTo(1);
+        assertThat(
+                        count(
+                                "SELECT count(*) FROM room_assignment_history WHERE contract_id=?"
+                                        + " AND ended_at IS NULL",
+                                contract))
+                .isZero();
+        var assignment =
+                jdbc.queryForMap(
+                        "SELECT id,kind,end_reason,ended_at FROM room_assignment_history WHERE contract_id=?",
+                        contract);
+        Long assignmentId = ((Number) assignment.get("id")).longValue();
+        assertThat(assignment.get("kind")).isEqualTo(AssignmentKind.HOLD);
+        assertThat(assignment.get("ended_at")).isNotNull();
+        assertThat(assignment.get("end_reason"))
+                .isEqualTo(
+                        automatic
+                                ? AssignmentEndReason.HOLD_EXPIRED
+                                : AssignmentEndReason.HOLD_CANCELLED);
+        assertTransition(
+                EntityType.APPLICATION,
+                application,
+                ApplicationStatus.ASSIGNED,
+                expectedApplication,
+                expectedActor);
+        assertTransition(
+                EntityType.CONTRACT,
+                contract,
+                ContractStatus.PENDING,
+                ContractStatus.CANCELLED,
+                expectedActor);
+        assertAudit(AuditAction.BED_RELEASE, EntityType.ASSIGNMENT, assignmentId, expectedActor, 1);
+        assertAudit(
+                AuditAction.CONTRACT_AUTO_CANCEL, EntityType.CONTRACT, contract, null, automatic ? 1 : 0);
+        assertAudit(
+                AuditAction.APPLICATION_AUTO_CANCEL,
+                EntityType.APPLICATION,
+                application,
+                null,
+                automatic ? 1 : 0);
+        assertAudit(AuditAction.CRUD_UPDATE, EntityType.CONTRACT, contract, actor, automatic ? 0 : 1);
+        assertAudit(
+                AuditAction.APPLICATION_RELEASE_HOLD,
+                EntityType.APPLICATION,
+                application,
+                actor,
+                !automatic && !cancelApplication ? 1 : 0);
     }
 
     private Long ticket(String state, int days) {

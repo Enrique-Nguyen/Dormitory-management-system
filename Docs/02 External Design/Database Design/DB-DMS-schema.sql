@@ -1,10 +1,10 @@
 -- =====================================================================
 -- DMS - Hệ thống quản lý ký túc xá sinh viên
--- Lược đồ nghiệp vụ, bản 0.6 (15/10/2026): Keycloak và ma trận quyền động
+-- Lược đồ nghiệp vụ, bản 0.7 (31/10/2026): Keycloak, ma trận quyền động, sở thích tài khoản
 -- DBMS: PostgreSQL 16
--- Căn cứ: SRS-DMS.md v0.10. Giải thích chi tiết: DB-Design-DMS.md v0.6
--- Đây là snapshot bảng nghiệp vụ hiện tại, gồm bổ sung của migration V3–V7.
--- Ứng dụng nâng cấp bằng Flyway V1–V7; V2 tạo bảng Spring Session riêng.
+-- Căn cứ: SRS-DMS.md v0.14. Giải thích chi tiết: DB-Design-DMS.md v0.12
+-- Đây là snapshot bảng nghiệp vụ hiện tại, gồm bổ sung của migration V3–V8.
+-- Ứng dụng nâng cấp bằng Flyway V1–V8; V2 tạo bảng Spring Session riêng.
 --
 -- Quy ước:
 --   * Tên bảng, cột: snake_case, số ít.
@@ -939,3 +939,26 @@ INSERT INTO role_permission_matrix(role, permissions) VALUES
     "ROOM_TYPE_READ",
     "SEMESTER_READ"
 ]'::jsonb);
+
+-- ---------------------------------------------------------------------
+-- 11. Sở thích giao diện theo tài khoản (Flyway V8)
+-- ---------------------------------------------------------------------
+
+CREATE TABLE user_preference (
+    user_id       BIGINT PRIMARY KEY REFERENCES app_user(id),
+    theme_mode    VARCHAR(10) NOT NULL DEFAULT 'light'
+                  CONSTRAINT ck_user_preference_theme_mode
+                  CHECK (theme_mode IN ('light', 'dark')),
+    theme_preset  VARCHAR(20) NOT NULL DEFAULT 'blue'
+                  CONSTRAINT ck_user_preference_theme_preset
+                  CHECK (theme_preset IN ('blue', 'indigo', 'teal', 'emerald', 'violet', 'amber')),
+    table_dense   BOOLEAN NOT NULL DEFAULT FALSE,
+    version       BIGINT NOT NULL DEFAULT 0
+                  CONSTRAINT ck_user_preference_version CHECK (version >= 0),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE user_preference IS
+    'Sở thích giao diện của từng tài khoản; module account ghi, không xóa cứng khi tài khoản còn';
+COMMENT ON COLUMN user_preference.version IS
+    'Phiên bản chống ghi đè; tăng 1 sau mỗi lần lưu, không phải security_version của tài khoản';

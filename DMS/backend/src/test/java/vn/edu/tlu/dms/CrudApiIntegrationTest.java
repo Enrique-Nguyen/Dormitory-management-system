@@ -41,8 +41,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.domain.AppUser;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.MeterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -2628,6 +2632,120 @@ class CrudApiIntegrationTest {
                                         mapper.writeValueAsString(
                                                 Map.of("id", id, "roomId", otherRoomId))))
                 .andExpect(status().isBadRequest());
+    }
+
+    /** Kỳ đầu được nhập mốc, các kỳ sau phải nối tiếp và không vượt phạm vi đơn vị. */
+    @Test
+    void readingCreationRequiresConsecutiveMonthsAndPreservesMeterReplacement() throws Exception {
+        var reading = mapper.createObjectNode();
+        reading.put("roomId", firstRoomId);
+        reading.put("meterType", "ELECTRIC");
+        reading.put("billingMonth", "2026-01-01");
+        reading.put("startReading", 100);
+        reading.put("endReading", 120);
+        mvc.perform(post("/api/utility-readings/save-or-update")
+                        .with(asUser(staffId, Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(reading)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.startReading").value(100));
+
+        Long auditCount = jdbc.queryForObject(
+                "SELECT count(*) FROM audit_log WHERE action=?", Long.class,
+                AuditAction.READING_CREATE);
+        reading.put("billingMonth", "2026-03-01");
+        reading.put("endReading", 150);
+        mvc.perform(post("/api/utility-readings/save-or-update")
+                        .with(asUser(staffId, Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(reading)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value(ErrorCode.VALIDATION_FAILED))
+                .andExpect(jsonPath("$.details.fieldErrors[0].message")
+                        .value(ValidationMessage.READING_PREVIOUS_MONTH_REQUIRED));
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM utility_reading WHERE room_id=? AND meter_type=?",
+                        Long.class, firstRoomId, "ELECTRIC"))
+                .isEqualTo(1);
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM audit_log WHERE action=?", Long.class,
+                        AuditAction.READING_CREATE))
+                .isEqualTo(auditCount);
+
+        mvc.perform(post("/api/utility-readings/save-or-update")
+                        .with(asUser(otherStaffId, Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(reading)))
+                .andExpect(status().isNotFound());
+        reading.put("billingMonth", "2026-02-01");
+        reading.put("oldMeterFinal", 130);
+        reading.put("newMeterStart", 0);
+        reading.put("replacementReason", "Thay đồng hồ");
+        reading.put("endReading", 20);
+        mvc.perform(post("/api/utility-readings/save-or-update")
+                        .with(asUser(staffId, Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(reading)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.startReading").value(120))
+                .andExpect(jsonPath("$.consumption").value(30));
+        reading.put("billingMonth", "2026-03-01");
+        reading.remove(List.of("oldMeterFinal", "newMeterStart", "replacementReason"));
+        reading.put("endReading", 30);
+        mvc.perform(post("/api/utility-readings/save-or-update")
+                        .with(asUser(staffId, Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(reading)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.startReading").value(20));
+    }
+
+    /** Kỳ đã tồn tại trong dữ liệu có khoảng trống vẫn trả lỗi trùng như trước. */
+    @Test
+    void duplicateReadingAfterHistoricalGapKeepsDuplicateConflict() throws Exception {
+        jdbc.update(
+                "INSERT INTO utility_reading(room_id,meter_type,billing_month,start_reading,end_reading,recorded_by)"
+                        + " VALUES (?,?,'2026-01-01',100,120,?),(?,?,'2026-03-01',120,150,?)",
+                firstRoomId,
+                MeterType.ELECTRIC,
+                staffId,
+                firstRoomId,
+                MeterType.ELECTRIC,
+                staffId);
+        var reading = mapper.createObjectNode();
+        reading.put("roomId", firstRoomId);
+        reading.put("meterType", MeterType.ELECTRIC);
+        reading.put("billingMonth", "2026-03-01");
+        reading.put("startReading", 120);
+        reading.put("endReading", 150);
+
+        mvc.perform(post("/api/utility-readings/save-or-update")
+                        .with(asUser(staffId, Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(reading)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value(ErrorCode.READING_INVALID));
+    }
+
+    /** Dữ liệu lịch sử có khoảng trống vẫn được sửa hoặc xóa kỳ cuối. */
+    @Test
+    void existingReadingAfterGapRemainsEditableAndDeletable() throws Exception {
+        jdbc.update(
+                "INSERT INTO utility_reading(room_id,meter_type,billing_month,start_reading,end_reading,recorded_by)"
+                        + " VALUES (?,?,'2026-01-01',100,120,?)",
+                firstRoomId, "ELECTRIC", staffId);
+        Long id = jdbc.queryForObject(
+                "INSERT INTO utility_reading(room_id,meter_type,billing_month,start_reading,end_reading,recorded_by)"
+                        + " VALUES (?,?,'2026-03-01',120,150,?) RETURNING id",
+                Long.class, firstRoomId, "ELECTRIC", staffId);
+        mvc.perform(post("/api/utility-readings/save-or-update")
+                        .with(asUser(staffId, Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(Map.of("id", id, "endReading", 160))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.endReading").value(160));
+        mvc.perform(delete("/api/utility-readings/" + id).with(asUser(staffId, Role.STAFF)))
+                .andExpect(status().isNoContent());
     }
 
     private void grantStaffPermissions(String... permissions) throws Exception {

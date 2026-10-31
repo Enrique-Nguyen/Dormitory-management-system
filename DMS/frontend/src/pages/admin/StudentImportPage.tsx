@@ -8,7 +8,7 @@ export default function StudentImportPage() {
   return (
     <>
       <PageHeader title={labels.title} />
-      <Tabs destroyOnHidden items={[
+      <Tabs items={[
         { key: 'import', label: labels.tab, children: <StudentImportPanel /> },
         { key: 'profiles', label: labels.profiles, children: <CrudPage resource="adminStudents" /> },
       ]} />

@@ -66,6 +66,8 @@ export interface ExtensionDetailPageProps {
   /** Cổng đang xem; Admin dùng lại màn Staff với role ADMIN. */
   role?: Role
   extensionId?: number
+  embedded?: boolean
+  readOnly?: boolean
 }
 
 /**
@@ -75,15 +77,11 @@ export interface ExtensionDetailPageProps {
 export default function ExtensionDetailPage({
   role,
   extensionId,
+  embedded = false,
+  readOnly = false,
 }: ExtensionDetailPageProps = {}) {
   const params = useParams()
-  const routeId = Number(params.id ?? params.extensionId)
-  const id =
-    extensionId != null && Number.isSafeInteger(extensionId) && extensionId > 0
-      ? extensionId
-      : Number.isSafeInteger(routeId) && routeId > 0
-        ? routeId
-        : 0
+  const id = extensionId ?? Number(params.id ?? params.extensionId)
   const { data: me } = useMe()
   const navigate = useNavigate()
   const portalRole = usePortalRole()
@@ -106,19 +104,21 @@ export default function ExtensionDetailPage({
       <>
         <PageHeader
           title="Không tìm thấy yêu cầu gia hạn"
-          breadcrumb={[{ label: 'Yêu cầu chờ xử lý', to: listPath }]}
+          breadcrumb={embedded ? undefined : [{ label: 'Yêu cầu chờ xử lý', to: listPath }]}
         />
         <EmptyState
           title="Không tìm thấy yêu cầu gia hạn"
           description={
-            id > 0
+            Number.isSafeInteger(id) && id > 0
               ? errorMessage(request.error)
               : 'Đường dẫn yêu cầu không hợp lệ.'
           }
           action={
-            <Button type="primary" onClick={() => navigate(listPath)}>
-              Quay lại danh sách
-            </Button>
+            !embedded && (
+              <Button type="primary" onClick={() => navigate(listPath)}>
+                Quay lại danh sách
+              </Button>
+            )
           }
         />
       </>
@@ -160,6 +160,7 @@ export default function ExtensionDetailPage({
 
   const actions: Record<string, ActionDef> = {}
   if (
+    !readOnly &&
     !studentOnly &&
     hasPermission(me, Permission.CONTRACT_EXTENSION_UPDATE)
   ) {
@@ -175,7 +176,7 @@ export default function ExtensionDetailPage({
       onAction: () => setReviewMode('reject'),
     }
   }
-  if (hasPermission(me, Permission.CONTRACT_EXTENSION_DELETE)) {
+  if (!readOnly && hasPermission(me, Permission.CONTRACT_EXTENSION_DELETE)) {
     actions[ExtensionAction.CANCEL] = {
       label: 'Hủy yêu cầu',
       danger: true,
@@ -206,16 +207,16 @@ export default function ExtensionDetailPage({
               ? `Sinh viên #${student.studentId}`
               : undefined
         }
-        breadcrumb={[
+        breadcrumb={embedded ? undefined : [
           { label: 'Yêu cầu chờ xử lý', to: listPath },
           { label: `Gia hạn #${detail.id}` },
         ]}
-        extra={
+        extra={(!embedded || !readOnly) && (
           <Flex gap={8} wrap justify="flex-end">
-            <Button onClick={() => navigate(listPath)}>Danh sách</Button>
-            <ActionBar allowedActions={allowedActions} actions={actions} />
+            {!embedded && <Button onClick={() => navigate(listPath)}>Danh sách</Button>}
+            {!readOnly && <ActionBar allowedActions={allowedActions} actions={actions} />}
           </Flex>
-        }
+        )}
       />
 
       {pending && (
@@ -259,12 +260,12 @@ export default function ExtensionDetailPage({
                 key: 'contract',
                 label: 'Hợp đồng',
                 children:
-                  contractPath && detail.contractCode ? (
-                    <Link to={contractPath}>{detail.contractCode}</Link>
-                  ) : contractPath ? (
-                    <Link to={contractPath}>Hợp đồng #{contractId}</Link>
+                  !embedded && contractPath ? (
+                    <Link to={contractPath}>
+                      {detail.contractCode ?? `Hợp đồng #${contractId}`}
+                    </Link>
                   ) : (
-                    (detail.contractCode ?? '—')
+                    detail.contractCode ?? (contractId != null ? `Hợp đồng #${contractId}` : '—')
                   ),
               },
               {
@@ -333,7 +334,7 @@ export default function ExtensionDetailPage({
         </Card>
       </div>
 
-      {reviewMode && (
+      {!readOnly && reviewMode && hasPermission(me, Permission.CONTRACT_EXTENSION_UPDATE) && allowedActions.includes(reviewMode === 'approve' ? ExtensionAction.APPROVE : ExtensionAction.REJECT) && (
         <ExtensionReviewModal
           open
           detail={detail}

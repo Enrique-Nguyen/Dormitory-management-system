@@ -1,14 +1,15 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.11**, 28/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.12**, 31/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.11 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
-> DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak, ma trận quyền động V5, quyền V6 và ghi chú xác minh diện ưu tiên V7; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
+> DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak, ma trận quyền động V5, quyền V6, ghi chú xác minh diện ưu tiên V7 và sở thích giao diện V8; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
 
 ### Lịch sử thay đổi
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.12 | 31/10/2026 | Flyway V8 thêm bảng `user_preference` (1-1 với `app_user`) lưu sở thích giao diện theo tài khoản: theme mode, accent preset, mật độ bảng, version chống ghi đè; chủ sở hữu lấy từ `/api/me`, không nhận ID từ client. |
 | 0.1 | 10/10/2026 | Bản đầu tiên: ERD, DDL PostgreSQL 16, partial unique index, ánh xạ lỗi, JPA notes |
 | 0.2 | 10/10/2026 | Chốt Q-DB-01..10, bổ sung sequence và fn_next_code |
 | 0.3 | 13/10/2026 | Bổ sung V2 bảng Spring Session |
@@ -36,7 +37,7 @@ DB và Keycloak không có transaction phân tán; rollback dùng thao tác bù,
 | Hạng mục | Lựa chọn | Ghi chú |
 |---|---|---|
 | DBMS | **PostgreSQL 16** | Theo SRS mục 2.5. Cần partial unique index, `EXCLUDE`, `JSONB`, generated column |
-| Migration | Flyway V1 tạo nghiệp vụ, V2 Spring Session, V3 `security_version`, V4 Keycloak, V5 ma trận quyền, V6 cấp `ROOM_TRANSFER_APPROVE` cho STAFF, V7 thêm `application_priority.note` | Giữ nguyên V1–V6; snapshot SQL hiện tại không dùng để nâng cấp CSDL đã chạy. Hibernate `ddl-auto: validate` |
+| Migration | Flyway V1 tạo nghiệp vụ, V2 Spring Session, V3 `security_version`, V4 Keycloak, V5 ma trận quyền, V6 cấp `ROOM_TRANSFER_APPROVE` cho STAFF, V7 thêm `application_priority.note`, V8 thêm `user_preference` | Giữ nguyên V1–V7; snapshot SQL hiện tại không dùng để nâng cấp CSDL đã chạy. Hibernate `ddl-auto: validate` |
 | Đặt tên | `snake_case`, số ít (`room`, `bed`) | `app_user` thay cho `user` vì `user` là từ khóa |
 | Khóa chính | `BIGINT GENERATED ALWAYS AS IDENTITY` | Mã hiển thị (HD-2026-0012, TK-1024) là cột `code` riêng, `UNIQUE` |
 | Mã hiển thị | Sequence riêng mỗi loại + hàm `fn_next_code` | Xem Q-DB-10 |
@@ -164,7 +165,10 @@ erDiagram
 | `management_unit` | Đơn vị quản lý: K1; N2 + N3 | `code` duy nhất | BR-07 |
 | `app_user` | Tài khoản mọi vai trò | Staff, KTV bắt buộc có đơn vị; Student, Admin không có. `cross_unit_access` chỉ cho Staff; `security_version >= 0` | FR-ACC-01..08 |
 | `student_profile` | Hồ sơ sinh viên, 1-1 với `app_user` | Mọi bảng nghiệp vụ tham chiếu sinh viên qua đây (Q-DB-03) | FR-ACC-04, 05 |
+| `user_preference` | Sở thích giao diện của tài khoản: theme mode, accent preset, mật độ bảng | 1-1 với `app_user` qua PK/FK `user_id`; CHECK mode/preset; `version >= 0`; `updated_at TIMESTAMPTZ` | DMS-PREF-01 |
 | `system_config` | Tham số cấu hình: 7 ngày kích hoạt, 15 ngày sắp hết hạn, 3 ngày tự đóng… | Khóa dạng `contract.activation_days` | SRS 2.6 |
+
+**Sở thích giao diện theo tài khoản (bản 0.12):** Flyway V8 tạo `user_preference` 1-1 với `app_user`; `user_id` vừa là khóa chính vừa là khóa ngoại nên mỗi tài khoản có tối đa một dòng. Cột `theme_mode` chỉ nhận `light`/`dark`, `theme_preset` chỉ nhận `blue`/`indigo`/`teal`/`emerald`/`violet`/`amber`; `table_dense` bắt buộc; `version BIGINT NOT NULL DEFAULT 0` chống ghi đè và `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()` (CHECK `ck_user_preference_version`). Owner là module `account`; API `/api/me/preferences` lấy chủ sở hữu từ `CurrentUser`, không nhận ID từ client. Chưa có dòng thì đọc trả mặc định `light`/`blue`/`false`/`0` mà không chèn. Service khóa dòng hiện có bằng `SELECT … FOR UPDATE` trước khi so version, lưu lần đầu thì chèn dòng với `version = 1`, mỗi lần lưu sau tăng version 1 trong cùng transaction. Không dùng `ON DELETE CASCADE`: tài khoản có nghiệp vụ được khóa chứ không xóa cứng, dòng sở thích không xóa độc lập khi chưa có quy trình lưu trữ.
 
 **Phiên bản bảo mật tài khoản (bản 0.4):** `app_user.security_version` có kiểu `BIGINT NOT NULL DEFAULT 0`, ràng buộc `ck_user_security_version CHECK (security_version >= 0)`. Flyway V3 bổ sung cột vào CSDL hiện có; snapshot SQL đưa cột trực tiếp vào `CREATE TABLE app_user`. Đây là số tăng khi thu hồi phiên, không phải cột khóa lạc quan `@Version`.
 

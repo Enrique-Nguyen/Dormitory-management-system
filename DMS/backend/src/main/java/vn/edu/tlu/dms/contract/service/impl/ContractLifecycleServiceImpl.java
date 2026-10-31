@@ -60,17 +60,21 @@ public class ContractLifecycleServiceImpl implements ContractLifecycleService {
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public Change cancelExpiredPending(Long id) {
-        var studentIds =
-                jdbc.queryForList(
-                        "SELECT student_id FROM dormitory_contract WHERE id=? AND status=?"
+        var candidates =
+                jdbc.query(
+                        "SELECT application_id,student_id FROM dormitory_contract WHERE id=? AND status=?"
                                 + " AND activation_deadline<CURRENT_TIMESTAMP",
-                        Long.class,
+                        (row, index) ->
+                                new PendingCandidate(
+                                        row.getLong("application_id"), row.getLong("student_id")),
                         id,
                         ContractStatus.PENDING);
-        if (studentIds.isEmpty()) {
+        if (candidates.isEmpty()) {
             return null;
         }
-        occupancy.lockOpenAssignment(id, studentIds.get(0));
+        var candidate = candidates.get(0);
+        events.publishEvent(new PendingContractExpired.PreLockApplication(candidate.applicationId()));
+        occupancy.lockOpenAssignment(id, candidate.studentId());
         var rows =
                 jdbc.queryForList(
                         "SELECT application_id FROM dormitory_contract WHERE id=? AND status=? AND"
@@ -148,4 +152,6 @@ public class ContractLifecycleServiceImpl implements ContractLifecycleService {
                                 today.plusDays(
                                         config.positiveInt(ConfigKey.CONTRACT_EXPIRING_DAYS)));
     }
+
+    private record PendingCandidate(Long applicationId, Long studentId) {}
 }

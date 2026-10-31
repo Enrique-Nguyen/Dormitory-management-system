@@ -4,8 +4,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Gender;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 
@@ -95,6 +97,17 @@ public final class AccountDtos {
             String cohort,
             String hometown,
             String emergencyContact) {}
+
+    /** Sở thích giao diện của chính tài khoản đang đăng nhập; version 0 khi chưa có bản ghi. */
+    public record Preference(
+            String themeMode, String themePreset, boolean tableDense, long version) {}
+
+    /** Chỉ nhận preset đã duyệt; version null khi lưu lần đầu, có version khi sửa. */
+    public record PreferenceInput(
+            @NotBlank @Pattern(regexp = DmsConstants.Preference.MODE_PATTERN) String themeMode,
+            @NotBlank @Pattern(regexp = DmsConstants.Preference.PRESET_PATTERN) String themePreset,
+            @NotNull Boolean tableDense,
+            @PositiveOrZero Long version) {}
 
     public record TemporaryPassword(Long userId, String temporaryPassword) {
         @Override

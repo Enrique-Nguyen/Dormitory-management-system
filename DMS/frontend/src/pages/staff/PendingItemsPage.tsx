@@ -1,21 +1,24 @@
 import type { TableColumnsType } from 'antd'
+import { Radio } from 'antd'
+import {
+  ClockCircleOutlined,
+  EyeOutlined,
+} from '@ant-design/icons'
 import { useState } from 'react'
-import { Link } from 'react-router'
 import {
   Alert,
   Button,
   Card,
   DataTable,
   FilterBar,
+  Modal,
   PageHeader,
   SearchInput,
   Select,
   Tag,
 } from '../../components'
-import {
-  pendingItemDetailSegments,
-  portalPath,
-} from '../../constants/navigation'
+import { pendingItemDetailSegments } from '../../constants/navigation'
+import RecordDetailContent from '../../features/crud/RecordDetailContent'
 import { pendingItemTypeLabels } from '../../constants/statusConfig'
 import { CRUD_DEFAULT_PAGE_SIZE, CRUD_PAGE_SIZES } from '../../features/crud/api'
 import {
@@ -47,14 +50,6 @@ function typeMeta(type: string | null | undefined) {
   )
 }
 
-function itemPath(role: Parameters<typeof portalPath>[0], item: PendingItem) {
-  const meta = typeMeta(item.type)
-  if (!meta.segment) return null
-  const id = pendingItemEntityId(item)
-  // Chưa có ID đối tượng thì không mở màn chi tiết; liên kết về danh sách sẽ rơi vào route lạ.
-  if (id == null) return null
-  return `${portalPath(role, `/staff/${meta.segment}`)}/${id}`
-}
 
 /**
  * Hộp "Yêu cầu chờ xử lý" (UI 22A): gom đơn đăng ký, gia hạn, chuyển phòng, lựa chọn hè và hợp
@@ -68,6 +63,12 @@ export default function PendingItemsPage() {
   const [searchText, setSearchText] = useState('')
   const [keyword, setKeyword] = useState('')
   const [type, setType] = useState<string | undefined>()
+  const [selectedItem, setSelectedItem] = useState<PendingItem | null>(null)
+  const [processing, setProcessing] = useState(false)
+  const selectedId = selectedItem ? pendingItemEntityId(selectedItem) : null
+  const selectedResource = selectedItem
+    ? typeMeta(selectedItem.type).segment
+    : ''
 
   const pendingItems = usePendingItems({
     page: page - 1,
@@ -85,34 +86,116 @@ export default function PendingItemsPage() {
 
   const columns: TableColumnsType<PendingItem> = [
     {
-      title: 'Loại',
+      title: 'Loại yêu cầu',
       key: 'type',
-      render: (_value, item) => <Tag>{typeMeta(item.type).label}</Tag>,
+      width: 190,
+      render: (_value, item) => (
+        <Tag
+          style={{
+            color: 'var(--color-primary)',
+            background: 'var(--color-primary-light)',
+            borderColor: 'var(--color-primary-border)',
+          }}
+        >
+          {typeMeta(item.type).label}
+        </Tag>
+      ),
     },
     {
       title: 'Sinh viên',
       key: 'student',
       render: (_value, item) => {
         const student = pendingItemStudent(item)
-        if (student.fullName)
-          return student.studentCode
-            ? `${student.fullName} · ${student.studentCode}`
-            : student.fullName
-        return item.studentId != null ? `Sinh viên #${item.studentId}` : '—'
+        if (student.fullName) {
+          const names = student.fullName.trim().split(' ')
+          const initial = names[names.length - 1]?.charAt(0) || student.fullName.charAt(0)
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  background: 'var(--color-primary-light, #eff6ff)',
+                  color: 'var(--color-primary, #1d4ed8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  border: '1px solid var(--color-primary-border, #bfdbfe)',
+                  flexShrink: 0,
+                }}
+              >
+                {initial}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span
+                  style={{
+                    fontWeight: 600,
+                    color: 'var(--color-heading)',
+                    fontSize: 13.5,
+                  }}
+                >
+                  {student.fullName}
+                </span>
+                {student.studentCode && (
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: 'var(--color-text-muted)',
+                      fontFamily: 'var(--font-mono, monospace)',
+                    }}
+                  >
+                    {student.studentCode}
+                  </span>
+                )}
+              </div>
+            </div>
+          )
+        }
+        return item.studentId != null ? (
+          <Tag>Sinh viên #{item.studentId}</Tag>
+        ) : (
+          '—'
+        )
       },
     },
     {
-      title: 'Gửi lúc',
+      title: 'Thời gian gửi',
       dataIndex: 'submittedAt',
-      render: (value: string | null) => formatDateTime(value),
+      width: 180,
+      render: (value: string | null) => (
+        <span
+          style={{
+            fontSize: 13,
+            color: 'var(--color-text-secondary)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <ClockCircleOutlined
+            style={{ color: 'var(--color-text-muted)', fontSize: 12 }}
+          />
+          {formatDateTime(value)}
+        </span>
+      ),
     },
     {
       title: 'Thao tác',
       key: 'actions',
-      render: (_value, item) => {
-        const path = itemPath(me?.role, item)
-        return path ? <Link to={path}>Xem chi tiết</Link> : '—'
-      },
+      width: 140,
+      render: (_value, item) =>
+        pendingItemEntityId(item) != null && typeMeta(item.type).segment ? (
+          <Button
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => { setProcessing(false); setSelectedItem(item) }}
+          >
+            Xem chi tiết
+          </Button>
+        ) : '—',
     },
   ]
 
@@ -121,17 +204,53 @@ export default function PendingItemsPage() {
       <PageHeader
         title="Yêu cầu chờ xử lý"
         subtitle="Đơn đăng ký, gia hạn, chuyển phòng, lựa chọn kỳ hè và hợp đồng chờ kích hoạt trong đơn vị."
-        extra={
-          <Button
-            onClick={() => void pendingItems.refetch()}
-            loading={pendingItems.isFetching}
-          >
-            Làm mới
-          </Button>
+        status={
+          total > 0 ? (
+            <Tag
+              color="error"
+              style={{
+                borderRadius: 12,
+                padding: '2px 10px',
+                fontSize: 12.5,
+                fontWeight: 600,
+              }}
+            >
+              {total} việc chờ
+            </Tag>
+          ) : undefined
         }
       />
 
-      <Card title="Danh sách việc chờ">
+      <Card
+        title="Danh sách việc chờ"
+        extra={
+          <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+            Tổng số: <strong>{total}</strong> yêu cầu
+          </span>
+        }
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Radio.Group
+            className="dms-pending-type-filter"
+            aria-label="Loại yêu cầu chờ xử lý"
+            value={type ?? 'ALL'}
+            onChange={(e) => {
+              const val = e.target.value === 'ALL' ? undefined : e.target.value
+              setType(val)
+              setPage(1)
+            }}
+            buttonStyle="solid"
+            size="middle"
+          >
+            <Radio.Button value="ALL">Tất cả</Radio.Button>
+            {Object.entries(TYPE_META).map(([val, meta]) => (
+              <Radio.Button key={val} value={val}>
+                {meta.label}
+              </Radio.Button>
+            ))}
+          </Radio.Group>
+        </div>
+
         <FilterBar>
           <SearchInput
             value={searchText}
@@ -194,6 +313,30 @@ export default function PendingItemsPage() {
           }}
         />
       </Card>
+      <Modal
+        open={selectedItem !== null}
+        title={processing ? 'Xử lý yêu cầu chờ' : 'Chi tiết yêu cầu chờ xử lý'}
+        width={1080}
+        onCancel={() => { setSelectedItem(null); setProcessing(false) }}
+        destroyOnHidden
+        footer={
+          <>
+            <Button onClick={() => { setSelectedItem(null); setProcessing(false) }}>Đóng</Button>
+            {!processing && (
+              <Button onClick={() => setProcessing(true)}>Xử lý nghiệp vụ</Button>
+            )}
+          </>
+        }
+      >
+        {selectedId != null && selectedResource && (
+          <RecordDetailContent
+            resource={selectedResource}
+            recordId={Number(selectedId)}
+            role={me?.role}
+            readOnly={!processing}
+          />
+        )}
+      </Modal>
     </>
   )
 }
