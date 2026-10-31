@@ -1,13 +1,15 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.18**, 30/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.13 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.9, `DMS-UI-UX-Design.md` (mục 27.2)
+> **Phiên bản 0.20**, 31/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.14 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.12, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
 ### Lịch sử thay đổi
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.20 | 31/10/2026 | DMS-PREF-01: thêm `GET /api/me/preferences` và `POST /api/me/preferences/save-or-update` lưu sở thích giao diện theo tài khoản (theme mode, accent preset, mật độ bảng); chủ sở hữu lấy từ `CurrentUser`, chưa có dòng trả mặc định không ghi CSDL, version lệch trả 409 `CONCURRENT_UPDATE`. |
+| 0.19 | 31/10/2026 | Đồng bộ SRS v0.14 / DEC-BIL-01: không tạo chỉ số điện nước cho kỳ mới khi đã có lịch sử nhưng thiếu kỳ liền trước; kỳ đầu vẫn nhập chỉ số đầu. |
 | 0.18 | 30/10/2026 | TV1: sửa đọc file import đúng cấu trúc có khoảng trắng Unicode/chữ tiếng Việt tổ hợp, mã SV kiểu số dài và dòng trống đã định dạng; giới hạn 5.000 dòng có dữ liệu, không làm tròn/đoán lại mã. Giữ nguyên endpoint, JSON và transaction |
 | 0.17 | 25/10/2026 | Sửa theo review PR #13: đồng bộ contract phát hành/Dashboard/sổ cọc; quyền ghi theo đơn vị; cấu hình hạn đóng; khóa chống phát hành trùng; thống nhất mã lỗi cọc và tra cứu PENDING. Công nợ sinh viên/phòng hiện chỉ là Service nội bộ, chưa mở REST endpoint. |
 | 0.16 | 22/10/2026 | TV5: hoàn thiện API sổ cọc (thu cọc, trừ cọc, bù cọc, hoàn cọc), tra cứu công nợ sinh viên và phòng, phát hành hóa đơn tự động (tiền phòng & điện nước), xác nhận thanh toán và tổng hợp KPI Staff Dashboard |
@@ -72,7 +74,7 @@ Phạm vi vẫn là khung CRUD và React đơn giản. Từ phiên bản 0.10, m
 - Hóa đơn: `/api/invoices/save-or-update`; tạo nhận `type`, `totalAmount`, `dueDate` và `studentId`/`semesterId` cho ROOM_FEE hoặc `roomId`/`billingMonth` cho UTILITY. Chỉ tạo UNPAID, chưa có dòng chi tiết/tự tính tiền. Sửa tổng tiền/hạn đóng; DELETE `/{id}` chỉ khi chưa có dòng/lịch sử và chưa thanh toán.
 - Sửa chữa: `/api/maintenance-requests/save-or-update`, giữ upload `multipart/form-data` với phần JSON `data` và phần `photos`. Tạo xử lý vị trí/ảnh; sửa ticket OPEN chỉ `category`, `severity`, `description`, giữ vị trí và ảnh đã có. DELETE `/{id}` chuyển CANCELLED và giữ lịch sử; action xử lý có sẵn giữ nguyên.
 - Thông báo: danh sách quản trị là `/api/notifications/published/search-by-page`, chi tiết GET `/api/notifications/published/{id}`. `/api/notifications/save-or-update` tạo/sửa thông báo thủ công của mình; sửa nội dung giữ phạm vi. DELETE `/api/notifications/{id}` giữ nguyên. Hộp thư là `/api/notifications/search-by-page`; đánh dấu đã đọc và đếm chưa đọc là endpoint chuyên biệt.
-- Hồ sơ và cấu hình chỉ sửa: GET `/api/me/profile`, POST `/api/me/profile/save-or-update`; cấu hình POST `/api/admin/configs/search-by-page`, POST `/api/admin/configs/save-or-update` với `{key,value}`, không tạo khóa mới.
+- Hồ sơ và cấu hình chỉ sửa: GET `/api/me/profile`, POST `/api/me/profile/save-or-update`; cấu hình POST `/api/admin/configs/search-by-page`, POST `/api/admin/configs/save-or-update` với `{key,value}`, không tạo khóa mới. Sở thích giao diện dùng GET `/api/me/preferences` và POST `/api/me/preferences/save-or-update` (mục 4.19), thuộc đúng tài khoản đang đăng nhập.
 - Các trang audit, tiền cọc, kho gửi đồ và phòng của tôi chỉ đọc qua `search-by-page`; `/api/me/room/search-by-page` trả trang có `content: []` nếu chưa có chỗ ở. GET `/api/contracts/{id}/deposit` vẫn là chi tiết sổ cọc. Không thêm chức năng ghi/xóa sổ tài chính, audit hay lịch sử.
 
 Tìm kiếm và tính tổng đều áp dụng phạm vi trước khi phân trang. Ghi giữ nguyên trường không gửi/null như trước; chuỗi rỗng chỉ xóa nội dung text tùy chọn nếu DTO hỗ trợ. Field ngoài danh sách cho phép trả 400. Điều kiện đang sử dụng/hết quyền sửa vẫn trả 409 như RESOURCE_IN_USE, INVALID_STATE_TRANSITION, READING_LOCKED, READING_HAS_FOLLOWING_MONTH, RATE_ALREADY_EFFECTIVE; không xóa lịch sử để vượt kiểm tra.
@@ -271,6 +273,8 @@ Các endpoint CRUD/search bên dưới theo contract 0.10. Những dòng phân g
 | POST | `/api/auth/change-password` | legacy-session | Không dùng với Keycloak; React gọi action UPDATE_PASSWORD tại Keycloak | FR-ACC-03 |
 | GET | `/api/me/profile` | \* | Hồ sơ của tôi (kèm `studentProfile` nếu là sinh viên) | FR-ACC-04 |
 | POST | `/api/me/profile/save-or-update` | \* | Sinh viên sửa `phone`, `hometown`, `emergencyContact`; cán bộ chỉ sửa `phone`; trường ngoài DTO trả 400; chỉ sửa hồ sơ người đăng nhập, không nhận ID người khác | FR-ACC-04 |
+| GET | `/api/me/preferences` | \* | Sở thích giao diện của chính người đăng nhập (mục 4.19); chưa có dòng trả `light`/`blue`/`false`/`0`, không tạo dữ liệu | DMS-PREF-01 |
+| POST | `/api/me/preferences/save-or-update` | \* | Lưu sở thích giao diện của chính người đăng nhập (mục 4.19); body không có ID người dùng, version lệch trả 409 `CONCURRENT_UPDATE` | DMS-PREF-01 |
 | POST | `/api/students/search-by-page` | St | Sinh viên trong phạm vi đơn vị (BR-07), khung hỗ trợ `q`. Bộ lọc cohort/faculty/hasActiveContract thuộc kế hoạch mở rộng | UC-14 |
 | GET | `/api/students/{id}` | St | Hồ sơ + chỗ ở hiện tại + danh sách hợp đồng | UC-14 |
 | POST | `/api/students/{id}/reset-password` | St | Sinh viên có đơn trong đợt đang mở hoặc phân phòng hiệu lực đúng đơn vị; trả mật khẩu tạm và thu hồi phiên (mục 4.1) | FR-ACC-07 |
@@ -441,7 +445,7 @@ Khung có DELETE phòng/giường chưa từng sử dụng; khi đã có lịch 
 | POST | `/api/utility-rates/save-or-update` | St | Tạo/sửa đơn giá: `{id, meterType, unitPrice, effectiveFrom}`; trùng loại/ngày trả 409 RATE_EXISTS. Chỉ sửa bản tương lai đủ điều kiện; không ghi đè giá đã hiệu lực | FR-BIL-01 |
 | POST | `/api/utility-readings/search-by-page` | St | Khung tra cứu `q`, `billingMonth` tùy chọn, có startReading/endReading và trạng thái đã lập hóa đơn; bảng nhập hàng loạt theo tòa thuộc kế hoạch MVP | FR-BIL-02 |
 | POST | `/api/utility-readings/save-or-update` | St | Lưu một bản ghi bằng ID trong body (mục 4.13); không phải import hàng loạt. Khi sửa giữ phòng/loại/kỳ | FR-BIL-02 |
-| POST | `/api/utility-readings/{id}/meter-replacement` | St | **Chưa phát hành.** Thay công tơ: `{ oldMeterFinalReading, newMeterStartReading, reason }`; hiện ghi hai bản chỉ số qua `/api/utility-readings/save-or-update` | FR-BIL-03 |
+| POST | `/api/utility-readings/{id}/meter-replacement` | St | **Chưa phát hành.** Endpoint riêng theo thiết kế dùng `{ oldMeterFinalReading, newMeterStartReading, reason }`. Hiện `save-or-update` ghi thay công tơ trong một bản chỉ số với `oldMeterFinal`, `newMeterStart`, `replacementReason` | FR-BIL-03 |
 | GET | `/api/invoices/room-fee/preview` | St | **Chưa phát hành.** `semesterId`, `buildingId?`: số sinh viên sẽ phát hành, số đã có hóa đơn, tổng tiền | FR-BIL-05, 06 |
 | POST | `/api/invoices/issue-room-fee` | St | Phát hành phí phòng theo học kỳ | FR-BIL-05, 06, 07 |
 | GET | `/api/invoices/utility/preview` | St | **Chưa phát hành.** `billingMonth`, `buildingId?`: số phòng sẽ phát hành, đã phát hành, tổng tiền; `roomsMissingReading` và `roomsWithoutLeader` dạng `[{ id, code }]` để hiện cảnh báo trước khi phát hành | FR-BIL-04, 06 |
@@ -935,9 +939,9 @@ Một transaction: chiếm giường qua `BedOccupancyService` (mở phân phòn
 ```
 
 - Một request lưu một bản ghi trong transaction. Bỏ ID để tạo, có ID để sửa; trả 200 với bản ghi sau khi lưu. Không nhận mảng `readings` theo hợp đồng nhập hàng loạt cũ.
-- `startReading` lấy từ kỳ trước khi phù hợp; kỳ đầu cần giá trị đầu. CSDL tính tiêu thụ và kiểm tra chỉ số cuối không nhỏ hơn chỉ số đầu.
+- `startReading` tự lấy từ chỉ số cuối kỳ liền trước; kỳ đầu chưa có lịch sử cần giá trị đầu. Khi đã có lịch sử mà thiếu kỳ liền trước, không tạo kỳ mới: trả `400 VALIDATION_FAILED` với lỗi trường `billingMonth`, yêu cầu nhập đủ kỳ trước. Nếu đã có kỳ sau thì quy tắc khóa kỳ sau trả lỗi xung đột trước; tạo trùng kỳ vẫn trả lỗi trùng dữ liệu. Dữ liệu lịch sử đã có khoảng trống vẫn tuân các quy tắc sửa/xóa hiện hành và có thể tiếp tục kỳ sau nếu kỳ liền trước tồn tại.
 - Khi sửa không đổi phòng, loại đồng hồ hoặc tháng nguồn. Chỉ số đã có hóa đơn trả 409 READING_LOCKED; có kỳ sau hoặc sai thay đồng hồ tiếp tục chịu kiểm tra riêng.
-- Đổi đồng hồ là hành động chuyên biệt theo thiết kế; không dùng save-or-update để xóa ràng buộc kỳ trước/kỳ sau. Luồng nhập hàng loạt là công việc bổ sung, chưa được mở chỉ vì refactor endpoint.
+- Thay đồng hồ hiện ghi trên **một bản chỉ số** qua `save-or-update`: `{ oldMeterFinal, newMeterStart, replacementReason, endReading }`. Phải có đủ ba trường thay đồng hồ; chỉ số chốt đồng hồ cũ không nhỏ hơn chỉ số đầu, chỉ số cuối đồng hồ mới không nhỏ hơn chỉ số bắt đầu mới. Vì vậy `endReading` có thể nhỏ hơn `startReading` khi thay đồng hồ hợp lệ. Endpoint thay đồng hồ chuyên biệt và nhập hàng loạt vẫn chưa phát hành.
 
 ### 4.14. Phát hành hóa đơn
 
@@ -1039,6 +1043,28 @@ GET /api/staff/dashboard?managementUnitId=1 yêu cầu DASHBOARD_READ. Staff th�
 ~~~
 
 occupiedBeds chỉ đếm STAY đang mở trên giường ACTIVE trong phòng ACTIVE. availableBeds loại cả HOLD và STAY. Tỷ lệ occupiedBeds / operationalBeds không tính giường không khai thác; maintenanceBeds là giường trong phòng bảo trì. Ngưỡng sắp hết hạn lấy contract.expiring_days qua ConfigService. Nợ phí phòng lọc theo đơn vị và học kỳ của hóa đơn, không dựa trên chỗ ở hiện tại. Dashboard ghép Service công khai của room, billing, contract và maintenance, không truy vấn trực tiếp bảng của các module đó. Biểu đồ FR-NOT-06 chưa nằm trong response hiện tại.
+
+### 4.19. Sở thích giao diện theo tài khoản
+
+GET /api/me/preferences yêu cầu `PROFILE_READ`; POST /api/me/preferences/save-or-update yêu cầu `PROFILE_UPDATE`. Chủ sở hữu luôn lấy từ `CurrentUser` phía server; body không nhận `userId`, `role` hay `permission`, gửi thêm trường lạ bị từ chối 400.
+
+~~~json
+{
+  "themeMode": "dark",
+  "themePreset": "teal",
+  "tableDense": true,
+  "version": 3
+}
+~~~
+
+| Trường | Kiểu | Bắt buộc khi lưu | Quy tắc |
+|---|---|---|---|
+| `themeMode` | string | Có | Một trong `light`, `dark` (phân biệt hoa thường) |
+| `themePreset` | string | Có | Một trong `blue`, `indigo`, `teal`, `emerald`, `violet`, `amber`; không nhận mã màu/CSS tùy ý |
+| `tableDense` | boolean | Có | `true` là bảng dày, `false` là gọn; không nhận `null` |
+| `version` | integer ≥ 0 | Không khi tạo mới; **Có khi đã có dòng** | `null`/bỏ trống chỉ hợp lệ khi tài khoản chưa có dòng; khi sửa phải gửi đúng version vừa đọc để chống ghi đè, thiếu version trả 400 `VALIDATION_FAILED` |
+
+Tài khoản chưa có dòng `user_preference`: GET trả `{ "themeMode": "light", "themePreset": "blue", "tableDense": false, "version": 0 }` và **không** chèn dòng. Lưu lần đầu (không có dòng) tạo dòng mới với `version = 1`; hai tab cùng lưu lần đầu thì CSDL chỉ cho một bên chèn, bên còn lại nhận 409 `CONCURRENT_UPDATE`. Lưu khi đã có dòng khóa dòng hiện tại, so `version` gửi lên với version đã lưu; lệch hoặc thiếu version trả 409/400 tương ứng và không ghi gì. Lưu thành công tăng version thêm 1 và cập nhật `updated_at`; response là cùng schema trên. Lỗi `themeMode`/`themePreset` ngoài danh mục hoặc thiếu `tableDense` trả 400 `VALIDATION_FAILED` kèm `fieldErrors`. Giá trị giao diện không đi qua luồng đổi role/đơn vị/khóa tài khoản và không tăng `security_version`.
 
 ---
 
