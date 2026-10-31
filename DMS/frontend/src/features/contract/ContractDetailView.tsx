@@ -25,6 +25,7 @@ import {
   PageHeader,
   PageSkeleton,
   ResponsiveTable,
+  StatusBadge,
   StatusTimeline,
   TextArea,
   stepsFromFlow,
@@ -55,6 +56,7 @@ import {
   type ContractAssignment,
   type ContractDetail,
   type ContractPendingRef,
+  type TimelineEntry,
 } from '../../services/api/contract'
 import { errorMessage } from '../../utils/errorMessages'
 import {
@@ -63,6 +65,8 @@ import {
   formatMoney,
 } from '../../utils/format'
 import { useMe } from '../account/useMe'
+import DepositLedgerModal from '../billing/DepositLedgerModal'
+import { billingUiLabels } from '../crud/resources'
 import ActivateContractModal from './ActivateContractModal'
 import {
   useContractDetail,
@@ -123,6 +127,8 @@ export interface ContractDetailViewProps {
   role?: Role
   /** Route có thể truyền thẳng ID hợp đồng. */
   contractId?: number
+  embedded?: boolean
+  readOnly?: boolean
 }
 
 interface CreateExtensionModalProps {
@@ -272,21 +278,18 @@ function CreateExtensionRequestModal({
 export default function ContractDetailView({
   role,
   contractId,
+  embedded = false,
+  readOnly = false,
 }: ContractDetailViewProps = {}) {
   const params = useParams()
-  const routeId = Number(params.id ?? params.contractId)
-  const id =
-    contractId != null && Number.isSafeInteger(contractId) && contractId > 0
-      ? contractId
-      : Number.isSafeInteger(routeId) && routeId > 0
-        ? routeId
-        : 0
+  const id = contractId ?? Number(params.id ?? params.contractId)
   const { data: me } = useMe()
   const navigate = useNavigate()
   const contractQuery = useContractDetail(id)
   const detail = contractQuery.data
   const [activateOpen, setActivateOpen] = useState(false)
   const [extensionOpen, setExtensionOpen] = useState(false)
+  const [ledgerOpen, setLedgerOpen] = useState(false)
 
   const actorRole = role ?? me?.role
   const manager = actorRole === Role.STAFF || actorRole === Role.ADMIN
@@ -302,19 +305,21 @@ export default function ContractDetailView({
       <>
         <PageHeader
           title="Không tìm thấy hợp đồng"
-          breadcrumb={[{ label: 'Hợp đồng', to: listPath }]}
+          breadcrumb={embedded ? undefined : [{ label: 'Hợp đồng', to: listPath }]}
         />
         <EmptyState
           title="Không tìm thấy hợp đồng"
           description={
-            id > 0
+            Number.isSafeInteger(id) && id > 0
               ? errorMessage(contractQuery.error)
               : 'Đường dẫn hợp đồng không hợp lệ.'
           }
           action={
-            <Button type="primary" onClick={() => navigate(listPath)}>
-              Quay lại danh sách
-            </Button>
+            !embedded && (
+              <Button type="primary" onClick={() => navigate(listPath)}>
+                Quay lại danh sách
+              </Button>
+            )
           }
         />
       </>
@@ -352,14 +357,14 @@ export default function ContractDetailView({
   )
 
   const actions: Record<string, ActionDef> = {}
-  if (manager && hasPermission(me, Permission.CONTRACT_UPDATE)) {
+  if (!readOnly && manager && hasPermission(me, Permission.CONTRACT_UPDATE)) {
     actions[ContractAction.ACTIVATE] = {
       label: 'Kích hoạt',
       icon: <CheckCircleOutlined />,
       onAction: () => setActivateOpen(true),
     }
   }
-  if (manager && hasPermission(me, Permission.MOVE_OUT_CREATE)) {
+  if (!readOnly && manager && hasPermission(me, Permission.MOVE_OUT_CREATE)) {
     actions[ContractAction.MOVE_OUT] = {
       label: 'Trả phòng',
       danger: true,
@@ -367,28 +372,28 @@ export default function ContractDetailView({
       onAction: () => navigate(`${managerBase}/${detail.id}/move-out`),
     }
   }
-  if (manager && hasPermission(me, Permission.STORAGE_CREATE)) {
+  if (!readOnly && manager && hasPermission(me, Permission.STORAGE_CREATE)) {
     actions[ContractAction.CREATE_STORAGE_RECORD] = {
       label: 'Gửi đồ',
       icon: <InboxOutlined />,
       onAction: () => navigate(`${storagePath}?contractId=${detail.id}`),
     }
   }
-  if (manager && hasPermission(me, Permission.DEPOSIT_CREATE)) {
+  if (!readOnly && manager && hasPermission(me, Permission.DEPOSIT_CREATE)) {
     actions[ContractAction.TOP_UP] = {
       label: 'Nộp bù cọc',
       icon: <WalletOutlined />,
-      onAction: () => navigate(depositPath),
+      onAction: () => embedded ? setLedgerOpen(true) : navigate(depositPath),
     }
   }
-  if (hasPermission(me, Permission.CONTRACT_EXTENSION_CREATE)) {
+  if (!readOnly && hasPermission(me, Permission.CONTRACT_EXTENSION_CREATE)) {
     actions[ContractAction.CREATE_EXTENSION_REQUEST] = {
       label: 'Yêu cầu gia hạn',
       icon: <EditOutlined />,
       onAction: () => setExtensionOpen(true),
     }
   }
-  if (!manager && hasPermission(me, Permission.ROOM_TRANSFER_CREATE)) {
+  if (!readOnly && !embedded && !manager && hasPermission(me, Permission.ROOM_TRANSFER_CREATE)) {
     actions[ContractAction.CREATE_TRANSFER_REQUEST] = {
       label: 'Yêu cầu chuyển phòng',
       icon: <SwapOutlined />,
@@ -446,9 +451,11 @@ export default function ContractDetailView({
     deposit.balance == null &&
     deposit.topUpRequired == null
   const canTopUp =
+    !readOnly &&
     manager &&
     hasPermission(me, Permission.DEPOSIT_CREATE) &&
     allowedActions.includes(ContractAction.TOP_UP)
+  const canReadLedger = hasPermission(me, Permission.DEPOSIT_READ)
 
   return (
     <>
@@ -467,16 +474,16 @@ export default function ContractDetailView({
         ]
           .filter(Boolean)
           .join(' · ')}
-        breadcrumb={[
+        breadcrumb={embedded ? undefined : [
           { label: 'Hợp đồng', to: listPath },
           { label: contractCodeOf(detail) },
         ]}
-        extra={
+        extra={(!embedded || !readOnly) && (
           <Flex gap={8} wrap justify="flex-end">
-            <Button onClick={() => navigate(listPath)}>Danh sách</Button>
-            <ActionBar allowedActions={allowedActions} actions={actions} />
+            {!embedded && <Button onClick={() => navigate(listPath)}>Danh sách</Button>}
+            {!readOnly && <ActionBar allowedActions={allowedActions} actions={actions} />}
           </Flex>
-        }
+        )}
       />
 
       {detail.status === ContractState.PENDING && (
@@ -499,11 +506,13 @@ export default function ContractDetailView({
           showIcon
           style={{ marginBottom: 16 }}
           title="Sinh viên đang gửi đồ"
-          description={
+          description={embedded ? (
+            <>Phiếu gửi đồ #{detail.openStorageRecordId}</>
+          ) : (
             <Link to={`${storagePath}?contractId=${detail.id}`}>
               Mở kho gửi đồ để xem phiếu #{detail.openStorageRecordId}
             </Link>
-          }
+          )}
         />
       )}
 
@@ -589,11 +598,18 @@ export default function ContractDetailView({
             title="Tiền cọc"
             style={{ marginTop: 16 }}
             extra={
-              canTopUp && deposit.topUpRequired != null && deposit.topUpRequired > 0 ? (
-                <Button size="small" onClick={() => navigate(depositPath)}>
-                  Nộp bù cọc
-                </Button>
-              ) : undefined
+              <Flex gap={8} wrap>
+                {canReadLedger && (
+                  <Button size="small" onClick={() => setLedgerOpen(true)}>
+                    {billingUiLabels.depositHistory}
+                  </Button>
+                )}
+                {canTopUp && deposit.topUpRequired != null && deposit.topUpRequired > 0 && (
+                  <Button size="small" onClick={() => embedded ? setLedgerOpen(true) : navigate(depositPath)}>
+                    Nộp bù cọc
+                  </Button>
+                )}
+              </Flex>
             }
           >
             {depositMissing ? (
@@ -718,9 +734,13 @@ export default function ContractDetailView({
                 {pendingRefs.map((ref) => (
                   <Flex key={`${ref.type}-${ref.id}`} gap={8} wrap>
                     <span>{PENDING_REF_LABELS[ref.type]}</span>
-                    <Link to={pendingRefPath(actorRole, ref)}>
-                      #{ref.id} — xem chi tiết
-                    </Link>
+                    {embedded ? (
+                      <span>#{ref.id}</span>
+                    ) : (
+                      <Link to={pendingRefPath(actorRole, ref)}>
+                        #{ref.id} — xem chi tiết
+                      </Link>
+                    )}
                   </Flex>
                 ))}
               </Flex>
@@ -731,6 +751,31 @@ export default function ContractDetailView({
         <div>
           <Card title="Tiến trình hợp đồng">
             <StatusTimeline steps={steps} />
+          </Card>
+
+          <Card title="Lịch sử xử lý" style={{ marginTop: 16 }}>
+            <ResponsiveTable<TimelineEntry>
+              data={timeline}
+              rowKey={(row) => `${row.at}-${row.toStatus}-${row.actorId ?? ''}`}
+              columns={[
+                {
+                  title: 'Thời điểm',
+                  dataIndex: 'at',
+                  render: (value: string) => formatDateTime(value),
+                },
+                {
+                  title: 'Trạng thái',
+                  dataIndex: 'toStatus',
+                  render: (value: string) => <StatusBadge entity="contract" status={value} />,
+                },
+                {
+                  title: 'Người thực hiện',
+                  dataIndex: 'actorId',
+                  render: (value: number | null) => value == null ? 'Hệ thống' : contractActorLabel(value),
+                },
+                { title: 'Ghi chú / lý do', dataIndex: 'reason' },
+              ]}
+            />
           </Card>
 
           <Card title="Lịch sử phân phòng" style={{ marginTop: 16 }}>
@@ -750,16 +795,31 @@ export default function ContractDetailView({
         </div>
       </div>
 
-      <ActivateContractModal
-        open={activateOpen}
-        contract={detail}
-        onClose={() => setActivateOpen(false)}
-      />
-      <CreateExtensionRequestModal
-        open={extensionOpen}
-        contract={detail}
-        onClose={() => setExtensionOpen(false)}
-      />
+      {!readOnly && actions[ContractAction.ACTIVATE] && allowedActions.includes(ContractAction.ACTIVATE) && activateOpen && (
+        <ActivateContractModal
+          open
+          contract={detail}
+          onClose={() => setActivateOpen(false)}
+        />
+      )}
+      {!readOnly && actions[ContractAction.CREATE_EXTENSION_REQUEST] && allowedActions.includes(ContractAction.CREATE_EXTENSION_REQUEST) && extensionOpen && (
+        <CreateExtensionRequestModal
+          open
+          contract={detail}
+          onClose={() => setExtensionOpen(false)}
+        />
+      )}
+      {canReadLedger && ledgerOpen && (
+        <DepositLedgerModal
+          key={readOnly ? 'read-only' : 'workflow'}
+          open
+          contractId={detail.id}
+          contractCode={contractCodeOf(detail)}
+          studentName={student.fullName ?? undefined}
+          readOnly={readOnly}
+          onClose={() => setLedgerOpen(false)}
+        />
+      )}
     </>
   )
 }

@@ -11,6 +11,8 @@ export interface CrudField {
   min?: number
   max?: number
   createOnly?: boolean
+  /** Trường bí mật chỉ nhập khi tạo, không hiển thị khi xem/sửa. */
+  sensitive?: boolean
   editOnly?: boolean
   options?: { value: string | number; label: string }[]
   lookup?: string
@@ -59,7 +61,7 @@ export interface CrudResource {
   filters?: CrudField[]
   columns: CrudColumn[]
   /** Trường chỉ hiện ở chi tiết, không được đưa vào payload thêm/sửa. */
-  detailColumns?: { key: string; label: string }[]
+  detailColumns?: CrudColumn[]
   /** Dùng dữ liệu danh sách cho form khi tài nguyên không có API chi tiết riêng. */
   useListRecordForEdit?: boolean
   note?: string

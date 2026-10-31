@@ -16,11 +16,13 @@ import {
   useConfirm,
   type LeaderCandidate,
 } from '../../components'
-import { Permission } from '../../constants/authorization'
+import { Permission, type Role } from '../../constants/authorization'
 import { portalPath, STAFF_ROOMS_PATH } from '../../constants/navigation'
 import {
+  assignmentLabel,
   assignmentOccupancy,
   BED_STATUS,
+  bedOperation,
   roomGender,
   roomOperation,
 } from '../../constants/statusConfig'
@@ -33,7 +35,7 @@ import {
   useRoomDetail,
 } from '../../features/room'
 import { hasPermission } from '../../services/api/auth'
-import type { LeaderChange, StudentRef } from '../../services/api/room'
+import type { LeaderChange, RoomBedItem, StudentRef } from '../../services/api/room'
 import { errorMessage } from '../../utils/errorMessages'
 import { formatDateTime } from '../../utils/format'
 
@@ -43,17 +45,30 @@ function studentLabel(student: StudentRef | null) {
   return student ? `${student.fullName} (${student.studentCode})` : '—'
 }
 
+export interface RoomDetailPageProps {
+  role?: Role
+  roomId?: number
+  embedded?: boolean
+  readOnly?: boolean
+}
+
 /**
  * Chi tiết phòng (UI 15): giường và người ở, trưởng phòng, cảnh báo thiếu trưởng phòng
  * (FR-ROOM-10), lịch sử đổi trưởng phòng (FR-ROOM-09) và quản lý giường.
  */
-export default function RoomDetailPage() {
-  const id = Number(useParams().id)
+export default function RoomDetailPage({
+  role,
+  roomId,
+  embedded = false,
+  readOnly = false,
+}: RoomDetailPageProps = {}) {
+  const params = useParams()
+  const id = roomId ?? Number(params.id)
   const room = useRoomDetail(id)
   const { data: me } = useMe()
-  const canUpdate = hasPermission(me, Permission.ROOM_UPDATE)
-  const roomTypes = useRoomCatalog('/room-types')
-  const buildings = useRoomCatalog('/buildings')
+  const canUpdate = !readOnly && hasPermission(me, Permission.ROOM_UPDATE)
+  const roomTypes = useRoomCatalog('/room-types', hasPermission(me, Permission.ROOM_TYPE_READ))
+  const buildings = useRoomCatalog('/buildings', hasPermission(me, Permission.BUILDING_READ))
   const assign = useAssignLeader(id)
   const remove = useRemoveLeader(id)
   const { confirm, dialog } = useConfirm()
@@ -90,10 +105,10 @@ export default function RoomDetailPage() {
         ]
           .filter(Boolean)
           .join(' · ')}
-        breadcrumb={[
+        breadcrumb={embedded ? undefined : [
           {
             label: 'Phòng & Giường',
-            to: portalPath(me?.role, STAFF_ROOMS_PATH),
+            to: portalPath(role ?? me?.role, STAFF_ROOMS_PATH),
           },
           { label: title },
         ]}
@@ -182,11 +197,34 @@ export default function RoomDetailPage() {
                       />
                     ))}
                   </div>
-                  <BedCrudPanel
-                    roomId={id}
-                    beds={detail.beds}
-                    reload={room.refetch}
-                  />
+                  {readOnly ? (
+                    <DataTable<RoomBedItem>
+                      rowKey="id"
+                      dataSource={detail.beds}
+                      pagination={false}
+                      columns={[
+                        { title: 'Mã giường', dataIndex: 'code' },
+                        {
+                          title: 'Vận hành',
+                          dataIndex: 'status',
+                          render: (value: string) => bedOperation[value]?.label ?? value,
+                        },
+                        {
+                          title: 'Người ở / giữ',
+                          key: 'occupant',
+                          render: (_value, bed) => bed.occupant
+                            ? `${bed.occupant.fullName} · ${bed.occupant.studentCode} · ${assignmentLabel(bed.occupant.kind)}`
+                            : '—',
+                        },
+                      ]}
+                    />
+                  ) : (
+                    <BedCrudPanel
+                      roomId={id}
+                      beds={detail.beds}
+                      reload={room.refetch}
+                    />
+                  )}
                 </Flex>
               ),
             },
@@ -234,16 +272,18 @@ export default function RoomDetailPage() {
           ]}
         />
       </Flex>
-      <LeaderDialog
-        roomCode={title}
-        open={leaderOpen}
-        occupants={occupants}
-        currentLeaderId={detail.leaderStudentId}
-        loading={assign.isPending}
-        onConfirm={(studentId) => assign.mutateAsync(studentId)}
-        onClose={() => setLeaderOpen(false)}
-      />
-      {dialog}
+      {canUpdate && leaderOpen && (
+        <LeaderDialog
+          roomCode={title}
+          open
+          occupants={occupants}
+          currentLeaderId={detail.leaderStudentId}
+          loading={assign.isPending}
+          onConfirm={(studentId) => assign.mutateAsync(studentId)}
+          onClose={() => setLeaderOpen(false)}
+        />
+      )}
+      {canUpdate && dialog}
     </>
   )
 }

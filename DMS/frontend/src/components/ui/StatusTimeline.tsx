@@ -40,9 +40,11 @@ export default function StatusTimeline({ steps }: { steps: TimelineStep[] }) {
             </Typography.Text>
             {step.description && <div>{step.description}</div>}
             {step.at && (
-              <Typography.Text type="secondary">
-                {formatDateTime(step.at)}
-              </Typography.Text>
+              <div>
+                <Typography.Text type="secondary">
+                  {formatDateTime(step.at)}
+                </Typography.Text>
+              </div>
             )}
             {step.reason && <div>Lý do: {step.reason}</div>}
           </div>

@@ -21,10 +21,11 @@ export const roomKeys = {
 }
 
 /** Danh mục tòa / loại phòng dùng cho bộ lọc và nhãn hiển thị. */
-export function useRoomCatalog(endpoint: '/buildings' | '/room-types') {
+export function useRoomCatalog(endpoint: '/buildings' | '/room-types', enabled = true) {
   return useQuery({
     queryKey: roomKeys.catalog(endpoint),
     queryFn: () => getLookupRecords(endpoint),
+    enabled,
     staleTime: 5 * 60 * 1000,
   })
 }

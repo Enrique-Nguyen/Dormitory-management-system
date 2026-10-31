@@ -117,6 +117,9 @@ function priorityVerifierLabel(priority: ApplicationPriority): string {
 export interface ApplicationDetailViewProps {
   /** Cổng đang xem; mặc định lấy từ /auth/me. */
   role?: Role
+  applicationId?: number
+  embedded?: boolean
+  readOnly?: boolean
 }
 
 /**
@@ -127,8 +130,12 @@ export interface ApplicationDetailViewProps {
  */
 export default function ApplicationDetailView({
   role,
+  applicationId,
+  embedded = false,
+  readOnly = false,
 }: ApplicationDetailViewProps = {}) {
-  const id = Number(useParams().id)
+  const params = useParams()
+  const id = applicationId ?? Number(params.id)
   const application = useApplicationDetail(id)
   const { data: me } = useMe()
   const actorRole = role ?? me?.role
@@ -137,8 +144,8 @@ export default function ApplicationDetailView({
 
   const detail = application.data
   const allowedActions = detail?.allowedActions ?? []
-  const canUpdate = hasPermission(me, Permission.ROOM_APPLICATION_UPDATE)
-  const canDelete = hasPermission(me, Permission.ROOM_APPLICATION_DELETE)
+  const canUpdate = !readOnly && hasPermission(me, Permission.ROOM_APPLICATION_UPDATE)
+  const canDelete = !readOnly && hasPermission(me, Permission.ROOM_APPLICATION_DELETE)
   const canAssign =
     canUpdate && allowedActions.includes(ApplicationAction.ASSIGN)
   const canVerify =
@@ -195,7 +202,7 @@ export default function ApplicationDetailView({
       <>
         <PageHeader
           title="Không tìm thấy đơn đăng ký"
-          breadcrumb={[{ label: list.label, to: list.path }]}
+          breadcrumb={embedded ? undefined : [{ label: list.label, to: list.path }]}
         />
         <EmptyState
           title="Không tìm thấy đơn đăng ký"
@@ -205,9 +212,11 @@ export default function ApplicationDetailView({
               : errorMessage(application.error)
           }
           action={
-            <Button type="primary" onClick={() => navigate(list.path)}>
-              Quay lại danh sách
-            </Button>
+            !embedded && (
+              <Button type="primary" onClick={() => navigate(list.path)}>
+                Quay lại danh sách
+              </Button>
+            )
           }
         />
       </>
@@ -499,11 +508,11 @@ export default function ApplicationDetailView({
             ? `${student.fullName} (${student.studentCode}) · ${periodName}`
             : periodName
         }
-        breadcrumb={[
+        breadcrumb={embedded ? undefined : [
           { label: list.label, to: list.path },
           { label: `#${detail.id}` },
         ]}
-        extra={
+        extra={(!embedded || !readOnly) && (
           <div
             style={{
               display: 'flex',
@@ -513,18 +522,19 @@ export default function ApplicationDetailView({
               gap: 'var(--space-2)',
             }}
           >
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate(list.path)}
-            >
-              Quay lại danh sách
-            </Button>
-            <ActionBar
-              allowedActions={allowedActions}
-              actions={actions}
-            />
+            {!embedded && (
+              <Button
+                icon={<ArrowLeftOutlined />}
+                onClick={() => navigate(list.path)}
+              >
+                Quay lại danh sách
+              </Button>
+            )}
+            {!readOnly && (
+              <ActionBar allowedActions={allowedActions} actions={actions} />
+            )}
           </div>
-        }
+        )}
       />
 
       {detail.rejectReason ? (
@@ -655,7 +665,7 @@ export default function ApplicationDetailView({
                       },
                     ]}
                   />
-                  {holdContractId ? (
+                  {holdContractId && !embedded ? (
                     <div style={{ marginTop: 'var(--space-4)' }}>
                       <Button
                         onClick={() =>
@@ -669,7 +679,7 @@ export default function ApplicationDetailView({
                 </>
               ) : (
                 <p className="dms-page-subtitle" style={{ margin: 0 }}>
-                  {actorRole === Role.STUDENT
+                  {actorRole === Role.STUDENT || readOnly
                     ? 'Đơn đã duyệt và đang chờ Ban quản lý phân giường.'
                     : 'Đơn đã duyệt nhưng chưa phân giường. Chọn giường ở bảng bên cạnh để giữ chỗ.'}
                 </p>
@@ -745,7 +755,7 @@ export default function ApplicationDetailView({
         </div>
       </div>
 
-      {verifyPriority ? (
+      {canVerify && verifyPriority ? (
         <VerifyPriorityModal
           applicationId={id}
           priority={verifyPriority}

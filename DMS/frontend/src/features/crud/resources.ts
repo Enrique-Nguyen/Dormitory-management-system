@@ -193,6 +193,24 @@ export const dashboardUiLabels = {
 } as const
 
 /** Nhãn thao tác hóa đơn, xác nhận thanh toán và sổ cọc dùng lại trên các màn hiện có. */
+export const crudDetailUiLabels = {
+  workflow: 'Xử lý nghiệp vụ',
+  collections: { items: 'Dòng hóa đơn', transactions: 'Giao dịch cọc', timeline: 'Lịch sử' },
+}
+
+/** Chỉ các metadata tham chiếu được khai báo mới được dùng làm nhãn. */
+export const crudReferenceLabels: Record<string, string[]> = {
+  contractId: ['contractCode'],
+  semesterId: ['semesterName'],
+  studentId: ['studentName', 'fullName', 'studentCode'],
+  applicationId: ['applicationCode', 'studentName'],
+  roomId: ['roomCode'],
+  buildingId: ['buildingName', 'buildingCode'],
+  managementUnitId: ['managementUnitName', 'unitName'],
+}
+
+export const crudSecretFieldNames = new Set(['password', 'temporaryPassword', 'secret', 'clientSecret', 'accessToken', 'refreshToken'])
+
 export const billingUiLabels = {
   confirmPayment: 'Xác nhận thanh toán',
   paymentTitle: 'Xác nhận thanh toán',
@@ -528,6 +546,20 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.ROOM_APPLICATION,
     title: 'Đơn đăng ký',
     endpoint: '/applications',
+    formSections: [
+      {
+        title: 'Thông tin sinh viên',
+        fields: ['studentId'],
+      },
+      {
+        title: 'Nguyện vọng phòng ở',
+        fields: ['periodId', 'preferredUnitId', 'preferredRoomTypeId'],
+      },
+      {
+        title: 'Diện ưu tiên & Ghi chú',
+        fields: ['priorityCategoryIds', 'note'],
+      },
+    ],
     fields: [
       {
         ...ref('studentId', 'Sinh viên', '/students', 'fullName'),
@@ -555,6 +587,10 @@ export const resources: Record<string, CrudResource> = {
       ['priorityScore', 'Điểm ưu tiên'],
       ['submittedAt', 'Ngày nộp'],
     ),
+    detailColumns: [
+      { key: 'priorityScore', label: 'Điểm ưu tiên' },
+      { key: 'submittedAt', label: 'Ngày nộp' },
+    ],
     editStates: [ApplicationStatus.DRAFT],
     deleteLabel: 'Hủy',
     deleteAction: ApplicationAction.CANCEL,
@@ -602,6 +638,16 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.CONTRACT,
     title: 'Hợp đồng',
     endpoint: '/contracts',
+    formSections: [
+      {
+        title: 'Thông tin sinh viên & Đơn',
+        fields: ['applicationId'],
+      },
+      {
+        title: 'Thời hạn hợp đồng',
+        fields: ['startDate', 'endDate'],
+      },
+    ],
     fields: [
       {
         ...ref(
@@ -623,6 +669,9 @@ export const resources: Record<string, CrudResource> = {
       ['endDate', 'Kết thúc'],
       ['status', 'Trạng thái'],
     ),
+    detailColumns: [
+      { key: 'depositAmount', label: 'Tiền đặt cọc', format: 'money' },
+    ],
     editStates: [ContractStatus.PENDING],
     detailRoutes: {
       [Role.STAFF]: STAFF_CONTRACTS_PATH,
@@ -649,6 +698,16 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.CONTRACT_EXTENSION,
     title: 'Yêu cầu gia hạn',
     endpoint: '/extension-requests',
+    formSections: [
+      {
+        title: 'Thông tin hợp đồng',
+        fields: ['contractId'],
+      },
+      {
+        title: 'Nội dung gia hạn',
+        fields: ['newEndDate', 'reason'],
+      },
+    ],
     fields: [
       {
         ...ref('contractId', 'Hợp đồng', '/me/contracts', 'code'),
@@ -664,6 +723,11 @@ export const resources: Record<string, CrudResource> = {
       ['reason', 'Lý do'],
       ['status', 'Trạng thái'],
     ),
+    detailColumns: [
+      { key: 'submittedAt', label: 'Thời gian gửi' },
+      { key: 'decidedAt', label: 'Thời gian quyết định' },
+      { key: 'decisionReason', label: 'Lý do quyết định' },
+    ],
     editStates: [ExtensionStatus.PENDING],
     // Sinh viên hủy yêu cầu còn PENDING bằng POST /cancel, không xóa cứng.
     deleteLabel: 'Hủy',
@@ -679,6 +743,16 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.ROOM_TRANSFER,
     title: 'Yêu cầu chuyển phòng',
     endpoint: '/transfer-requests',
+    formSections: [
+      {
+        title: 'Thông tin hợp đồng',
+        fields: ['contractId'],
+      },
+      {
+        title: 'Nội dung chuyển phòng',
+        fields: ['reason'],
+      },
+    ],
     fields: [
       {
         ...ref('contractId', 'Hợp đồng', '/me/contracts', 'code'),
@@ -692,6 +766,10 @@ export const resources: Record<string, CrudResource> = {
       ['reason', 'Lý do'],
       ['status', 'Trạng thái'],
     ),
+    detailColumns: [
+      { key: 'submittedAt', label: 'Thời gian gửi' },
+      { key: 'decidedAt', label: 'Thời gian quyết định' },
+    ],
     editStates: [StayRequestStatus.PENDING],
     // Hủy giữ lại yêu cầu và lịch sử (POST /cancel), không xóa cứng.
     deleteLabel: 'Hủy',
@@ -706,6 +784,18 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.SUMMER_REGISTRATION,
     title: 'Lựa chọn kỳ hè',
     endpoint: '/summer-choices',
+    formSections: [
+      {
+        title: 'Thông tin tham chiếu',
+        note: 'Hợp đồng và học kỳ hè đăng ký.',
+        fields: ['contractId', 'semesterId'],
+      },
+      {
+        title: 'Phương án kỳ hè',
+        note: 'Lựa chọn lưu trú hoặc tạm rời trong thời gian hè.',
+        fields: ['choice'],
+      },
+    ],
     fields: [
       {
         ...ref('contractId', 'Hợp đồng', '/me/contracts', 'code'),
@@ -720,6 +810,11 @@ export const resources: Record<string, CrudResource> = {
       ['choice', 'Lựa chọn'],
       ['status', 'Trạng thái'],
     ),
+    detailColumns: [
+      { key: 'createdAt', label: 'Thời gian gửi', format: 'datetime' },
+      { key: 'decidedAt', label: 'Thời gian quyết định' },
+      { key: 'decisionReason', label: 'Lý do quyết định' },
+    ],
     editStates: [SummerStatus.PENDING],
     detailRoutes: {
       [Role.STAFF]: STAFF_SUMMER_PATH,
