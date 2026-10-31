@@ -31,6 +31,15 @@ public class PendingContractExpiredListener {
 
     @EventListener
     @Transactional(propagation = Propagation.MANDATORY)
+    public void onPreLock(PendingContractExpired.PreLockApplication event) {
+        jdbc.queryForObject(
+                "SELECT id FROM room_application WHERE id=? FOR UPDATE",
+                Long.class,
+                event.applicationId());
+    }
+
+    @EventListener
+    @Transactional(propagation = Propagation.MANDATORY)
     public void onExpired(PendingContractExpired event) {
         String before =
                 jdbc.queryForObject(
