@@ -951,7 +951,7 @@ CREATE TABLE user_preference (
                   CHECK (theme_mode IN ('light', 'dark')),
     theme_preset  VARCHAR(20) NOT NULL DEFAULT 'blue'
                   CONSTRAINT ck_user_preference_theme_preset
-                  CHECK (theme_preset IN ('blue', 'indigo', 'teal', 'emerald', 'violet', 'amber')),
+                  CHECK (theme_preset IN ('blue', 'indigo', 'teal', 'emerald', 'violet', 'amber', 'gray', 'brown', 'pink', 'red')),
     table_dense   BOOLEAN NOT NULL DEFAULT FALSE,
     version       BIGINT NOT NULL DEFAULT 0
                   CONSTRAINT ck_user_preference_version CHECK (version >= 0),

@@ -111,6 +111,21 @@ class UserPreferenceIntegrationTest {
     }
 
     @Test
+    void savesAdditionalColorPresets() {
+        Long currentVersion = null;
+        for (String preset : List.of(
+                DmsConstants.Preference.PRESET_GRAY,
+                DmsConstants.Preference.PRESET_BROWN,
+                DmsConstants.Preference.PRESET_PINK,
+                DmsConstants.Preference.PRESET_RED)) {
+            var saved = preferences.saveOrUpdate(
+                    new PreferenceInput(DmsConstants.Preference.MODE_LIGHT, preset, false, currentVersion));
+            assertThat(preferences.preferences().themePreset()).isEqualTo(preset);
+            currentVersion = saved.version();
+        }
+    }
+
+    @Test
     void staleVersionIsRejectedAndKeepsStoredValues() {
         preferences.saveOrUpdate(
                 new PreferenceInput(

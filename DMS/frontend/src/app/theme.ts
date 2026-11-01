@@ -10,7 +10,14 @@ import { theme as antdTheme, type ThemeConfig } from 'antd'
  */
 
 export type ThemeMode = 'light' | 'dark'
-export type AccentKey = 'blue' | 'indigo' | 'teal' | 'emerald' | 'violet' | 'amber'
+export type AccentKey = 'blue' | 'indigo' | 'teal' | 'emerald' | 'violet' | 'amber' | 'gray' | 'brown' | 'pink' | 'red'
+export type ThemeStyle = 'clear' | 'modern' | 'classic'
+
+export const THEME_STYLES: Record<ThemeStyle, { label: string; description: string; radius: number }> = {
+  clear: { label: 'Đơn giản', description: 'Phẳng, tối giản', radius: 4 },
+  modern: { label: 'Hiện đại', description: 'Ánh sáng mềm, thẻ nổi', radius: 10 },
+  classic: { label: 'Cổ điển', description: 'Viền rõ, bảng kẻ dòng', radius: 4 },
+}
 
 export interface AccentMeta {
   key: AccentKey
@@ -77,6 +84,10 @@ export const ACCENT_PRESETS: Record<AccentKey, AccentMeta> = {
     light: '#fffbeb',
     border: '#fde68a',
   },
+  gray: { key: 'gray', label: 'Xám', primary: '#57534e', hover: '#44403c', active: '#292524', light: '#f5f5f4', border: '#d6d3d1' },
+  brown: { key: 'brown', label: 'Nâu', primary: '#8b573e', hover: '#754731', active: '#5c3524', light: '#f7ede8', border: '#e5c5b4' },
+  pink: { key: 'pink', label: 'Hồng', primary: '#a62f70', hover: '#87245a', active: '#6d1d49', light: '#fdf2f8', border: '#fbcfe8' },
+  red: { key: 'red', label: 'Đỏ', primary: '#b91c1c', hover: '#991b1b', active: '#7f1d1d', light: '#fef2f2', border: '#fecaca' },
 }
 
 /** Trả về bảng màu chi tiết cho CSS Variables và Ant Design dựa trên Mode & Accent. */
@@ -265,9 +276,10 @@ export function initializeTheme(mode: ThemeMode = 'light', accentKey: AccentKey 
 /**
  * Sinh cấu hình Ant Design v6 ThemeConfig động theo chế độ và màu nhấn.
  */
-export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentKey = 'blue'): ThemeConfig {
+export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentKey = 'blue', style: ThemeStyle = 'modern'): ThemeConfig {
   const isDark = mode === 'dark'
   const colors = getThemeColors(mode, accentKey)
+  const radius = THEME_STYLES[style].radius
 
   return {
     algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
@@ -306,9 +318,9 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
       colorBorder: colors.border,
       colorBorderSecondary: colors.borderLight,
       colorSplit: colors.borderLight,
-      borderRadius: 8,
-      borderRadiusLG: 12,
-      borderRadiusSM: 6,
+      borderRadius: radius,
+      borderRadiusLG: radius,
+      borderRadiusSM: radius,
       boxShadow: colors.shadowSmall,
       boxShadowSecondary: colors.shadowMedium,
       boxShadowTertiary: colors.shadowLarge,
@@ -333,7 +345,7 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
         bodyBg: colors.background,
       },
       Menu: {
-        itemBorderRadius: 6,
+        itemBorderRadius: radius,
         itemHeight: 38,
         itemMarginInline: 8,
         itemHoverBg: isDark ? '#1e293b' : 'rgba(0, 0, 0, 0.04)',
@@ -345,7 +357,7 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
       },
       Button: {
         controlHeight: 36,
-        borderRadius: 6,
+        borderRadius: radius,
         fontWeight: 500,
         boxShadow: 'none',
         primaryShadow: 'none',
@@ -357,7 +369,7 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
         defaultHoverBorderColor: colors.primary,
       },
       Card: {
-        borderRadiusLG: 10,
+        borderRadiusLG: radius,
         headerHeight: 48,
         headerFontSize: 15,
         colorBgContainer: colors.surface,
@@ -369,12 +381,12 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
         headerSplitColor: colors.borderLight,
         rowHoverBg: isDark ? '#1e293b' : '#f8fafc',
         borderColor: colors.borderLight,
-        borderRadius: 8,
+        borderRadius: radius,
         cellPaddingBlock: 10,
         cellPaddingInline: 12,
       },
       Modal: {
-        borderRadiusLG: 16,
+        borderRadiusLG: radius,
         headerBg: colors.surface,
         contentBg: colors.surface,
       },
@@ -383,13 +395,13 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
       },
       Input: {
         controlHeight: 38,
-        borderRadius: 8,
+        borderRadius: radius,
         colorBgContainer: isDark ? '#0f172a' : '#ffffff',
         colorBorder: colors.controlBorder,
       },
       Select: {
         controlHeight: 38,
-        borderRadius: 8,
+        borderRadius: radius,
       },
       Tabs: {
         horizontalItemPadding: '10px 16px',

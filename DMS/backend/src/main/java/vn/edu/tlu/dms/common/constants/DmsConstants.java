@@ -358,7 +358,7 @@ public final class DmsConstants {
         public static final String PREFERENCE_MODE_INVALID =
                 "Chế độ giao diện phải là light hoặc dark";
         public static final String PREFERENCE_PRESET_INVALID =
-                "Tông màu phải là blue, indigo, teal, emerald, violet hoặc amber";
+                "Tông màu phải là blue, indigo, teal, emerald, violet, amber, gray, brown, pink hoặc red";
         public static final String PREFERENCE_TABLE_DENSE_REQUIRED =
                 "Phải chọn mật độ bảng (dày hoặc gọn)";
         public static final String PREFERENCE_VERSION_REQUIRED =
@@ -1150,6 +1150,10 @@ public final class DmsConstants {
         public static final String PRESET_EMERALD = "emerald";
         public static final String PRESET_VIOLET = "violet";
         public static final String PRESET_AMBER = "amber";
+        public static final String PRESET_GRAY = "gray";
+        public static final String PRESET_BROWN = "brown";
+        public static final String PRESET_PINK = "pink";
+        public static final String PRESET_RED = "red";
         public static final String PRESET_PATTERN =
                 PRESET_BLUE
                         + "|"
@@ -1161,7 +1165,11 @@ public final class DmsConstants {
                         + "|"
                         + PRESET_VIOLET
                         + "|"
-                        + PRESET_AMBER;
+                        + PRESET_AMBER
+                        + "|" + PRESET_GRAY
+                        + "|" + PRESET_BROWN
+                        + "|" + PRESET_PINK
+                        + "|" + PRESET_RED;
         public static final Set<String> PRESETS =
                 Set.of(
                         PRESET_BLUE,
@@ -1169,7 +1177,11 @@ public final class DmsConstants {
                         PRESET_TEAL,
                         PRESET_EMERALD,
                         PRESET_VIOLET,
-                        PRESET_AMBER);
+                        PRESET_AMBER,
+                        PRESET_GRAY,
+                        PRESET_BROWN,
+                        PRESET_PINK,
+                        PRESET_RED);
 
         public static final String DEFAULT_MODE = MODE_LIGHT;
         public static final String DEFAULT_PRESET = PRESET_BLUE;
