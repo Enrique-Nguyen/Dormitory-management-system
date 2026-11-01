@@ -28,7 +28,7 @@ import {
 import { useViewport } from '../../hooks/useViewport'
 import { errorMessage } from '../../utils/errorMessages'
 import { useAppTheme } from '../../app/themeStore'
-import { ACCENT_PRESETS, type AccentKey } from '../../app/theme'
+import { ACCENT_PRESETS, THEME_STYLES } from '../../app/theme'
 
 interface Props {
   /** Mục riêng của cổng (cổng sinh viên đặt Hồ sơ, Hợp đồng, Tiền cọc, Kỳ hè... ở đây trên mobile). */
@@ -41,7 +41,7 @@ export default function UserMenu({ extraItems = [] }: Props) {
   const { message } = App.useApp()
   const showName = useViewport() !== 'mobile'
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const { mode, accent, tableDense, toggleMode, setAccent, setTableDense } = useAppTheme()
+  const { mode, accent, style, tableDense, toggleMode, setAccent, setStyle, setTableDense } = useAppTheme()
 
   if (!me) return null
   const profilePath = roleProfile[me.role]
@@ -91,6 +91,16 @@ export default function UserMenu({ extraItems = [] }: Props) {
       onClick: () => toggleMode(),
     },
     {
+      key: 'theme-style',
+      icon: <BgColorsOutlined />,
+      label: 'Kiểu giao diện',
+      children: Object.entries(THEME_STYLES).map(([key, preset]) => ({
+        key: `style-${key}`,
+        label: <span>{preset.label} — {preset.description} {style === key && <CheckOutlined />}</span>,
+        onClick: () => setStyle(key as keyof typeof THEME_STYLES),
+      })),
+    },
+    {
       key: 'theme-accent',
       icon: <BgColorsOutlined />,
       label: 'Tông màu chủ đạo (V5)',
@@ -114,7 +124,7 @@ export default function UserMenu({ extraItems = [] }: Props) {
             )}
           </span>
         ),
-        onClick: () => setAccent(preset.key as AccentKey),
+        onClick: () => setAccent(preset.key),
       })),
     },
     {

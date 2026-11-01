@@ -31,6 +31,41 @@
   --header-height: 64px;
 }
 
+html[data-theme-style='clear'] {
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --shadow-card: none;
+  --shadow-card-hover: none;
+  --shadow-header: none;
+}
+
+html[data-theme-style='modern'] {
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+}
+
+html[data-theme-style='classic'] {
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --shadow-card: none;
+  --shadow-card-hover: none;
+}
+
+html[data-theme-style='classic'] .dms-data-table .ant-table-thead > tr > th {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-border);
+}
+
+html[data-theme-style='classic'] .dms-data-table .ant-table-tbody > tr:nth-child(even) > td {
+  background: var(--color-bg);
+}
+
 /* ==========================================================================
    Base & Resets
    ========================================================================== */

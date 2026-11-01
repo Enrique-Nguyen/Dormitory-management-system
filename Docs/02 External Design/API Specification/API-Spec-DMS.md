@@ -1060,7 +1060,7 @@ GET /api/me/preferences yêu cầu `PROFILE_READ`; POST /api/me/preferences/save
 | Trường | Kiểu | Bắt buộc khi lưu | Quy tắc |
 |---|---|---|---|
 | `themeMode` | string | Có | Một trong `light`, `dark` (phân biệt hoa thường) |
-| `themePreset` | string | Có | Một trong `blue`, `indigo`, `teal`, `emerald`, `violet`, `amber`; không nhận mã màu/CSS tùy ý |
+| `themePreset` | string | Có | Một trong `blue`, `indigo`, `teal`, `emerald`, `violet`, `amber`, `gray`, `brown`, `pink`, `red`; không nhận mã màu/CSS tùy ý |
 | `tableDense` | boolean | Có | `true` là bảng dày, `false` là gọn; không nhận `null` |
 | `version` | integer ≥ 0 | Không khi tạo mới; **Có khi đã có dòng** | `null`/bỏ trống chỉ hợp lệ khi tài khoản chưa có dòng; khi sửa phải gửi đúng version vừa đọc để chống ghi đè, thiếu version trả 400 `VALIDATION_FAILED` |
 

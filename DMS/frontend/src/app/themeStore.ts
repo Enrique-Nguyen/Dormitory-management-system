@@ -3,8 +3,10 @@ import {
   ACCENT_PRESETS,
   getAntdThemeConfig,
   initializeTheme,
+  THEME_STYLES,
   type AccentKey,
   type ThemeMode,
+  type ThemeStyle,
 } from './theme'
 
 /**
@@ -48,6 +50,7 @@ let activeUserId: number | null = null
 let version = 0
 let userChangeEpoch = 0
 let currentPreferences: ThemePreferences = { ...DEFAULT_THEME_PREFERENCES }
+let currentStyle: ThemeStyle = 'modern'
 
 const listeners = new Set<() => void>()
 const preferenceSaveListeners = new Set<() => void>()
@@ -111,6 +114,7 @@ function persistCurrentPreferences() {
 function notifyUi() {
   // Cập nhật CSS Variables và class dark trước khi component React render lại.
   initializeTheme(currentPreferences.mode, currentPreferences.accent)
+  document.documentElement.setAttribute('data-theme-style', currentStyle)
   listeners.forEach((listener) => listener())
 }
 
@@ -162,6 +166,17 @@ export function setActiveUser(userId: number | null) {
   if (activeUserId === userId) return
   activeUserId = userId
   version = 0
+  let style: ThemeStyle = 'modern'
+  if (userId !== null && typeof window !== 'undefined') {
+    try {
+      const saved = window.localStorage.getItem(`${STORAGE_KEY_PREFIX}:style:${userId}`)
+      if (saved && Object.hasOwn(THEME_STYLES, saved)) style = saved as ThemeStyle
+    } catch {
+      // Tùy chọn vẫn dùng được trong phiên khi trình duyệt chặn localStorage.
+    }
+  }
+  currentStyle = style
+  notifyUi()
 }
 
 /**
@@ -214,6 +229,19 @@ export function setTableDensity(tableDense: boolean) {
   applyUserPreferences({ tableDense })
 }
 
+export function setThemeStyle(style: ThemeStyle) {
+  if (currentStyle === style) return
+  currentStyle = style
+  if (activeUserId !== null && typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(`${STORAGE_KEY_PREFIX}:style:${activeUserId}`, style)
+    } catch {
+      // Tùy chọn vẫn dùng được trong phiên khi trình duyệt chặn localStorage.
+    }
+  }
+  notifyUi()
+}
+
 /**
  * Cập nhật version sau khi máy chủ xác nhận lưu thành công cho đúng tài khoản.
  * Ghi kèm cache để tab khác nhận được version mới qua sự kiện storage và tránh 409 oan.
@@ -255,12 +283,16 @@ export function useAppTheme() {
     getServerSnapshot,
   )
 
+  const style = useSyncExternalStore(subscribe, () => currentStyle, () => 'modern' as ThemeStyle)
+
   return {
     ...prefs,
+    style,
     setMode: setThemeMode,
     setAccent: setAccentColor,
+    setStyle: setThemeStyle,
     toggleMode: toggleThemeMode,
     setTableDense: setTableDensity,
-    antdThemeConfig: getAntdThemeConfig(prefs.mode, prefs.accent),
+    antdThemeConfig: getAntdThemeConfig(prefs.mode, prefs.accent, style),
   }
 }
