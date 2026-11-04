@@ -193,9 +193,9 @@ export const bedOccupancy: Record<
   BedOccupancy,
   { label: string; background: string; border: string }
 > = {
-  FREE: { label: 'Trống', background: '#FFFFFF', border: '#D1D5DB' },
-  HELD: { label: 'Đang giữ', background: '#FEF3C7', border: '#B45309' },
-  OCCUPIED: { label: 'Đang ở', background: '#DCFCE7', border: '#15803D' },
+  FREE: { label: 'Trống', background: 'var(--color-surface)', border: 'var(--color-border)' },
+  HELD: { label: 'Đang giữ', background: 'var(--color-warning-bg)', border: 'var(--color-warning-border)' },
+  OCCUPIED: { label: 'Đang ở', background: 'var(--color-success-bg)', border: 'var(--color-success-border)' },
 }
 
 /** Loại phân phòng mở → chiếm dụng giường: giữ chỗ (HOLD) hoặc đang ở (STAY). */

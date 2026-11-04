@@ -1,13 +1,14 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.20**, 31/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.14 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.12, `DMS-UI-UX-Design.md` (mục 27.2)
+> **Phiên bản 0.21**, 04/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.15 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.13, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
 ### Lịch sử thay đổi
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.21 | 04/11/2026 | Danh mục dùng chung, lookup form/bộ lọc, tham chiếu hồ sơ bằng ID, tiện nghi nhiều lựa chọn, tầng theo tòa và vị trí kho; giữ mã tự nhiên của năm học/hạng mục sửa chữa. |
 | 0.20 | 31/10/2026 | DMS-PREF-01: thêm `GET /api/me/preferences` và `POST /api/me/preferences/save-or-update` lưu sở thích giao diện theo tài khoản (theme mode, accent preset, mật độ bảng); chủ sở hữu lấy từ `CurrentUser`, chưa có dòng trả mặc định không ghi CSDL, version lệch trả 409 `CONCURRENT_UPDATE`. |
 | 0.19 | 31/10/2026 | Đồng bộ SRS v0.14 / DEC-BIL-01: không tạo chỉ số điện nước cho kỳ mới khi đã có lịch sử nhưng thiếu kỳ liền trước; kỳ đầu vẫn nhập chỉ số đầu. |
 | 0.18 | 30/10/2026 | TV1: sửa đọc file import đúng cấu trúc có khoảng trắng Unicode/chữ tiếng Việt tổ hợp, mã SV kiểu số dài và dòng trống đã định dạng; giới hạn 5.000 dòng có dữ liệu, không làm tròn/đoán lại mã. Giữ nguyên endpoint, JSON và transaction |
@@ -33,6 +34,22 @@
 | 0.17 | 27/10/2026 | Kiểm thử E2E TV3 trên PostgreSQL + Keycloak local và sửa lỗ hổng phân quyền còn lại: `priorities[].note` trong `GET /api/applications/{id}` (mục 4.3) lấy từ cột `application_priority.note` do Flyway V7 thêm vào — trước đây ghi chú xác nhận chỉ vào `audit_log` nên bảng "Diện ưu tiên" trên màn chi tiết luôn trống; `POST /api/transfer-requests/{id}/approve` và `/reject` bổ sung khóa vai trò STAFF ở tầng service (ADMIN vẫn đi qua) vì ma trận quyền là jsonb chỉnh được, giống các endpoint duyệt khác; `GET /api/beds/available` bắt buộc người gọi là STUDENT chỉ dò giường cho đơn/yêu cầu/hợp đồng của chính mình (404 khi không thuộc về). Frontend: cổng Admin dùng lại màn Staff nên vai trò điều hướng suy từ tiền tố đường dẫn (`usePortalRole`), sửa breadcrumb và nút "Quay lại danh sách" trỏ về `/staff/*`; bỏ `rowKey` dùng tham số `index` và các prop antd v6 đã deprecated (`maskClosable` → `mask.closable`, `Alert.message` → `title`). |
 
 ---
+
+### Hợp đồng danh mục dùng chung (04/11/2026)
+
+Các thay đổi dưới đây thay thế trường chuỗi tương ứng trong mô tả phiên bản trước; không bổ sung đường ghi legacy.
+
+| Nguồn | Endpoint/kiểu dữ liệu |
+|---|---|
+| Danh mục | `/api/catalogs/{kind}` với kind `schools`, `faculties`, `cohorts`, `hometowns`, `academic-years`, `amenities`, `maintenance-categories`. POST `/search-by-page` nhận `{page,size,q,sort,active,schoolId,parentId}`, POST `/save-or-update` nhận `{id,code,name,active,schoolId,parentId}`, GET/DELETE `/{id}`. Chỉ khoa nhận `schoolId`, chỉ địa giới nhận `parentId`. |
+| Tầng | `/api/floors` có cùng bốn thao tác; tìm kiếm nhận `buildingId/active`, lưu `{id,buildingId,floor,name,active}`. `floor` là số nguyên từ 0; không đổi tòa hoặc số tầng khi sửa. |
+| Vị trí kho | `/api/storage-locations` có cùng bốn thao tác; tìm kiếm nhận `managementUnitId/active`, lưu `{id,managementUnitId,code,name,active}`. Không đổi đơn vị/mã khi sửa. Đọc tổng hợp không mở quyền ghi ngoài đơn vị. |
+| Quyền | Đọc danh mục cần `CATALOG_READ`; lưu kiểm riêng `CATALOG_CREATE` hoặc `CATALOG_UPDATE`, xóa cần `CATALOG_DELETE`. ADMIN có toàn quyền; STAFF mặc định chỉ đọc, quyền ghi cần cấp qua ma trận và vẫn giữ phạm vi tòa/kho. |
+| Hồ sơ | Lưu và lọc sinh viên dùng `schoolId/facultyId/cohortId/hometownId` kiểu Long, không ghi `faculty/cohort/hometown` dạng chuỗi. Response vẫn có các nhãn suy từ danh mục và `schoolName`. Hồ sơ cá nhân chỉ nhận `phone/hometownId/emergencyContact`; backend ép chủ sở hữu. |
+| Nghiệp vụ | `room.floor` giữ số theo tòa; `semester.academicYear` giữ mã năm học; ticket `category` giữ mã hạng mục; `roomType.amenityIds` là mảng Long, `amenities` response là nhãn tổng hợp; tạo phiếu gửi đồ dùng `locationId` thay `location`, response trả cả ID và tên vị trí. |
+| Bộ lọc nhật ký | POST `/api/admin/audit-logs/actions/search-by-page` và `/api/admin/audit-logs/entity-types/search-by-page` trả `PageResponse<{code,name}>` từ mã đã ghi, cần `AUDIT_READ`; đây là lookup chỉ đọc, không phải CRUD mã nghiệp vụ. |
+
+Không gửi/null khi sửa giữ tham chiếu cũ; mảng `amenityIds: []` xóa các liên kết tiện nghi. Mục ngừng dùng được giữ khi không đổi và vẫn tra cứu lịch sử, nhưng không được gán mới; tham chiếu sai loại hoặc sai quan hệ trường/khoa/tòa/tầng/đơn vị/kho trả `400 VALIDATION_FAILED`. Xóa mục đang dùng trả `409 RESOURCE_IN_USE`, ID sửa không tồn tại trả 404. Import sinh viên khớp chính xác mã/tên khoa và khóa đang hoạt động, không tự tạo danh mục; file CRUD Excel dùng ID, riêng tầng/năm học/hạng mục giữ kiểu số/mã tương ứng. Giới tính M/F, trạng thái và các enum điều khiển quy trình không mở CRUD tùy ý.
 
 ## 1. Phạm vi và cách đọc
 

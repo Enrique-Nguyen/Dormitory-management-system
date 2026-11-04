@@ -17,8 +17,9 @@ import {
   ActionBar,
   Alert,
   Button,
-  Card,
+  DetailSection as Card,
   Descriptions,
+  DetailLayout,
   EmptyState,
   PageHeader,
   PageSkeleton,
@@ -171,6 +172,7 @@ export default function SummerChoiceDetailView({
     return (
       <>
         <PageHeader
+        showHeading
           title="Không tìm thấy lựa chọn kỳ hè"
           breadcrumb={embedded ? undefined : [{ label: 'Kỳ hè', to: listPath }]}
         />
@@ -328,6 +330,7 @@ export default function SummerChoiceDetailView({
   return (
     <>
       <PageHeader
+        showHeading
         title={`Lựa chọn kỳ hè #${detail.id}`}
         status={<StatusBadge entity="request" status={detail.status} />}
         subtitle={[
@@ -363,127 +366,125 @@ export default function SummerChoiceDetailView({
         />
       )}
 
-      <div className="dms-split-view">
-        <div>
-          <Card title="Phương án kỳ hè">
-            <Descriptions
-              column={1}
-              size="small"
-              items={[
-                {
-                  key: 'choice',
-                  label: 'Phương án',
-                  children: <strong>{choiceLabel}</strong>,
-                },
-                {
-                  key: 'semester',
-                  label: 'Học kỳ hè',
-                  children: semesterLabel,
-                },
-                {
-                  key: 'contract',
-                  label: 'Hợp đồng',
-                  children:
-                    !embedded && contractPath && contractId != null ? (
-                      <Link to={contractPath}>
-                        {contractCode || `Hợp đồng #${contractId}`}
-                      </Link>
-                    ) : (
-                      contractCode || (contractId != null ? `Hợp đồng #${contractId}` : '—')
-                    ),
-                },
-                {
-                  key: 'contractStatus',
-                  label: 'Trạng thái hợp đồng',
-                  children: contractStatus ? (
-                    <StatusBadge entity="contract" status={contractStatus} />
+      <DetailLayout>
+        <Card title="Phương án kỳ hè">
+          <Descriptions
+            column={{ xs: 1, sm: 2 }}
+            size="small"
+            items={[
+              {
+                key: 'choice',
+                label: 'Phương án',
+                children: <strong>{choiceLabel}</strong>,
+              },
+              {
+                key: 'semester',
+                label: 'Học kỳ hè',
+                children: semesterLabel,
+              },
+              {
+                key: 'contract',
+                label: 'Hợp đồng',
+                children:
+                  !embedded && contractPath && contractId != null ? (
+                    <Link to={contractPath}>
+                      {contractCode || `Hợp đồng #${contractId}`}
+                    </Link>
                   ) : (
-                    '—'
+                    contractCode || (contractId != null ? `Hợp đồng #${contractId}` : '—')
                   ),
-                },
-                {
-                  key: 'contractPeriod',
-                  label: 'Thời hạn hợp đồng',
-                  children:
-                    contract?.startDate ||
-                    contract?.endDate ||
-                    detail.contractEndDate
-                      ? `${formatDate(contract?.startDate)} – ${formatDate(contract?.endDate ?? detail.contractEndDate)}`
-                      : '—',
-                },
-                {
-                  key: 'createdAt',
-                  label: 'Gửi lúc',
-                  children: formatDateTime(detail.createdAt),
-                },
-                {
-                  key: 'decidedAt',
-                  label: 'Quyết định lúc',
-                  children: formatDateTime(detail.decidedAt),
-                },
-                {
-                  key: 'decisionReason',
-                  label:
-                    detail.status === SummerChoiceStatus.REJECTED
-                      ? 'Lý do từ chối'
-                      : 'Ghi chú quyết định',
-                  children: detail.decisionReason ?? '—',
-                },
-              ]}
-            />
-          </Card>
-
-          <Alert
-            type={explanation.type}
-            showIcon
-            style={{ marginTop: 16 }}
-            title={explanation.title}
-            description={explanation.description}
+              },
+              {
+                key: 'contractStatus',
+                label: 'Trạng thái hợp đồng',
+                children: contractStatus ? (
+                  <StatusBadge entity="contract" status={contractStatus} />
+                ) : (
+                  '—'
+                ),
+              },
+              {
+                key: 'contractPeriod',
+                label: 'Thời hạn hợp đồng',
+                children:
+                  contract?.startDate ||
+                  contract?.endDate ||
+                  detail.contractEndDate
+                    ? `${formatDate(contract?.startDate)} – ${formatDate(contract?.endDate ?? detail.contractEndDate)}`
+                    : '—',
+              },
+              {
+                key: 'createdAt',
+                label: 'Gửi lúc',
+                children: formatDateTime(detail.createdAt),
+              },
+              {
+                key: 'decidedAt',
+                label: 'Quyết định lúc',
+                children: formatDateTime(detail.decidedAt),
+              },
+              {
+                key: 'decisionReason',
+                label:
+                  detail.status === SummerChoiceStatus.REJECTED
+                    ? 'Lý do từ chối'
+                    : 'Ghi chú quyết định',
+                children: detail.decisionReason ?? '—',
+              },
+            ]}
           />
+        </Card>
 
-          <Flex gap={8} wrap style={{ marginTop: 16 }}>
-            {canCreateStorage && (
-              <Button
-                type="primary"
-                icon={<InboxOutlined />}
-                onClick={() =>
-                  navigate(
-                    `${portalPath(actorRole, '/staff/storage')}?contractId=${contractId}`,
-                  )
-                }
-              >
-                Tạo phiếu gửi đồ
+        <Alert
+          type={explanation.type}
+          showIcon
+          style={{ marginTop: 16 }}
+          title={explanation.title}
+          description={explanation.description}
+        />
+
+        <Flex gap={8} wrap style={{ marginTop: 16 }}>
+          {canCreateStorage && (
+            <Button
+              type="primary"
+              icon={<InboxOutlined />}
+              onClick={() =>
+                navigate(
+                  `${portalPath(actorRole, '/staff/storage')}?contractId=${contractId}`,
+                )
+              }
+            >
+              Tạo phiếu gửi đồ
+            </Button>
+          )}
+          {canMoveOut && (
+            <Button
+              type="primary"
+              danger
+              icon={<LogoutOutlined />}
+              onClick={() =>
+                navigate(
+                  `${portalPath(actorRole, '/staff/contracts')}/${contractId}/move-out`,
+                )
+              }
+            >
+              Làm thủ tục trả phòng
+            </Button>
+          )}
+          {!embedded && !studentOnly &&
+            detail.status === SummerChoiceStatus.APPROVED &&
+            detail.choice === SummerChoice.STAY &&
+            contractPath && (
+              <Button onClick={() => navigate(contractPath)}>
+                Xem hợp đồng đã gia hạn
               </Button>
             )}
-            {canMoveOut && (
-              <Button
-                type="primary"
-                danger
-                icon={<LogoutOutlined />}
-                onClick={() =>
-                  navigate(
-                    `${portalPath(actorRole, '/staff/contracts')}/${contractId}/move-out`,
-                  )
-                }
-              >
-                Làm thủ tục trả phòng
-              </Button>
-            )}
-            {!embedded && !studentOnly &&
-              detail.status === SummerChoiceStatus.APPROVED &&
-              detail.choice === SummerChoice.STAY &&
-              contractPath && (
-                <Button onClick={() => navigate(contractPath)}>
-                  Xem hợp đồng đã gia hạn
-                </Button>
-              )}
-          </Flex>
-        </div>
+        </Flex>
 
         <Card title="Tiến trình lựa chọn">
           <StatusTimeline steps={steps} />
         </Card>
-      </div>
+      </DetailLayout>
     </>
   )
 }

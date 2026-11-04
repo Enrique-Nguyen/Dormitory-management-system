@@ -17,10 +17,12 @@ import vn.edu.tlu.dms.account.repository.AppUserRepository;
 import vn.edu.tlu.dms.account.repository.StudentProfileRepository;
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.account.service.AuthService;
+import vn.edu.tlu.dms.account.service.CatalogService;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
 import vn.edu.tlu.dms.account.service.UserService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Catalog;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
@@ -64,6 +66,8 @@ public class UserServiceImpl implements UserService {
 
     private final IdentityAccountService identities;
 
+    private final CatalogService catalogs;
+
     private static final SecureRandom RANDOM = new SecureRandom();
 
     public UserServiceImpl(
@@ -74,7 +78,8 @@ public class UserServiceImpl implements UserService {
             ScopeGuard guard,
             AuditService audit,
             AuthService authService,
-            IdentityAccountService identities) {
+            IdentityAccountService identities,
+            CatalogService catalogs) {
         this.users = users;
         this.students = students;
         this.references = references;
@@ -83,6 +88,7 @@ public class UserServiceImpl implements UserService {
         this.audit = audit;
         this.authService = authService;
         this.identities = identities;
+        this.catalogs = catalogs;
     }
 
     @Override
@@ -145,8 +151,10 @@ public class UserServiceImpl implements UserService {
             rejectStudentFieldOnCreate("studentCode", input.studentCode());
             rejectStudentFieldOnCreate("gender", input.gender());
             rejectStudentFieldOnCreate("dateOfBirth", input.dateOfBirth());
-            rejectStudentFieldOnCreate("faculty", input.faculty());
-            rejectStudentFieldOnCreate("cohort", input.cohort());
+            rejectStudentFieldOnCreate(ApiField.SCHOOL_ID, input.schoolId());
+            rejectStudentFieldOnCreate(ApiField.FACULTY_ID, input.facultyId());
+            rejectStudentFieldOnCreate(ApiField.COHORT_ID, input.cohortId());
+            rejectStudentFieldOnCreate(ApiField.HOMETOWN_ID, input.hometownId());
             String username = trimRequiredText(input.username(), "username");
             String fullName = trimRequiredText(input.fullName(), "fullName");
             String role = trimRequiredText(input.role(), "role");
@@ -172,8 +180,10 @@ public class UserServiceImpl implements UserService {
                         input.studentCode(),
                         input.gender(),
                         input.dateOfBirth(),
-                        input.faculty(),
-                        input.cohort()));
+                        input.schoolId(),
+                        input.facultyId(),
+                        input.cohortId(),
+                        input.hometownId()));
     }
 
     private TemporaryPassword create(Create input) {
@@ -263,18 +273,24 @@ public class UserServiceImpl implements UserService {
             if (input.dateOfBirth() != null) {
                 p.setDateOfBirth(input.dateOfBirth());
             }
-            if (input.faculty() != null) {
-                p.setFaculty(input.faculty());
-            }
-            if (input.cohort() != null) {
-                p.setCohort(input.cohort());
-            }
+            var selected =
+                    StudentCatalogReferences.merge(
+                            catalogs,
+                            new StudentCatalogReferences(
+                                    p.getSchoolId(), p.getFacultyId(), p.getCohortId(), p.getHometownId()),
+                            input.schoolId(), input.facultyId(), input.cohortId(), input.hometownId());
+            p.setSchoolId(selected.schoolId());
+            p.setFacultyId(selected.facultyId());
+            p.setCohortId(selected.cohortId());
+            p.setHometownId(selected.hometownId());
             students.saveAndFlush(p);
         } else if (input.studentCode() != null
                 || input.gender() != null
                 || input.dateOfBirth() != null
-                || input.faculty() != null
-                || input.cohort() != null) {
+                || input.schoolId() != null
+                || input.facultyId() != null
+                || input.cohortId() != null
+                || input.hometownId() != null) {
             throw BusinessException.invalid(ApiField.STUDENT_CODE, ValidationMessage.STUDENT_ONLY);
         }
         // Phiên đã mở giữ thông tin đăng nhập/phạm vi cũ, nên phải đăng nhập lại khi đổi chúng.
@@ -391,15 +407,18 @@ public class UserServiceImpl implements UserService {
         }
         var p = students.findById(u.getId()).orElse(null);
         if (p != null) {
-            if (input.hometown() != null) {
-                p.setHometown(input.hometown().trim());
+            if (input.hometownId() != null) {
+                StudentCatalogReferences.reference(
+                        catalogs, Catalog.HOMETOWNS, ApiField.HOMETOWN_ID,
+                        input.hometownId(), p.getHometownId());
+                p.setHometownId(input.hometownId());
             }
             if (input.emergencyContact() != null) {
                 p.setEmergencyContact(input.emergencyContact().trim());
             }
             students.saveAndFlush(p);
-        } else if (input.hometown() != null || input.emergencyContact() != null) {
-            throw BusinessException.invalid(ApiField.HOMETOWN, ValidationMessage.STUDENT_ONLY);
+        } else if (input.hometownId() != null || input.emergencyContact() != null) {
+            throw BusinessException.invalid(ApiField.HOMETOWN_ID, ValidationMessage.STUDENT_ONLY);
         }
         users.saveAndFlush(u);
         return toUserProfileResponse(u);
@@ -420,9 +439,14 @@ public class UserServiceImpl implements UserService {
                 p == null ? null : p.getStudentCode(),
                 p == null ? null : p.getGender(),
                 p == null ? null : p.getDateOfBirth(),
-                p == null ? null : p.getFaculty(),
-                p == null ? null : p.getCohort(),
-                p == null ? null : p.getHometown(),
+                p == null ? null : p.getSchoolId(),
+                p == null ? null : p.getFacultyId(),
+                p == null ? null : p.getCohortId(),
+                p == null ? null : p.getHometownId(),
+                p == null ? null : StudentCatalogReferences.label(catalogs, Catalog.SCHOOLS, p.getSchoolId()),
+                p == null ? null : StudentCatalogReferences.label(catalogs, Catalog.FACULTIES, p.getFacultyId()),
+                p == null ? null : StudentCatalogReferences.label(catalogs, Catalog.COHORTS, p.getCohortId()),
+                p == null ? null : StudentCatalogReferences.label(catalogs, Catalog.HOMETOWNS, p.getHometownId()),
                 p == null ? null : p.getEmergencyContact());
     }
 

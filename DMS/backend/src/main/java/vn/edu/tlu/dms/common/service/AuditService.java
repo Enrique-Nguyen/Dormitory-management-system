@@ -17,6 +17,12 @@ public interface AuditService {
      */
     PageResponse<Map<String, Object>> searchByPage(SearchRequest input);
 
+    /** Tra cứu mã thao tác thực tế đã ghi để chọn trong bộ lọc nhật ký. */
+    PageResponse<Map<String, Object>> searchActionsByPage(SearchRequest input);
+
+    /** Tra cứu loại đối tượng thực tế đã ghi để chọn trong bộ lọc nhật ký. */
+    PageResponse<Map<String, Object>> searchEntityTypesByPage(SearchRequest input);
+
     /** Admin đọc dữ liệu trước/sau của một bản ghi; thiếu ID trả 404, không có API sửa/xóa. */
     Map<String, Object> getAuditById(Long id);
 

@@ -89,6 +89,10 @@ class SummerChoiceIntegrationTest {
         studentId = createStudent(suffix + "01", "Sinh viên một");
         otherStudentId = createStudent(suffix + "02", "Sinh viên hai");
 
+        jdbc.update(
+                "INSERT INTO academic_year(code,name) VALUES(?,?) ON CONFLICT DO NOTHING",
+                "2098-2099",
+                "2098-2099");
         Long regularSemesterId =
                 jdbc.queryForObject(
                         """

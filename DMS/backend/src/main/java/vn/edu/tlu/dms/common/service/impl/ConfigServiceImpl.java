@@ -88,6 +88,10 @@ public class ConfigServiceImpl implements ConfigService {
                                 builder.like(builder.lower(row.get("key")), keyword),
                                 builder.like(builder.lower(row.get("description")), keyword),
                                 builder.like(builder.lower(row.get("value")), keyword));
+        if (input.key() != null && !input.key().isBlank()) {
+            specification = specification.and(
+                    (row, query, builder) -> builder.equal(row.get("key"), input.key()));
+        }
         return PageResponse.from(
                 repository
                         .findAll(specification, pageable)

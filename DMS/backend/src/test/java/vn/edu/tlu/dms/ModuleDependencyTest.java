@@ -168,7 +168,11 @@ class ModuleDependencyTest {
         assertThat(DmsConstants.Role.ALL)
                 .containsExactlyInAnyOrderElementsOf(expectedCounts.keySet());
         for (var baseline : expectedCounts.entrySet()) {
-            List<String> permissions = ScopeGuard.permissionsForRole(baseline.getKey());
+            List<String> permissions = ScopeGuard.permissionsForRole(baseline.getKey()).stream()
+                    .filter(code -> !code.startsWith(DmsConstants.Resource.CATALOG + DmsConstants.PERMISSION_SEPARATOR))
+                    .toList();
+            assertThat(ScopeGuard.permissionsForRole(baseline.getKey()))
+                    .contains(DmsConstants.Permission.CATALOG_READ);
             assertThat(permissions)
                     .as("Số quyền của %s phải giữ nguyên sau khi gom Constants", baseline.getKey())
                     .hasSize(baseline.getValue())

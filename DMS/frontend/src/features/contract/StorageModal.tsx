@@ -1,6 +1,11 @@
 import { App } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { useQuery } from '@tanstack/react-query'
+import { getContract } from '../../services/api/contract'
+import { ContractStatus } from '../../constants/statusConfig'
+import ReferenceSelect from '../crud/ReferenceSelect'
 import {
   Alert,
   BedPicker,
@@ -9,7 +14,6 @@ import {
   Descriptions,
   FormField,
   FormGrid,
-  Input,
   InputNumber,
   Modal,
   TextArea,
@@ -35,6 +39,7 @@ export interface StorageModalProps {
   /** Hợp đồng ACTIVE khi tạo phiếu; có thể nhập tay nếu mở từ trang kho. */
   contractId?: number
   contractCode?: string
+  managementUnitId?: number
   /** Phiếu cần nhận lại đồ ở chế độ `return`. */
   record?: StorageRecordItem | null
   onSuccess?: (record: StorageRecordItem) => void
@@ -44,12 +49,11 @@ interface CreateFormState {
   contractId: number | null
   packageCount: number | null
   description: string
-  location: string
   depositedAt: Dayjs
 }
 
 type CreateErrors = Partial<
-  Record<'contractId' | 'packageCount' | 'description' | 'location' | 'depositedAt', string>
+  Record<'contractId' | 'packageCount' | 'description' | 'depositedAt', string>
 >
 
 interface ReturnErrors {
@@ -68,11 +72,12 @@ function CreateStorageModal({
   open,
   contractId,
   contractCode,
+  managementUnitId,
   onClose,
   onSuccess,
 }: Pick<
   StorageModalProps,
-  'open' | 'contractId' | 'contractCode' | 'onClose' | 'onSuccess'
+  'open' | 'contractId' | 'contractCode' | 'managementUnitId' | 'onClose' | 'onSuccess'
 >) {
   const { message } = App.useApp()
   const createStorage = useCreateStorageRecord()
@@ -80,33 +85,40 @@ function CreateStorageModal({
     contractId: contractId ?? null,
     packageCount: 1,
     description: '',
-    location: '',
     depositedAt: dayjs(),
   }))
   const [errors, setErrors] = useState<CreateErrors>({})
+  const contract = useQuery({
+    queryKey: ['storage-contract', form.contractId],
+    queryFn: () => getContract(form.contractId!),
+    enabled: open && form.contractId != null,
+  })
+  const unitId = contract.data?.currentAssignment?.bed?.unitId ?? managementUnitId
+  const { control, reset, trigger, getValues, formState: { errors: referenceErrors } } = useForm<{
+    locationId: number | undefined
+  }>({ defaultValues: { locationId: undefined } })
 
   function resetForm() {
     setForm({
       contractId: contractId ?? null,
       packageCount: 1,
       description: '',
-      location: '',
       depositedAt: dayjs(),
     })
+    reset({ locationId: undefined })
     setErrors({})
   }
 
   function validate() {
     const next: CreateErrors = {}
     if (!form.contractId || !Number.isSafeInteger(form.contractId))
-      next.contractId = 'Nhập mã hợp đồng đang ACTIVE.'
+      next.contractId = 'Chọn hợp đồng đang ACTIVE.'
     if (!form.packageCount || form.packageCount < 1)
       next.packageCount = 'Số kiện phải từ 1 đến 32767.'
     if (form.packageCount && form.packageCount > 32767)
       next.packageCount = 'Số kiện phải từ 1 đến 32767.'
     if (!form.description.trim())
       next.description = 'Mô tả các kiện đồ gửi.'
-    if (!form.location.trim()) next.location = 'Nhập vị trí lưu kho.'
     if (!form.depositedAt || !form.depositedAt.isValid())
       next.depositedAt = 'Chọn ngày gửi đồ.'
     setErrors(next)
@@ -114,13 +126,14 @@ function CreateStorageModal({
   }
 
   async function submit() {
-    if (!validate() || !form.contractId) return
+    const validReference = await trigger('locationId')
+    if (!validate() || !validReference || !form.contractId || unitId == null || contract.isError || contract.isFetching) return
     try {
       const record = await createStorage.mutateAsync({
         contractId: form.contractId,
         packageCount: form.packageCount!,
         description: form.description.trim(),
-        location: form.location.trim(),
+        locationId: getValues('locationId')!,
         depositedAt: form.depositedAt.format('YYYY-MM-DD'),
       })
       message.success('Đã tạo phiếu gửi đồ.')
@@ -179,7 +192,7 @@ function CreateStorageModal({
           hint={
             contractId
               ? 'Hợp đồng được xác định từ ngữ cảnh đang mở.'
-              : 'Nhập ID hợp đồng đang ACTIVE của sinh viên gửi đồ.'
+              : 'Chọn hợp đồng đang ACTIVE của sinh viên gửi đồ.'
           }
         >
           {(control) =>
@@ -188,19 +201,18 @@ function CreateStorageModal({
                 {contractCode ?? `#${contractId}`}
               </div>
             ) : (
-              <InputNumber
+              <ReferenceSelect
                 {...control}
-                min={1}
-                precision={0}
-                style={{ width: '100%' }}
-                placeholder="Ví dụ: 1024"
-                value={form.contractId}
-                onChange={(value) =>
-                  setForm((current) => ({
-                    ...current,
-                    contractId: typeof value === 'number' ? value : null,
-                  }))
-                }
+                endpoint="/contracts"
+                labelField="code"
+                filters={{ status: ContractStatus.ACTIVE }}
+                value={form.contractId ?? undefined}
+                allowClear
+                placeholder="Chọn hợp đồng"
+                onChange={(value) => {
+                  reset({ locationId: undefined })
+                  setForm((current) => ({ ...current, contractId: typeof value === 'number' ? value : null }))
+                }}
               />
             )
           }
@@ -253,20 +265,24 @@ function CreateStorageModal({
         <FormField
           label="Vị trí lưu kho"
           required
-          error={errors.location}
+          error={referenceErrors.locationId?.message}
         >
-          {(control) => (
-            <Input
-              {...control}
-              maxLength={100}
-              placeholder="Ví dụ: Kho K1 tầng 1, kệ B"
-              value={form.location}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  location: event.target.value,
-                }))
-              }
+          {(fieldControl) => (
+            <Controller
+              name="locationId"
+              control={control}
+              rules={{ required: 'Chọn vị trí lưu kho trong danh mục.' }}
+              render={({ field }) => (
+                <ReferenceSelect
+                  {...fieldControl}
+                  endpoint="/storage-locations"
+                  filters={{ active: true, ...(unitId != null ? { managementUnitId: unitId } : {}) }}
+                  value={field.value}
+                  onChange={(value) => field.onChange(typeof value === 'number' ? value : undefined)}
+                  disabled={createStorage.isPending || unitId == null || contract.isFetching || contract.isError}
+                  placeholder={unitId == null ? 'Chọn hợp đồng có phân phòng trước' : 'Chọn vị trí lưu kho'}
+                />
+              )}
             />
           )}
         </FormField>
@@ -524,6 +540,7 @@ export default function StorageModal(props: StorageModalProps) {
       open={props.open}
       contractId={props.contractId}
       contractCode={props.contractCode}
+      managementUnitId={props.managementUnitId}
       onClose={props.onClose}
       onSuccess={props.onSuccess}
     />

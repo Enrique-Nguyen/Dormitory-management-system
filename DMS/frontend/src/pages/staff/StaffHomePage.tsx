@@ -163,7 +163,7 @@ function BedCapacityChart({
             cy="60"
             r="44"
             fill="none"
-            stroke={dashboardChartColors.track}
+            stroke="var(--color-border)"
             strokeWidth="12"
           />
           {segments

@@ -119,6 +119,7 @@ public class ScopeGuard {
     private static Map<String, Set<String>> createDefaultRolePermissions() {
         Set<String> shared =
                 Set.of(
+                        Permission.CATALOG_READ,
                         Permission.PROFILE_READ,
                         Permission.PROFILE_UPDATE,
                         Permission.MANAGEMENT_UNIT_READ,
@@ -131,6 +132,7 @@ public class ScopeGuard {
         var staff = new LinkedHashSet<>(shared);
         for (String resource :
                 List.of(
+                        Resource.CATALOG,
                         Resource.ROOM_TYPE,
                         Resource.SEMESTER,
                         Resource.ROOM,

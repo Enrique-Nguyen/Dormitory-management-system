@@ -111,6 +111,17 @@ public final class DmsConstants {
 
     /** Tên field của hợp đồng validation, audit và ma trận quyền; không dùng làm tên cột SQL. */
     public static final class ApiField {
+        public static final String CODE = "code";
+        public static final String ACTIVE = "active";
+        public static final String PARENT_ID = "parentId";
+        public static final String PARENT_NAME = "parentName";
+        public static final String SCHOOL_ID = "schoolId";
+        public static final String FACULTY_ID = "facultyId";
+        public static final String COHORT_ID = "cohortId";
+        public static final String HOMETOWN_ID = "hometownId";
+        public static final String SCHOOL_NAME = "schoolName";
+        public static final String KIND = "kind";
+        public static final String ALLOWED_ACTIONS = "allowedActions";
         public static final String STUDENT_CODE = "studentCode";
         public static final String FULL_NAME = "fullName";
         public static final String GENDER = "gender";
@@ -276,6 +287,21 @@ public final class DmsConstants {
     }
 
     /** Thông báo validation dùng chung; giữ nguyên từng chuỗi đã trả về qua API. */
+    public static final class Catalog {
+        public static final String SCHOOLS = "schools";
+        public static final String FACULTIES = "faculties";
+        public static final String COHORTS = "cohorts";
+        public static final String HOMETOWNS = "hometowns";
+        public static final String ACADEMIC_YEARS = "academic-years";
+        public static final String AMENITIES = "amenities";
+        public static final String MAINTENANCE_CATEGORIES = "maintenance-categories";
+        public static final String INVALID_VALUE = "Giá trị danh mục không hợp lệ hoặc không còn hoạt động";
+        public static final String IMMUTABLE_CODE = "Không được thay đổi mã danh mục đã tạo";
+        public static final String INVALID_HIERARCHY = "Quan hệ danh mục không hợp lệ hoặc tạo chu trình";
+        public static final String INVALID_YEAR = "Năm học phải có dạng YYYY-YYYY và hai năm liên tiếp";
+        private Catalog() {}
+    }
+
     public static final class ValidationMessage {
         public static final String ID_POSITIVE = "ID phải lớn hơn 0";
         public static final String ID_POSITIVE_INTEGER = "ID phải là số nguyên dương";
@@ -538,6 +564,7 @@ public final class DmsConstants {
                         new ScreenDefinition(Resource.PROFILE, "Hồ sơ cá nhân", Group.PERSONAL),
                         new ScreenDefinition(
                                 Resource.MANAGEMENT_UNIT, "Đơn vị quản lý", Group.CATALOG),
+                        new ScreenDefinition(Resource.CATALOG, "Danh mục dùng chung", Group.CATALOG),
                         new ScreenDefinition(Resource.BUILDING, "Tòa nhà", Group.CATALOG),
                         new ScreenDefinition(
                                 Resource.PRIORITY_CATEGORY, "Diện ưu tiên", Group.CATALOG),
@@ -609,6 +636,7 @@ public final class DmsConstants {
 
     /** Mã đối tượng/màn hình phân quyền; không phải tên bảng SQL. */
     public static final class Resource {
+        public static final String CATALOG = "CATALOG";
         public static final String USER = "USER";
         public static final String STUDENT = "STUDENT";
         public static final String MANAGEMENT_UNIT = "MANAGEMENT_UNIT";
@@ -643,6 +671,10 @@ public final class DmsConstants {
 
     /** Mã quyền đã đăng ký; hằng compile-time dùng được trực tiếp trong @RequirePrivilege. */
     public static final class Permission {
+        public static final String CATALOG_READ = Resource.CATALOG + PERMISSION_SEPARATOR + Action.READ;
+        public static final String CATALOG_CREATE = Resource.CATALOG + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String CATALOG_UPDATE = Resource.CATALOG + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String CATALOG_DELETE = Resource.CATALOG + PERMISSION_SEPARATOR + Action.DELETE;
         public static final String USER_READ = Resource.USER + PERMISSION_SEPARATOR + Action.READ;
         public static final String USER_CREATE =
                 Resource.USER + PERMISSION_SEPARATOR + Action.CREATE;
@@ -867,6 +899,10 @@ public final class DmsConstants {
                         BUILDING_CREATE,
                         BUILDING_UPDATE,
                         BUILDING_DELETE,
+                        CATALOG_READ,
+                        CATALOG_CREATE,
+                        CATALOG_UPDATE,
+                        CATALOG_DELETE,
                         PRIORITY_CATEGORY_READ,
                         PRIORITY_CATEGORY_CREATE,
                         PRIORITY_CATEGORY_UPDATE,
@@ -1330,6 +1366,9 @@ public final class DmsConstants {
      * đồng riêng; không đổi mã audit khi đổi cách đặt tên hoặc cấp quyền.
      */
     public static final class AuditAction {
+        public static final String CATALOG_CREATE = "CATALOG_CREATE";
+        public static final String CATALOG_UPDATE = "CATALOG_UPDATE";
+        public static final String CATALOG_DELETE = "CATALOG_DELETE";
         public static final String BED_CREATE = "BED_CREATE";
         public static final String BED_DELETE = "BED_DELETE";
         public static final String BED_OCCUPY = "BED_OCCUPY";
@@ -1398,6 +1437,7 @@ public final class DmsConstants {
 
     /** Mã đối tượng audit/timeline tách khỏi mã quyền để giữ nguyên dữ liệu lịch sử. */
     public static final class EntityType {
+        public static final String CATALOG = "CATALOG";
         public static final String APPLICATION = "APPLICATION";
         public static final String ASSIGNMENT = "ASSIGNMENT";
         public static final String BED = "BED";

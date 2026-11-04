@@ -173,6 +173,9 @@ class DepositIntegrationTest {
                         Long.class,
                         "T4-" + suffix);
 
+        jdbc.update(
+                "INSERT INTO building_floor(building_id,floor,name) VALUES(?,1,'Tang 1') ON CONFLICT DO NOTHING",
+                buildingId);
         roomId =
                 jdbc.queryForObject(
                         "INSERT INTO room(building_id, room_type_id, code, floor, gender, status)"

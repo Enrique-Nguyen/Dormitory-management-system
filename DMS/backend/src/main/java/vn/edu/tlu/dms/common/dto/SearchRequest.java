@@ -58,6 +58,18 @@ public final class SearchRequest {
     private String meterType;
     private LocalDate billingMonth;
     private Boolean unread;
+    @Positive private Long schoolId;
+    @Positive private Long facultyId;
+    @Positive private Long cohortId;
+    @Positive private Long hometownId;
+    @Size(max = 30) private String code;
+    private Boolean active;
+    @Size(max = 9) private String academicYear;
+    @Size(max = 30) private String scope;
+    @Size(max = 100) private String key;
+    private Boolean returned;
+    @Positive private Long contractId;
+    private Boolean hasTopup;
     @Positive private Long actorId;
     private String action;
     private String entityType;
@@ -163,6 +175,30 @@ public final class SearchRequest {
     public Boolean unread() {
         return unread;
     }
+
+    public Long schoolId() { return schoolId; }
+
+    public Long facultyId() { return facultyId; }
+
+    public Long cohortId() { return cohortId; }
+
+    public Long hometownId() { return hometownId; }
+
+    public String code() { return code; }
+
+    public Boolean active() { return active; }
+
+    public String academicYear() { return academicYear; }
+
+    public String scope() { return scope; }
+
+    public String key() { return key; }
+
+    public Boolean returned() { return returned; }
+
+    public Long contractId() { return contractId; }
+
+    public Boolean hasTopup() { return hasTopup; }
 
     public Long actorId() {
         return actorId;

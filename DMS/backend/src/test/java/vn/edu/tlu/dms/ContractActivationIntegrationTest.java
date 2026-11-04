@@ -140,6 +140,9 @@ class ContractActivationIntegrationTest {
                         "B" + suffix,
                         "Tòa " + suffix,
                         DEPOSIT);
+        jdbc.update(
+                "INSERT INTO building_floor(building_id,floor,name) VALUES(?,1,'Tang 1') ON CONFLICT DO NOTHING",
+                buildingId);
         roomId =
                 jdbc.queryForObject(
                         "INSERT INTO room(building_id,room_type_id,floor,code,gender,status)"
@@ -179,6 +182,7 @@ class ContractActivationIntegrationTest {
             jdbc.update("DELETE FROM room WHERE id=?", roomId);
         }
         if (buildingId != null) {
+            jdbc.update("DELETE FROM building_floor WHERE building_id=?", buildingId);
             jdbc.update("DELETE FROM building WHERE id=?", buildingId);
         }
         if (roomTypeId != null) {

@@ -1,22 +1,77 @@
 import { theme as antdTheme, type ThemeConfig } from 'antd'
 
-/**
- * HỆ THỐNG GIAO DIỆN VÀ MÀU SẮC CHUẨN DOANH NGHIỆP CHO DMS (THEO CẢM HỨNG HR-V5 & NOTION)
- *
- * - Thay thế hoàn toàn tông màu cũ (vàng đục/giấy cũ sepia) bằng Slate Neutral hiện đại, sắc nét.
- * - Hỗ trợ đa dạng Accent Presets (Blue, Indigo, Teal, Emerald, Violet, Amber) để người dùng tự chọn.
- * - Hỗ trợ Dark Mode chuẩn xác với độ tương phản cao, dịu mắt, đáp ứng chuẩn WCAG AA.
- * - Tương thích 100% với Ant Design v6 và hệ thống biến CSS toàn cục.
- */
-
 export type ThemeMode = 'light' | 'dark'
 export type AccentKey = 'blue' | 'indigo' | 'teal' | 'emerald' | 'violet' | 'amber' | 'gray' | 'brown' | 'pink' | 'red'
+export type V5AccentKey =
+  | 'default'
+  | 'gray'
+  | 'brown'
+  | 'orange'
+  | 'yellow'
+  | 'green'
+  | 'blue'
+  | 'purple'
+  | 'pink'
+  | 'red'
+  | 'custom'
 export type ThemeStyle = 'clear' | 'modern' | 'classic'
 
+export interface CustomAccent {
+  key: 'default' | 'yellow' | 'custom'
+  primary: string
+  light: string
+}
+
+export interface V5AccentPreset {
+  key: V5AccentKey
+  label: string
+  swatch: string
+  swatchBg: string
+  backendKey?: AccentKey
+}
+
+export const DEFAULT_CUSTOM_ACCENT: CustomAccent = { key: 'custom', primary: '#0a78be', light: '#deeef8' }
+export const YELLOW_ACCENT = { primary: '#cb912f', light: '#fbf3db' }
+export const THEME_UI_LABELS = {
+  title: 'Tùy chỉnh giao diện',
+  appearance: 'GIAO DIỆN',
+  accent: 'MÀU CHỦ ĐẠO',
+  default: 'Mặc định',
+  yellow: 'Vàng',
+  custom: 'Tùy chỉnh',
+  darkMode: 'Chế độ tối',
+  lightMode: 'Chế độ sáng',
+  dark: 'Chế độ tối',
+  light: 'Chế độ sáng',
+  tableBorders: 'Viền ô bảng',
+  borders: 'Viền ô bảng',
+  yes: 'Có',
+  no: 'Không',
+  dense: 'Bảng gọn',
+  foreground: 'Màu chủ đạo',
+  background: 'Màu nền nhấn',
+  apply: 'Áp dụng',
+} as const
+
+export const V5_ACCENT_PRESETS: V5AccentPreset[] = [
+  { key: 'default', label: 'Mặc định', swatch: '#cb912f', swatchBg: '#fbf3db' },
+  { key: 'gray', label: 'Xám', swatch: '#787774', swatchBg: '#f1f1ef', backendKey: 'gray' },
+  { key: 'brown', label: 'Nâu', swatch: '#9f6b53', swatchBg: '#f4eeee', backendKey: 'brown' },
+  { key: 'orange', label: 'Cam', swatch: '#d9730d', swatchBg: '#fbecdd', backendKey: 'amber' },
+  { key: 'yellow', label: 'Vàng', swatch: '#cb912f', swatchBg: '#fbf3db' },
+  { key: 'green', label: 'Xanh lá', swatch: '#448361', swatchBg: '#edf3ec', backendKey: 'emerald' },
+  { key: 'blue', label: 'Xanh dương', swatch: '#0a78be', swatchBg: '#deeef8', backendKey: 'blue' },
+  { key: 'purple', label: 'Tím', swatch: '#9065b0', swatchBg: '#f4eeff', backendKey: 'violet' },
+  { key: 'pink', label: 'Hồng', swatch: '#c14c8a', swatchBg: '#fbe4ee', backendKey: 'pink' },
+  { key: 'red', label: 'Đỏ', swatch: '#ee0033', swatchBg: '#ffe0e8', backendKey: 'red' },
+]
+
+export const ACCENT_MENU_ORDER: AccentKey[] = ['gray', 'brown', 'amber', 'emerald', 'blue', 'violet', 'pink', 'red']
+
 export const THEME_STYLES: Record<ThemeStyle, { label: string; description: string; radius: number }> = {
-  clear: { label: 'Đơn giản', description: 'Phẳng, tối giản', radius: 4 },
-  modern: { label: 'Hiện đại', description: 'Ánh sáng mềm, thẻ nổi', radius: 10 },
-  classic: { label: 'Cổ điển', description: 'Viền rõ, bảng kẻ dòng', radius: 4 },
+  clear: { label: 'Đơn giản', description: 'Phẳng, khoảng đạt, tối giản', radius: 4 },
+  modern: { label: 'Hiện đại', description: 'Kính mờ trong suốt, ánh sáng mềm', radius: 6 },
+  classic: { label: 'Cổ điển', description: 'Header màu, đường viền rõ, sọc bảng', radius: 4 },
 }
 
 export interface AccentMeta {
@@ -30,15 +85,7 @@ export interface AccentMeta {
 }
 
 export const ACCENT_PRESETS: Record<AccentKey, AccentMeta> = {
-  blue: {
-    key: 'blue',
-    label: 'Xanh Đại học (Mặc định)',
-    primary: '#1d4ed8', // blue-700
-    hover: '#1e40af',
-    active: '#1e3a8a',
-    light: '#eff6ff', // blue-50
-    border: '#bfdbfe', // blue-200
-  },
+  blue: { key: 'blue', label: 'Xanh dương', primary: '#0a78be', hover: '#0867a3', active: '#075585', light: '#deeef8', border: '#b7d7ec' },
   indigo: {
     key: 'indigo',
     label: 'Tím Indigo (Hiện đại)',
@@ -57,49 +104,39 @@ export const ACCENT_PRESETS: Record<AccentKey, AccentMeta> = {
     light: '#f0fdfa',
     border: '#99f6e4',
   },
-  emerald: {
-    key: 'emerald',
-    label: 'Xanh Lục bảo (Emerald)',
-    primary: '#059669', // emerald-600
-    hover: '#047857',
-    active: '#065f46',
-    light: '#ecfdf5',
-    border: '#a7f3d0',
-  },
-  violet: {
-    key: 'violet',
-    label: 'Tím Violet (Thanh lịch)',
-    primary: '#7c3aed', // violet-600
-    hover: '#6d28d9',
-    active: '#5b21b6',
-    light: '#f5f3ff',
-    border: '#ddd6fe',
-  },
-  amber: {
-    key: 'amber',
-    label: 'Cam Hổ phách (Ấm áp)',
-    primary: '#d97706', // amber-600
-    hover: '#b45309',
-    active: '#92400e',
-    light: '#fffbeb',
-    border: '#fde68a',
-  },
-  gray: { key: 'gray', label: 'Xám', primary: '#57534e', hover: '#44403c', active: '#292524', light: '#f5f5f4', border: '#d6d3d1' },
-  brown: { key: 'brown', label: 'Nâu', primary: '#8b573e', hover: '#754731', active: '#5c3524', light: '#f7ede8', border: '#e5c5b4' },
-  pink: { key: 'pink', label: 'Hồng', primary: '#a62f70', hover: '#87245a', active: '#6d1d49', light: '#fdf2f8', border: '#fbcfe8' },
-  red: { key: 'red', label: 'Đỏ', primary: '#b91c1c', hover: '#991b1b', active: '#7f1d1d', light: '#fef2f2', border: '#fecaca' },
+  emerald: { key: 'emerald', label: 'Xanh lá', primary: '#448361', hover: '#397252', active: '#306044', light: '#edf3ec', border: '#b7d1bc' },
+  violet: { key: 'violet', label: 'Tím', primary: '#9065b0', hover: '#7c559b', active: '#694883', light: '#f4eeff', border: '#d8c7e8' },
+  amber: { key: 'amber', label: 'Cam', primary: '#d9730d', hover: '#bd630b', active: '#9e5309', light: '#fbecdd', border: '#efcba8' },
+  gray: { key: 'gray', label: 'Xám', primary: '#787774', hover: '#666560', active: '#55544f', light: '#f1f1ef', border: '#d6d5d2' },
+  brown: { key: 'brown', label: 'Nâu', primary: '#9f6b53', hover: '#8a5c47', active: '#744d3b', light: '#f4eeee', border: '#dfc8be' },
+  pink: { key: 'pink', label: 'Hồng', primary: '#c14c8a', hover: '#a64076', active: '#8b3663', light: '#fbe4ee', border: '#edbdd3' },
+  red: { key: 'red', label: 'Đỏ', primary: '#ee0033', hover: '#cc002c', active: '#ad0025', light: '#ffe0e8', border: '#f7a7b8' },
+}
+
+function lightenAccent(hex: string, amount: number): string {
+  const channels = [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16))
+  return `#${channels.map((channel) => Math.round(channel + (255 - channel) * amount).toString(16).padStart(2, '0')).join('')}`
 }
 
 /** Trả về bảng màu chi tiết cho CSS Variables và Ant Design dựa trên Mode & Accent. */
-export function getThemeColors(mode: ThemeMode = 'light', accentKey: AccentKey = 'blue') {
+export function getThemeColors(mode: ThemeMode = 'light', accentKey: AccentKey = 'blue', custom?: CustomAccent | null) {
   const isDark = mode === 'dark'
-  const accent = ACCENT_PRESETS[accentKey] ?? ACCENT_PRESETS.blue
+  const preset = ACCENT_PRESETS[accentKey] ?? ACCENT_PRESETS.blue
+  const accent = custom ? {
+    ...preset,
+    primary: custom.primary,
+    hover: custom.primary,
+    active: custom.primary,
+    light: custom.light,
+    border: lightenAccent(custom.primary, 0.7),
+  } : preset
 
   if (isDark) {
+    const darkAccent = lightenAccent(accent.primary, 0.48)
     return {
-      primary: accent.primary,
-      primaryHover: accent.hover,
-      primaryActive: accent.active,
+      primary: darkAccent,
+      primaryHover: lightenAccent(accent.primary, 0.62),
+      primaryActive: lightenAccent(accent.primary, 0.34),
       primaryLight: '#1e293b', // slate-800
       primaryBorder: '#334155', // slate-700
       background: '#0b1120', // deep slate
@@ -114,9 +151,9 @@ export function getThemeColors(mode: ThemeMode = 'light', accentKey: AccentKey =
       borderLight: '#1e293b', // slate-800
       borderStrong: '#475569', // slate-600
       controlBorder: '#475569',
-      controlBorderHover: accent.primary,
-      accent: accent.primary,
-      accentHover: accent.hover,
+      controlBorderHover: darkAccent,
+      accent: darkAccent,
+      accentHover: lightenAccent(accent.primary, 0.62),
       accentLight: '#1e293b',
       accentBorder: accent.border,
       success: '#10b981',
@@ -138,42 +175,42 @@ export function getThemeColors(mode: ThemeMode = 'light', accentKey: AccentKey =
     }
   }
 
-  // Light Mode (Sạch, sáng chuẩn Enterprise SaaS)
+ 
   return {
     primary: accent.primary,
     primaryHover: accent.hover,
     primaryActive: accent.active,
     primaryLight: accent.light,
     primaryBorder: accent.border,
-    background: '#f1f5f9', // slate-100: tạo độ tương phản rõ rệt với card trắng
-    backgroundAlt: '#e2e8f0', // slate-200
-    surface: '#ffffff', // card trắng tinh, nổi bật trên nền slate-100
-    surfaceHover: '#f8fafc',
-    text: '#0f172a', // slate-900: độ sắc nét tuyệt đối
-    textSecondary: '#334155', // slate-700: thông tin phụ dễ đọc
-    textMuted: '#64748b', // slate-500
-    heading: '#0f172a', // slate-900: tiêu đề đậm rõ
-    border: '#cbd5e1', // slate-300: viền sắc nét, định hình card rõ ràng
-    borderLight: '#e2e8f0', // slate-200
-    borderStrong: '#94a3b8', // slate-400
-    controlBorder: '#cbd5e1',
+    background: '#f7f6f3',
+    backgroundAlt: '#f1f1ef',
+    surface: '#ffffff',
+    surfaceHover: '#f7f6f3',
+    text: '#211f1b',
+    textSecondary: '#5f5e5a',
+    textMuted: '#8a8884',
+    heading: '#211f1b',
+    border: '#d6d5d2',
+    borderLight: '#e4e3e0',
+    borderStrong: '#b9b8b4',
+    controlBorder: '#d6d5d2',
     controlBorderHover: accent.primary,
     accent: accent.primary,
     accentHover: accent.hover,
     accentLight: accent.light,
     accentBorder: accent.border,
-    success: '#059669', // emerald-600
-    successBg: '#ecfdf5', // emerald-50
-    successBorder: '#a7f3d0', // emerald-200
-    warning: '#d97706', // amber-600
-    warningBg: '#fffbeb', // amber-50
-    warningBorder: '#fde68a', // amber-200
-    danger: '#dc2626', // red-600
-    dangerBg: '#fef2f2', // red-50
-    dangerBorder: '#fecaca', // red-200
-    info: '#0284c7', // sky-600
-    infoBg: '#f0f9ff', // sky-50
-    infoBorder: '#bae6fd', // sky-200
+    success: '#059669',
+    successBg: '#ecfdf5',
+    successBorder: '#a7f3d0',
+    warning: '#d97706',
+    warningBg: '#fffbeb',
+    warningBorder: '#fde68a',
+    danger: '#dc2626',
+    dangerBg: '#fef2f2',
+    dangerBorder: '#fecaca',
+    info: '#0284c7',
+    infoBg: '#f0f9ff',
+    infoBorder: '#bae6fd',
     shadowSmall: '0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06)',
     shadowMedium: '0 4px 6px -1px rgb(0 0 0 / 0.09), 0 2px 4px -2px rgb(0 0 0 / 0.07)',
     shadowLarge: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.08)',
@@ -199,12 +236,12 @@ export const dashboardChartColors = {
  * Gắn CSS Variables và class dark vào thẻ <html>.
  * Được gọi khi ứng dụng khởi tạo hoặc khi người dùng đổi theme/accent.
  */
-export function initializeTheme(mode: ThemeMode = 'light', accentKey: AccentKey = 'blue') {
+export function initializeTheme(mode: ThemeMode = 'light', accentKey: AccentKey = 'blue', custom?: CustomAccent | null) {
   if (typeof document === 'undefined') return
 
   const root = document.documentElement
   const isDark = mode === 'dark'
-  const colors = getThemeColors(mode, accentKey)
+  const colors = getThemeColors(mode, accentKey, custom)
 
   // Bật/tắt class dark cho CSS rules
   if (mode === 'dark') {
@@ -214,17 +251,27 @@ export function initializeTheme(mode: ThemeMode = 'light', accentKey: AccentKey 
     root.classList.remove('dark')
     root.setAttribute('data-theme-mode', 'light')
   }
-  root.setAttribute('data-theme-accent', accentKey)
+
+  const v5AccentMap: Record<string, string> = {
+    amber: 'orange',
+    emerald: 'green',
+    violet: 'purple',
+  }
+  const effectiveAccent = custom ? custom.key : (v5AccentMap[accentKey] ?? accentKey)
+  root.setAttribute('data-theme-accent', effectiveAccent)
+  root.setAttribute('data-accent', effectiveAccent)
 
   const cssVarMap: Record<string, string> = {
     '--color-primary': colors.primary,
+    '--color-on-primary': isDark ? '#0b1120' : '#ffffff',
     '--color-primary-hover': colors.primaryHover,
     '--color-primary-active': colors.primaryActive,
     '--color-primary-light': colors.primaryLight,
     '--color-primary-border': colors.primaryBorder,
     '--color-bg': colors.background,
     '--color-bg-alt': colors.backgroundAlt,
-    '--color-bg-sidebar': isDark ? '#0f172a' : '#f8fafc',
+    '--color-bg-sidebar': isDark ? '#0f172a' : `color-mix(in srgb, ${colors.primaryLight} 28%, #fbfaf8)`,
+    '--color-table-header': `color-mix(in srgb, ${colors.primaryLight} 35%, ${colors.surfaceHover})`,
     '--color-surface': colors.surface,
     '--color-surface-hover': colors.surfaceHover,
     '--color-text': colors.text,
@@ -234,10 +281,14 @@ export function initializeTheme(mode: ThemeMode = 'light', accentKey: AccentKey 
     '--color-border': colors.border,
     '--color-border-light': colors.borderLight,
     '--color-border-strong': colors.borderStrong,
-    '--color-accent': colors.accent,
-    '--color-accent-hover': colors.accentHover,
-    '--color-accent-light': colors.accentLight,
-    '--color-accent-border': colors.accentBorder,
+    '--color-accent': colors.primary,
+    '--color-accent-hover': colors.primaryHover,
+    '--color-accent-active': colors.primaryActive,
+    '--color-accent-light': colors.primaryLight,
+    '--color-accent-border': colors.primaryBorder,
+    '--color-accent-bg': colors.primaryLight,
+    '--src-accent': colors.primary,
+    '--src-accent-bg': colors.primaryLight,
     '--color-control-border': colors.controlBorder,
     '--color-control-border-hover': colors.controlBorderHover,
     '--color-success': colors.success,
@@ -254,7 +305,7 @@ export function initializeTheme(mode: ThemeMode = 'light', accentKey: AccentKey 
     '--color-info-border': colors.infoBorder,
     '--color-neutral': colors.textSecondary,
     '--color-neutral-bg': colors.backgroundAlt,
-    '--font-sans': "'Be Vietnam Pro', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    '--font-sans': "-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif",
     '--font-serif': "'Lora', 'Noto Serif', Georgia, 'Times New Roman', serif",
     '--shadow-xs': colors.shadowSmall,
     '--shadow-sm': colors.shadowSmall,
@@ -276,15 +327,15 @@ export function initializeTheme(mode: ThemeMode = 'light', accentKey: AccentKey 
 /**
  * Sinh cấu hình Ant Design v6 ThemeConfig động theo chế độ và màu nhấn.
  */
-export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentKey = 'blue', style: ThemeStyle = 'modern'): ThemeConfig {
+export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentKey = 'blue', style: ThemeStyle = 'modern', custom?: CustomAccent | null): ThemeConfig {
   const isDark = mode === 'dark'
-  const colors = getThemeColors(mode, accentKey)
+  const colors = getThemeColors(mode, accentKey, custom)
   const radius = THEME_STYLES[style].radius
 
   return {
     algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
     token: {
-      fontFamily: "'Be Vietnam Pro', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif",
       fontSize: 14,
       fontSizeHeading1: 26,
       fontSizeHeading2: 22,
@@ -358,6 +409,7 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
       Button: {
         controlHeight: 36,
         borderRadius: radius,
+        primaryColor: isDark ? '#0b1120' : '#ffffff',
         fontWeight: 500,
         boxShadow: 'none',
         primaryShadow: 'none',

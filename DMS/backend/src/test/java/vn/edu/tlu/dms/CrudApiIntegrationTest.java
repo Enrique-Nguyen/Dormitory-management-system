@@ -119,6 +119,7 @@ class CrudApiIntegrationTest {
                 .when(identities)
                 .provisionAccount(any(AppUser.class), anyString());
         suffix = UUID.randomUUID().toString().substring(0, 6);
+        jdbc.update("INSERT INTO academic_year(code,name) VALUES ('2040-2041','2040-2041') ON CONFLICT DO NOTHING");
         firstUnitId =
                 jdbc.queryForObject("SELECT id FROM management_unit WHERE code = 'K1'", Long.class);
         otherUnitId =
@@ -142,6 +143,11 @@ class CrudApiIntegrationTest {
                         """,
                         Long.class,
                         "Loại " + suffix);
+        for (Long buildingId : List.of(firstBuildingId, otherBuildingId)) {
+            for (int floor : List.of(1, 2, 3)) {
+                jdbc.update("INSERT INTO building_floor(building_id,floor,name) VALUES (?,?,?) ON CONFLICT DO NOTHING", buildingId, floor, "Tang " + floor);
+            }
+        }
         firstRoomId = createRoom(firstBuildingId, "A101");
         otherRoomId = createRoom(otherBuildingId, "B101");
     }
@@ -198,6 +204,7 @@ class CrudApiIntegrationTest {
             // Case này cần commit thật để kiểm tra rollback của Service, nên dọn đúng các ID
             // fixture đã tạo.
             jdbc.update("DELETE FROM room WHERE id IN (?, ?)", firstRoomId, otherRoomId);
+            jdbc.update("DELETE FROM building_floor WHERE building_id IN (?, ?)", firstBuildingId, otherBuildingId);
             jdbc.update(
                     "DELETE FROM building WHERE id IN (?, ?)", firstBuildingId, otherBuildingId);
             jdbc.update("DELETE FROM room_type WHERE id = ?", roomTypeId);
@@ -682,6 +689,13 @@ class CrudApiIntegrationTest {
                 .andExpect(status().isNoContent());
     }
 
+    private Long studentFacultyId() {
+        return jdbc.queryForObject(
+                "INSERT INTO faculty(code,name) VALUES ('CRUD_TEST_F','CNTT')"
+                        + " ON CONFLICT(school_id,name) DO UPDATE SET active=true RETURNING id",
+                Long.class);
+    }
+
     @Test
     void studentCrudReturnsTemporaryPasswordAndBlocksDeleteWhenHistoryExists() throws Exception {
         String json =
@@ -693,8 +707,8 @@ class CrudApiIntegrationTest {
                                 "Sinh viên CRUD",
                                 "gender",
                                 "F",
-                                "faculty",
-                                "CNTT"));
+                                "facultyId",
+                                studentFacultyId()));
         String result =
                 mvc.perform(
                                 post("/api/admin/students/save-or-update")
@@ -1071,7 +1085,7 @@ class CrudApiIntegrationTest {
                                                                 "studentCode", "PT" + suffix,
                                                                 "fullName", "Tên cũ",
                                                                 "gender", "M",
-                                                                "faculty", "CNTT",
+                                                                "facultyId", studentFacultyId(),
                                                                 "phone", "0900000000"))))
                         .andExpect(status().isOk())
                         .andReturn()
@@ -2330,20 +2344,22 @@ class CrudApiIntegrationTest {
                                                         + "\",\"fullName\":\"Không ghi thay đổi"
                                                         + " này\"}")))
                 .andExpect(status().isBadRequest());
-        Map<String, String> studentFields =
+        Map<String, Object> studentFields =
                 Map.of(
                         "studentCode", "BAD" + suffix,
                         "gender", "M",
                         "dateOfBirth", "2003-01-01",
-                        "faculty", "CNTT",
-                        "cohort", "65");
+                        "schoolId", 1L,
+                        "facultyId", 1L,
+                        "cohortId", 1L,
+                        "hometownId", 1L);
         for (var field : studentFields.entrySet()) {
             var input = mapper.createObjectNode();
             input.put("username", "strict-" + suffix);
             input.put("fullName", "Không tạo tài khoản sai nhánh");
             input.put("role", Role.STAFF);
             input.put("managementUnitId", firstUnitId);
-            input.put(field.getKey(), field.getValue());
+            input.set(field.getKey(), mapper.valueToTree(field.getValue()));
             mvc.perform(
                             post("/api/admin/users/save-or-update")
                                     .with(asUser(adminId, Role.ADMIN))
@@ -2416,16 +2432,20 @@ class CrudApiIntegrationTest {
                                 + " RETURNING id",
                         Long.class,
                         firstRoomId);
+        Long storageLocationId = jdbc.queryForObject(
+                "INSERT INTO storage_location(management_unit_id,code,name) VALUES(?,?,?) RETURNING id",
+                Long.class, firstUnitId, "OWNER-" + marker, "Kho kiểm thử " + marker);
         Long storageId =
                 jdbc.queryForObject(
                         "INSERT INTO storage_record(contract_id,summer_choice_id,previous_bed_id,"
-                                + " package_count,description,location,deposited_at,received_by)"
-                                + " VALUES(?,?,?,1,'Đồ kiểm thử','Kho kiểm thử','2041-06-01',?)"
+                                + " package_count,description,location_id,deposited_at,received_by)"
+                                + " VALUES(?,?,?,1,'Đồ kiểm thử',?,'2041-06-01',?)"
                                 + " RETURNING id",
                         Long.class,
                         contractId,
                         summerId,
                         bedId,
+                        storageLocationId,
                         staffId);
         Map<String, Long> resources =
                 Map.of(
@@ -2824,6 +2844,7 @@ class CrudApiIntegrationTest {
     }
 
     private Long createRoom(Long buildingId, String code) {
+        jdbc.update("INSERT INTO building_floor(building_id,floor,name) VALUES (?,1,'Tang 1') ON CONFLICT DO NOTHING", buildingId);
         return jdbc.queryForObject(
                 "INSERT INTO"
                     + " room(building_id,room_type_id,floor,code,gender)VALUES(?,?,1,?,'M')RETURNING"

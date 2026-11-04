@@ -12,8 +12,9 @@ import java.time.LocalDate;
  * "bảng semester trống".
  *
  * <p>Ngày bắt đầu luôn lấy sau {@code MAX(end_date)} hiện có (nên không chồng với bất kỳ học kỳ nào),
- * còn nhãn năm học được dò tăng dần cho tới khi chưa dùng cho loại học kỳ đang yêu cầu. Mọi bước đều
- * dùng SELECT kiểm tra trước rồi mới INSERT một lần, tránh làm hỏng transaction của test đang bọc.
+ * còn nhãn năm học được dò tăng dần cho tới khi chưa dùng cho loại học kỳ đang yêu cầu. Dùng SELECT
+ * kiểm tra trước và tạo năm học trong danh mục trước khi INSERT học kỳ, tránh làm hỏng transaction
+ * của test đang bọc.
  */
 public final class FutureSemesterFixture {
 
@@ -54,8 +55,12 @@ public final class FutureSemesterFixture {
                 LocalDate.class);
         for (int probe = 0; probe < MAX_PROBE; probe++) {
             LocalDate end = start.plusDays(lengthDays);
-            String academicYear = yearLabel(start, end);
+            String academicYear = yearLabel(start);
             if (!academicYearUsed(jdbc, academicYear, type)) {
+                jdbc.update(
+                        "INSERT INTO academic_year(code,name) VALUES(?,?) ON CONFLICT DO NOTHING",
+                        academicYear,
+                        academicYear);
                 Long id = jdbc.queryForObject(
                         "INSERT INTO semester(academic_year, type, name, start_date, end_date)"
                                 + " VALUES(?,?,?,?,?) RETURNING id",
@@ -72,10 +77,9 @@ public final class FutureSemesterFixture {
         throw new IllegalStateException("Không cấp phát được học kỳ tương lai cho loại " + type);
     }
 
-    /** Nhãn năm học đúng mẫu {@code ^\d{4}-\d{4}$} và dài vừa đủ cho cột VARCHAR(9). */
-    private static String yearLabel(LocalDate start, LocalDate end) {
-        return String.format(
-                "%04d-%04d", start.getYear(), Math.max(start.getYear(), end.getYear()) + 1);
+    /** Nhãn năm học gồm hai năm liên tiếp, đúng ràng buộc của danh mục năm học. */
+    private static String yearLabel(LocalDate start) {
+        return String.format("%04d-%04d", start.getYear(), start.getYear() + 1);
     }
 
     private static boolean academicYearUsed(JdbcTemplate jdbc, String academicYear, String type) {

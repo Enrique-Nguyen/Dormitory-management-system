@@ -25,6 +25,7 @@ import vn.edu.tlu.dms.notification.domain.Notification;
 import vn.edu.tlu.dms.notification.repository.NotificationRepository;
 import vn.edu.tlu.dms.notification.service.NotificationCrudService;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
+import vn.edu.tlu.dms.room.service.FloorService;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -51,6 +52,8 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
 
     private final RoomReferenceService rooms;
 
+    private final FloorService floors;
+
     public NotificationCrudServiceImpl(
             JdbcTemplate jdbc,
             SqlPage queries,
@@ -58,7 +61,8 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
             ScopeGuard guard,
             AuditService audit,
             NotificationRepository repository,
-            RoomReferenceService rooms) {
+            RoomReferenceService rooms,
+            FloorService floors) {
         this.jdbc = jdbc;
         this.queries = queries;
         this.current = current;
@@ -66,6 +70,7 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
         this.audit = audit;
         this.repository = repository;
         this.rooms = rooms;
+        this.floors = floors;
     }
 
     @Override
@@ -75,6 +80,10 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
         var args = new ArrayList<Object>();
         String owner = current.get().isAdmin() ? "TRUE" : "n.created_by=?";
         if (!current.get().isAdmin()) args.add(current.get().id());
+        if (request.scope() != null && !request.scope().isBlank()) {
+            owner += " AND n.scope=?";
+            args.add(request.scope());
+        }
         args.add(LikePattern.contains(request.q().trim()));
         args.add(LikePattern.contains(request.q().trim()));
         return queries.search(
@@ -241,8 +250,12 @@ public class NotificationCrudServiceImpl implements NotificationCrudService {
                 }
                 guard.requireUnit(input.unitId());
             }
-            case NotificationScope.BUILDING, NotificationScope.FLOOR ->
+            case NotificationScope.BUILDING ->
                     guard.requireUnit(rooms.getBuildingManagementUnitId(input.buildingId()));
+            case NotificationScope.FLOOR -> {
+                guard.requireUnit(rooms.getBuildingManagementUnitId(input.buildingId()));
+                floors.requireActiveFloor(input.buildingId(), input.floor());
+            }
             case NotificationScope.ROOM ->
                     guard.requireUnit(rooms.getRoomLocation(input.roomId()).unitId());
             default -> throw BusinessException.invalid(ApiField.SCOPE, ValidationMessage.SCOPE_UNSUPPORTED);

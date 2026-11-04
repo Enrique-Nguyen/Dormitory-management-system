@@ -86,6 +86,7 @@ class KeycloakAccountIntegrationTest {
 
     @BeforeEach
     void createLinkedProfile() {
+        jdbc.update("UPDATE role_permission_matrix SET version=0");
         privilegeProbe.resetInvocations();
         classPrivilegeProbe.resetInvocations();
         subject = UUID.randomUUID().toString();
@@ -97,6 +98,13 @@ class KeycloakAccountIntegrationTest {
                         Long.class,
                         username,
                         subject);
+    }
+
+    private List<String> migrationPermissionsForRole(String role) {
+        return ScopeGuard.permissionsForRole(role).stream()
+                .filter(code -> !Role.STAFF.equals(role) || !List.of(Permission.CATALOG_CREATE,
+                        Permission.CATALOG_UPDATE, Permission.CATALOG_DELETE).contains(code))
+                .toList();
     }
 
     private RequestPostProcessor token(String identity, String role, long version) {
@@ -445,7 +453,7 @@ class KeycloakAccountIntegrationTest {
             stored.forEach(value -> codes.add(value.asText()));
             assertThat(codes)
                     .doesNotHaveDuplicates()
-                    .containsExactlyInAnyOrderElementsOf(ScopeGuard.permissionsForRole(role));
+                    .containsExactlyInAnyOrderElementsOf(migrationPermissionsForRole(role));
             assertThat(matrixVersion(role)).isZero();
         }
         mvc.perform(get("/api/auth/me").with(token(subject, Role.ADMIN, 0)))
@@ -496,7 +504,7 @@ class KeycloakAccountIntegrationTest {
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(
                                             matrixBody(
-                                                    0, ScopeGuard.permissionsForRole(Role.STAFF))))
+                                                    0, migrationPermissionsForRole(Role.STAFF))))
                     .andExpect(status().isForbidden());
         }
         mvc.perform(get("/api/admin/role-permissions/STAFF")).andExpect(status().isUnauthorized());
@@ -516,7 +524,7 @@ class KeycloakAccountIntegrationTest {
         RequestPostProcessor oldToken = token(staffSubject, Role.STAFF, 0);
         mvc.perform(searchByPage("/api/rooms").with(oldToken)).andExpect(status().isOk());
 
-        var restricted = new ArrayList<>(ScopeGuard.permissionsForRole(Role.STAFF));
+        var restricted = new ArrayList<>(migrationPermissionsForRole(Role.STAFF));
         // Thu hồi đúng màn ROOM, giữ ROOM_TYPE/ROOM_APPLICATION/ROOM_TRANSFER độc lập.
         restricted.removeAll(
                 List.of(
@@ -533,7 +541,7 @@ class KeycloakAccountIntegrationTest {
                 .andExpect(jsonPath("$.permissions").value(not(hasItem(Permission.ROOM_READ))))
                 .andExpect(jsonPath("$.permissions").value(hasItem(Permission.PROFILE_READ)));
 
-        updateMatrix(Role.STAFF, 1, ScopeGuard.permissionsForRole(Role.STAFF))
+        updateMatrix(Role.STAFF, 1, migrationPermissionsForRole(Role.STAFF))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.version").value(2));
         mvc.perform(searchByPage("/api/rooms").with(oldToken)).andExpect(status().isOk());
@@ -562,7 +570,7 @@ class KeycloakAccountIntegrationTest {
         RequestPostProcessor oldToken = token(technicianSubject, Role.TECHNICIAN, 0);
         mvc.perform(get("/api/privilege-test/any-permission").with(oldToken))
                 .andExpect(status().isOk());
-        var restricted = new ArrayList<>(ScopeGuard.permissionsForRole(Role.TECHNICIAN));
+        var restricted = new ArrayList<>(migrationPermissionsForRole(Role.TECHNICIAN));
         restricted.remove(Permission.MAINTENANCE_UPDATE);
         updateMatrix(Role.TECHNICIAN, 0, restricted).andExpect(status().isOk());
         mvc.perform(get("/api/privilege-test/any-permission").with(oldToken))
@@ -597,7 +605,7 @@ class KeycloakAccountIntegrationTest {
     /** Backend xác thực toàn bộ danh sách trước khi lưu; không tin ô disabled ở frontend. */
     @Test
     void invalidPermissionListsAreRejectedWithoutChangingPersistedMatrix() throws Exception {
-        List<String> baseline = ScopeGuard.permissionsForRole(Role.STAFF);
+        List<String> baseline = migrationPermissionsForRole(Role.STAFF);
         var duplicate = new ArrayList<>(baseline);
         duplicate.add(Permission.ROOM_READ);
         var unknown = new ArrayList<>(baseline);
@@ -632,19 +640,19 @@ class KeycloakAccountIntegrationTest {
                                                     + " role_permission_matrix WHERE role='STAFF'",
                                                 String.class))
                                 .size())
-                .isEqualTo(ScopeGuard.permissionsForRole(Role.STAFF).size());
+                .isEqualTo(migrationPermissionsForRole(Role.STAFF).size());
         assertThat(matrixAuditCount()).isZero();
     }
 
     /** Hai quản trị viên sửa cùng phiên bản: người lưu sau nhận 409, không ghi đè dữ liệu mới. */
     @Test
     void staleMatrixVersionCannotOverwriteNewerPermissionsOrProduceExtraAudit() throws Exception {
-        var restricted = new ArrayList<>(ScopeGuard.permissionsForRole(Role.STAFF));
+        var restricted = new ArrayList<>(migrationPermissionsForRole(Role.STAFF));
         restricted.remove(Permission.ROOM_DELETE);
         updateMatrix(Role.STAFF, 0, restricted)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.version").value(1));
-        updateMatrix(Role.STAFF, 0, ScopeGuard.permissionsForRole(Role.STAFF))
+        updateMatrix(Role.STAFF, 0, migrationPermissionsForRole(Role.STAFF))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("PERMISSION_MATRIX_STALE"));
         assertThat(matrixVersion(Role.STAFF)).isEqualTo(1);
@@ -659,7 +667,7 @@ class KeycloakAccountIntegrationTest {
 
     @Test
     void savingSamePermissionSetInAnotherOrderDoesNotIncrementVersionOrAudit() throws Exception {
-        var same = new ArrayList<>(ScopeGuard.permissionsForRole(Role.STAFF));
+        var same = new ArrayList<>(migrationPermissionsForRole(Role.STAFF));
         Collections.reverse(same);
         updateMatrix(Role.STAFF, 0, same)
                 .andExpect(status().isOk())
@@ -674,7 +682,7 @@ class KeycloakAccountIntegrationTest {
      */
     @Test
     void changedMatrixRecordsExactBeforeAfterAndUpdater() throws Exception {
-        var restricted = new ArrayList<>(ScopeGuard.permissionsForRole(Role.STAFF));
+        var restricted = new ArrayList<>(migrationPermissionsForRole(Role.STAFF));
         restricted.remove(Permission.ROOM_DELETE);
         updateMatrix(Role.STAFF, 0, restricted).andExpect(status().isOk());
         entityManager.flush();
@@ -692,11 +700,11 @@ class KeycloakAccountIntegrationTest {
         assertThat(before.path("role").asText()).isEqualTo(Role.STAFF);
         assertThat(before.path("version").asLong()).isZero();
         assertThat(before.path("permissions").size())
-                .isEqualTo(ScopeGuard.permissionsForRole(Role.STAFF).size());
+                .isEqualTo(migrationPermissionsForRole(Role.STAFF).size());
         assertThat(after.path("role").asText()).isEqualTo(Role.STAFF);
         assertThat(after.path("version").asLong()).isEqualTo(1);
         assertThat(after.path("permissions").size())
-                .isEqualTo(ScopeGuard.permissionsForRole(Role.STAFF).size() - 1);
+                .isEqualTo(migrationPermissionsForRole(Role.STAFF).size() - 1);
         var afterCodes = new ArrayList<String>();
         after.path("permissions").forEach(value -> afterCodes.add(value.asText()));
         assertThat(afterCodes).doesNotContain(Permission.ROOM_DELETE);
@@ -742,7 +750,7 @@ class KeycloakAccountIntegrationTest {
         mvc.perform(get("/api/admin/role-permissions/STAFF").with(token(subject, Role.ADMIN, 0)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("PERMISSION_MATRIX_UNAVAILABLE"));
-        updateMatrix(Role.STAFF, 0, ScopeGuard.permissionsForRole(Role.STAFF))
+        updateMatrix(Role.STAFF, 0, migrationPermissionsForRole(Role.STAFF))
                 .andExpect(status().isConflict());
         mvc.perform(get("/api/auth/me").with(token(subject, Role.ADMIN, 0)))
                 .andExpect(status().isOk())

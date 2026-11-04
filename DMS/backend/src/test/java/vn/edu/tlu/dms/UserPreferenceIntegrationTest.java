@@ -207,7 +207,7 @@ class UserPreferenceIntegrationTest {
         assertThatThrownBy(
                         () ->
                                 preferences.saveOrUpdate(
-                                        new PreferenceInput("dark", "pink", false, null)))
+                                        new PreferenceInput("dark", "not-a-preset", false, null)))
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         exception -> {

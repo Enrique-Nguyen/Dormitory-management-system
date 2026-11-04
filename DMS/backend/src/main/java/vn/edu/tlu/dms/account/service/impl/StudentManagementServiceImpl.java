@@ -8,6 +8,7 @@ import vn.edu.tlu.dms.account.api.AccountDtos.TemporaryPassword;
 import vn.edu.tlu.dms.account.api.StudentManagementController.Save;
 import vn.edu.tlu.dms.account.repository.AppUserRepository;
 import vn.edu.tlu.dms.account.service.AuthService;
+import vn.edu.tlu.dms.account.service.CatalogService;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
 import vn.edu.tlu.dms.account.service.StudentManagementService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
@@ -57,6 +58,8 @@ public class StudentManagementServiceImpl implements StudentManagementService {
 
     private final IdentityAccountService identities;
 
+    private final CatalogService catalogs;
+
     public StudentManagementServiceImpl(
             JdbcTemplate jdbc,
             SqlPage queries,
@@ -65,7 +68,8 @@ public class StudentManagementServiceImpl implements StudentManagementService {
             AuditService audit,
             AppUserRepository users,
             AuthService authService,
-            IdentityAccountService identities) {
+            IdentityAccountService identities,
+            CatalogService catalogs) {
         this.jdbc = jdbc;
         this.queries = queries;
         this.current = current;
@@ -74,17 +78,28 @@ public class StudentManagementServiceImpl implements StudentManagementService {
         this.users = users;
         this.authService = authService;
         this.identities = identities;
+        this.catalogs = catalogs;
     }
 
     private static final String SELECT =
             "SELECT"
-                + " u.id,u.username,u.full_name,u.phone,u.locked,p.student_code,p.gender,p.date_of_birth,p.faculty,p.cohort,p.hometown,p.emergency_contact"
-                + " FROM app_user u JOIN student_profile p ON p.user_id=u.id";
+                + " u.id,u.username,u.full_name,u.phone,u.locked,p.student_code,p.gender,p.date_of_birth,"
+                + " p.school_id,p.faculty_id,p.cohort_id,p.hometown_id,s.name AS school_name,"
+                + " f.name AS faculty,c.name AS cohort,h.name AS hometown,p.emergency_contact"
+                + " FROM app_user u JOIN student_profile p ON p.user_id=u.id"
+                + " LEFT JOIN school s ON s.id=p.school_id"
+                + " LEFT JOIN faculty f ON f.id=p.faculty_id"
+                + " LEFT JOIN student_cohort c ON c.id=p.cohort_id"
+                + " LEFT JOIN hometown h ON h.id=p.hometown_id";
 
     private String scope() {
         if (current.get().canReadAllUnits()) {
             return "TRUE";
         }
+        return unitScope();
+    }
+
+    private String unitScope() {
         return "(EXISTS (SELECT 1 FROM room_assignment_history a JOIN bed b ON b.id=a.bed_id JOIN"
                 + " room r ON r.id=b.room_id JOIN building bd ON bd.id=r.building_id WHERE"
                 + " a.student_id=u.id AND bd.management_unit_id=?) OR EXISTS (SELECT 1 FROM"
@@ -104,11 +119,42 @@ public class StudentManagementServiceImpl implements StudentManagementService {
         var args = scopeParameters();
         args.add(LikePattern.contains(q.trim()));
         args.add(LikePattern.contains(q.trim()));
+        var sql =
+                new StringBuilder(SELECT)
+                        .append(" WHERE ")
+                        .append(scope())
+                        .append(" AND (u.full_name ILIKE ? OR p.student_code ILIKE ?)");
+        if (input.gender() != null && !input.gender().isBlank()) {
+            sql.append(" AND p.gender=?");
+            args.add(input.gender().trim());
+        }
+        if (input.schoolId() != null) {
+            sql.append(" AND p.school_id=?");
+            args.add(input.schoolId());
+        }
+        if (input.facultyId() != null) {
+            sql.append(" AND p.faculty_id=?");
+            args.add(input.facultyId());
+        }
+        if (input.cohortId() != null) {
+            sql.append(" AND p.cohort_id=?");
+            args.add(input.cohortId());
+        }
+        if (input.hometownId() != null) {
+            sql.append(" AND p.hometown_id=?");
+            args.add(input.hometownId());
+        }
+        if (input.locked() != null) {
+            sql.append(" AND u.locked=?");
+            args.add(input.locked());
+        }
+        if (input.managementUnitId() != null) {
+            sql.append(" AND ").append(unitScope());
+            args.add(input.managementUnitId());
+            args.add(input.managementUnitId());
+        }
         return queries.search(
-                SELECT
-                        + " WHERE "
-                        + scope()
-                        + " AND (u.full_name ILIKE ? OR p.student_code ILIKE ?)",
+                sql.toString(),
                 args,
                 input,
                 Set.of(
@@ -120,6 +166,11 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                         "studentCode",
                         "gender",
                         "dateOfBirth",
+                        ApiField.SCHOOL_ID,
+                        ApiField.FACULTY_ID,
+                        ApiField.COHORT_ID,
+                        ApiField.HOMETOWN_ID,
+                        ApiField.SCHOOL_NAME,
                         "faculty",
                         "cohort",
                         "hometown",
@@ -158,6 +209,10 @@ public class StudentManagementServiceImpl implements StudentManagementService {
 
     private TemporaryPassword createStudent(Save in) {
         guard.requirePermission(Permission.STUDENT_CREATE);
+        var selected =
+                StudentCatalogReferences.merge(
+                        catalogs, new StudentCatalogReferences(null, null, null, null),
+                        in.schoolId(), in.facultyId(), in.cohortId(), in.hometownId());
         String temporary = "Kt7" + UUID.randomUUID().toString().replace("-", "").substring(0, 13);
         Long id =
                 jdbc.queryForObject(
@@ -171,15 +226,16 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                         in.phone());
         jdbc.update(
                 "INSERT INTO"
-                    + " student_profile(user_id,student_code,gender,date_of_birth,faculty,cohort,hometown,emergency_contact)"
-                    + " VALUES (?,?,?,?,?,?,?,?)",
+                    + " student_profile(user_id,student_code,gender,date_of_birth,school_id,faculty_id,cohort_id,hometown_id,emergency_contact)"
+                    + " VALUES (?,?,?,?,?,?,?,?,?)",
                 id,
                 in.studentCode().trim(),
                 in.gender(),
                 in.dateOfBirth(),
-                in.faculty(),
-                in.cohort(),
-                in.hometown(),
+                selected.schoolId(),
+                selected.facultyId(),
+                selected.cohortId(),
+                selected.hometownId(),
                 in.emergencyContact());
         var newUser = users.findById(id).orElseThrow(BusinessException::notFound);
         identities.provisionAccount(newUser, temporary);
@@ -190,7 +246,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                 EntityType.USER,
                 id,
                 null,
-                Map.of("studentCode", in.studentCode()),
+                getStudentById(id),
                 null);
         return new TemporaryPassword(id, temporary);
     }
@@ -222,6 +278,15 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                                 id))) {
             throw BusinessException.conflict(ErrorCode.STUDENT_HAS_ACTIVE_CONTRACT);
         }
+        var selected =
+                StudentCatalogReferences.merge(
+                        catalogs,
+                        new StudentCatalogReferences(
+                                (Long) before.get(ApiField.SCHOOL_ID),
+                                (Long) before.get(ApiField.FACULTY_ID),
+                                (Long) before.get(ApiField.COHORT_ID),
+                                (Long) before.get(ApiField.HOMETOWN_ID)),
+                        in.schoolId(), in.facultyId(), in.cohortId(), in.hometownId());
         // Đổi mã sinh viên cũng đổi tên đăng nhập; thu hồi phiên chứa tên cũ trong cùng
         // transaction.
         if (!Objects.equals(user.getUsername(), studentCode)) {
@@ -234,14 +299,15 @@ public class StudentManagementServiceImpl implements StudentManagementService {
         identities.synchronizeAccount(user);
         jdbc.update(
                 "UPDATE student_profile SET"
-                    + " student_code=?,gender=?,date_of_birth=?,faculty=?,cohort=?,hometown=?,emergency_contact=?"
+                    + " student_code=?,gender=?,date_of_birth=?,school_id=?,faculty_id=?,cohort_id=?,hometown_id=?,emergency_contact=?"
                     + " WHERE user_id=?",
                 studentCode,
                 gender,
                 keep(in.dateOfBirth(), before.get("dateOfBirth")),
-                keep(in.faculty(), before.get("faculty")),
-                keep(in.cohort(), before.get("cohort")),
-                keep(in.hometown(), before.get("hometown")),
+                selected.schoolId(),
+                selected.facultyId(),
+                selected.cohortId(),
+                selected.hometownId(),
                 keep(in.emergencyContact(), before.get("emergencyContact")),
                 id);
         var after = getStudentById(id);

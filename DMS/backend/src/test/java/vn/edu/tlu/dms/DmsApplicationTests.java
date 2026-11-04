@@ -21,8 +21,6 @@ class DmsApplicationTests {
                         "SELECT count(*) FROM information_schema.tables WHERE table_schema ="
                                 + " 'public' AND table_type = 'BASE TABLE'",
                         Integer.class);
-        // 34 bảng nghiệp vụ (gồm user_preference V8) + ma trận quyền động + 2 bảng Spring Session
-        // + Flyway history.
-        assertThat(tables).isEqualTo(38);
+        assertThat(tables).isEqualTo(48);
     }
 }

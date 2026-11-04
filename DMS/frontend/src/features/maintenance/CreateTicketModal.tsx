@@ -7,7 +7,6 @@ import {
   Button,
   FormField,
   FormGrid,
-  InputNumber,
   Modal,
   Radio,
   RadioGroup,
@@ -21,8 +20,8 @@ import type {
 } from '../../services/api/maintenance'
 import { errorMessage } from '../../utils/errorMessages'
 import { useMe } from '../account/useMe'
+import ReferenceSelect from '../crud/ReferenceSelect'
 import {
-  maintenanceCategoryOptions,
   maintenancePhotoRules,
   maintenanceSeverityOptions,
 } from './constants'
@@ -98,6 +97,7 @@ export default function CreateTicketModal({
   const canChooseLocation =
     me?.role === Role.STAFF || me?.role === Role.ADMIN
   const locationType = useWatch({ control, name: 'locationType' })
+  const buildingId = useWatch({ control, name: 'buildingId' })
   const create = useCreateTicket()
   const rooms = useMaintenanceRooms(open && canChooseLocation)
   const buildings = useMaintenanceBuildings(open && canChooseLocation)
@@ -195,7 +195,7 @@ export default function CreateTicketModal({
           return
         }
         if (values.floor == null) {
-          setError('floor', { message: 'Nhập tầng của khu vực chung.' })
+          setError('floor', { message: 'Chọn tầng của khu vực chung.' })
           return
         }
       }
@@ -260,10 +260,14 @@ export default function CreateTicketModal({
               control={control}
               rules={{ required: 'Chọn hạng mục sự cố.' }}
               render={({ field }) => (
-                <Select
-                  {...field}
+                <ReferenceSelect
                   {...fieldControl}
-                  options={[...maintenanceCategoryOptions]}
+                  endpoint="/catalogs/maintenance-categories"
+                  valueField="code"
+                  filters={{ active: true }}
+                  value={field.value || undefined}
+                  onChange={field.onChange}
+                  disabled={!open || create.isPending}
                   placeholder="Chọn hạng mục"
                 />
               )}
@@ -414,6 +418,10 @@ export default function CreateTicketModal({
                           {...field}
                           {...fieldControl}
                           options={buildingOptions}
+                          onChange={(value) => {
+                            field.onChange(value)
+                            setValue('floor', undefined)
+                          }}
                           loading={buildings.isLoading}
                           disabled={buildings.isError}
                           showSearch
@@ -430,21 +438,18 @@ export default function CreateTicketModal({
                     <Controller
                       name="floor"
                       control={control}
-                      rules={{ required: 'Nhập tầng.' }}
+                      rules={{ required: 'Chọn tầng.' }}
                       render={({ field }) => (
-                        <InputNumber
-                          {...field}
+                        <ReferenceSelect
                           {...fieldControl}
-                          min={0}
-                          max={32767}
-                          precision={0}
-                          style={{ width: '100%' }}
-                          placeholder="Ví dụ: 2"
-                          onChange={(value) =>
-                            field.onChange(
-                              typeof value === 'number' ? value : undefined,
-                            )
-                          }
+                          endpoint="/floors"
+                          valueField="floor"
+                          filters={{ active: true, ...(buildingId != null ? { buildingId } : {}) }}
+                          value={field.value}
+                          onChange={field.onChange}
+                          disabled={buildingId == null || create.isPending}
+                          allowClear
+                          placeholder={buildingId == null ? 'Chọn tòa nhà trước' : 'Chọn tầng'}
                         />
                       )}
                     />

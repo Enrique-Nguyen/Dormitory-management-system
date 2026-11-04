@@ -1,6 +1,16 @@
 import { api } from '../../services/api/client'
 import axios from 'axios'
-import type { CrudRecord, CrudResource } from './types'
+import type { CrudField, CrudRecord, CrudResource } from './types'
+
+export function isNumericField(field: CrudField): boolean {
+  if (field.filterValueType) return field.filterValueType === 'number'
+  return field.kind === 'number' || (!!field.lookup && ['id', 'floor'].includes(field.lookupValue ?? 'id'))
+}
+
+export function isFieldVisible(field: CrudField, value: unknown): boolean {
+  if (!field.visibleWhen) return true
+  return (Array.isArray(field.visibleWhen.value) ? field.visibleWhen.value : [field.visibleWhen.value]).includes(String(value))
+}
 
 export const CRUD_PAGE_SIZES = [10, 20, 50, 100]
 export const CRUD_DEFAULT_PAGE_SIZE = 20
@@ -36,8 +46,8 @@ export function readCrudQuery(
     )
       continue
     if (
-      (field.kind === 'number' || field.lookup) &&
-      (!Number.isSafeInteger(Number(value)) || Number(value) < (field.min ?? 1))
+      isNumericField(field) &&
+      (!Number.isSafeInteger(Number(value)) || Number(value) < (field.min ?? (field.lookupValue === 'floor' ? 0 : 1)))
     )
       continue
     if (
@@ -46,7 +56,7 @@ export function readCrudQuery(
     )
       continue
     filters[field.name] =
-      field.kind === 'number' || field.lookup
+      isNumericField(field)
         ? String(Number(value))
         : field.maxLength
           ? value.slice(0, field.maxLength)
@@ -216,9 +226,7 @@ export function createSearchRequest(query: CrudQuery, config: CrudResource) {
         ? new Date(value).toISOString()
         : field.filterValueType === 'boolean'
           ? value === 'true'
-          : field.filterValueType === 'number' ||
-              field.kind === 'number' ||
-              field.lookup
+          : isNumericField(field)
             ? Number(value)
             : value
   }
@@ -286,6 +294,15 @@ export async function getLookupRecords(
       console.warn(`Lookup ${endpoint} chạm trần 100 trang, danh sách bị cắt.`)
   }
   return all
+}
+
+export async function findReferenceRecord(endpoint: string, valueField: string, value: string | number, filters: Record<string, string | number | boolean> = {}): Promise<CrudRecord | undefined> {
+  for (let page = 0; ; page++) {
+    const result = await searchByPage(endpoint, { ...filters, q: String(value), page, size: 100 })
+    const found = result.content.find((row) => String(readValue(row, valueField)) === String(value))
+    if (found) return found
+    if (!result.content.length || (page + 1) * 100 >= result.totalElements) return undefined
+  }
 }
 
 /** Danh sách luôn đi qua API tìm kiếm và phân trang tại máy chủ. */

@@ -5,6 +5,7 @@ import {
   Pagination,
   type TableColumnsType,
   type TablePaginationConfig,
+  type TableProps,
 } from 'antd'
 import type { Key, ReactNode } from 'react'
 import { useIsMobile } from '../../hooks/useViewport'
@@ -24,6 +25,7 @@ interface Props<T extends object> {
   renderCard?: (record: T) => ReactNode
   /** Bật/tắt cột STT trên desktop (mặc định bật). */
   showStt?: boolean
+  scroll?: TableProps<T>['scroll']
 }
 
 function pick(record: unknown, dataIndex: unknown): unknown {
@@ -49,6 +51,7 @@ export default function ResponsiveTable<T extends object>({
   emptyDescription,
   renderCard,
   showStt = true,
+  scroll,
 }: Props<T>) {
   const isMobile = useIsMobile()
 
@@ -66,7 +69,7 @@ export default function ResponsiveTable<T extends object>({
             <EmptyState title={emptyTitle} description={emptyDescription} />
           ),
         }}
-        scroll={{ x: 'max-content' }}
+        scroll={scroll}
       />
     )
   }

@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Phiên bản | **0.14** |
-| Ngày | 31/10/2026 |
+| Phiên bản | **0.15** |
+| Ngày | 04/11/2026 |
 | Học phần | Chuyên đề CNTT, lớp 65CNTT, Nhóm 3 |
 | Giảng viên | Hoàng Quốc Dũng |
 | Thành viên | Nguyễn Văn Séc, Nguyễn Phú Nguyên, Lê Đức Nguyên, Nguyễn Văn Quyền, Nguyễn Tiến Lộc |
@@ -15,6 +15,7 @@
 
 | Phiên bản | Ngày | Người thực hiện | Nội dung |
 |---|---|---|---|
+| 0.15 | 04/11/2026 | Nhóm 3 | Chuẩn hóa danh mục dùng chung cho form, bộ lọc và Excel; trường/khoa/khóa/địa giới, tầng theo tòa, năm học, tiện nghi, hạng mục sửa chữa và vị trí kho dùng dữ liệu quản trị có tham chiếu. |
 | 0.14 | 31/10/2026 | Nhóm 3 | Theo quyết định DEC-BIL-01: khi đã có lịch sử chỉ số, phải nhập đủ kỳ liên tiếp; không tạo kỳ mới nếu còn thiếu kỳ liền trước. Kỳ đầu vẫn nhập chỉ số đầu, thay đồng hồ theo quy tắc hiện hành. |
 | 0.13 | 22/10/2026 | TV5 Nguyễn Tiến Lộc | Đồng bộ phân hệ 6 & 7: chuẩn hóa nghiệp vụ sổ cọc (thu cọc ban đầu, trừ cọc FIFO, bù cọc, hoàn cọc), tra cứu công nợ sinh viên/phòng, tự động phát hành hóa đơn phòng và điện nước theo đợt/chỉ số, cùng tổng hợp KPI Staff Dashboard |
 | 0.12 | 21/10/2026 | TV1 Nguyễn Văn Séc | Đồng bộ phần tài khoản và khung chung: làm rõ lỗi JWT, giữ FR-ACC-05 hai bước và trả mật khẩu tạm một lần; khung job SYSTEM có transaction riêng từng ID, nhắc bù cọc ít nhất mỗi giờ theo NFR-REL-03. Không đổi luồng nghiệp vụ của các module khác |
@@ -46,6 +47,13 @@
 10. Phụ lục: sơ đồ trạng thái
 
 ---
+
+### Bổ sung yêu cầu danh mục dùng chung (04/11/2026)
+
+- FR-CAT-01: Nhóm **Danh mục dùng chung** có màn thêm/sửa/xóa và tìm kiếm cho trường, khoa, khóa, quê quán/địa giới, năm học, tiện nghi, hạng mục sửa chữa, tầng theo tòa và vị trí kho theo đơn vị; dùng lại danh mục đơn vị, tòa, loại phòng, học kỳ, diện ưu tiên và đợt đăng ký hiện có.
+- FR-CAT-02: Form và bộ lọc dùng cùng API danh mục, không nhập nhãn hoặc ID tham chiếu bằng tay; khoa lọc theo trường, tầng theo tòa, vị trí kho theo đơn vị của hợp đồng. Giới tính hiển thị Nam/Nữ qua lựa chọn mã M/F cố định, không CRUD tùy ý các mã có ràng buộc nghiệp vụ.
+- FR-CAT-03: Chỉ gán mới danh mục đang hoạt động; dữ liệu lịch sử vẫn đọc và lọc được mục ngừng dùng. Chặn xóa mục đang được tham chiếu, kiểm tra quyền và phạm vi ở backend; thay đổi tên không làm mất liên kết.
+- FR-CAT-04: Migration chuyển nhãn cũ sang khóa ngoại và giữ nguyên tên đã lưu; không suy đoán trường của khoa cũ hoặc tách chuỗi tiện nghi cũ. Import sinh viên chỉ nhận mã/tên khoa và khóa khớp chính xác danh mục đang hoạt động; không tự sinh danh mục từ Excel. Ghi chú, mô tả và thông tin liên hệ vẫn là văn bản tự do.
 
 ## 1. Giới thiệu
 

@@ -1,7 +1,7 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.12**, 31/10/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.11 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
+> **Phiên bản 0.13**, 04/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.15 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
 > DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak, ma trận quyền động V5, quyền V6, ghi chú xác minh diện ưu tiên V7 và sở thích giao diện V8; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
 
@@ -9,6 +9,7 @@
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.13 | 04/11/2026 | Flyway V10–V13 chuẩn hóa danh mục, quan hệ hồ sơ, tầng theo tòa, vị trí kho và tiện nghi nhiều lựa chọn; giữ dữ liệu cũ bằng backfill trước khi bỏ các cột nhãn dư thừa. |
 | 0.12 | 31/10/2026 | Flyway V8 thêm bảng `user_preference` (1-1 với `app_user`) lưu sở thích giao diện theo tài khoản: theme mode, accent preset, mật độ bảng, version chống ghi đè; chủ sở hữu lấy từ `/api/me`, không nhận ID từ client. |
 | 0.1 | 10/10/2026 | Bản đầu tiên: ERD, DDL PostgreSQL 16, partial unique index, ánh xạ lỗi, JPA notes |
 | 0.2 | 10/10/2026 | Chốt Q-DB-01..10, bổ sung sequence và fn_next_code |
@@ -31,6 +32,20 @@ Flyway V4 thêm `app_user.keycloak_user_id VARCHAR(255)` với unique index từ
 Version DMS tiếp tục tăng khi khóa/reset/thay đổi quyền/logout tại DMS và được đưa vào JWT qua mapper từ thuộc tính chỉ Admin được sửa. Principal JWT không ghi Spring Session. Các mô tả BCrypt/session v0.4 bên dưới thuộc chế độ legacy-session; không áp dụng đăng nhập mặc định. V1–V3 giữ nguyên.
 
 DB và Keycloak không có transaction phân tán; rollback dùng thao tác bù, xóa danh tính sau commit. Mất kết nối lúc bù cần đối soát. Không thay thế migration bằng chạy lại snapshot SQL.
+
+### Danh mục dùng chung V10–V13 (04/11/2026)
+
+Nguồn nâng cấp chính thức là các migration mới trong backend; các mô tả cột chuỗi cũ và snapshot SQL bên dưới không thay thế V10–V13.
+
+| Migration | Thay đổi |
+|---|---|
+| V10 | Tạo `school`, `faculty`, `student_cohort`, `hometown`, `academic_year`, `amenity`, `maintenance_category` với `id/code/name/active`. `faculty.school_id` và `hometown.parent_id` là FK; tên khoa duy nhất trong trường, tên địa giới duy nhất trong cấp cha (`UNIQUE NULLS NOT DISTINCT`). |
+| V10 | `student_profile.school_id/faculty_id/cohort_id/hometown_id` là FK. Backfill nhãn chính xác trước khi bỏ `faculty/cohort/hometown`; trường của hồ sơ cũ để null nếu chưa biết. `semester.academic_year` và `maintenance_request.category` giữ mã đã công bố nhưng tham chiếu `academic_year.code` và `maintenance_category.code`. |
+| V11 | Tạo `building_floor(id,building_id,floor,name,active)`, duy nhất `(building_id,floor)`. Backfill vị trí phòng, ticket và thông báo hiện có; ba bảng tham chiếu khóa kép này. Tầng 0 hợp lệ. |
+| V12 | Tạo `storage_location(id,management_unit_id,code,name,active)`, duy nhất mã/tên theo đơn vị. Backfill theo đơn vị của giường cũ, thay `storage_record.location` bằng FK `location_id`. |
+| V13 | Tạo `room_type_amenity(room_type_id,amenity_id)` khóa chính kép; chuyển mỗi mô tả tiện nghi cũ thành một mục nguyên vẹn, hỗ trợ tên tối đa 500 ký tự rồi bỏ cột `room_type.amenities`. |
+
+Khóa ngoại chặn xóa mục đang dùng; ngừng hoạt động chỉ chặn gán mới. Mã danh mục và cặp tòa/số tầng, đơn vị/mã vị trí không đổi qua sửa. V10 bổ sung `CATALOG_READ` vào ma trận hiện có và tăng version; quyền ghi danh mục vẫn phải được cấp rõ ràng. Không sửa migration V1–V9 đã áp dụng.
 
 ## 1. Phạm vi và quy ước
 

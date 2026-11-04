@@ -26,6 +26,7 @@ import {
   StayRequestStatus,
   SummerStatus,
   TRANSFER_ACTION,
+  type StatusEntity,
 } from '../../constants/statusConfig'
 import {
   ExtensionAction,
@@ -102,25 +103,55 @@ const monthColumn = (key: string, label: string): CrudColumn => ({
   label,
   format: 'month',
 })
+const booleanFilter = (name: string, label: string, yes = 'Có', no = 'Không'): CrudField => ({
+  name, label, kind: 'select', filterValueType: 'boolean',
+  options: [{ value: 'true', label: yes }, { value: 'false', label: no }],
+})
+const statusFilter = (values: string[]): CrudField => ({
+  ...select('status', 'Trạng thái', values), required: false,
+})
+const facultyRef = (required = false): CrudField => ({
+  ...ref('facultyId', 'Khoa', '/catalogs/faculties', 'name', required),
+  lookupDependsOn: { field: 'schoolId', required: true },
+})
+const floorRef = (required = true): CrudField => ({
+  ...ref('floor', 'Tầng', '/floors', 'name', required),
+  lookupValue: 'floor',
+  lookupDependsOn: { field: 'buildingId', required: true },
+})
+const studentFilters: CrudField[] = [
+  { ...select('gender', 'Giới tính', Object.values(RoomGender)), required: false },
+  ref('schoolId', 'Trường', '/catalogs/schools', 'name', false),
+  facultyRef(),
+  ref('cohortId', 'Khóa', '/catalogs/cohorts', 'name', false),
+  ref('hometownId', 'Quê quán', '/catalogs/hometowns', 'name', false),
+  ref('managementUnitId', 'Đơn vị', '/management-units', 'name', false),
+  booleanFilter('locked', 'Tài khoản', 'Đã khóa', 'Đang mở'),
+]
 const studentFields: CrudField[] = [
   text('studentCode', 'Mã sinh viên', true, 20),
   text('fullName', 'Họ tên'),
-  select('gender', 'Giới tính', ['M', 'F']),
+  select('gender', 'Giới tính', Object.values(RoomGender)),
   { ...date('dateOfBirth', 'Ngày sinh'), required: false },
-  text('faculty', 'Khoa', false),
-  text('cohort', 'Khóa', false, 10),
+  { ...ref('schoolId', 'Trường', '/catalogs/schools', 'name', false), lookupFilters: { active: true } },
+  { ...facultyRef(), lookupFilters: { active: true } },
+  { ...ref('cohortId', 'Khóa', '/catalogs/cohorts', 'name', false), lookupFilters: { active: true } },
   text('phone', 'Điện thoại', false, 20),
-  text('hometown', 'Quê quán', false, 200),
+  { ...ref('hometownId', 'Quê quán', '/catalogs/hometowns', 'name', false), lookupFilters: { active: true } },
   text('emergencyContact', 'Liên hệ khẩn cấp', false, 200),
 ]
 
 /** Nhãn màn import khai báo cùng registry tài nguyên, component chỉ dùng lại. */
 export const studentImportLabels = {
-  title: 'Import sinh viên',
-  tab: 'Import Excel',
+  title: 'Sinh viên',
+  tab: 'Nhập Excel sinh viên',
   profiles: 'Hồ sơ sinh viên',
+  update: 'Cập nhật hồ sơ từ Excel',
+  updateHint: 'Nhập file có ID để cập nhật hồ sơ đã tồn tại. Tạo tài khoản mới bằng khu vực nhập sinh viên bên trên.',
+  subtitle: 'Tra cứu, lọc, xuất danh sách và nhập hồ sơ sinh viên trên cùng một màn hình.',
+  panelTitle: 'Nhập sinh viên và tạo tài khoản',
   instructions: 'Chọn file .xlsx tối đa 5 MB, 5.000 dòng. Kiểm tra dữ liệu trước, sau đó chỉ tạo các dòng hợp lệ. Mã SV đã tồn tại được bỏ qua.',
-  format: 'Cột: Mã SV (6–20 chữ số), Họ tên, Giới tính (Nam/Nữ hoặc M/F), Ngày sinh (dd/MM/yyyy, tuổi 15–60), Khoa, Khóa (K65). Đặt mã SV dài hơn 15 số hoặc có số 0 đầu và số điện thoại ở dạng Text để Excel giữ nguyên. Số điện thoại tùy chọn: 10 số, bắt đầu bằng 0.',
+  format: 'Cột: Mã SV (6–20 chữ số), Họ tên, Giới tính (Nam/Nữ hoặc M/F), Ngày sinh (dd/MM/yyyy, tuổi 15–60), Khoa, Khóa (K65): nhập đúng mã hoặc tên trong danh mục đang sử dụng đã được quản lý. Đặt mã SV dài hơn 15 số hoặc có số 0 đầu và số điện thoại ở dạng Text để Excel giữ nguyên. Số điện thoại tùy chọn: 10 số, bắt đầu bằng 0.',
   choose: 'Chọn file Excel',
   template: 'Tải file mẫu',
   templateFileName: 'mau-import-sinh-vien.xlsx',
@@ -194,12 +225,28 @@ export const dashboardUiLabels = {
 
 /** Nhãn thao tác hóa đơn, xác nhận thanh toán và sổ cọc dùng lại trên các màn hiện có. */
 export const crudDetailUiLabels = {
+  information: 'Thông tin chung',
+  additionalInformation: 'Thông tin bổ sung',
+  filters: 'Bộ lọc',
+  help: 'Hướng dẫn',
+  closeFilters: 'Đóng bộ lọc',
+  all: 'Tất cả',
+  results: 'Kết quả',
+  moreActions: 'Thao tác khác',
+  countError: 'Không tải được số lượng',
+  statusFilterNames: ['status', 'locked', 'active'],
   workflow: 'Xử lý nghiệp vụ',
   collections: { items: 'Dòng hóa đơn', transactions: 'Giao dịch cọc', timeline: 'Lịch sử' },
 }
 
 /** Chỉ các metadata tham chiếu được khai báo mới được dùng làm nhãn. */
 export const crudReferenceLabels: Record<string, string[]> = {
+  schoolId: ['schoolName'],
+  facultyId: ['faculty'],
+  cohortId: ['cohort'],
+  hometownId: ['hometown'],
+  parentId: ['parentName'],
+  amenityIds: ['amenityNames', 'amenities'],
   contractId: ['contractCode'],
   semesterId: ['semesterName'],
   studentId: ['studentName', 'fullName', 'studentCode'],
@@ -207,6 +254,52 @@ export const crudReferenceLabels: Record<string, string[]> = {
   roomId: ['roomCode'],
   buildingId: ['buildingName', 'buildingCode'],
   managementUnitId: ['managementUnitName', 'unitName'],
+}
+
+export const excelUiLabels = {
+  export: 'Xuất Excel', import: 'Nhập Excel',
+  exportSuccess: 'Đã xuất toàn bộ kết quả phù hợp với tìm kiếm và bộ lọc hiện tại.',
+  exportEmpty: 'Không có dữ liệu phù hợp để xuất.',
+  readonlyHint: 'Dữ liệu chỉ đọc hoặc hình thành từ quy trình nghiệp vụ; không nhập Excel để sửa lịch sử hay bỏ qua bước xử lý.',
+  instructions: 'Chọn file .xlsx, kiểm tra các dòng và xác nhận trước khi ghi dữ liệu.',
+  format: 'Tối đa 5 MB, 5.000 dòng. Dùng đúng tiêu đề trong file mẫu. Bỏ trống ID để thêm mới, nhập ID để cập nhật; mỗi dòng được lưu riêng và kiểm tra quyền, phạm vi, trạng thái tại máy chủ. Khóa ngoại dùng ID; danh sách ID dùng dạng [1,2]. Ô trống khi cập nhật giữ nguyên dữ liệu.',
+  choose: 'Chọn file Excel', template: 'Tải file mẫu', preview: 'Kiểm tra dữ liệu',
+  apply: 'Nhập các dòng hợp lệ', confirm: 'Xác nhận nhập dữ liệu từ Excel?',
+  confirmDescription: 'Mỗi dòng là một giao dịch riêng. Dòng thành công được giữ lại nếu dòng khác lỗi. Không tự động thử lại các dòng đã gửi.',
+  invalidFile: 'Chọn file .xlsx không rỗng, tối đa 5 MB.',
+  invalidHeaders: 'Tiêu đề cột không hợp lệ hoặc thiếu cột bắt buộc.',
+  tooManyRows: 'File vượt quá giới hạn 5.000 dòng.', noRows: 'File không có dòng dữ liệu.',
+  required: 'Bắt buộc nhập', invalidValue: 'Giá trị không hợp lệ',
+  unknownColumn: 'Cột không được hỗ trợ', duplicateColumn: 'Cột bị trùng',
+  formula: 'Không chấp nhận công thức Excel.',
+  tooManyExportRows: 'Kết quả vượt giới hạn xuất. Hãy thu hẹp bộ lọc rồi xuất lại.',
+  complete: 'Đã xử lý file Excel.', total: 'Tổng dòng', valid: 'Hợp lệ', errors: 'Lỗi', saved: 'Đã lưu',
+  row: 'Dòng Excel', result: 'Kết quả', reason: 'Chi tiết', ready: 'Sẵn sàng nhập',
+  pending: 'Chưa nhập', success: 'Thành công', failed: 'Không thành công',
+  credentials: 'Tải tài khoản vừa tạo',
+  credentialWarning: 'Mật khẩu tạm chỉ hiển thị một lần. Tải và bàn giao an toàn trước khi rời màn hình; không chia sẻ file xuất tài khoản.',
+  partialWarning: 'Các dòng được lưu riêng. Kiểm tra kết quả từng dòng; không nhập lại dòng đã thành công.',
+  id: 'ID', templateSheet: 'Mẫu nhập', dataSheet: 'Dữ liệu', fieldsSheet: 'Hướng dẫn',
+  field: 'Trường', type: 'Kiểu dữ liệu', requiredColumn: 'Bắt buộc khi tạo',
+  options: 'Giá trị cho phép', reference: 'Nguồn ID tham chiếu', yes: 'Có', no: 'Không',
+  fileNameSuffix: 'mau-nhap',
+  noCreate: 'Màn này không hỗ trợ thêm mới bằng Excel. Cần nhập ID của bản ghi hiện có.',
+  noUpdate: 'Bạn không có quyền cập nhật bản ghi này.',
+  recordMissing: 'Không tìm thấy bản ghi trong phạm vi được phép.',
+  immutable: 'Không được thay đổi trường bất biến',
+  stateLocked: 'Trạng thái hoặc người sở hữu hiện tại không cho phép sửa bản ghi.',
+  noChanges: 'Không có trường hợp lệ để cập nhật.',
+  studentsImport: 'Sinh viên mới phải được tạo qua luồng nhập sinh viên và cấp tài khoản.',
+  importTitle: 'Nhập dữ liệu từ Excel',
+  leaveBlocked: 'Chờ xử lý xong và tải tài khoản vừa tạo trước khi rời màn hình.',
+} as const
+
+export const crudStatusEntities: Record<string, StatusEntity> = {
+  applications: 'application', myApplications: 'application',
+  contracts: 'contract', myContracts: 'contract', deposits: 'contract', myDeposits: 'contract',
+  maintenance: 'ticket', myMaintenance: 'ticket',
+  invoices: 'invoice', myInvoices: 'invoice',
+  extensions: 'request', transfers: 'request', summer: 'request', storage: 'storage',
 }
 
 export const crudSecretFieldNames = new Set(['password', 'temporaryPassword', 'secret', 'clientSecret', 'accessToken', 'refreshToken'])
@@ -299,12 +392,86 @@ const invoiceFields: CrudField[] = [
   date('dueDate', 'Hạn đóng'),
 ]
 
+const catalogResource = (title: string, endpoint: string, nameLength = 200, codeLength = 30): CrudResource => ({
+  permission: Resource.CATALOG,
+  title,
+  endpoint,
+  createDefaults: { active: true },
+  filters: [booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng')],
+  fields: [
+    { ...text('code', 'Mã', true, codeLength), createOnly: true },
+    text('name', 'Tên', true, nameLength),
+    { name: 'active', label: 'Đang sử dụng', kind: 'boolean' },
+  ],
+  columns: columns(['code', 'Mã'], ['name', 'Tên'], ['active', 'Sử dụng']),
+})
+const facultyCatalog = catalogResource('Khoa', '/catalogs/faculties', 100)
+const hometownCatalog = catalogResource('Quê quán', '/catalogs/hometowns')
+
 export const resources: Record<string, CrudResource> = {
+  schools: catalogResource('Trường', '/catalogs/schools'),
+  faculties: {
+    ...facultyCatalog,
+    filters: [...(facultyCatalog.filters ?? []), ref('schoolId', 'Trường', '/catalogs/schools', 'name', false)],
+    fields: [
+      ...facultyCatalog.fields,
+      { ...ref('schoolId', 'Trường', '/catalogs/schools', 'name', false), lookupFilters: { active: true } },
+    ],
+    columns: [...facultyCatalog.columns, ...columns(['schoolId', 'Trường'])],
+  },
+  cohorts: catalogResource('Khóa', '/catalogs/cohorts', 10),
+  hometowns: {
+    ...hometownCatalog,
+    filters: [...(hometownCatalog.filters ?? []), ref('parentId', 'Địa phương cấp trên', '/catalogs/hometowns', 'name', false)],
+    fields: [
+      ...hometownCatalog.fields,
+      { ...ref('parentId', 'Địa phương cấp trên', '/catalogs/hometowns', 'name', false), lookupFilters: { active: true } },
+    ],
+    columns: [...hometownCatalog.columns, ...columns(['parentId', 'Địa phương cấp trên'])],
+  },
+  academicYears: catalogResource('Năm học', '/catalogs/academic-years', 200, 9),
+  amenities: catalogResource('Tiện nghi', '/catalogs/amenities', 500),
+  maintenanceCategories: catalogResource('Hạng mục sửa chữa', '/catalogs/maintenance-categories'),
+  floors: {
+    permission: Resource.CATALOG,
+    title: 'Tầng',
+    endpoint: '/floors',
+    createDefaults: { active: true },
+    filters: [
+      ref('buildingId', 'Tòa nhà', '/buildings', 'name', false),
+      booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng'),
+    ],
+    fields: [
+      { ...ref('buildingId', 'Tòa nhà', '/buildings'), createOnly: true },
+      { ...number('floor', 'Số tầng'), createOnly: true },
+      text('name', 'Tên tầng'),
+      { name: 'active', label: 'Đang sử dụng', kind: 'boolean' },
+    ],
+    columns: columns(['buildingId', 'Tòa nhà'], ['floor', 'Số tầng'], ['name', 'Tên tầng'], ['active', 'Sử dụng']),
+  },
+  storageLocations: {
+    permission: Resource.CATALOG,
+    title: 'Vị trí kho',
+    endpoint: '/storage-locations',
+    createDefaults: { active: true },
+    filters: [
+      ref('managementUnitId', 'Đơn vị', '/management-units', 'name', false),
+      booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng'),
+    ],
+    fields: [
+      { ...ref('managementUnitId', 'Đơn vị', '/management-units'), createOnly: true },
+      { ...text('code', 'Mã vị trí', true, 30), createOnly: true },
+      text('name', 'Tên vị trí', true, 100),
+      { name: 'active', label: 'Đang sử dụng', kind: 'boolean' },
+    ],
+    columns: columns(['code', 'Mã vị trí'], ['name', 'Vị trí'], ['managementUnitName', 'Đơn vị'], ['active', 'Sử dụng']),
+  },
   units: {
     permission: Resource.MANAGEMENT_UNIT,
     title: 'Đơn vị quản lý',
     endpoint: '/management-units',
     writeEndpoint: '/admin/management-units',
+    filters: [{ ...ref('code', 'Đơn vị', '/management-units', 'name', false), lookupValue: 'code' }],
     fields: [text('code', 'Mã đơn vị', true, 20), text('name', 'Tên đơn vị')],
     columns: columns(['code', 'Mã'], ['name', 'Tên đơn vị']),
     useListRecordForEdit: true,
@@ -314,6 +481,7 @@ export const resources: Record<string, CrudResource> = {
     title: 'Tòa nhà',
     endpoint: '/buildings',
     writeEndpoint: '/admin/buildings',
+    filters: [ref('managementUnitId', 'Đơn vị', '/management-units', 'name', false)],
     fields: [
       text('code', 'Mã tòa', true, 10),
       text('name', 'Tên tòa'),
@@ -333,13 +501,14 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.ROOM_TYPE,
     title: 'Loại phòng',
     endpoint: '/room-types',
+    filters: [booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng')],
     fields: [
       text('name', 'Tên loại', true, 50),
       { ...number('bedCount', 'Số giường', 1), max: 12 },
       number('priceMain', 'Giá học kỳ (đ)'),
       number('priceSummer', 'Giá hè (đ)'),
       { ...number('areaM2', 'Diện tích (m²)'), required: false },
-      text('amenities', 'Tiện nghi', false, 500),
+      { ...ref('amenityIds', 'Tiện nghi', '/catalogs/amenities', 'name', false), multiple: true, lookupFilters: { active: true } },
       { name: 'active', label: 'Đang sử dụng', kind: 'boolean' },
     ],
     columns: columns(
@@ -355,9 +524,13 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.SEMESTER,
     title: 'Học kỳ',
     endpoint: '/semesters',
+    filters: [
+      { ...select('type', 'Loại học kỳ', ['HK1', 'HK2', 'SUMMER']), required: false },
+      { ...ref('academicYear', 'Năm học', '/catalogs/academic-years', 'name', false), lookupValue: 'code' },
+    ],
     fields: [
       text('name', 'Tên học kỳ', true, 50),
-      text('academicYear', 'Năm học (2026-2027)', true, 9),
+      { ...ref('academicYear', 'Năm học', '/catalogs/academic-years'), lookupValue: 'code', lookupFilters: { active: true } },
       select('type', 'Loại', ['HK1', 'HK2', 'SUMMER']),
       date('startDate', 'Bắt đầu'),
       date('endDate', 'Kết thúc'),
@@ -377,6 +550,7 @@ export const resources: Record<string, CrudResource> = {
     createDefaults: { active: true },
     endpoint: '/priority-categories',
     writeEndpoint: '/admin/priority-categories',
+    filters: [booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng')],
     fields: [
       text('code', 'Mã', true, 30),
       text('name', 'Tên diện'),
@@ -454,14 +628,17 @@ export const resources: Record<string, CrudResource> = {
     // Backend chỉ mở xóa hồ sơ ở /api/admin/students; thêm/sửa vẫn dùng /students cho Staff.
     deleteEndpoint: '/admin/students',
     fields: studentFields,
+    filters: studentFilters,
     editFields: studentFields.filter((field) =>
       !['studentCode', 'fullName', 'gender'].includes(field.name)),
     columns: columns(
       ['studentCode', 'Mã sinh viên'],
       ['fullName', 'Họ tên'],
       ['gender', 'Giới tính'],
+      ['schoolName', 'Trường'],
       ['faculty', 'Khoa'],
       ['cohort', 'Khóa'],
+      ['hometown', 'Quê quán'],
     ),
     note: 'Admin thêm/xóa hồ sơ chưa có lịch sử; Staff tìm kiếm và sửa trong đơn vị.',
   },
@@ -470,14 +647,18 @@ export const resources: Record<string, CrudResource> = {
     title: 'Sinh viên',
     endpoint: '/admin/students',
     fields: studentFields,
+    filters: studentFilters,
     columns: columns(
       ['studentCode', 'Mã sinh viên'],
       ['fullName', 'Họ tên'],
       ['gender', 'Giới tính'],
+      ['schoolName', 'Trường'],
       ['faculty', 'Khoa'],
       ['cohort', 'Khóa'],
+      ['hometown', 'Quê quán'],
     ),
-    note: 'Quản lý từng hồ sơ; dùng tab Import Excel để kiểm tra và tạo tài khoản hàng loạt.',
+    subtitle: studentImportLabels.subtitle,
+    note: 'Nhập Excel để kiểm tra và tạo tài khoản hàng loạt; danh sách và bộ lọc luôn ở cùng màn hình.',
   },
   rooms: {
     permission: Resource.ROOM,
@@ -486,7 +667,7 @@ export const resources: Record<string, CrudResource> = {
     filters: [
       ref('buildingId', 'Tòa nhà', '/buildings', 'name', false),
       ref('roomTypeId', 'Loại phòng', '/room-types', 'name', false),
-      { ...number('floor', 'Tầng'), required: false },
+      floorRef(false),
       { ...select('gender', 'Giới tính', [RoomGender.M, RoomGender.F]), required: false },
       {
         ...select('status', 'Trạng thái', [
@@ -499,10 +680,10 @@ export const resources: Record<string, CrudResource> = {
     ],
     fields: [
       { ...ref('buildingId', 'Tòa nhà', '/buildings'), createOnly: true },
-      number('floor', 'Tầng'),
+      { ...floorRef(), lookupFilters: { active: true } },
       text('code', 'Mã phòng', true, 20),
       ref('roomTypeId', 'Loại phòng', '/room-types'),
-      select('gender', 'Giới tính', ['M', 'F']),
+      select('gender', 'Giới tính', Object.values(RoomGender)),
     ],
     columns: columns(
       ['code', 'Phòng'],
@@ -522,6 +703,11 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.REGISTRATION_PERIOD,
     title: 'Đợt đăng ký',
     endpoint: '/registration-periods',
+    filters: [
+      ref('semesterId', 'Học kỳ', '/semesters', 'name', false),
+      { ...select('kind', 'Loại đợt', ['REGULAR', 'SUMMER']), required: false },
+      booleanFilter('open', 'Đang mở đăng ký', 'Đang mở', 'Chưa mở hoặc đã đóng'),
+    ],
     fields: [
       ref('semesterId', 'Học kỳ', '/semesters'),
       select('kind', 'Loại đợt', ['REGULAR', 'SUMMER']),
@@ -546,6 +732,7 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.ROOM_APPLICATION,
     title: 'Đơn đăng ký',
     endpoint: '/applications',
+    filters: [statusFilter(Object.values(ApplicationStatus)), ref('periodId', 'Đợt đăng ký', '/registration-periods', 'name', false)],
     formSections: [
       {
         title: 'Thông tin sinh viên',
@@ -604,6 +791,7 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.ROOM_APPLICATION,
     title: 'Đơn đăng ký của tôi',
     endpoint: '/me/applications',
+    filters: [statusFilter(Object.values(ApplicationStatus)), ref('periodId', 'Đợt đăng ký', '/me/registration-periods/open', 'name', false)],
     writeEndpoint: '/applications',
     detailEndpoint: '/applications',
     fields: [
@@ -638,6 +826,7 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.CONTRACT,
     title: 'Hợp đồng',
     endpoint: '/contracts',
+    filters: [statusFilter(Object.values(ContractStatus))],
     formSections: [
       {
         title: 'Thông tin sinh viên & Đơn',
@@ -683,6 +872,7 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.CONTRACT,
     title: 'Hợp đồng của tôi',
     endpoint: '/me/contracts',
+    filters: [statusFilter(Object.values(ContractStatus))],
     detailEndpoint: '/contracts',
     fields: [],
     columns: columns(
@@ -698,6 +888,7 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.CONTRACT_EXTENSION,
     title: 'Yêu cầu gia hạn',
     endpoint: '/extension-requests',
+    filters: [statusFilter(Object.values(ExtensionStatus))],
     formSections: [
       {
         title: 'Thông tin hợp đồng',
@@ -743,6 +934,7 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.ROOM_TRANSFER,
     title: 'Yêu cầu chuyển phòng',
     endpoint: '/transfer-requests',
+    filters: [statusFilter(Object.values(StayRequestStatus))],
     formSections: [
       {
         title: 'Thông tin hợp đồng',
@@ -784,6 +976,7 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.SUMMER_REGISTRATION,
     title: 'Lựa chọn kỳ hè',
     endpoint: '/summer-choices',
+    filters: [statusFilter(Object.values(SummerStatus))],
     formSections: [
       {
         title: 'Thông tin tham chiếu',
@@ -850,6 +1043,11 @@ export const resources: Record<string, CrudResource> = {
       },
     ],
     endpoint: '/utility-readings',
+    filters: [
+      ref('buildingId', 'Tòa nhà', '/buildings', 'name', false),
+      { ...select('meterType', 'Loại đồng hồ', ['ELECTRIC', 'WATER']), required: false },
+      { ...date('billingMonth', 'Tháng ghi chỉ số'), required: false },
+    ],
     fields: [
       { ...ref('roomId', 'Phòng', '/rooms', 'code'), createOnly: true },
       {
@@ -916,6 +1114,7 @@ export const resources: Record<string, CrudResource> = {
       },
     ],
     endpoint: '/utility-rates',
+    filters: [{ ...select('meterType', 'Loại đồng hồ', ['ELECTRIC', 'WATER']), required: false }],
     fields: [
       select('meterType', 'Loại', ['ELECTRIC', 'WATER']),
       {
@@ -1011,6 +1210,7 @@ export const resources: Record<string, CrudResource> = {
     emptyTitle: 'Chưa có sổ cọc',
     emptyHint: 'Sổ cọc hình thành khi hợp đồng phát sinh giao dịch tiền cọc.',
     endpoint: '/deposit-balances',
+    filters: [statusFilter(Object.values(ContractStatus)), booleanFilter('hasTopup', 'Cần bù cọc', 'Còn thiếu cọc', 'Đủ cọc')],
     detailEndpoint: '/contracts',
     fields: [],
     columns: [
@@ -1034,6 +1234,7 @@ export const resources: Record<string, CrudResource> = {
     emptyTitle: 'Chưa có sổ cọc',
     emptyHint: 'Giao dịch tiền cọc của bạn sẽ xuất hiện tại đây.',
     endpoint: '/me/deposit-balances',
+    filters: [statusFilter(Object.values(ContractStatus)), booleanFilter('hasTopup', 'Cần bù cọc', 'Còn thiếu cọc', 'Đủ cọc')],
     detailEndpoint: '/contracts',
     fields: [],
     columns: [
@@ -1048,14 +1249,13 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.MAINTENANCE,
     title: 'Yêu cầu sửa chữa',
     endpoint: '/maintenance-requests',
+    filters: [
+      statusFilter(Object.values(MaintenanceStatus)),
+      { ...ref('category', 'Hạng mục', '/catalogs/maintenance-categories', 'name', false), lookupValue: 'code' },
+      { ...select('severity', 'Mức độ', ['LOW', 'MEDIUM', 'HIGH']), required: false },
+    ],
     fields: [
-      select('category', 'Hạng mục', [
-        'ELECTRIC',
-        'WATER',
-        'FURNITURE',
-        'DOOR_LOCK',
-        'OTHER',
-      ]),
+      { ...ref('category', 'Hạng mục', '/catalogs/maintenance-categories'), lookupValue: 'code', lookupFilters: { active: true } },
       select('severity', 'Mức độ', ['LOW', 'MEDIUM', 'HIGH']),
       { ...text('description', 'Mô tả', true, 1000), kind: 'textarea' },
       {
@@ -1064,13 +1264,7 @@ export const resources: Record<string, CrudResource> = {
       },
     ],
     editFields: [
-      select('category', 'Hạng mục', [
-        'ELECTRIC',
-        'WATER',
-        'FURNITURE',
-        'DOOR_LOCK',
-        'OTHER',
-      ]),
+      { ...ref('category', 'Hạng mục', '/catalogs/maintenance-categories'), lookupValue: 'code', lookupFilters: { active: true } },
       select('severity', 'Mức độ', ['LOW', 'MEDIUM', 'HIGH']),
       { ...text('description', 'Mô tả', true, 1000), kind: 'textarea' },
     ],
@@ -1099,10 +1293,11 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.NOTIFICATION,
     title: 'Thông báo đã đăng',
     endpoint: '/notifications/published',
+    filters: [{ ...select('scope', 'Phạm vi', ['UNIT', 'BUILDING', 'FLOOR', 'ROOM', 'ALL']), required: false }],
     writeEndpoint: '/notifications',
     fields: [
       {
-        ...select('scope', 'Phạm vi', ['UNIT', 'BUILDING', 'ROOM', 'ALL']),
+        ...select('scope', 'Phạm vi', ['UNIT', 'BUILDING', 'FLOOR', 'ROOM', 'ALL']),
         createOnly: true,
       },
       {
@@ -1113,7 +1308,13 @@ export const resources: Record<string, CrudResource> = {
       {
         ...ref('buildingId', 'Tòa', '/buildings'),
         createOnly: true,
-        visibleWhen: { field: 'scope', value: 'BUILDING' },
+        visibleWhen: { field: 'scope', value: ['BUILDING', 'FLOOR'] },
+      },
+      {
+        ...floorRef(),
+        lookupFilters: { active: true },
+        createOnly: true,
+        visibleWhen: { field: 'scope', value: 'FLOOR' },
       },
       {
         ...ref('roomId', 'Phòng', '/rooms', 'code'),
@@ -1136,7 +1337,7 @@ export const resources: Record<string, CrudResource> = {
     endpoint: '/me/profile',
     fields: [
       text('phone', 'Điện thoại', false, 20),
-      text('hometown', 'Quê quán', false, 200),
+      { ...ref('hometownId', 'Quê quán', '/catalogs/hometowns', 'name', false), lookupFilters: { active: true } },
       text('emergencyContact', 'Liên hệ khẩn cấp', false, 200),
     ],
     columns: columns(
@@ -1152,9 +1353,9 @@ export const resources: Record<string, CrudResource> = {
     title: 'Nhật ký hệ thống',
     endpoint: '/admin/audit-logs',
     filters: [
-      { ...number('actorId', 'ID người thao tác', 1), required: false },
-      text('action', 'Mã thao tác', false, 100),
-      text('entityType', 'Loại đối tượng', false, 100),
+      ref('actorId', 'Người thao tác', '/admin/users', 'fullName', false),
+      { ...ref('action', 'Thao tác', '/admin/audit-logs/actions', 'name', false), lookupValue: 'code' },
+      { ...ref('entityType', 'Loại đối tượng', '/admin/audit-logs/entity-types', 'name', false), lookupValue: 'code' },
       { name: 'from', label: 'Từ thời điểm', kind: 'datetime' },
       { name: 'to', label: 'Đến thời điểm', kind: 'datetime' },
     ],
@@ -1184,6 +1385,7 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.CONFIG,
     title: 'Cấu hình hệ thống',
     endpoint: '/admin/configs',
+    filters: [{ ...ref('key', 'Cấu hình', '/admin/configs', 'description', false), lookupValue: 'key' }],
     fields: [text('value', 'Giá trị', true, 100)],
     columns: columns(
       ['key', 'Khóa'],
@@ -1194,6 +1396,17 @@ export const resources: Record<string, CrudResource> = {
     singleton: false,
     useListRecordForEdit: true,
     note: 'Chỉ sửa các khóa cấu hình đã có.',
+  },
+  storage: {
+    permission: Resource.STORAGE, title: 'Kho gửi đồ', endpoint: '/storage-records', fields: [], readOnly: true,
+    filters: [booleanFilter('returned', 'Trạng thái phiếu', 'Đã nhận đồ', 'Đang gửi'), ref('contractId', 'Hợp đồng', '/contracts', 'code', false)],
+    columns: columns(['id', 'Phiếu'], ['fullName', 'Sinh viên'], ['contractCode', 'Hợp đồng'], ['contractId', 'ID hợp đồng'], ['packageCount', 'Số kiện'], ['description', 'Mô tả'], ['location', 'Vị trí'], ['depositedAt', 'Ngày gửi'], ['returnedAt', 'Ngày nhận']),
+    note: 'Tạo phiếu gửi đồ giải phóng giường; nhận lại đồ phải phân giường qua quy trình nghiệp vụ, không nhập Excel để bỏ qua các bước này.',
+  },
+  notificationInbox: {
+    permission: Resource.NOTIFICATION, title: 'Hộp thư thông báo', endpoint: '/notifications', fields: [], readOnly: true,
+    columns: columns(['id', 'ID'], ['title', 'Tiêu đề'], ['body', 'Nội dung'], ['scope', 'Phạm vi'], ['source', 'Nguồn'], ['createdAt', 'Ngày gửi'], ['isRead', 'Đã đọc'], ['link', 'Liên kết']),
+    note: 'Thông báo đã nhận và thông báo hệ thống không được nhập Excel hoặc ghi đè; tạo thông báo tại màn đăng thông báo theo quyền được cấp.',
   },
   myRoom: {
     inlineDetail: true,

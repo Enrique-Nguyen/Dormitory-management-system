@@ -12,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.account.service.CatalogService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Catalog;
+import vn.edu.tlu.dms.room.service.FloorService;
 import vn.edu.tlu.dms.billing.service.DepositService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
@@ -110,6 +113,10 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
     private final ApplicationEventPublisher events;
 
+    private final CatalogService catalogs;
+
+    private final FloorService floors;
+
     public MaintenanceRequestServiceImpl(
             MaintenanceRequestRepository requests,
             MaintenancePhotoRepository photoRows,
@@ -125,7 +132,9 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             JdbcTemplate jdbc,
             AuditService audit,
             EntityManager entityManager,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events,
+            CatalogService catalogs,
+            FloorService floors) {
         this.requests = requests;
         this.photoRows = photoRows;
         this.photos = photos;
@@ -141,6 +150,8 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         this.audit = audit;
         this.entityManager = entityManager;
         this.events = events;
+        this.catalogs = catalogs;
+        this.floors = floors;
     }
 
     @Override
@@ -216,7 +227,10 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         if (input.category() == null && input.severity() == null && input.description() == null) {
             throw BusinessException.invalid(ApiField.FORM, ValidationMessage.NOTHING_TO_UPDATE);
         }
-        if (input.category() != null) req.setCategory(input.category());
+        if (input.category() != null && !input.category().equals(req.getCategory())) {
+            catalogs.requireActiveCode(Catalog.MAINTENANCE_CATEGORIES, input.category());
+            req.setCategory(input.category());
+        }
         if (input.severity() != null) req.setSeverity(input.severity());
         if (input.description() != null) {
             requireNonBlank(input.description(), "description");
@@ -245,6 +259,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         guard.requirePermission(Permission.MAINTENANCE_CREATE);
         guard.requireRole(Role.STUDENT, Role.STAFF);
         requireNonBlank(input.category(), "category");
+        catalogs.requireActiveCode(Catalog.MAINTENANCE_CATEGORIES, input.category());
         requireNonBlank(input.severity(), "severity");
         requireNonBlank(input.description(), "description");
         var actor = current.get();
@@ -271,6 +286,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                 request.setRoomId(input.roomId());
             } else {
                 guard.requireUnit(rooms.getBuildingManagementUnitId(input.buildingId()));
+                floors.requireActiveFloor(input.buildingId(), input.floor());
                 request.setBuildingId(input.buildingId());
                 request.setFloor(input.floor());
             }

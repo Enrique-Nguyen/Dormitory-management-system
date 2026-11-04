@@ -14,6 +14,7 @@ import vn.edu.tlu.dms.common.support.SqlPage;
 import vn.edu.tlu.dms.notification.service.OverviewService;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,15 +72,27 @@ public class OverviewServiceImpl implements OverviewService {
         guard.requireRole(Role.STAFF, Role.STUDENT);
         var args = new ArrayList<Object>();
         String filter = contractScope(args, mine);
-        args.add(LikePattern.contains(input.q()));
+        if (input.statuses() != null && !input.statuses().isEmpty()) {
+            filter += " AND c.status IN ("
+                    + String.join(",", Collections.nCopies(input.statuses().size(), "?"))
+                    + ")";
+            args.addAll(input.statuses());
+        }
+        if (input.hasTopup() != null) {
+            filter += " AND (coalesce(v.topup_needed,0)>0)=?";
+            args.add(input.hasTopup());
+        }
+        String keyword = LikePattern.contains(input.q());
+        args.add(keyword);
+        args.add(keyword);
         String sql =
                 "SELECT c.id,c.code,c.student_id,c.status,c.deposit_required,u.full_name,"
-                    + " coalesce(v.balance,0) AS balance,coalesce(v.topup_needed,0) AS topup_needed"
-                    + " FROM dormitory_contract c JOIN room_application ap ON"
-                    + " ap.id=c.application_id JOIN app_user u ON u.id=c.student_id LEFT JOIN"
-                    + " v_deposit_balance v ON v.contract_id=c.id WHERE "
+                        + " coalesce(v.balance,0) AS balance,coalesce(v.topup_needed,0) AS topup_needed"
+                        + " FROM dormitory_contract c JOIN room_application ap ON"
+                        + " ap.id=c.application_id JOIN app_user u ON u.id=c.student_id LEFT JOIN"
+                        + " v_deposit_balance v ON v.contract_id=c.id WHERE "
                         + filter
-                        + " AND u.full_name ILIKE ?";
+                        + " AND (u.full_name ILIKE ? OR c.code ILIKE ?)";
         return queries.search(sql, args, input, DEPOSIT_SORT_COLUMNS, "id,desc");
     }
 
@@ -115,13 +128,23 @@ public class OverviewServiceImpl implements OverviewService {
         guard.requireRole(Role.STAFF, Role.STUDENT);
         var args = new ArrayList<Object>();
         String filter = contractScope(args, mine);
-        args.add(LikePattern.contains(input.q()));
+        if (input.returned() != null) {
+            filter += " AND (s.returned_at IS NOT NULL)=?";
+            args.add(input.returned());
+        }
+        if (input.contractId() != null) {
+            filter += " AND s.contract_id=?";
+            args.add(input.contractId());
+        }
+        String keyword = LikePattern.contains(input.q());
+        args.add(keyword);
+        args.add(keyword);
         String sql =
                 "SELECT s.*,c.code AS contract_code,u.full_name FROM storage_record s JOIN"
                         + " dormitory_contract c ON c.id=s.contract_id JOIN room_application ap ON"
                         + " ap.id=c.application_id JOIN app_user u ON u.id=c.student_id WHERE "
                         + filter
-                        + " AND u.full_name ILIKE ?";
+                        + " AND (u.full_name ILIKE ? OR c.code ILIKE ?)";
         return queries.search(sql, args, input, STORAGE_SORT_COLUMNS, "id,desc");
     }
 

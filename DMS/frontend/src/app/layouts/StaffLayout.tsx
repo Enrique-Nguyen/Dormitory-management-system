@@ -14,7 +14,6 @@ export default function StaffLayout() {
     <SidebarShell
       groups={staffNav}
       badges={badges}
-      portalName="Quản lý"
       homePath="/staff/dashboard"
       notificationsPath={STAFF_INBOX_PATH}
       searchPlaceholder="Tìm sinh viên (mã SV, họ tên)..."

@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
-import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceCategory;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MaintenanceSeverity;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
 
@@ -22,7 +21,7 @@ public final class MaintenanceDtos {
     /** Không có id thì tạo mới; có id chỉ sửa các trường nội dung được gửi và giữ vị trí/ảnh cũ. */
     public record Save(
             @Positive Long id,
-            @Pattern(regexp = MaintenanceCategory.PATTERN) String category,
+            @Size(max = 30) String category,
             @Pattern(regexp = MaintenanceSeverity.PATTERN) String severity,
             @Size(max = 1000) String description,
             @Positive Long roomId,

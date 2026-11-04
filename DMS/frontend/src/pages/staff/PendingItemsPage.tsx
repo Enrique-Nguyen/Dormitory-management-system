@@ -1,5 +1,5 @@
 import type { TableColumnsType } from 'antd'
-import { Radio } from 'antd'
+import { Radio, Tooltip } from 'antd'
 import {
   ClockCircleOutlined,
   EyeOutlined,
@@ -10,7 +10,7 @@ import {
   Button,
   Card,
   DataTable,
-  FilterBar,
+  ListToolbar,
   Modal,
   PageHeader,
   SearchInput,
@@ -20,6 +20,7 @@ import {
 import { pendingItemDetailSegments } from '../../constants/navigation'
 import RecordDetailContent from '../../features/crud/RecordDetailContent'
 import { pendingItemTypeLabels } from '../../constants/statusConfig'
+import { crudDetailUiLabels } from '../../features/crud/resources'
 import { CRUD_DEFAULT_PAGE_SIZE, CRUD_PAGE_SIZES } from '../../features/crud/api'
 import {
   pendingItemEntityId,
@@ -185,22 +186,23 @@ export default function PendingItemsPage() {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 140,
+      width: 88,
       render: (_value, item) =>
         pendingItemEntityId(item) != null && typeMeta(item.type).segment ? (
-          <Button
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => { setProcessing(false); setSelectedItem(item) }}
-          >
-            Xem chi tiết
-          </Button>
+          <Tooltip title="Xem chi tiết">
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => { setProcessing(false); setSelectedItem(item) }}
+              aria-label="Xem chi tiết"
+            />
+          </Tooltip>
         ) : '—',
     },
   ]
 
   return (
-    <>
+    <div className="dms-crud-page">
       <PageHeader
         title="Yêu cầu chờ xử lý"
         subtitle="Đơn đăng ký, gia hạn, chuyển phòng, lựa chọn kỳ hè và hợp đồng chờ kích hoạt trong đơn vị."
@@ -229,6 +231,35 @@ export default function PendingItemsPage() {
           </span>
         }
       >
+        <ListToolbar
+          filterLabel={crudDetailUiLabels.filters}
+          closeFiltersLabel={crudDetailUiLabels.closeFilters}
+          filterCount={type ? 1 : 0}
+          search={          <SearchInput
+            value={searchText}
+            placeholder="Tìm theo tên sinh viên hoặc mã sinh viên..."
+            onChange={(event) => {
+              const value = event.target.value
+              setSearchText(value)
+              if (!value) search('')
+            }}
+            onSearch={search}
+          />}
+          filters={          <Select<string>
+            allowClear
+            placeholder="Lọc theo loại việc"
+            style={{ minWidth: 220 }}
+            value={type}
+            onChange={(value) => {
+              setType(value)
+              setPage(1)
+            }}
+            options={Object.entries(TYPE_META).map(([value, meta]) => ({
+              value,
+              label: meta.label,
+            }))}
+          />}
+        />
         <div style={{ marginBottom: 16 }}>
           <Radio.Group
             className="dms-pending-type-filter"
@@ -250,33 +281,6 @@ export default function PendingItemsPage() {
             ))}
           </Radio.Group>
         </div>
-
-        <FilterBar>
-          <SearchInput
-            value={searchText}
-            placeholder="Tìm theo tên sinh viên hoặc mã sinh viên..."
-            onChange={(event) => {
-              const value = event.target.value
-              setSearchText(value)
-              if (!value) search('')
-            }}
-            onSearch={search}
-          />
-          <Select<string>
-            allowClear
-            placeholder="Lọc theo loại việc"
-            style={{ minWidth: 220 }}
-            value={type}
-            onChange={(value) => {
-              setType(value)
-              setPage(1)
-            }}
-            options={Object.entries(TYPE_META).map(([value, meta]) => ({
-              value,
-              label: meta.label,
-            }))}
-          />
-        </FilterBar>
 
         {pendingItems.isError && (
           <Alert
@@ -316,7 +320,7 @@ export default function PendingItemsPage() {
       <Modal
         open={selectedItem !== null}
         title={processing ? 'Xử lý yêu cầu chờ' : 'Chi tiết yêu cầu chờ xử lý'}
-        width={1080}
+        width={960}
         onCancel={() => { setSelectedItem(null); setProcessing(false) }}
         destroyOnHidden
         footer={
@@ -337,6 +341,6 @@ export default function PendingItemsPage() {
           />
         )}
       </Modal>
-    </>
+    </div>
   )
 }

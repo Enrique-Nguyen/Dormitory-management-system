@@ -1,3 +1,5 @@
+import { DownloadOutlined } from '@ant-design/icons'
+import { App } from 'antd'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import {
@@ -8,15 +10,22 @@ import {
   FilterBar,
   PageHeader,
   SearchInput,
+  Select,
   StatusBadge,
 } from '../../components'
 import { Permission } from '../../constants/authorization'
 import { StorageState } from '../../constants/statusConfig'
 import { CRUD_DEFAULT_PAGE_SIZE, CRUD_PAGE_SIZES } from '../../features/crud/api'
+import { downloadWorkbook, EXCEL_MAX_EXPORT_ROWS } from '../../features/crud/excel'
+import { excelUiLabels, resources } from '../../features/crud/resources'
+import ReferenceSelect from '../../features/crud/ReferenceSelect'
 import { StorageModal, useStorageRecords } from '../../features/contract'
 import { useMe } from '../../features/account/useMe'
 import { hasPermission } from '../../services/api/auth'
-import type { StorageRecordItem } from '../../services/api/checkout'
+import {
+  searchStorageRecords,
+  type StorageRecordItem,
+} from '../../services/api/checkout'
 import { errorMessage } from '../../utils/errorMessages'
 import { formatDate } from '../../utils/format'
 
@@ -26,6 +35,8 @@ import { formatDate } from '../../utils/format'
  * vẫn kiểm tra điều kiện hợp đồng, lựa chọn hè và phân phòng.
  */
 export default function StoragePage() {
+  const { message } = App.useApp()
+  const config = resources.storage
   const { data: me } = useMe()
   const [searchParams] = useSearchParams()
   const linkedContractId = Number(searchParams.get('contractId'))
@@ -37,11 +48,56 @@ export default function StoragePage() {
   const [keyword, setKeyword] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [returning, setReturning] = useState<StorageRecordItem | null>(null)
-  const records = useStorageRecords({
+  const [exporting, setExporting] = useState(false)
+  const [returned, setReturned] = useState<string>()
+  const [contractId, setContractId] = useState<number | null>(null)
+  const query = {
     page: page - 1,
     size: pageSize,
     ...(keyword ? { q: keyword } : {}),
-  })
+    ...(returned !== undefined ? { returned: returned === 'true' } : {}),
+    ...(contractId ? { contractId } : {}),
+    sort: ['id,desc'],
+  }
+  const records = useStorageRecords(query)
+
+  async function exportRecords() {
+    setExporting(true)
+    try {
+      const rows: StorageRecordItem[] = []
+      // Dùng cùng truy vấn với bảng, chỉ thay phân trang để xuất đủ kết quả từ máy chủ.
+      for (let exportPage = 0; ; exportPage++) {
+        const result = await searchStorageRecords({
+          ...query,
+          page: exportPage,
+          size: 100,
+        })
+        if (
+          result.totalElements > EXCEL_MAX_EXPORT_ROWS ||
+          rows.length + result.content.length > EXCEL_MAX_EXPORT_ROWS
+        ) {
+          void message.warning(excelUiLabels.tooManyExportRows)
+          return
+        }
+        rows.push(...result.content)
+        if (!result.content.length || rows.length >= result.totalElements) break
+      }
+      if (!rows.length) {
+        void message.info(excelUiLabels.exportEmpty)
+        return
+      }
+      await downloadWorkbook(
+        config.title,
+        config.columns,
+        rows.map((row) => ({ ...row })),
+      )
+      void message.success(excelUiLabels.exportSuccess)
+    } catch (error) {
+      void message.error(errorMessage(error))
+    } finally {
+      setExporting(false)
+    }
+  }
 
   function search(value: string) {
     setKeyword(value.trim())
@@ -73,7 +129,27 @@ export default function StoragePage() {
             }}
             onSearch={search}
           />
+          <Select allowClear aria-label={config.filters?.[0].label} placeholder={config.filters?.[0].label}
+            value={returned} options={config.filters?.[0].options}
+            onChange={(value: string | undefined) => { setReturned(value); setPage(1) }} />
+          <ReferenceSelect aria-label={config.filters?.[1].label} placeholder={config.filters?.[1].label}
+            endpoint="/contracts" labelField="code" allowClear value={contractId ?? undefined}
+            onChange={(value) => { setContractId(typeof value === 'number' ? value : null); setPage(1) }} />
+          <Button
+            icon={<DownloadOutlined />}
+            loading={exporting}
+            onClick={() => void exportRecords()}
+          >
+            {excelUiLabels.export}
+          </Button>
         </FilterBar>
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title={excelUiLabels.readonlyHint}
+          description={config.note}
+        />
         {records.isError && (
           <Alert
             type="error"

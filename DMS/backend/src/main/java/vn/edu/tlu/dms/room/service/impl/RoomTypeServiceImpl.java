@@ -1,12 +1,17 @@
 package vn.edu.tlu.dms.room.service.impl;
 
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import vn.edu.tlu.dms.account.service.CatalogService;
 import vn.edu.tlu.dms.common.constants.DmsConstants;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Catalog;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -19,7 +24,9 @@ import vn.edu.tlu.dms.room.repository.RoomRepository;
 import vn.edu.tlu.dms.room.repository.RoomTypeRepository;
 import vn.edu.tlu.dms.room.service.RoomTypeService;
 
+import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class RoomTypeServiceImpl
@@ -30,15 +37,19 @@ public class RoomTypeServiceImpl
 
     private final RoomRepository rooms;
 
+    private final CatalogService catalogs;
+
     public RoomTypeServiceImpl(
             RoomTypeRepository repository,
             RoomRepository rooms,
             ScopeGuard guard,
             CurrentUser currentUser,
-            AuditService auditService) {
+            AuditService auditService,
+            CatalogService catalogs) {
         super(repository, auditService, currentUser);
         this.guard = guard;
         this.rooms = rooms;
+        this.catalogs = catalogs;
     }
 
     @Override
@@ -75,8 +86,15 @@ public class RoomTypeServiceImpl
                 "priceMain",
                 "priceSummer",
                 "areaM2",
-                "amenities",
                 "active");
+    }
+
+    @Override
+    protected Specification<RoomType> searchScope(SearchRequest search) {
+        return (root, query, builder) ->
+                search.active() == null
+                        ? builder.conjunction()
+                        : builder.equal(root.get("active"), search.active());
     }
 
     @Override
@@ -119,8 +137,19 @@ public class RoomTypeServiceImpl
         if (input.areaM2() != null) {
             entity.setAreaM2(input.areaM2());
         }
-        if (input.amenities() != null) {
-            entity.setAmenities(input.amenities());
+        if (input.amenityIds() != null) {
+            Set<Long> selected = new LinkedHashSet<>(input.amenityIds());
+            // Giữ tiện nghi cũ đã ngừng hoạt động; chỉ kiểm tra các lựa chọn mới.
+            for (Long amenityId : selected) {
+                if (amenityId == null || amenityId <= 0) {
+                    throw BusinessException.invalid(Catalog.AMENITIES, Catalog.INVALID_VALUE);
+                }
+                if (creating || !entity.getAmenityIds().contains(amenityId)) {
+                    catalogs.requireActive(Catalog.AMENITIES, amenityId);
+                }
+            }
+            entity.getAmenityIds().clear();
+            entity.getAmenityIds().addAll(selected);
         }
         if (creating) {
             entity.setActive(input.active() == null ? true : input.active());
@@ -132,6 +161,10 @@ public class RoomTypeServiceImpl
 
     @Override
     protected RoomTypeResponse toResponse(RoomType entity) {
+        var amenityIds = entity.getAmenityIds().stream().sorted().toList();
+        String amenities = amenityIds.stream()
+                .map(id -> (String) catalogs.getById(Catalog.AMENITIES, id).get(ApiField.NAME))
+                .collect(Collectors.joining(", "));
         return new RoomTypeResponse(
                 entity.getId(),
                 entity.getName(),
@@ -139,7 +172,8 @@ public class RoomTypeServiceImpl
                 entity.getPriceMain(),
                 entity.getPriceSummer(),
                 entity.getAreaM2(),
-                entity.getAmenities(),
+                amenityIds,
+                amenities,
                 entity.getActive());
     }
 

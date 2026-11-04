@@ -1,12 +1,7 @@
 import { Button } from '../ui/Surface'
 import {
-  BgColorsOutlined,
-  CheckOutlined,
   KeyOutlined,
   LogoutOutlined,
-  MoonOutlined,
-  SunOutlined,
-  TableOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { App, Avatar, Dropdown, type MenuProps } from 'antd'
@@ -27,8 +22,6 @@ import {
 } from '../../services/api/auth'
 import { useViewport } from '../../hooks/useViewport'
 import { errorMessage } from '../../utils/errorMessages'
-import { useAppTheme } from '../../app/themeStore'
-import { ACCENT_PRESETS, THEME_STYLES } from '../../app/theme'
 
 interface Props {
   /** Mục riêng của cổng (cổng sinh viên đặt Hồ sơ, Hợp đồng, Tiền cọc, Kỳ hè... ở đây trên mobile). */
@@ -41,7 +34,6 @@ export default function UserMenu({ extraItems = [] }: Props) {
   const { message } = App.useApp()
   const showName = useViewport() !== 'mobile'
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const { mode, accent, style, tableDense, toggleMode, setAccent, setStyle, setTableDense } = useAppTheme()
 
   if (!me) return null
   const profilePath = roleProfile[me.role]
@@ -83,56 +75,6 @@ export default function UserMenu({ extraItems = [] }: Props) {
       icon: item.icon && <item.icon />,
       label: <Link to={item.path}>{item.label}</Link>,
     })),
-    { type: 'divider' as const },
-    {
-      key: 'theme-mode',
-      icon: mode === 'dark' ? <SunOutlined /> : <MoonOutlined />,
-      label: mode === 'dark' ? 'Chế độ: Giao diện sáng' : 'Chế độ: Giao diện tối',
-      onClick: () => toggleMode(),
-    },
-    {
-      key: 'theme-style',
-      icon: <BgColorsOutlined />,
-      label: 'Kiểu giao diện',
-      children: Object.entries(THEME_STYLES).map(([key, preset]) => ({
-        key: `style-${key}`,
-        label: <span>{preset.label} — {preset.description} {style === key && <CheckOutlined />}</span>,
-        onClick: () => setStyle(key as keyof typeof THEME_STYLES),
-      })),
-    },
-    {
-      key: 'theme-accent',
-      icon: <BgColorsOutlined />,
-      label: 'Tông màu chủ đạo (V5)',
-      children: Object.values(ACCENT_PRESETS).map((preset) => ({
-        key: `accent-${preset.key}`,
-        label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <span
-              style={{
-                display: 'inline-block',
-                width: 12,
-                height: 12,
-                borderRadius: '50%',
-                background: preset.primary,
-                border: '1px solid rgba(0,0,0,0.1)',
-              }}
-            />
-            <span>{preset.label}</span>
-            {accent === preset.key && (
-              <CheckOutlined style={{ color: preset.primary, marginLeft: 'auto' }} />
-            )}
-          </span>
-        ),
-        onClick: () => setAccent(preset.key),
-      })),
-    },
-    {
-      key: 'table-density',
-      icon: <TableOutlined />,
-      label: tableDense ? 'Độ giãn bảng: Tiêu chuẩn' : 'Độ giãn bảng: Gọn gàng',
-      onClick: () => setTableDense(!tableDense),
-    },
     { type: 'divider' as const },
     {
       key: 'password',

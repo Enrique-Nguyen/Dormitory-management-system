@@ -54,8 +54,10 @@ public final class AccountDtos {
             @Size(max = 20) String studentCode,
             @Pattern(regexp = Gender.PATTERN) String gender,
             LocalDate dateOfBirth,
-            @Size(max = 100) String faculty,
-            @Size(max = 10) String cohort) {}
+            @Positive Long schoolId,
+            @Positive Long facultyId,
+            @Positive Long cohortId,
+            @Positive Long hometownId) {}
 
     public record Create(
             @NotBlank @Size(max = 50) String username,
@@ -72,12 +74,14 @@ public final class AccountDtos {
             @Size(max = 20) String studentCode,
             @Pattern(regexp = Gender.PATTERN) String gender,
             LocalDate dateOfBirth,
-            @Size(max = 100) String faculty,
-            @Size(max = 10) String cohort) {}
+            @Positive Long schoolId,
+            @Positive Long facultyId,
+            @Positive Long cohortId,
+            @Positive Long hometownId) {}
 
     public record ProfileInput(
             @Size(max = 20) String phone,
-            @Size(max = 200) String hometown,
+            @Positive Long hometownId,
             @Size(max = 200) String emergencyContact) {}
 
     public record Profile(
@@ -93,6 +97,11 @@ public final class AccountDtos {
             String studentCode,
             String gender,
             LocalDate dateOfBirth,
+            Long schoolId,
+            Long facultyId,
+            Long cohortId,
+            Long hometownId,
+            String schoolName,
             String faculty,
             String cohort,
             String hometown,
