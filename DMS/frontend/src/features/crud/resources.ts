@@ -235,7 +235,6 @@ export const crudDetailUiLabels = {
   moreActions: 'Thao tác khác',
   countError: 'Không tải được số lượng',
   statusFilterNames: ['status', 'locked', 'active'],
-  workflow: 'Xử lý nghiệp vụ',
   collections: { items: 'Dòng hóa đơn', transactions: 'Giao dịch cọc', timeline: 'Lịch sử' },
 }
 
@@ -1038,7 +1037,7 @@ export const resources: Record<string, CrudResource> = {
       },
       {
         title: 'Thay hoặc reset đồng hồ',
-        note: 'Bỏ trống nếu đồng hồ giữ nguyên.',
+        note: 'Bỏ trống nếu đồng hồ giữ nguyên. Khi sửa, xóa lý do và hai chỉ số để bỏ thông tin thay đồng hồ đã nhập nhầm.',
         fields: ['oldMeterFinal', 'newMeterStart', 'replacementReason'],
       },
     ],
@@ -1081,7 +1080,7 @@ export const resources: Record<string, CrudResource> = {
       {
         ...text('replacementReason', 'Lý do thay/reset đồng hồ', false, 300),
         kind: 'textarea',
-        hint: 'Bắt buộc khi thay hoặc reset đồng hồ.',
+        hint: 'Bắt buộc khi thay hoặc reset đồng hồ. Xóa trống để bỏ thông tin thay đồng hồ.',
       },
     ],
     columns: [
@@ -1222,7 +1221,7 @@ export const resources: Record<string, CrudResource> = {
       { key: 'status', label: 'Trạng thái' },
     ],
     readOnly: true,
-    note: 'Sổ tiền chỉ tra cứu. Thu/trừ/bù/hoàn cọc là nghiệp vụ chi tiết, không sửa/xóa giao dịch đã ghi.',
+    note: 'Không sửa/xóa giao dịch đã ghi. Mở sổ cọc để nộp bù hoặc hoàn cọc khi hệ thống cho phép; thu cọc ban đầu thực hiện khi kích hoạt hợp đồng.',
   },
   myDeposits: {
     finance: true,

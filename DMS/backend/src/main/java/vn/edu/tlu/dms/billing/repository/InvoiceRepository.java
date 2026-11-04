@@ -27,8 +27,9 @@ public interface InvoiceRepository
 
     /**
      * Phạm vi đơn vị của Staff. Điện nước theo đơn vị của phòng. Phí phòng theo đơn vị mà sinh viên
-     * ở trong học kỳ của hóa đơn (hoặc đã đăng ký nguyện vọng trong đợt thuộc học kỳ đó), không lấy
-     * mọi lịch sử ở từng đơn vị để sinh viên chuyển đơn vị không làm lộ hóa đơn kỳ khác.
+     * ở trong học kỳ của hóa đơn (hoặc có đơn nguyện vọng đã duyệt/đã xếp trong đợt thuộc học kỳ
+     * đó), không lấy mọi lịch sử ở từng đơn vị để sinh viên chuyển đơn vị không làm lộ hóa đơn kỳ
+     * khác. Đơn nháp, bị từ chối hoặc đã hủy không gắn sinh viên vào đơn vị.
      */
     String STAFF_UNIT_SCOPE =
             """
@@ -46,6 +47,7 @@ public interface InvoiceRepository
                 OR EXISTS (SELECT 1 FROM room_application ap
                     JOIN registration_period rp ON rp.id = ap.period_id
                     WHERE ap.student_id = i.student_id AND ap.preferred_unit_id = :unitId
+                        AND ap.status IN ('APPROVED', 'ASSIGNED')
                         AND rp.semester_id = i.semester_id)))
             """;
 

@@ -1,6 +1,6 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.21**, 04/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.22**, 04/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.15 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.13, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
@@ -8,6 +8,7 @@
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.22 | 04/11/2026 | Sửa theo review Điện nước/Hóa đơn/Tiền cọc: phạm vi hóa đơn phí phòng của Staff chỉ tính đơn nguyện vọng APPROVED/ASSIGNED trong đợt của học kỳ; `issue-utility` phát hành cho mọi phòng có người ở trong tháng (kể cả đã trả phòng sau đó), không còn lọc phòng ACTIVE/đang ở; trừ cọc chỉ cho hợp đồng ACTIVE, nếu không `409 CONTRACT_NOT_ACTIVE`; hoàn cọc trực tiếp bắt buộc có `move_out_record` và `amount` đúng `refund_amount` đã chốt, nếu không `409 INVALID_STATE_TRANSITION`; đơn giá mới không được có `effectiveFrom` trước hôm nay (`400 VALIDATION_FAILED`, trường `effectiveFrom`); sửa chỉ số gửi `replacementReason: ""` xóa cả nhóm thay đồng hồ; bỏ endpoint `POST /api/contracts/{id}/initial-deposit` (thu cọc ban đầu chỉ qua `POST /api/contracts/{id}/activate`); item của `deposit-balances/search-by-page` trả `allowedActions: []`, hành động chỉ tính ở `GET /api/contracts/{id}/deposit-balance`; nút xác nhận thanh toán chỉ dựa trên `allowedActions` của chi tiết hóa đơn. |
 | 0.21 | 04/11/2026 | Danh mục dùng chung, lookup form/bộ lọc, tham chiếu hồ sơ bằng ID, tiện nghi nhiều lựa chọn, tầng theo tòa và vị trí kho; giữ mã tự nhiên của năm học/hạng mục sửa chữa. |
 | 0.20 | 31/10/2026 | DMS-PREF-01: thêm `GET /api/me/preferences` và `POST /api/me/preferences/save-or-update` lưu sở thích giao diện theo tài khoản (theme mode, accent preset, mật độ bảng); chủ sở hữu lấy từ `CurrentUser`, chưa có dòng trả mặc định không ghi CSDL, version lệch trả 409 `CONCURRENT_UPDATE`. |
 | 0.19 | 31/10/2026 | Đồng bộ SRS v0.14 / DEC-BIL-01: không tạo chỉ số điện nước cho kỳ mới khi đã có lịch sử nhưng thiếu kỳ liền trước; kỳ đầu vẫn nhập chỉ số đầu. |
@@ -86,13 +87,13 @@ Phạm vi vẫn là khung CRUD và React đơn giản. Từ phiên bản 0.10, m
 - Hợp đồng: `/api/contracts/save-or-update`, tạo nhận `applicationId`, `startDate`, `endDate`; chỉ tạo PENDING từ đơn APPROVED, chưa phân giường hay thu cọc. Khi sửa chỉ đổi ngày; DELETE `/{id}` chỉ khi PENDING chưa có phân phòng, tiền cọc hoặc lịch sử. Không nhận trạng thái từ client.
 - Gia hạn/chuyển phòng: `/api/extension-requests/save-or-update`, `/api/transfer-requests/save-or-update`; tạo nhận `contractId` và nội dung yêu cầu, sửa giữ hợp đồng nguồn. Sinh viên sở hữu chỉ CRUD yêu cầu PENDING; Staff chỉ đọc. Nhánh `/api/me/.../search-by-page` giữ scope cá nhân. Chưa tự xét duyệt hay chuyển giường.
 - Lựa chọn hè: `/api/summer-choices/save-or-update`, body có `contractId`, `semesterId`, `choice` (STAY/TEMP_LEAVE/LEAVE). Chỉ sinh viên sở hữu CRUD PENDING; sửa không đổi hợp đồng/học kỳ nguồn. Chưa cập nhật chỗ ở/hợp đồng.
-- Chỉ số: `/api/utility-readings/save-or-update`, lưu một bản ghi gồm `roomId`, `meterType`, `billingMonth`, `startReading`, `endReading`. `billingMonth` là ngày đầu tháng. Chỉ số đã dùng trong hóa đơn hoặc có kỳ sau bị khóa sửa/xóa; khi sửa không đổi phòng/loại/kỳ.
-- Đơn giá: `/api/utility-rates/save-or-update`; chỉ sửa/xóa bản giá tương lai đủ điều kiện theo người tạo/phạm vi. Giá đã có hiệu lực được giữ nguyên, thay giá bằng bản mới.
+- Chỉ số: `/api/utility-readings/save-or-update`, lưu một bản ghi gồm `roomId`, `meterType`, `billingMonth`, `startReading`, `endReading`. `billingMonth` là ngày đầu tháng. Chỉ số đã dùng trong hóa đơn hoặc có kỳ sau bị khóa sửa/xóa; khi sửa không đổi phòng/loại/kỳ. Khi sửa, `replacementReason` là chuỗi rỗng sẽ xóa cả nhóm thay đồng hồ (`oldMeterFinal`, `newMeterStart`, `replacementReason`); gửi null hoặc bỏ qua thì giữ nguyên.
+- Đơn giá: `/api/utility-rates/save-or-update`; bản mới phải có `effectiveFrom` từ hôm nay trở đi (lùi ngày trả 400 VALIDATION_FAILED, trường `effectiveFrom`) để không đổi giá của kỳ đã qua. Chỉ sửa/xóa bản giá tương lai đủ điều kiện theo người tạo/phạm vi. Giá đã có hiệu lực được giữ nguyên, thay giá bằng bản mới.
 - Hóa đơn: `/api/invoices/save-or-update`; tạo nhận `type`, `totalAmount`, `dueDate` và `studentId`/`semesterId` cho ROOM_FEE hoặc `roomId`/`billingMonth` cho UTILITY. Chỉ tạo UNPAID, chưa có dòng chi tiết/tự tính tiền. Sửa tổng tiền/hạn đóng; DELETE `/{id}` chỉ khi chưa có dòng/lịch sử và chưa thanh toán.
 - Sửa chữa: `/api/maintenance-requests/save-or-update`, giữ upload `multipart/form-data` với phần JSON `data` và phần `photos`. Tạo xử lý vị trí/ảnh; sửa ticket OPEN chỉ `category`, `severity`, `description`, giữ vị trí và ảnh đã có. DELETE `/{id}` chuyển CANCELLED và giữ lịch sử; action xử lý có sẵn giữ nguyên.
 - Thông báo: danh sách quản trị là `/api/notifications/published/search-by-page`, chi tiết GET `/api/notifications/published/{id}`. `/api/notifications/save-or-update` tạo/sửa thông báo thủ công của mình; sửa nội dung giữ phạm vi. DELETE `/api/notifications/{id}` giữ nguyên. Hộp thư là `/api/notifications/search-by-page`; đánh dấu đã đọc và đếm chưa đọc là endpoint chuyên biệt.
 - Hồ sơ và cấu hình chỉ sửa: GET `/api/me/profile`, POST `/api/me/profile/save-or-update`; cấu hình POST `/api/admin/configs/search-by-page`, POST `/api/admin/configs/save-or-update` với `{key,value}`, không tạo khóa mới. Sở thích giao diện dùng GET `/api/me/preferences` và POST `/api/me/preferences/save-or-update` (mục 4.19), thuộc đúng tài khoản đang đăng nhập.
-- Các trang audit, tiền cọc, kho gửi đồ và phòng của tôi chỉ đọc qua `search-by-page`; `/api/me/room/search-by-page` trả trang có `content: []` nếu chưa có chỗ ở. GET `/api/contracts/{id}/deposit` vẫn là chi tiết sổ cọc. Không thêm chức năng ghi/xóa sổ tài chính, audit hay lịch sử.
+- Các trang audit, tiền cọc, kho gửi đồ và phòng của tôi không có CRUD ghi qua `search-by-page`; trang tiền cọc của Staff chỉ mở nộp bù/hoàn cọc theo `allowedActions` của `GET /api/contracts/{id}/deposit-balance` (mục 4.16); `/api/me/room/search-by-page` trả trang có `content: []` nếu chưa có chỗ ở. GET `/api/contracts/{id}/deposit` vẫn là chi tiết sổ cọc. Không thêm chức năng ghi/xóa sổ tài chính, audit hay lịch sử.
 
 Tìm kiếm và tính tổng đều áp dụng phạm vi trước khi phân trang. Ghi giữ nguyên trường không gửi/null như trước; chuỗi rỗng chỉ xóa nội dung text tùy chọn nếu DTO hỗ trợ. Field ngoài danh sách cho phép trả 400. Điều kiện đang sử dụng/hết quyền sửa vẫn trả 409 như RESOURCE_IN_USE, INVALID_STATE_TRANSITION, READING_LOCKED, READING_HAS_FOLLOWING_MONTH, RATE_ALREADY_EFFECTIVE; không xóa lịch sử để vượt kiểm tra.
 
@@ -459,24 +460,23 @@ Khung có DELETE phòng/giường chưa từng sử dụng; khi đã có lịch 
 | Method | Path | Vai trò | Mô tả | FR |
 |---|---|---|---|---|
 | POST | `/api/utility-rates/search-by-page` | St | Đơn giá theo thời gian; lọc `meterType` | FR-BIL-01 |
-| POST | `/api/utility-rates/save-or-update` | St | Tạo/sửa đơn giá: `{id, meterType, unitPrice, effectiveFrom}`; trùng loại/ngày trả 409 RATE_EXISTS. Chỉ sửa bản tương lai đủ điều kiện; không ghi đè giá đã hiệu lực | FR-BIL-01 |
+| POST | `/api/utility-rates/save-or-update` | St | Tạo/sửa đơn giá: `{id, meterType, unitPrice, effectiveFrom}`; trùng loại/ngày trả 409 RATE_EXISTS. Tạo mới cần `effectiveFrom` ≥ hôm nay (400 VALIDATION_FAILED). Chỉ sửa bản tương lai đủ điều kiện; không ghi đè giá đã hiệu lực | FR-BIL-01 |
 | POST | `/api/utility-readings/search-by-page` | St | Khung tra cứu `q`, `billingMonth` tùy chọn, có startReading/endReading và trạng thái đã lập hóa đơn; bảng nhập hàng loạt theo tòa thuộc kế hoạch MVP | FR-BIL-02 |
 | POST | `/api/utility-readings/save-or-update` | St | Lưu một bản ghi bằng ID trong body (mục 4.13); không phải import hàng loạt. Khi sửa giữ phòng/loại/kỳ | FR-BIL-02 |
 | POST | `/api/utility-readings/{id}/meter-replacement` | St | **Chưa phát hành.** Endpoint riêng theo thiết kế dùng `{ oldMeterFinalReading, newMeterStartReading, reason }`. Hiện `save-or-update` ghi thay công tơ trong một bản chỉ số với `oldMeterFinal`, `newMeterStart`, `replacementReason` | FR-BIL-03 |
 | GET | `/api/invoices/room-fee/preview` | St | **Chưa phát hành.** `semesterId`, `buildingId?`: số sinh viên sẽ phát hành, số đã có hóa đơn, tổng tiền | FR-BIL-05, 06 |
 | POST | `/api/invoices/issue-room-fee` | St | Phát hành phí phòng theo học kỳ | FR-BIL-05, 06, 07 |
 | GET | `/api/invoices/utility/preview` | St | **Chưa phát hành.** `billingMonth`, `buildingId?`: số phòng sẽ phát hành, đã phát hành, tổng tiền; `roomsMissingReading` và `roomsWithoutLeader` dạng `[{ id, code }]` để hiện cảnh báo trước khi phát hành | FR-BIL-04, 06 |
-| POST | `/api/invoices/issue-utility` | St | Phát hành điện nước theo phòng | FR-BIL-04, 06, 07 |
+| POST | `/api/invoices/issue-utility` | St | Phát hành điện nước theo phòng cho mọi phòng có người ở trong tháng lập hóa đơn | FR-BIL-04, 06, 07 |
 | POST | `/api/invoices/search-by-page` | St | Khung lọc `type`, `status`, `q` trong phạm vi; bộ lọc công nợ/kỳ/đối tượng nâng cao là kế hoạch MVP | FR-BIL-08, 11 |
-| GET | `/api/invoices/{id}` | S, St | Chi tiết, các dòng, `allowedActions`. Sinh viên: hóa đơn phí phòng của mình, hóa đơn điện nước của phòng mình đang ở hoặc đã ở trong tháng đó. Staff: điện nước theo đơn vị phòng, phí phòng theo học kỳ hóa đơn và lịch sử ở/đơn trong kỳ (`STAFF_UNIT_SCOPE`); ngoài scope trả 404 | FR-BIL-04, 10 |
+| GET | `/api/invoices/{id}` | S, St | Chi tiết, các dòng, `allowedActions`. Sinh viên: hóa đơn phí phòng của mình, hóa đơn điện nước của phòng mình đang ở hoặc đã ở trong tháng đó. Staff: điện nước theo đơn vị phòng, phí phòng theo học kỳ hóa đơn và lịch sử ở hoặc đơn nguyện vọng APPROVED/ASSIGNED trong đợt của học kỳ (`STAFF_UNIT_SCOPE`; đơn DRAFT/REJECTED/CANCELLED không gắn sinh viên vào đơn vị); ngoài scope trả 404 | FR-BIL-04, 10 |
 | POST | `/api/me/invoices/search-by-page` | S | Hóa đơn của tôi và của phòng tôi; lọc `type`, `status` | FR-BIL-10 |
 | POST | `/api/invoices/{id}/confirm-payment` | St | UNPAID → PAID (mục 4.15); bắt buộc thuộc đơn vị ghi của Staff (`isInStaffUnit`), quyền tổng hợp không mở rộng ghi tài chính, ngoài scope trả 404 | FR-BIL-08 |
 | POST | `/api/invoices/{id}/adjustments` | St | **Chưa phát hành** (xem mục 6, hành động `add-adjustment` chưa có trong `allowedActions`). Thêm dòng điều chỉnh vào hóa đơn **UNPAID** này cho một hóa đơn đã PAID trước đó của cùng sinh viên / phòng: `{ adjustsInvoiceId, amount (âm / dương, ≠ 0), reason }`. Tổng hóa đơn sau điều chỉnh phải ≥ 0 → nếu âm: `409 ADJUSTMENT_INVALID`, `details: { totalAfter }` (CSDL cũng chặn bằng `CHECK (total_amount >= 0)`) | FR-BIL-12 |
 | GET | `/api/contracts/{id}/deposit-balance` | S, St | Sổ cọc: mức cọc, số dư, số cần bù, hạn bù, quá hạn (mục 4.16) | FR-BIL-09, 10 |
 | GET | `/api/contracts/{id}/deposit-transactions` | S, St | Lịch sử giao dịch sổ cọc của hợp đồng | FR-BIL-09, 10 |
-| POST | `/api/contracts/{id}/initial-deposit` | St | Thu cọc ban đầu khi kích hoạt hợp đồng; `{ amount, note }` phải đúng mức cọc của hợp đồng PENDING/ACTIVE và mỗi hợp đồng chỉ thu một lần | FR-BIL-09 |
 | POST | `/api/contracts/{id}/deposit-topup` | St | Xác nhận sinh viên nộp bù cọc. Chỉ dùng khi hợp đồng ACTIVE **và còn thiếu cọc**: `topupNeeded = 0` → `409 NO_TOPUP_REQUIRED`, `amount > topupNeeded` → `409 TOPUP_EXCEEDS_REQUIRED` (mục 5.7) | FR-BIL-09, 12 |
-| POST | `/api/contracts/{id}/deposit-refund` | St | Hoàn trả tiền cọc khi hợp đồng EXPIRED/TERMINATED; `amount ≤ balance` (ngược lại `409 REFUND_EXCEEDS_BALANCE`) và mỗi hợp đồng chỉ hoàn một lần nên số dư còn lại được chốt kèm công nợ | FR-BIL-13 |
+| POST | `/api/contracts/{id}/deposit-refund` | St | Hoàn trả tiền cọc khi hợp đồng EXPIRED/TERMINATED **đã qua trả phòng**: thiếu `move_out_record` hoặc `refund_amount ≤ 0` → `409 INVALID_STATE_TRANSITION`; `amount` phải bằng số dư và `refund_amount` đã chốt; `amount ≤ balance` (ngược lại `409 REFUND_EXCEEDS_BALANCE`) và mỗi hợp đồng chỉ hoàn một lần | FR-BIL-13 |
 | POST | `/api/debts/students/search-by-page` | St | **Chưa phát hành.** Công nợ theo sinh viên: phí phòng chưa đóng, bù cọc (khi ACTIVE), số dư cọc âm sau trả phòng. Lọc `semesterId`, `buildingId`, `contractStatus`. Hiện đọc từng phần qua `/api/contracts/{id}/move-out/preview` và `/api/deposit-balances/search-by-page` | FR-BIL-11, FR-CON-10 |
 | POST | `/api/debts/rooms/search-by-page` | St | **Chưa phát hành.** Công nợ điện nước theo phòng; lọc `billingMonth`, `buildingId` | FR-BIL-11 |
 | GET | `/api/debts/export` | St | **Chưa phát hành.** Xuất `.xlsx` theo bộ lọc của hai API trên + `kind=STUDENT \| ROOM` | FR-BIL-11 |
@@ -932,6 +932,7 @@ Một transaction: chiếm giường qua `BedOccupancyService` (mở phân phòn
 - `MISUSE`: `repairCost > 0`. `WEAR`: không gửi `repairCost`, bắt buộc `note` → sai: `400 COST_INVALID`.
 - `GET .../chargeable-students` trả các sinh viên có phân phòng `STAY` trong phòng **tại thời điểm tạo ticket** (`[{ student, contractId, contractStatus }]`); màn kết luận hiện danh sách này dạng checkbox, mặc định chọn hết.
 - `chargedStudentIds` (chỉ với `MISUSE`): bỏ trống = chọn tất cả ứng viên. Phải là tập con **khác rỗng** của ứng viên → nếu không: `400 CHARGED_STUDENTS_INVALID`, `details: { invalidIds }`. Bỏ bớt ứng viên thì `note` bắt buộc ghi lý do → thiếu: `400 VALIDATION_FAILED` (`field = note`).
+- Khoản trừ chỉ ghi cho hợp đồng đang `ACTIVE`; hợp đồng đã kết thúc (đã tất toán cọc khi trả phòng) → `409 CONTRACT_NOT_ACTIVE`, rollback cả kết luận.
 - `MISUSE`: cùng transaction ghi `DEDUCTION` chia đều cho các sinh viên được chọn; phần lẻ cộng vào người cuối để tổng khớp `repairCost`; hạn bù = hôm nay + 7 ngày. Danh sách được chọn và lý do lưu vào `status_history` của ticket để truy vết. 200 trả chi tiết ticket kèm:
 
 ```json
@@ -958,7 +959,7 @@ Một transaction: chiếm giường qua `BedOccupancyService` (mở phân phòn
 - Một request lưu một bản ghi trong transaction. Bỏ ID để tạo, có ID để sửa; trả 200 với bản ghi sau khi lưu. Không nhận mảng `readings` theo hợp đồng nhập hàng loạt cũ.
 - `startReading` tự lấy từ chỉ số cuối kỳ liền trước; kỳ đầu chưa có lịch sử cần giá trị đầu. Khi đã có lịch sử mà thiếu kỳ liền trước, không tạo kỳ mới: trả `400 VALIDATION_FAILED` với lỗi trường `billingMonth`, yêu cầu nhập đủ kỳ trước. Nếu đã có kỳ sau thì quy tắc khóa kỳ sau trả lỗi xung đột trước; tạo trùng kỳ vẫn trả lỗi trùng dữ liệu. Dữ liệu lịch sử đã có khoảng trống vẫn tuân các quy tắc sửa/xóa hiện hành và có thể tiếp tục kỳ sau nếu kỳ liền trước tồn tại.
 - Khi sửa không đổi phòng, loại đồng hồ hoặc tháng nguồn. Chỉ số đã có hóa đơn trả 409 READING_LOCKED; có kỳ sau hoặc sai thay đồng hồ tiếp tục chịu kiểm tra riêng.
-- Thay đồng hồ hiện ghi trên **một bản chỉ số** qua `save-or-update`: `{ oldMeterFinal, newMeterStart, replacementReason, endReading }`. Phải có đủ ba trường thay đồng hồ; chỉ số chốt đồng hồ cũ không nhỏ hơn chỉ số đầu, chỉ số cuối đồng hồ mới không nhỏ hơn chỉ số bắt đầu mới. Vì vậy `endReading` có thể nhỏ hơn `startReading` khi thay đồng hồ hợp lệ. Endpoint thay đồng hồ chuyên biệt và nhập hàng loạt vẫn chưa phát hành.
+- Thay đồng hồ hiện ghi trên **một bản chỉ số** qua `save-or-update`: `{ oldMeterFinal, newMeterStart, replacementReason, endReading }`. Phải có đủ ba trường thay đồng hồ; khi sửa, gửi `replacementReason: ""` (và không gửi hai chỉ số) để xóa thông tin thay đồng hồ đã nhập nhầm; chỉ số chốt đồng hồ cũ không nhỏ hơn chỉ số đầu, chỉ số cuối đồng hồ mới không nhỏ hơn chỉ số bắt đầu mới. Vì vậy `endReading` có thể nhỏ hơn `startReading` khi thay đồng hồ hợp lệ. Endpoint thay đồng hồ chuyên biệt và nhập hàng loạt vẫn chưa phát hành.
 
 ### 4.14. Phát hành hóa đơn
 
@@ -971,7 +972,7 @@ Staff chỉ phát hành trong đơn vị được giao; quyền đọc tổng h�
 
 Phí phòng chỉ phát hành trong học kỳ chứa ngày hiện tại, cho sinh viên có phân phòng STAY đang mở và hợp đồng ACTIVE. Hè yêu cầu lựa chọn STAY đã APPROVED cho đúng học kỳ. Giá lấy từ snapshot phân phòng; thiếu giá báo 400 VALIDATION_FAILED, không tự thay bằng 0. Hạn đóng do server tính: ngày phát hành + invoice.due_days qua ConfigService.
 
-Phòng điện nước phải ACTIVE, có người đang ở và đủ hai chỉ số. Đơn giá điện/nước là giá có hiệu lực tại kỳ điện nước, chụp vào dòng hóa đơn; thiếu giá báo validation.
+Phát hành cho mọi phòng có người ở trong tháng lập hóa đơn (`stay_started_at` trước cuối tháng và chưa kết thúc trước đầu tháng), kể cả phòng đã trả hoặc đổi trạng thái sau đó; phòng phải đủ hai chỉ số. Đơn giá điện/nước là giá có hiệu lực tại kỳ điện nước, chụp vào dòng hóa đơn; thiếu giá báo validation.
 
 Response chung:
 
@@ -1009,7 +1010,7 @@ GET /api/contracts/{id}/deposit-balance trả:
 }
 ~~~
 
-POST /api/deposit-balances/search-by-page và POST /api/me/deposit-balances/search-by-page trả PageResponse với các item cùng schema. contractId là định danh dòng; tìm theo mã hợp đồng/tên sinh viên và lọc phạm vi trước truy vấn dữ liệu/đếm. Bao gồm hợp đồng PENDING kể cả chưa phát sinh giao dịch; số dư lấy tổng sổ cái, các chỉ số cần bù/nợ chỉ có nghĩa ở trạng thái tương ứng. Không sửa view/migration cũ.
+POST /api/deposit-balances/search-by-page và POST /api/me/deposit-balances/search-by-page trả PageResponse với các item cùng schema, nhưng `allowedActions` của item luôn là `[]` (không tính hành động từng dòng); giao diện lấy hành động từ GET chi tiết. contractId là định danh dòng; tìm theo mã hợp đồng/tên sinh viên và lọc phạm vi trước truy vấn dữ liệu/đếm. Bao gồm hợp đồng PENDING kể cả chưa phát sinh giao dịch; số dư lấy tổng sổ cái, các chỉ số cần bù/nợ chỉ có nghĩa ở trạng thái tương ứng. Không sửa view/migration cũ.
 
 GET /api/contracts/{id}/deposit-transactions trả mảng theo createdAt rồi id tăng dần:
 
@@ -1021,7 +1022,7 @@ GET /api/contracts/{id}/deposit-transactions trả mảng theo createdAt rồi i
 
 Transaction không trả balanceAfter, staffName hoặc studentId. confirmedBy là ID người xác nhận. status trong Balance là trạng thái hợp đồng, không phải NORMAL/TOPUP_NEEDED/REFUNDED.
 
-Các action thu/trừ/bù/hoàn cọc giữ đường dẫn ở mục 3.6 và kiểm quyền DEPOSIT_CREATE. Thu ban đầu chỉ khi PENDING/ACTIVE và amount đúng depositRequired; sai trả 409 DEPOSIT_INVALID. Bù cọc chỉ khi ACTIVE. Hoàn cọc chỉ khi EXPIRED/TERMINATED, không vượt số dư và tối đa một lần. Mọi action khóa hợp đồng, kiểm lại trạng thái/phạm vi trước ghi; Staff chỉ ghi trong đơn vị mình dù có quyền đọc tổng hợp. Student chỉ xem hợp đồng của chính mình; ngoài phạm vi hoặc ID không tồn tại trả 404 NOT_FOUND.
+Các action thu/trừ/bù/hoàn cọc giữ đường dẫn ở mục 3.6 và kiểm quyền DEPOSIT_CREATE. Thu ban đầu không có endpoint riêng: chỉ thực hiện trong `POST /api/contracts/{id}/activate`, khi PENDING/ACTIVE và amount đúng depositRequired; sai trả 409 DEPOSIT_INVALID. Trừ cọc (từ kết luận ticket) và bù cọc chỉ khi ACTIVE, nếu không 409 CONTRACT_NOT_ACTIVE. Hoàn cọc chỉ khi EXPIRED/TERMINATED đã có `move_out_record`, amount đúng `refund_amount` đã chốt và số dư, tối đa một lần; chưa trả phòng trả 409 INVALID_STATE_TRANSITION. Mọi action khóa hợp đồng, kiểm lại trạng thái/phạm vi trước ghi; Staff chỉ ghi trong đơn vị mình dù có quyền đọc tổng hợp. Student chỉ xem hợp đồng của chính mình; ngoài phạm vi hoặc ID không tồn tại trả 404 NOT_FOUND.
 
 ### 4.17. Đăng thông báo
 
@@ -1218,7 +1219,7 @@ Mã bổ sung cho Keycloak:
 | DUPLICATE_DEDUCTION | 409 | Ticket đã được trừ cọc cho hợp đồng |
 | DUPLICATE_REFUND | 409 | Hợp đồng đã hoàn cọc |
 | REFUND_EXCEEDS_BALANCE | 409 | Số tiền hoàn vượt số dư |
-| CONTRACT_NOT_ACTIVE | 409 | Hợp đồng không ACTIVE để nộp bù cọc |
+| CONTRACT_NOT_ACTIVE | 409 | Hợp đồng không ACTIVE để nộp bù hoặc trừ cọc |
 
 ### 5.8. Ánh xạ ràng buộc CSDL → `errorCode`
 
@@ -1258,7 +1259,7 @@ Tên hành động = đoạn cuối URL. Policy ở backend (SAD 4.3) cài đún
 | | ASSIGNED | `cancel` | `release-hold` | |
 | Hợp đồng | PENDING | | `activate` | |
 | | ACTIVE | `create-extension-request`, `create-transfer-request` (khi đang ở, không có yêu cầu chờ) | `move-out`, `create-storage-record` (khi lựa chọn hè TEMP_LEAVE đã duyệt), `deposit-topup` (khi `topupNeeded > 0`) | |
-| | EXPIRED, TERMINATED | | `deposit-refund` (chỉ khi `balance > 0` và chưa hoàn lần nào) | |
+| | EXPIRED, TERMINATED | | `deposit-refund` (chỉ khi đã có biên bản trả phòng, `refund_amount = balance > 0` và chưa hoàn lần nào) | |
 | Yêu cầu gia hạn | PENDING | `cancel` | `approve`, `reject` | |
 | Yêu cầu chuyển phòng | PENDING | `cancel` | `approve`, `reject` | |
 | Lựa chọn hè | PENDING | `edit` | `approve`, `reject` | |
@@ -1402,6 +1403,6 @@ Cập nhật (bản 0.11, 15/10/2026): Thêm hành động `APPROVE` và mã quy
 
 ### Ghi chú triển khai PR #13 (25/10/2026)
 
-- Balance trả allowedActions theo quyền DEPOSIT_CREATE, phạm vi ghi và trạng thái. deposit-topup chỉ cho ACTIVE còn thiếu cọc; deposit-refund chỉ cho EXPIRED/TERMINATED có số dư dương và chưa hoàn. Student và Staff đọc tổng hợp ngoài đơn vị nhận danh sách rỗng. Backend vẫn kiểm tra lại mọi action.
+- Balance trả allowedActions theo quyền DEPOSIT_CREATE, phạm vi ghi và trạng thái. deposit-topup chỉ cho ACTIVE còn thiếu cọc; deposit-refund chỉ cho EXPIRED/TERMINATED có số dư dương bằng `refund_amount` của biên bản trả phòng và chưa hoàn. Cập nhật 0.22: chỉ GET chi tiết số dư tính allowedActions; item search-by-page trả danh sách rỗng. Student và Staff đọc tổng hợp ngoài đơn vị nhận danh sách rỗng. Backend vẫn kiểm tra lại mọi action.
 - Các endpoint preview hóa đơn, báo cáo/export công nợ trong bảng thiết kế là kế hoạch, không phải endpoint đã triển khai. DebtQuery chỉ phục vụ lời gọi Service nội bộ; frontend không gọi /billing/debt/student/{id} hoặc /billing/debt/room/{id}.
 - Xác nhận thanh toán hiện nhận payerUserId hoặc payerName và paymentMethod; thời điểm xác nhận lấy từ server. paidAt/note trong ví dụ thiết kế 4.15 chưa phải field đầu vào của DTO hiện tại.
