@@ -87,13 +87,13 @@ const money = (key: string, label: string): CrudColumn => ({
   key,
   label,
   format: 'money',
-  align: 'right',
+  align: 'left',
 })
 const count = (key: string, label: string): CrudColumn => ({
   key,
   label,
   format: 'number',
-  align: 'right',
+  align: 'left',
 })
 const dateColumn = (key: string, label: string): CrudColumn => ({
   key,

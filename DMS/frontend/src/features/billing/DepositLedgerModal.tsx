@@ -77,7 +77,7 @@ export default function DepositLedgerModal({ contractId, contractCode, studentNa
     {
       title: billingUiLabels.depositTransactionAmount,
       dataIndex: 'amount',
-      align: 'right',
+      align: 'left',
       className: 'dms-table-col-number',
       render: (value: number) => (
         <span className={value > 0 ? 'dms-amount-credit' : 'dms-amount-debit'}>
