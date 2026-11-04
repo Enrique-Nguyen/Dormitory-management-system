@@ -15,6 +15,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Root;
+import jakarta.validation.Validation;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,6 +28,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
 import vn.edu.tlu.dms.billing.repository.DepositTransactionRepository;
+import vn.edu.tlu.dms.billing.repository.UtilityRateRepository;
+import vn.edu.tlu.dms.billing.service.impl.UtilityRateServiceImpl;
+import vn.edu.tlu.dms.common.service.StatusHistoryService;
+import vn.edu.tlu.dms.contract.service.ContractService;
+import vn.edu.tlu.dms.registration.service.impl.SummerCrudServiceImpl;
 import vn.edu.tlu.dms.billing.service.impl.DepositServiceImpl;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.NotificationScope;
@@ -87,16 +93,51 @@ class CrudOperationalFilterTest {
         verify(fixture.guard).requirePermission(Permission.STORAGE_READ);
     }
 
+    @Test
+    void storageColumnFiltersAreBoundBeforeCountAndPagination() {
+        Fixture fixture = new Fixture();
+        SearchRequest input = request(Map.ofEntries(
+                Map.entry("id", 15), Map.entry("packageCount", 2),
+                Map.entry("location", "A_%"), Map.entry("description", "box'"),
+                Map.entry("depositedFrom", "2026-01-01"), Map.entry("depositedTo", "2026-01-31"),
+                Map.entry("returnedFrom", "2026-02-01"), Map.entry("returnedTo", "2026-02-28"),
+                Map.entry("page", 1), Map.entry("size", 5)));
+
+        fixture.overview().searchStorageByPage(input, false);
+
+        assertThat(fixture.countSql()).contains(
+                "ap.preferred_unit_id=?", "s.id=?", "s.package_count=?", "s.location ILIKE ?",
+                "s.description ILIKE ?", "s.deposited_at>=?", "s.deposited_at<=?",
+                "s.returned_at>=?", "s.returned_at<=?").doesNotContain("box'", "A_%");
+        fixture.assertPagedQuery(" | " + UNIT_ID + " | 15 | 2 | %A\\_\\%% | %box'%"
+                + " | 2026-01-01 | 2026-01-31 | 2026-02-01 | 2026-02-28 | %% | %%", input);
+    }
+
+    @Test
+    void storageFilterValidationRejectsInvalidValuesAndDateRanges() {
+        SearchRequest input = request(Map.of(
+                "id", 0, "packageCount", -1, "location", "x".repeat(101),
+                "description", "x".repeat(501), "depositedFrom", "2026-02-01",
+                "depositedTo", "2026-01-01", "returnedFrom", "2026-03-01",
+                "returnedTo", "2026-02-01"));
+        try (var factory = Validation.buildDefaultValidatorFactory()) {
+            assertThat(factory.getValidator().validate(input)).hasSize(6);
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void storageStudentScopeCannotBeReplacedByContractFilter(boolean mine) {
         Fixture fixture = new Fixture(new Actor(ACTOR_ID, Role.STUDENT, null, false, false));
-        SearchRequest input = request(Map.of("contractId", CONTRACT_ID));
+        SearchRequest input = request(Map.of("contractId", CONTRACT_ID, "id", 15,
+                "returnedFrom", "2026-02-01"));
 
         fixture.overview().searchStorageByPage(input, mine);
 
-        assertThat(fixture.countSql()).contains("WHERE c.student_id=? AND s.contract_id=?");
-        fixture.assertPagedQuery(" | " + ACTOR_ID + " | " + CONTRACT_ID + " | %% | %%", input);
+        assertThat(fixture.countSql()).contains("WHERE c.student_id=? AND s.contract_id=?",
+                "s.id=?", "s.returned_at>=?");
+        fixture.assertPagedQuery(" | " + ACTOR_ID + " | " + CONTRACT_ID
+                + " | 15 | 2026-02-01 | %% | %%", input);
     }
 
     @Test
@@ -233,8 +274,54 @@ class CrudOperationalFilterTest {
         verify(fixture.builder, never()).equal(any(Expression.class), any(Object.class));
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void summerFiltersRemainInsideAuthenticatedScopeAndBothQueries(boolean student) {
+        Fixture fixture = new Fixture(new Actor(ACTOR_ID, student ? Role.STUDENT : Role.STAFF,
+                UNIT_ID, false, false));
+        SearchRequest input = request(Map.of("choice", " STAY ", "contractId", CONTRACT_ID,
+                "studentId", 42L, "q", KEYWORD, "page", 1, "size", 5));
+        fixture.summer().searchByPage(input, student);
+        assertThat(fixture.countSql()).contains(student ? "WHERE c.student_id=?" : "WHERE a.preferred_unit_id=?",
+                "AND u.full_name ILIKE ? AND sc.choice=? AND sc.contract_id=? AND c.student_id=?");
+        fixture.assertPagedQuery(" | " + (student ? ACTOR_ID : UNIT_ID) + " | " + KEYWORD_PATTERN
+                + " | STAY | " + CONTRACT_ID + " | 42", input);
+        verify(fixture.guard).requirePermission(Permission.SUMMER_REGISTRATION_READ);
+    }
+
+    @Test
+    void summerOmittedFiltersLeaveStaffScopeIntact() {
+        Fixture fixture = new Fixture();
+        SearchRequest input = new SearchRequest();
+        fixture.summer().searchByPage(input, false);
+        assertThat(fixture.countSql()).contains("WHERE a.preferred_unit_id=?")
+                .doesNotContain("sc.choice=?", "sc.contract_id=?", "AND c.student_id=?");
+        fixture.assertPagedQuery(" | " + UNIT_ID + " | %%", input);
+    }
+
+    @Test
+    void utilityRateZeroPriceAndInclusiveDatesAreBoundToCountAndData() {
+        Fixture fixture = new Fixture();
+        SearchRequest input = request(Map.of("unitPrice", 0, "effectiveFromFrom", "2026-01-01",
+                "effectiveFromTo", "2026-01-31", "q", "power", "page", 1, "size", 5));
+        fixture.utilityRates().searchByPage(input);
+        assertThat(fixture.countSql()).contains("AND unit_price=? AND effective_from>=? AND effective_from<=?");
+        fixture.assertPagedQuery(" | %power% | %power% | %power% | 0 | 2026-01-01 | 2026-01-31", input);
+        verify(fixture.guard).requirePermission(Permission.UTILITY_RATE_READ);
+        verify(fixture.guard).requireRole(Role.STAFF);
+    }
+
+    @Test
+    void utilityRateOmittedFiltersDoNotBecomeZeroOrDates() {
+        Fixture fixture = new Fixture();
+        SearchRequest input = new SearchRequest();
+        fixture.utilityRates().searchByPage(input);
+        assertThat(fixture.countSql()).doesNotContain("unit_price=?", "effective_from>=?", "effective_from<=?");
+        fixture.assertPagedQuery(" | %% | %% | %%", input);
+    }
+
     private static SearchRequest request(Map<String, Object> fields) {
-        return new ObjectMapper().convertValue(fields, SearchRequest.class);
+        return new ObjectMapper().findAndRegisterModules().convertValue(fields, SearchRequest.class);
     }
 
     private static final class Fixture {
@@ -255,6 +342,18 @@ class CrudOperationalFilterTest {
 
         private OverviewServiceImpl overview() {
             return new OverviewServiceImpl(pages, guard, current);
+        }
+
+        private SummerCrudServiceImpl summer() {
+            return new SummerCrudServiceImpl(jdbc, pages, current,
+                    mock(AuditService.class), guard, mock(StatusHistoryService.class),
+                    mock(ContractService.class), mock(RoomReferenceService.class));
+        }
+
+        private UtilityRateServiceImpl utilityRates() {
+            return new UtilityRateServiceImpl(
+                    mock(UtilityRateRepository.class), current, guard,
+                    jdbc, pages, mock(AuditService.class));
         }
 
         private NotificationCrudServiceImpl notifications() {

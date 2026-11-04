@@ -430,21 +430,21 @@ class StorageIntegrationTest {
                 null, otherUnit, "LOC-" + suffix, "Kho khác " + suffix, true)).id();
         when(currentUser.get()).thenReturn(new Actor(staffId, Role.STAFF, unitId, false, false));
         var local = locations.searchByPage(new StorageLocationDtos.Search(0, 1, suffix,
-                List.of("name,desc"), null, true));
+                List.of("name,desc"), null, true, "LOC-", suffix));
         assertThat(local.totalElements()).isEqualTo(1);
         assertThat(local.content()).extracting(StorageLocationDtos.Location::id).containsExactly(locationId);
         assertThat(locations.searchByPage(new StorageLocationDtos.Search(0, 10, suffix,
-                null, otherUnit, null)).totalElements()).isZero();
+                null, otherUnit, null, null, null)).totalElements()).isZero();
         assertError(() -> locations.getById(other), ErrorCode.NOT_FOUND);
         when(currentUser.get()).thenReturn(new Actor(staffId, Role.STAFF, unitId, true, false));
-        var aggregate = locations.searchByPage(new StorageLocationDtos.Search(0, 1, suffix, null, null, true));
+        var aggregate = locations.searchByPage(new StorageLocationDtos.Search(0, 1, suffix, null, null, true, "LOC-", suffix));
         assertThat(aggregate.totalElements()).isEqualTo(2);
         assertThat(locations.getById(other).allowedActions()).isEmpty();
         assertError(() -> locations.saveOrUpdate(new StorageLocationDtos.SaveRequest(
                 other, null, null, "Ngoài đơn vị", null)), ErrorCode.NOT_FOUND);
         assertError(() -> locations.delete(other), ErrorCode.NOT_FOUND);
         when(currentUser.get()).thenReturn(new Actor(studentId, Role.STUDENT, null, false, false));
-        assertError(() -> locations.searchByPage(new StorageLocationDtos.Search(0, 10, null, null, null, null)),
+        assertError(() -> locations.searchByPage(new StorageLocationDtos.Search(0, 10, null, null, null, null, null, null)),
                 ErrorCode.FORBIDDEN);
     }
 

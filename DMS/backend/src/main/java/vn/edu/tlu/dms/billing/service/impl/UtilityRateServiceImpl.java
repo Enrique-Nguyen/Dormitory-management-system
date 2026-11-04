@@ -75,6 +75,18 @@ public class UtilityRateServiceImpl implements UtilityRateService {
             sql += " AND meter_type=?";
             args.add(meterType);
         }
+        if (input.unitPrice() != null) {
+            sql += " AND unit_price=?";
+            args.add(input.unitPrice());
+        }
+        if (input.effectiveFromFrom() != null) {
+            sql += " AND effective_from>=?";
+            args.add(input.effectiveFromFrom());
+        }
+        if (input.effectiveFromTo() != null) {
+            sql += " AND effective_from<=?";
+            args.add(input.effectiveFromTo());
+        }
         var page =
                 queries.search(
                         sql,

@@ -58,6 +58,14 @@ public class FloorServiceImpl implements FloorService {
             sql.append(" AND f.building_id=?");
             args.add(input.buildingId());
         }
+        if (input.floor() != null) {
+            sql.append(" AND f.floor=?");
+            args.add(input.floor());
+        }
+        if (input.name() != null && !input.name().isBlank()) {
+            sql.append(" AND strpos(lower(f.name),lower(?))>0");
+            args.add(input.name().trim());
+        }
         if (input.active() != null) {
             sql.append(" AND f.active=?");
             args.add(input.active());

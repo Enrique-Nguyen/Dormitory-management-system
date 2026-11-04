@@ -1,46 +1,3 @@
--- Correct the known malformed legacy academic-year value before enforcing the catalog invariant.
-DO $$
-DECLARE
-    malformed_ids BIGINT[];
-    canonical_id BIGINT;
-BEGIN
-    SELECT array_agg(id ORDER BY id)
-    INTO malformed_ids
-    FROM semester
-    WHERE academic_year = '2908-2910';
-
-    IF malformed_ids IS NOT NULL THEN
-        SELECT id
-        INTO canonical_id
-        FROM semester
-        WHERE academic_year = '2908-2909'
-          AND type = 'HK1'
-        ORDER BY id
-        LIMIT 1;
-
-        IF canonical_id IS NULL THEN
-            UPDATE semester
-            SET academic_year = '2908-2909'
-            WHERE id = malformed_ids[1];
-            canonical_id := malformed_ids[1];
-            malformed_ids := malformed_ids[2:array_length(malformed_ids, 1)];
-        END IF;
-
-        UPDATE registration_period
-        SET semester_id = canonical_id
-        WHERE semester_id = ANY(malformed_ids);
-        UPDATE invoice
-        SET semester_id = canonical_id
-        WHERE semester_id = ANY(malformed_ids);
-        UPDATE summer_choice
-        SET semester_id = canonical_id
-        WHERE semester_id = ANY(malformed_ids);
-
-        DELETE FROM semester
-        WHERE id = ANY(malformed_ids);
-    END IF;
-END $$;
-
 -- Managed reference catalogs. Preserve the exact legacy labels; never merge on trim().
 CREATE TABLE school (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -76,9 +33,7 @@ CREATE TABLE academic_year (
     code VARCHAR(9) NOT NULL UNIQUE,
     name VARCHAR(200) NOT NULL UNIQUE CHECK (btrim(name) <> ''),
     active BOOLEAN NOT NULL DEFAULT true,
-    CONSTRAINT ck_academic_year_code CHECK (
-        code ~ '^[0-9]{4}-[0-9]{4}$'
-        AND substring(code, 6, 4)::integer = substring(code, 1, 4)::integer + 1)
+    CONSTRAINT ck_academic_year_code CHECK (code ~ '^[0-9]{4}-[0-9]{4}$')
 );
 CREATE TABLE amenity (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

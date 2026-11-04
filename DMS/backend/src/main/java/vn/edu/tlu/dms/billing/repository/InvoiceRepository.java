@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import vn.edu.tlu.dms.billing.domain.Invoice;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,6 +73,11 @@ public interface InvoiceRepository
             """
             AND (:type IS NULL OR i.type = :type)
             AND (:filterStatuses = false OR i.status IN (:statuses))
+            AND (CAST(:billingMonth AS date) IS NULL OR i.billing_month = CAST(:billingMonth AS date))
+            AND (CAST(:totalAmountMin AS bigint) IS NULL OR i.total_amount >= CAST(:totalAmountMin AS bigint))
+            AND (CAST(:totalAmountMax AS bigint) IS NULL OR i.total_amount <= CAST(:totalAmountMax AS bigint))
+            AND (CAST(:dueDateFrom AS date) IS NULL OR i.due_date >= CAST(:dueDateFrom AS date))
+            AND (CAST(:dueDateTo AS date) IS NULL OR i.due_date <= CAST(:dueDateTo AS date))
             AND (i.code ILIKE :q OR EXISTS(SELECT 1 FROM app_user u WHERE u.id=i.student_id AND u.full_name ILIKE :q))
             """;
 
@@ -93,6 +99,11 @@ public interface InvoiceRepository
             boolean filterStatuses,
             List<String> statuses,
             String q,
+            LocalDate billingMonth,
+            Long totalAmountMin,
+            Long totalAmountMax,
+            LocalDate dueDateFrom,
+            LocalDate dueDateTo,
             Pageable pageable);
 
     @Query(

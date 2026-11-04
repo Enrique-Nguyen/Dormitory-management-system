@@ -160,6 +160,41 @@ class CatalogServiceTest {
     }
 
     @Test
+    void catalogSearchDeserializesSeparateCodeAndName() throws Exception {
+        var request = new com.fasterxml.jackson.databind.ObjectMapper().readValue(
+                "{\"code\":\"TLU\",\"name\":\"Thuy Loi\"}", CatalogSearch.class);
+        assertThat(request.code()).isEqualTo("TLU");
+        assertThat(request.name()).isEqualTo("Thuy Loi");
+    }
+
+    @Test
+    void schoolCodeAndNameAreBoundSeparatelyForCountAndRows() {
+        when(jdbc.queryForObject(startsWith("SELECT count"), any(SqlParameterSource.class), eq(Long.class))).thenReturn(1L);
+        when(jdbc.queryForList(anyString(), any(SqlParameterSource.class))).thenReturn(List.of(row));
+        service.searchByPage(Catalog.SCHOOLS,
+                new CatalogSearch(0, 10, null, null, null, null, null, " A% ", " O'Brien "));
+        String where = " WHERE true AND strpos(lower(code), lower(:code)) > 0"
+                + " AND strpos(lower(name), lower(:name)) > 0";
+        verify(jdbc).queryForObject(eq("SELECT count(*) FROM school" + where),
+                org.mockito.ArgumentMatchers.<SqlParameterSource>argThat(p ->
+                        "A%".equals(p.getValue("code")) && "O'Brien".equals(p.getValue("name"))), eq(Long.class));
+        verify(jdbc).queryForList(startsWith("SELECT * FROM school" + where),
+                org.mockito.ArgumentMatchers.<SqlParameterSource>argThat(p ->
+                        "A%".equals(p.getValue("code")) && "O'Brien".equals(p.getValue("name"))));
+    }
+
+    @Test
+    void blankCatalogFiltersAreOmittedFromCountAndData() {
+        when(jdbc.queryForObject(startsWith("SELECT count"), any(SqlParameterSource.class), eq(Long.class))).thenReturn(0L);
+        when(jdbc.queryForList(anyString(), any(SqlParameterSource.class))).thenReturn(List.of());
+        service.searchByPage(Catalog.SCHOOLS,
+                new CatalogSearch(0, 10, null, null, null, null, null, " ", ""));
+        verify(jdbc).queryForObject(eq("SELECT count(*) FROM school WHERE true"), any(SqlParameterSource.class), eq(Long.class));
+        verify(jdbc).queryForList(startsWith("SELECT * FROM school WHERE true ORDER BY"), any(SqlParameterSource.class));
+        verify(guard).requirePermission(Permission.CATALOG_READ);
+    }
+
+    @Test
     void unknownKindBadPagingAndSqlSortRejected() {
         assertThatThrownBy(() -> service.getById("school;drop table school", 1L)).hasMessage("NOT_FOUND");
         assertThatThrownBy(() -> service.searchByPage(Catalog.SCHOOLS,

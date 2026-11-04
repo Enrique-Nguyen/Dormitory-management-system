@@ -72,6 +72,14 @@ public class StorageLocationServiceImpl implements StorageLocationService {
             where.append(" AND active=:active");
             args.addValue("active", input.active());
         }
+        if (input.code() != null && !input.code().isBlank()) {
+            where.append(" AND strpos(lower(code),lower(:code))>0");
+            args.addValue("code", input.code().strip());
+        }
+        if (input.name() != null && !input.name().isBlank()) {
+            where.append(" AND strpos(lower(name),lower(:name))>0");
+            args.addValue("name", input.name().strip());
+        }
         if (input.q() != null && !input.q().isBlank()) {
             where.append(" AND (strpos(lower(code),lower(:q))>0 OR strpos(lower(name),lower(:q))>0)");
             args.addValue("q", input.q().strip());

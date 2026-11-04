@@ -25,6 +25,7 @@ import vn.edu.tlu.dms.room.repository.RoomTypeRepository;
 import vn.edu.tlu.dms.room.service.RoomTypeService;
 
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -91,10 +92,26 @@ public class RoomTypeServiceImpl
 
     @Override
     protected Specification<RoomType> searchScope(SearchRequest search) {
-        return (root, query, builder) ->
-                search.active() == null
-                        ? builder.conjunction()
-                        : builder.equal(root.get("active"), search.active());
+        return (root, query, builder) -> {
+            var predicate = builder.conjunction();
+            if (search.name() != null && !search.name().isBlank()) {
+                predicate = builder.and(predicate, builder.greaterThan(builder.locate(
+                        builder.lower(root.get("name")), search.name().trim().toLowerCase(Locale.ROOT)), 0));
+            }
+            if (search.active() != null) {
+                predicate = builder.and(predicate, builder.equal(root.get("active"), search.active()));
+            }
+            if (search.bedCount() != null) {
+                predicate = builder.and(predicate, builder.equal(root.get("bedCount"), search.bedCount()));
+            }
+            if (search.priceMain() != null) {
+                predicate = builder.and(predicate, builder.equal(root.get("priceMain"), search.priceMain()));
+            }
+            if (search.priceSummer() != null) {
+                predicate = builder.and(predicate, builder.equal(root.get("priceSummer"), search.priceSummer()));
+            }
+            return predicate;
+        };
     }
 
     @Override

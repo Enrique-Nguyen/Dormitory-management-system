@@ -136,6 +136,38 @@ public class OverviewServiceImpl implements OverviewService {
             filter += " AND s.contract_id=?";
             args.add(input.contractId());
         }
+        if (input.id() != null) {
+            filter += " AND s.id=?";
+            args.add(input.id());
+        }
+        if (input.packageCount() != null) {
+            filter += " AND s.package_count=?";
+            args.add(input.packageCount());
+        }
+        if (input.location() != null && !input.location().isBlank()) {
+            filter += " AND s.location ILIKE ?";
+            args.add(LikePattern.contains(input.location()));
+        }
+        if (input.description() != null && !input.description().isBlank()) {
+            filter += " AND s.description ILIKE ?";
+            args.add(LikePattern.contains(input.description()));
+        }
+        if (input.depositedFrom() != null) {
+            filter += " AND s.deposited_at>=?";
+            args.add(input.depositedFrom());
+        }
+        if (input.depositedTo() != null) {
+            filter += " AND s.deposited_at<=?";
+            args.add(input.depositedTo());
+        }
+        if (input.returnedFrom() != null) {
+            filter += " AND s.returned_at>=?";
+            args.add(input.returnedFrom());
+        }
+        if (input.returnedTo() != null) {
+            filter += " AND s.returned_at<=?";
+            args.add(input.returnedTo());
+        }
         String keyword = LikePattern.contains(input.q());
         args.add(keyword);
         args.add(keyword);

@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.constants.DmsConstants.NotificationScope;
 import vn.edu.tlu.dms.common.constants.DmsConstants.NotificationSource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
@@ -22,6 +24,7 @@ import vn.edu.tlu.dms.notification.repository.NotificationRepository;
 import vn.edu.tlu.dms.notification.service.NotificationService;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -54,6 +57,11 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public PageResponse<NotificationDtos.Response> searchByPage(SearchRequest request) {
         scopeGuard.requirePermission(Permission.NOTIFICATION_READ);
+        OffsetDateTime from = request.from();
+        OffsetDateTime to = request.to();
+        if (from != null && to != null && from.isAfter(to)) {
+            throw BusinessException.invalid(ApiField.TO, ValidationMessage.TIME_RANGE_INVALID);
+        }
         int page = request.page();
         int size = request.size();
         Boolean unread = request.unread();
@@ -91,13 +99,22 @@ public class NotificationServiceImpl implements NotificationService {
         String filter = unread == null ? "" : unread ? " AND NOT is_read" : " AND is_read";
         filter += " AND (title ILIKE ? OR body ILIKE ?)";
         String pattern = LikePattern.contains(keyword.trim());
+        var args = new ArrayList<Object>(List.of(userId, pattern, pattern));
+        if (from != null) {
+            filter += " AND created_at >= ?";
+            args.add(from);
+        }
+        if (to != null) {
+            filter += " AND created_at <= ?";
+            args.add(to);
+        }
         Long total =
                 jdbc.queryForObject(
                         "SELECT count(*) FROM " + inboxSource() + filter,
                         Long.class,
-                        userId,
-                        pattern,
-                        pattern);
+                        args.toArray());
+        args.add(size);
+        args.add((long) page * size);
         List<NotificationDtos.Response> notifications =
                 jdbc.query(
                         "SELECT * FROM "
@@ -121,11 +138,7 @@ public class NotificationServiceImpl implements NotificationService {
                                                 row.getObject("source_id", Long.class)),
                                         row.getObject("created_at", OffsetDateTime.class),
                                         row.getBoolean("is_read")),
-                        userId,
-                        pattern,
-                        pattern,
-                        size,
-                        (long) page * size);
+                        args.toArray());
         return new PageResponse<>(
                 notifications, page, size, total, (int) ((total + size - 1) / size));
     }

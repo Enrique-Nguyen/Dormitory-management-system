@@ -3,6 +3,7 @@ package vn.edu.tlu.dms.common.dto;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -45,6 +46,9 @@ public final class SearchRequest {
     @Positive private Long buildingId;
     private Short floor;
     @Positive private Long roomTypeId;
+    @Min(0) private Short bedCount;
+    @Min(0) private Long priceMain;
+    @Min(0) private Long priceSummer;
     private String gender;
     private Boolean hasFreeBed;
     private Boolean noLeader;
@@ -69,12 +73,82 @@ public final class SearchRequest {
     @Size(max = 100) private String key;
     private Boolean returned;
     @Positive private Long contractId;
+    @Positive private Long studentId;
+    private LocalDate startDateFrom;
+    private LocalDate startDateTo;
+    private LocalDate endDateFrom;
+    private LocalDate endDateTo;
+    @Positive private Long id;
+    @Positive private Integer packageCount;
+    @Size(max = 100) private String location;
+    @Size(max = 500) private String description;
+    private LocalDate depositedFrom;
+    private LocalDate depositedTo;
+    private LocalDate returnedFrom;
+    private LocalDate returnedTo;
     private Boolean hasTopup;
     @Positive private Long actorId;
     private String action;
     private String entityType;
     private OffsetDateTime from;
     private OffsetDateTime to;
+    @Size(max = 30) private String choice;
+    @Size(max = 200) private String name;
+    @Min(0) private Integer weight;
+    @Min(0) private Long unitPrice;
+    private LocalDate effectiveFromFrom;
+    private LocalDate effectiveFromTo;
+    @Min(0) private Long totalAmountMin;
+    @Min(0) private Long totalAmountMax;
+    private LocalDate dueDateFrom;
+    private LocalDate dueDateTo;
+    @Min(0) private Long depositAmount;
+    private OffsetDateTime openAtFrom;
+    private OffsetDateTime openAtTo;
+    private OffsetDateTime closeAtFrom;
+    private OffsetDateTime closeAtTo;
+
+    public Long depositAmount() { return depositAmount; }
+    public OffsetDateTime openAtFrom() { return openAtFrom; }
+    public OffsetDateTime openAtTo() { return openAtTo; }
+    public OffsetDateTime closeAtFrom() { return closeAtFrom; }
+    public OffsetDateTime closeAtTo() { return closeAtTo; }
+
+    @AssertTrue
+    public boolean isOpenAtRangeValid() {
+        return openAtFrom == null || openAtTo == null || !openAtFrom.isAfter(openAtTo);
+    }
+
+    @AssertTrue
+    public boolean isCloseAtRangeValid() {
+        return closeAtFrom == null || closeAtTo == null || !closeAtFrom.isAfter(closeAtTo);
+    }
+
+    public String choice() { return choice; }
+    public String name() { return name; }
+    public Integer weight() { return weight; }
+    public Long unitPrice() { return unitPrice; }
+    public LocalDate effectiveFromFrom() { return effectiveFromFrom; }
+    public LocalDate effectiveFromTo() { return effectiveFromTo; }
+    public Long totalAmountMin() { return totalAmountMin; }
+    public Long totalAmountMax() { return totalAmountMax; }
+    public LocalDate dueDateFrom() { return dueDateFrom; }
+    public LocalDate dueDateTo() { return dueDateTo; }
+
+    @AssertTrue
+    public boolean isEffectiveFromRangeValid() {
+        return effectiveFromFrom == null || effectiveFromTo == null || !effectiveFromFrom.isAfter(effectiveFromTo);
+    }
+
+    @AssertTrue
+    public boolean isTotalAmountRangeValid() {
+        return totalAmountMin == null || totalAmountMax == null || totalAmountMin <= totalAmountMax;
+    }
+
+    @AssertTrue
+    public boolean isDueDateRangeValid() {
+        return dueDateFrom == null || dueDateTo == null || !dueDateFrom.isAfter(dueDateTo);
+    }
 
     public int page() {
         return page;
@@ -122,6 +196,18 @@ public final class SearchRequest {
 
     public Long roomTypeId() {
         return roomTypeId;
+    }
+
+    public Short bedCount() {
+        return bedCount;
+    }
+
+    public Long priceMain() {
+        return priceMain;
+    }
+
+    public Long priceSummer() {
+        return priceSummer;
     }
 
     public String gender() {
@@ -197,6 +283,52 @@ public final class SearchRequest {
     public Boolean returned() { return returned; }
 
     public Long contractId() { return contractId; }
+
+    public Long studentId() { return studentId; }
+
+    public LocalDate startDateFrom() { return startDateFrom; }
+
+    public LocalDate startDateTo() { return startDateTo; }
+
+    public LocalDate endDateFrom() { return endDateFrom; }
+
+    public LocalDate endDateTo() { return endDateTo; }
+
+    @AssertTrue
+    public boolean isStartDateRangeValid() {
+        return startDateFrom == null || startDateTo == null || !startDateFrom.isAfter(startDateTo);
+    }
+
+    @AssertTrue
+    public boolean isEndDateRangeValid() {
+        return endDateFrom == null || endDateTo == null || !endDateFrom.isAfter(endDateTo);
+    }
+
+    public Long id() { return id; }
+
+    public Integer packageCount() { return packageCount; }
+
+    public String location() { return location; }
+
+    public String description() { return description; }
+
+    public LocalDate depositedFrom() { return depositedFrom; }
+
+    public LocalDate depositedTo() { return depositedTo; }
+
+    public LocalDate returnedFrom() { return returnedFrom; }
+
+    public LocalDate returnedTo() { return returnedTo; }
+
+    @AssertTrue
+    public boolean isDepositedRangeValid() {
+        return depositedFrom == null || depositedTo == null || !depositedFrom.isAfter(depositedTo);
+    }
+
+    @AssertTrue
+    public boolean isReturnedRangeValid() {
+        return returnedFrom == null || returnedTo == null || !returnedFrom.isAfter(returnedTo);
+    }
 
     public Boolean hasTopup() { return hasTopup; }
 

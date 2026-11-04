@@ -554,6 +554,7 @@ export default function ApplicationDetailView({
         <Card title="Sinh viên">
           {student ? (
             <Descriptions
+              className="dms-application-student-details"
               column={{ xs: 1, sm: 2 }}
               items={[
                 {

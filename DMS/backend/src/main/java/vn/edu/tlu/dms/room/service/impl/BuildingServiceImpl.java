@@ -24,6 +24,7 @@ import vn.edu.tlu.dms.room.service.BuildingService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -90,6 +91,17 @@ public class BuildingServiceImpl
             }
             if (search.managementUnitId() != null) {
                 filters.add(builder.equal(root.get("managementUnitId"), search.managementUnitId()));
+            }
+            if (search.code() != null && !search.code().isBlank()) {
+                filters.add(builder.greaterThan(builder.locate(builder.lower(root.get("code")),
+                        search.code().trim().toLowerCase(Locale.ROOT)), 0));
+            }
+            if (search.name() != null && !search.name().isBlank()) {
+                filters.add(builder.greaterThan(builder.locate(builder.lower(root.get("name")),
+                        search.name().trim().toLowerCase(Locale.ROOT)), 0));
+            }
+            if (search.depositAmount() != null) {
+                filters.add(builder.equal(root.get("depositAmount"), search.depositAmount()));
             }
             return builder.and(filters.toArray(Predicate[]::new));
         };

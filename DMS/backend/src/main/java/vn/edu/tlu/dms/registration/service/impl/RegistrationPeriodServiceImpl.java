@@ -129,6 +129,22 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                                                                         .toLowerCase(Locale.ROOT)
                                                                 + "%"));
                                     }
+                                    if (search.name() != null && !search.name().isBlank()) {
+                                        filters.add(b.greaterThan(b.locate(b.lower(r.get("name")),
+                                                search.name().trim().toLowerCase(Locale.ROOT)), 0));
+                                    }
+                                    if (search.openAtFrom() != null) {
+                                        filters.add(b.greaterThanOrEqualTo(r.get("openAt"), search.openAtFrom()));
+                                    }
+                                    if (search.openAtTo() != null) {
+                                        filters.add(b.lessThanOrEqualTo(r.get("openAt"), search.openAtTo()));
+                                    }
+                                    if (search.closeAtFrom() != null) {
+                                        filters.add(b.greaterThanOrEqualTo(r.get("closeAt"), search.closeAtFrom()));
+                                    }
+                                    if (search.closeAtTo() != null) {
+                                        filters.add(b.lessThanOrEqualTo(r.get("closeAt"), search.closeAtTo()));
+                                    }
                                     var isOpen =
                                             b.and(
                                                     b.lessThanOrEqualTo(r.get("openAt"), now),

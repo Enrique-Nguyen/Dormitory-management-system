@@ -194,6 +194,8 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                 request.category(),
                                 request.severity(),
                                 LikePattern.contains(request.q()),
+                                LikePattern.contains(request.code() == null ? "" : request.code()),
+                                LikePattern.contains(request.description() == null ? "" : request.description()),
                                 PageRequest.of(request.page(), request.size(), sort))
                         .map(row -> toMaintenanceResponse(row, false)));
     }

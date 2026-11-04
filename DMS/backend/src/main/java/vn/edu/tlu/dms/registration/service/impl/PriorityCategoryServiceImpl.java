@@ -8,6 +8,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
+import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
@@ -92,6 +93,22 @@ public class PriorityCategoryServiceImpl
                     scope.and(
                             (root, query, builder) ->
                                     builder.equal(root.get("active"), search.active()));
+        }
+        if (search.code() != null && !search.code().isBlank()) {
+            String code = search.code().trim().toLowerCase(java.util.Locale.ROOT);
+            scope = scope.and((root, query, builder) ->
+                    builder.greaterThan(builder.locate(builder.lower(root.get("code")), code), 0));
+        }
+        if (search.name() != null && !search.name().isBlank()) {
+            String name = search.name().trim().toLowerCase(java.util.Locale.ROOT);
+            scope = scope.and((root, query, builder) ->
+                    builder.greaterThan(builder.locate(builder.lower(root.get("name")), name), 0));
+        }
+        if (search.weight() != null) {
+            if (actor.is(Role.STUDENT) || actor.is(Role.TECHNICIAN)) {
+                throw BusinessException.forbidden();
+            }
+            scope = scope.and((root, query, builder) -> builder.equal(root.get("weight"), search.weight()));
         }
         return scope;
     }

@@ -166,6 +166,11 @@ public class InvoiceServiceImpl implements InvoiceService {
                                 filterStatuses,
                                 filterStatuses ? statuses : List.of(InvoiceStatus.UNPAID),
                                 LikePattern.contains(input.q().trim()),
+                                input.billingMonth(),
+                                input.totalAmountMin(),
+                                input.totalAmountMax(),
+                                input.dueDateFrom(),
+                                input.dueDateTo(),
                                 pageable)
                         .map(invoice -> toInvoiceResponse(invoice, false)));
     }

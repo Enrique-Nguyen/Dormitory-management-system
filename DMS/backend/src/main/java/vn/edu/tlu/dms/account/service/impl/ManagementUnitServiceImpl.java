@@ -17,6 +17,7 @@ import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.impl.AbstractCrudServiceImpl;
 
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -69,10 +70,17 @@ public class ManagementUnitServiceImpl
 
     @Override
     protected Specification<ManagementUnit> searchScope(SearchRequest search) {
-        return (root, query, builder) ->
-                search.code() == null || search.code().isBlank()
-                        ? builder.conjunction()
-                        : builder.equal(root.get("code"), search.code().trim());
+        return (root, query, builder) -> {
+            var predicate = builder.conjunction();
+            if (search.code() != null && !search.code().isBlank()) {
+                predicate = builder.and(predicate, builder.equal(root.get("code"), search.code().trim()));
+            }
+            if (search.name() != null && !search.name().isBlank()) {
+                predicate = builder.and(predicate, builder.greaterThan(builder.locate(
+                        builder.lower(root.get("name")), search.name().trim().toLowerCase(Locale.ROOT)), 0));
+            }
+            return predicate;
+        };
     }
 
     @Override
