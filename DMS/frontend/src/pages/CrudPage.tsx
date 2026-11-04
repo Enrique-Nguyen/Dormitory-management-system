@@ -825,6 +825,8 @@ export default function CrudPage({ resource }: { resource: string }) {
     return (
       canDelete &&
       canChangeRow(row) &&
+      (!config.deleteStates ||
+        config.deleteStates.includes(String(row.status))) &&
       !config.singleton &&
       !config.noDelete &&
       !(resource === 'users' && (row.locked === true || row.id === me?.id))

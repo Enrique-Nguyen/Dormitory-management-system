@@ -21,8 +21,10 @@ import {
   InvoiceStatus,
   InvoiceType,
   MaintenanceStatus,
+  RegistrationKind,
   RoomGender,
   RoomStatus,
+  SemesterType,
   StayRequestStatus,
   SummerStatus,
   TRANSFER_ACTION,
@@ -790,11 +792,21 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.ROOM_APPLICATION,
     title: 'Đơn đăng ký của tôi',
     endpoint: '/me/applications',
-    filters: [statusFilter(Object.values(ApplicationStatus)), ref('periodId', 'Đợt đăng ký', '/me/registration-periods/open', 'name', false)],
+    filters: [
+      statusFilter(Object.values(ApplicationStatus)),
+      {
+        ...ref('periodId', 'Đợt đăng ký', '/me/registration-periods/open', 'name', false),
+        lookupFilters: { kind: RegistrationKind.REGULAR },
+      },
+    ],
     writeEndpoint: '/applications',
     detailEndpoint: '/applications',
     fields: [
-      ref('periodId', 'Đợt đăng ký', '/me/registration-periods/open'),
+      // Đơn ở chỉ thuộc đợt thường; đợt hè có luồng lựa chọn riêng.
+      {
+        ...ref('periodId', 'Đợt đăng ký', '/me/registration-periods/open'),
+        lookupFilters: { kind: RegistrationKind.REGULAR },
+      },
       ref('preferredUnitId', 'Đơn vị nguyện vọng', '/management-units'),
       ref('preferredRoomTypeId', 'Loại phòng', '/room-types', 'name', false),
       {
@@ -991,9 +1003,14 @@ export const resources: Record<string, CrudResource> = {
     fields: [
       {
         ...ref('contractId', 'Hợp đồng', '/me/contracts', 'code'),
+        lookupFilters: { status: ContractStatus.ACTIVE },
         createOnly: true,
       },
-      { ...ref('semesterId', 'Học kỳ hè', '/semesters'), createOnly: true },
+      {
+        ...ref('semesterId', 'Học kỳ hè', '/semesters'),
+        lookupFilters: { type: SemesterType.SUMMER },
+        createOnly: true,
+      },
       select('choice', 'Lựa chọn', Object.values(SummerChoice)),
     ],
     columns: columns(
@@ -1007,7 +1024,10 @@ export const resources: Record<string, CrudResource> = {
       { key: 'decidedAt', label: 'Thời gian quyết định' },
       { key: 'decisionReason', label: 'Lý do quyết định' },
     ],
-    editStates: [SummerStatus.PENDING],
+    // Bị từ chối vẫn sửa để gửi lại trong đợt hè còn mở; chỉ lựa chọn đang chờ mới rút được.
+    editStates: [SummerStatus.PENDING, SummerStatus.REJECTED],
+    deleteStates: [SummerStatus.PENDING],
+    deleteLabel: 'Rút',
     detailRoutes: {
       [Role.STAFF]: STAFF_SUMMER_PATH,
       [Role.ADMIN]: portalPath(Role.ADMIN, STAFF_SUMMER_PATH),
