@@ -32,6 +32,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -405,6 +406,16 @@ public class DepositServiceImpl implements DepositService {
 
         var args = new ArrayList<Object>();
         String filter = contractScope(args, mine);
+        if (input.statuses() != null && !input.statuses().isEmpty()) {
+            filter += " AND c.status IN ("
+                    + String.join(",", Collections.nCopies(input.statuses().size(), "?"))
+                    + ")";
+            args.addAll(input.statuses());
+        }
+        if (input.hasTopup() != null) {
+            filter += " AND (COALESCE(v.topup_needed,0)>0)=?";
+            args.add(input.hasTopup());
+        }
         args.add(LikePattern.contains(input.q()));
 
         String sql =

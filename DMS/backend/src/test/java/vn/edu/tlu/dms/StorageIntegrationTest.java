@@ -9,7 +9,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,10 +25,13 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.contract.api.StorageDtos;
+import vn.edu.tlu.dms.contract.api.StorageLocationDtos;
+import vn.edu.tlu.dms.contract.service.StorageLocationService;
 import vn.edu.tlu.dms.contract.service.StorageService;
 import vn.edu.tlu.dms.room.service.BedOccupancyService;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -51,6 +57,10 @@ class StorageIntegrationTest {
     private static final LocalDate DEPOSITED_AT = LocalDate.of(2071, 5, 20);
 
     @Autowired StorageService storage;
+
+    @Autowired StorageLocationService locations;
+
+    private Long locationId;
 
     @Autowired BedOccupancyService occupancy;
 
@@ -79,12 +89,14 @@ class StorageIntegrationTest {
     @BeforeEach
     void createFixtureData() {
         suffix = UUID.randomUUID().toString().substring(0, 6);
+        jdbc.update("UPDATE role_permission_matrix SET permissions=permissions || '[\"CATALOG_CREATE\",\"CATALOG_UPDATE\",\"CATALOG_DELETE\"]'::jsonb WHERE role='STAFF'");
         unitId =
                 jdbc.queryForObject(
                         "SELECT id FROM management_unit WHERE code='K1'", Long.class);
         staffId = createUser(Role.STAFF, unitId, "Cán bộ " + suffix);
         when(currentUser.get()).thenReturn(new Actor(staffId, Role.STAFF, unitId, false, false));
         studentId = createStudent("SV" + suffix);
+        jdbc.update("INSERT INTO academic_year(code,name) VALUES ('2070-2071','2070-2071') ON CONFLICT DO NOTHING");
         Long semesterId =
                 jdbc.queryForObject(
                         "INSERT INTO semester(academic_year,type,name,start_date,end_date)"
@@ -115,6 +127,7 @@ class StorageIntegrationTest {
                         unitId,
                         "B" + suffix,
                         "Tòa " + suffix);
+        jdbc.update("INSERT INTO building_floor(building_id,floor,name) VALUES (?,1,'Tang 1') ON CONFLICT DO NOTHING", buildingId);
         roomId =
                 jdbc.queryForObject(
                         "INSERT INTO room(building_id,room_type_id,floor,code,gender)"
@@ -134,6 +147,8 @@ class StorageIntegrationTest {
                 staffId);
         jdbc.update("UPDATE room SET leader_student_id=? WHERE id=?", studentId, roomId);
         summerChoiceId = createChoice(semesterId);
+        locationId = jdbc.queryForObject("INSERT INTO storage_location(management_unit_id,code,name) VALUES (?,?,?) RETURNING id", Long.class,
+                unitId, "LOC-" + suffix, "Kho K1 tầng 1, kệ B " + suffix);
     }
 
     /** AT-24: tạo phiếu, đóng phân phòng SUMMER_LEAVE, giữ hợp đồng ACTIVE và nguyên cọc. */
@@ -147,6 +162,8 @@ class StorageIntegrationTest {
         assertThat(record.summerChoiceId()).isEqualTo(summerChoiceId);
         assertThat(record.previousBedId()).isEqualTo(bedId);
         assertThat(record.packageCount()).isEqualTo((short) 3);
+        assertThat(record.locationId()).isEqualTo(locationId);
+        assertThat(record.location()).isEqualTo("Kho K1 tầng 1, kệ B " + suffix);
         assertThat(record.receivedBy()).isEqualTo(staffId);
         assertThat(record.returnedAt()).isNull();
 
@@ -354,9 +371,130 @@ class StorageIntegrationTest {
                 .isEqualTo(1);
     }
 
+    @Test
+    void unknownAndInactiveLocationsCannotBeSelected() {
+        Long original = locationId;
+        locationId = Long.MAX_VALUE;
+        assertError(() -> storage.create(contractId, createRequest()), ErrorCode.NOT_FOUND);
+        locationId = original;
+        locations.saveOrUpdate(new StorageLocationDtos.SaveRequest(locationId, null, null, null, false));
+        assertError(() -> storage.create(contractId, createRequest()), ErrorCode.VALIDATION_FAILED);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM storage_record WHERE contract_id=?",
+                Long.class, contractId)).isZero();
+    }
+
+    @Test
+    void locationFromAnotherUnitCannotBeSelectedEvenByAdmin() {
+        Long otherUnit = jdbc.queryForObject("SELECT id FROM management_unit WHERE code='N23'", Long.class);
+        when(currentUser.get()).thenReturn(new Actor(staffId, Role.ADMIN, null, false, false));
+        locationId = locations.saveOrUpdate(new StorageLocationDtos.SaveRequest(
+                null, otherUnit, "OTHER-" + suffix, "Kho khác " + suffix, true)).id();
+        assertError(() -> storage.create(contractId, createRequest()), ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    void usedLocationCannotBeDeletedAndInactiveHistoryCanStillBeReturned() {
+        var record = storage.create(contractId, createRequest());
+        assertError(() -> locations.delete(locationId), ErrorCode.RESOURCE_IN_USE);
+        locations.saveOrUpdate(new StorageLocationDtos.SaveRequest(locationId, null, null, null, false));
+        assertThat(locations.getById(locationId).active()).isFalse();
+        var returned = storage.returnStorage(record.id(), new StorageDtos.ReturnRequest(bedId, DEPOSITED_AT.plusDays(1)));
+        assertThat(returned.locationId()).isEqualTo(locationId);
+        assertThat(returned.location()).isEqualTo(record.location());
+        assertError(() -> locations.delete(locationId), ErrorCode.RESOURCE_IN_USE);
+    }
+
+    @Test
+    void catalogSupportsPartialUpdateImmutableKeysAndUnusedDelete() {
+        var updated = locations.saveOrUpdate(new StorageLocationDtos.SaveRequest(
+                locationId, null, null, "Tên mới " + suffix, false));
+        assertThat(updated.code()).isEqualTo("LOC-" + suffix);
+        assertThat(updated.managementUnitId()).isEqualTo(unitId);
+        assertThat(updated.active()).isFalse();
+        assertError(() -> locations.saveOrUpdate(new StorageLocationDtos.SaveRequest(
+                locationId, null, "CHANGED", null, null)), ErrorCode.VALIDATION_FAILED);
+        Long otherUnit = jdbc.queryForObject("SELECT id FROM management_unit WHERE code='N23'", Long.class);
+        assertError(() -> locations.saveOrUpdate(new StorageLocationDtos.SaveRequest(
+                locationId, otherUnit, null, null, null)), ErrorCode.VALIDATION_FAILED);
+        assertError(() -> locations.saveOrUpdate(new StorageLocationDtos.SaveRequest(
+                Long.MAX_VALUE, null, null, "missing", true)), ErrorCode.NOT_FOUND);
+        locations.delete(locationId);
+        assertError(() -> locations.getById(locationId), ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    void catalogFiltersScopeBeforeCountAndAggregateReadDoesNotAllowWrites() {
+        Long otherUnit = jdbc.queryForObject("SELECT id FROM management_unit WHERE code='N23'", Long.class);
+        when(currentUser.get()).thenReturn(new Actor(staffId, Role.ADMIN, null, false, false));
+        Long other = locations.saveOrUpdate(new StorageLocationDtos.SaveRequest(
+                null, otherUnit, "LOC-" + suffix, "Kho khác " + suffix, true)).id();
+        when(currentUser.get()).thenReturn(new Actor(staffId, Role.STAFF, unitId, false, false));
+        var local = locations.searchByPage(new StorageLocationDtos.Search(0, 1, suffix,
+                List.of("name,desc"), null, true));
+        assertThat(local.totalElements()).isEqualTo(1);
+        assertThat(local.content()).extracting(StorageLocationDtos.Location::id).containsExactly(locationId);
+        assertThat(locations.searchByPage(new StorageLocationDtos.Search(0, 10, suffix,
+                null, otherUnit, null)).totalElements()).isZero();
+        assertError(() -> locations.getById(other), ErrorCode.NOT_FOUND);
+        when(currentUser.get()).thenReturn(new Actor(staffId, Role.STAFF, unitId, true, false));
+        var aggregate = locations.searchByPage(new StorageLocationDtos.Search(0, 1, suffix, null, null, true));
+        assertThat(aggregate.totalElements()).isEqualTo(2);
+        assertThat(locations.getById(other).allowedActions()).isEmpty();
+        assertError(() -> locations.saveOrUpdate(new StorageLocationDtos.SaveRequest(
+                other, null, null, "Ngoài đơn vị", null)), ErrorCode.NOT_FOUND);
+        assertError(() -> locations.delete(other), ErrorCode.NOT_FOUND);
+        when(currentUser.get()).thenReturn(new Actor(studentId, Role.STUDENT, null, false, false));
+        assertError(() -> locations.searchByPage(new StorageLocationDtos.Search(0, 10, null, null, null, null)),
+                ErrorCode.FORBIDDEN);
+    }
+
+    @Test
+    void migrationPreservesWholeLegacyNamesAndDerivesUnitOnlyFromPreviousBed() {
+        String schema = "storage_backfill_" + suffix;
+        jdbc.execute("CREATE SCHEMA " + schema);
+        jdbc.execute("SET LOCAL search_path TO " + schema);
+        jdbc.execute("CREATE TABLE management_unit(id bigint PRIMARY KEY)");
+        jdbc.execute("CREATE TABLE building(id bigint PRIMARY KEY,management_unit_id bigint)");
+        jdbc.execute("CREATE TABLE room(id bigint PRIMARY KEY,building_id bigint)");
+        jdbc.execute("CREATE TABLE bed(id bigint PRIMARY KEY,room_id bigint)");
+        jdbc.execute("CREATE TABLE dormitory_contract(id bigint PRIMARY KEY,student_id bigint,status varchar)");
+        jdbc.execute("CREATE TABLE room_assignment_history(bed_id bigint,ended_at timestamp)");
+        jdbc.execute("CREATE TABLE storage_record(id bigint PRIMARY KEY,contract_id bigint,previous_bed_id bigint,"
+                + "package_count smallint,location varchar(100) NOT NULL,deposited_at date,returned_at date)");
+        jdbc.execute("INSERT INTO management_unit VALUES(1),(2)");
+        jdbc.execute("INSERT INTO building VALUES(10,1),(20,2)");
+        jdbc.execute("INSERT INTO room VALUES(100,10),(200,20)");
+        jdbc.execute("INSERT INTO bed VALUES(1000,100),(2000,200)");
+        jdbc.execute("INSERT INTO dormitory_contract VALUES(1,11,'ACTIVE'),(2,22,'ACTIVE'),(3,33,'EXPIRED')");
+        String label = "  Kho N23 tầng 9 / K1 - kệ B  ";
+        for (int i = 1; i <= 3; i++) {
+            jdbc.update("INSERT INTO storage_record VALUES(?,?,?,1,?,CURRENT_DATE,?)",
+                    i, i, i == 2 ? 2000 : 1000, label, i == 3 ? DEPOSITED_AT : null);
+        }
+        jdbc.execute((ConnectionCallback<Void>) connection -> {
+            ScriptUtils.executeSqlScript(connection,
+                    new ClassPathResource("db/migration/V12__storage_location_catalog.sql"));
+            return null;
+        });
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM storage_location", Long.class)).isEqualTo(2);
+        assertThat(jdbc.queryForList("SELECT name FROM storage_location", String.class)).containsOnly(label);
+        assertThat(jdbc.queryForList("SELECT l.management_unit_id FROM storage_record s JOIN storage_location l"
+                + " ON l.id=s.location_id ORDER BY s.id", Long.class)).containsExactly(1L, 2L, 1L);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM v_summer_leave", Long.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM information_schema.columns WHERE table_schema=?"
+                + " AND table_name='storage_record' AND column_name='location'", Long.class, schema)).isZero();
+        assertThat(jdbc.queryForObject("SELECT returned_at FROM storage_record WHERE id=3", LocalDate.class))
+                .isEqualTo(DEPOSITED_AT);
+    }
+
+    private static void assertError(Runnable action, String code) {
+        assertThatThrownBy(action::run).isInstanceOfSatisfying(BusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(code));
+    }
+
     private StorageDtos.CreateRequest createRequest() {
         return new StorageDtos.CreateRequest(
-                (short) 3, "2 thùng sách, 1 vali", "Kho K1 tầng 1, kệ B", DEPOSITED_AT);
+                (short) 3, "2 thùng sách, 1 vali", locationId, DEPOSITED_AT);
     }
 
     private Long createUser(String role, Long unitId, String name) {

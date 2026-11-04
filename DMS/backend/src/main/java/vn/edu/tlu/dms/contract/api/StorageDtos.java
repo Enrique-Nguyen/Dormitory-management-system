@@ -12,6 +12,8 @@ import java.time.LocalDate;
 /** DTO tạo phiếu gửi đồ và nhận lại đồ của kỳ hè (API 4.9). */
 public final class StorageDtos {
 
+    public static final String LOCATION_ID = "locationId";
+
     private StorageDtos() {}
 
     /** Thân tạo phiếu gửi đồ; giường cũ do server đọc từ phân phòng đang mở. */
@@ -22,9 +24,9 @@ public final class StorageDtos {
             @NotBlank(message = ValidationMessage.STORAGE_DESCRIPTION_REQUIRED)
                     @Size(max = 500)
                     String description,
-            @NotBlank(message = ValidationMessage.STORAGE_LOCATION_REQUIRED)
-                    @Size(max = 100)
-                    String location,
+            @NotNull(message = ValidationMessage.STORAGE_LOCATION_REQUIRED)
+                    @Positive(message = ValidationMessage.ID_POSITIVE)
+                    Long locationId,
             @NotNull(message = ValidationMessage.DEPOSITED_DATE_REQUIRED) LocalDate depositedAt) {}
 
     /** Thân nhận lại đồ: giường nhận và ngày trả đồ bắt buộc. */
@@ -43,6 +45,7 @@ public final class StorageDtos {
             Long previousBedId,
             Short packageCount,
             String description,
+            Long locationId,
             String location,
             LocalDate depositedAt,
             Long receivedBy,

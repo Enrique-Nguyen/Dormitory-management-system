@@ -38,10 +38,11 @@ public class StudentManagementController {
             @Size(max = 100) String fullName,
             @Pattern(regexp = Gender.PATTERN) String gender,
             LocalDate dateOfBirth,
-            @Size(max = 100) String faculty,
-            @Size(max = 10) String cohort,
+            @Positive Long schoolId,
+            @Positive Long facultyId,
+            @Positive Long cohortId,
             @Size(max = 20) String phone,
-            @Size(max = 200) String hometown,
+            @Positive Long hometownId,
             @Size(max = 200) String emergencyContact) {}
 
     @RequirePrivilege(Permission.STUDENT_READ)

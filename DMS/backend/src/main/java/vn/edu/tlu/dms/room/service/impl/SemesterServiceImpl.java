@@ -3,7 +3,9 @@ package vn.edu.tlu.dms.room.service.impl;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import vn.edu.tlu.dms.account.service.CatalogService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Catalog;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.constants.DmsConstants;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
@@ -30,13 +32,17 @@ public class SemesterServiceImpl
 
     private final ScopeGuard guard;
 
+    private final CatalogService catalogs;
+
     public SemesterServiceImpl(
             SemesterRepository repository,
             ScopeGuard guard,
             CurrentUser currentUser,
-            AuditService auditService) {
+            AuditService auditService,
+            CatalogService catalogs) {
         super(repository, auditService, currentUser);
         this.guard = guard;
+        this.catalogs = catalogs;
     }
 
     @Override
@@ -71,10 +77,20 @@ public class SemesterServiceImpl
 
     @Override
     protected Specification<Semester> searchScope(SearchRequest search) {
-        return (root, query, builder) ->
-                search.type() == null || search.type().isBlank()
-                        ? builder.conjunction()
-                        : builder.equal(root.get("type"), search.type());
+        Specification<Semester> scope =
+                (root, query, builder) ->
+                        search.type() == null || search.type().isBlank()
+                                ? builder.conjunction()
+                                : builder.equal(root.get("type"), search.type());
+        if (search.academicYear() != null && !search.academicYear().isBlank()) {
+            scope =
+                    scope.and(
+                            (root, query, builder) ->
+                                    builder.equal(
+                                            root.get(ApiField.ACADEMIC_YEAR),
+                                            search.academicYear().trim()));
+        }
+        return scope;
     }
 
     @Override
@@ -94,7 +110,11 @@ public class SemesterServiceImpl
             requireValue(input.academicYear(), "academicYear");
         }
         if (input.academicYear() != null) {
-            entity.setAcademicYear(trimRequiredText(input.academicYear(), "academicYear"));
+            String academicYear = trimRequiredText(input.academicYear(), ApiField.ACADEMIC_YEAR);
+            if (creating || !academicYear.equals(entity.getAcademicYear())) {
+                catalogs.requireActiveCode(Catalog.ACADEMIC_YEARS, academicYear);
+            }
+            entity.setAcademicYear(academicYear);
         }
         if (creating) {
             requireValue(input.type(), "type");

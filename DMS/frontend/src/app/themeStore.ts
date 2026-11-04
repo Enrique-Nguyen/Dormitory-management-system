@@ -5,6 +5,7 @@ import {
   initializeTheme,
   THEME_STYLES,
   type AccentKey,
+  type CustomAccent,
   type ThemeMode,
   type ThemeStyle,
 } from './theme'
@@ -51,6 +52,43 @@ let version = 0
 let userChangeEpoch = 0
 let currentPreferences: ThemePreferences = { ...DEFAULT_THEME_PREFERENCES }
 let currentStyle: ThemeStyle = 'modern'
+
+interface ThemeAppearance {
+  tableBorders: boolean
+  customAccent: CustomAccent | null
+}
+
+const DEFAULT_APPEARANCE: ThemeAppearance = { tableBorders: true, customAccent: null }
+let currentAppearance: ThemeAppearance = DEFAULT_APPEARANCE
+
+function isCustomAccent(value: unknown): value is CustomAccent {
+  if (!value || typeof value !== 'object') return false
+  const accent = value as Partial<CustomAccent>
+  return ['default', 'yellow', 'custom'].includes(accent.key ?? '') &&
+    /^#[0-9a-f]{6}$/i.test(accent.primary ?? '') &&
+    /^#[0-9a-f]{6}$/i.test(accent.light ?? '')
+}
+
+function updateAppearance(patch: Partial<ThemeAppearance>) {
+  currentAppearance = { ...currentAppearance, ...patch }
+  if (activeUserId !== null && typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(`${STORAGE_KEY_PREFIX}:appearance:${activeUserId}`, JSON.stringify(currentAppearance))
+    } catch {
+      // Tùy chọn vẫn có hiệu lực khi trình duyệt không cho ghi cache.
+    }
+  }
+  notifyUi()
+}
+
+export function setTableBorders(tableBorders: boolean) {
+  updateAppearance({ tableBorders })
+}
+
+export function setCustomAccent(customAccent: CustomAccent | null) {
+  if (customAccent !== null && !isCustomAccent(customAccent)) return
+  updateAppearance({ customAccent })
+}
 
 const listeners = new Set<() => void>()
 const preferenceSaveListeners = new Set<() => void>()
@@ -113,8 +151,10 @@ function persistCurrentPreferences() {
 
 function notifyUi() {
   // Cập nhật CSS Variables và class dark trước khi component React render lại.
-  initializeTheme(currentPreferences.mode, currentPreferences.accent)
+  initializeTheme(currentPreferences.mode, currentPreferences.accent, currentAppearance.customAccent)
   document.documentElement.setAttribute('data-theme-style', currentStyle)
+  document.documentElement.setAttribute('data-theme', currentStyle)
+  document.documentElement.setAttribute('data-table-borders', String(currentAppearance.tableBorders))
   listeners.forEach((listener) => listener())
 }
 
@@ -166,11 +206,20 @@ export function setActiveUser(userId: number | null) {
   if (activeUserId === userId) return
   activeUserId = userId
   version = 0
+  currentAppearance = DEFAULT_APPEARANCE
   let style: ThemeStyle = 'modern'
   if (userId !== null && typeof window !== 'undefined') {
     try {
       const saved = window.localStorage.getItem(`${STORAGE_KEY_PREFIX}:style:${userId}`)
       if (saved && Object.hasOwn(THEME_STYLES, saved)) style = saved as ThemeStyle
+      const rawAppearance = window.localStorage.getItem(`${STORAGE_KEY_PREFIX}:appearance:${userId}`)
+      if (rawAppearance) {
+        const appearance = JSON.parse(rawAppearance) as Partial<ThemeAppearance> | null
+        currentAppearance = {
+          tableBorders: appearance?.tableBorders !== false,
+          customAccent: isCustomAccent(appearance?.customAccent) ? appearance.customAccent : null,
+        }
+      }
     } catch {
       // Tùy chọn vẫn dùng được trong phiên khi trình duyệt chặn localStorage.
     }
@@ -218,6 +267,7 @@ export function setThemeMode(mode: ThemeMode) {
 }
 
 export function setAccentColor(accent: AccentKey) {
+  if (currentAppearance.customAccent) updateAppearance({ customAccent: null })
   applyUserPreferences({ accent })
 }
 
@@ -284,15 +334,19 @@ export function useAppTheme() {
   )
 
   const style = useSyncExternalStore(subscribe, () => currentStyle, () => 'modern' as ThemeStyle)
+  const appearance = useSyncExternalStore(subscribe, () => currentAppearance, () => DEFAULT_APPEARANCE)
 
   return {
     ...prefs,
+    ...appearance,
     style,
+    setCustomAccent,
+    setTableBorders,
     setMode: setThemeMode,
     setAccent: setAccentColor,
     setStyle: setThemeStyle,
     toggleMode: toggleThemeMode,
     setTableDense: setTableDensity,
-    antdThemeConfig: getAntdThemeConfig(prefs.mode, prefs.accent, style),
+    antdThemeConfig: getAntdThemeConfig(prefs.mode, prefs.accent, style, appearance.customAccent),
   }
 }

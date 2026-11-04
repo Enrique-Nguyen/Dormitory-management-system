@@ -32,6 +32,18 @@ public class AuditController {
         return service.searchByPage(input);
     }
 
+    @PostMapping("/api/admin/audit-logs/actions/search-by-page")
+    @RequirePrivilege(Permission.AUDIT_READ)
+    public PageResponse<Map<String, Object>> searchActionsByPage(@Valid @RequestBody SearchRequest input) {
+        return service.searchActionsByPage(input);
+    }
+
+    @PostMapping("/api/admin/audit-logs/entity-types/search-by-page")
+    @RequirePrivilege(Permission.AUDIT_READ)
+    public PageResponse<Map<String, Object>> searchEntityTypesByPage(@Valid @RequestBody SearchRequest input) {
+        return service.searchEntityTypesByPage(input);
+    }
+
     @GetMapping("/api/admin/audit-logs/{id}")
     @RequirePrivilege(Permission.AUDIT_READ)
     public Map<String, Object> getAuditById(@PathVariable Long id) {

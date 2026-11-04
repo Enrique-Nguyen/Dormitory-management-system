@@ -1,13 +1,18 @@
 package vn.edu.tlu.dms.room.domain;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Entity ánh xạ bảng đã có trong Flyway. Tham chiếu chéo module lưu bằng ID, tránh phụ thuộc vòng
@@ -37,8 +42,10 @@ public class RoomType {
     @Column(name = "area_m2", precision = 5, scale = 1)
     private BigDecimal areaM2;
 
-    @Column(name = "amenities", length = 500)
-    private String amenities;
+    @ElementCollection
+    @CollectionTable(name = "room_type_amenity", joinColumns = @JoinColumn(name = "room_type_id"))
+    @Column(name = "amenity_id", nullable = false)
+    private Set<Long> amenityIds = new LinkedHashSet<>();
 
     @Column(name = "active", nullable = false)
     private Boolean active;
@@ -91,12 +98,8 @@ public class RoomType {
         this.areaM2 = value;
     }
 
-    public String getAmenities() {
-        return amenities;
-    }
-
-    public void setAmenities(String value) {
-        this.amenities = value;
+    public Set<Long> getAmenityIds() {
+        return amenityIds;
     }
 
     public Boolean getActive() {

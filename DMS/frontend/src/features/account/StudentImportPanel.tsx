@@ -1,6 +1,6 @@
 import { App, Flex, Space, Typography, Upload } from 'antd'
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import DataTable from '../../components/ui/DataTable'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
@@ -8,6 +8,7 @@ import { Alert, Button, Card, Tag } from '../../components/ui/Surface'
 import { Permission } from '../../constants/authorization'
 import { StudentImportResult } from '../../constants/statusConfig'
 import { CRUD_DEFAULT_PAGE_SIZE, CRUD_PAGE_SIZES } from '../crud/api'
+import { downloadCredentialWorkbook } from '../crud/excel'
 import { studentImportLabels as labels } from '../crud/resources'
 import { useMe } from './useMe'
 import { hasPermission } from '../../services/api/auth'
@@ -44,7 +45,7 @@ function download(blob: Blob, name: string) {
 }
 
 /** Kết quả có mật khẩu chỉ giữ trong state của màn, không đặt vào query cache hay storage. */
-export default function StudentImportPanel() {
+export default function StudentImportPanel({ onBlockedChange }: { onBlockedChange?: (blocked: boolean) => void }) {
   const { data: me } = useMe()
   const { message } = App.useApp()
   const queries = useQueryClient()
@@ -59,6 +60,14 @@ export default function StudentImportPanel() {
   const previewedFile = useRef<File | undefined>(undefined)
   const canImport = hasPermission(me, Permission.STUDENT_CREATE)
   const hasUndownloadedAccounts = Boolean(result?.createdAccounts.length) && !accountsDownloaded
+  useEffect(() => { onBlockedChange?.(busy || hasUndownloadedAccounts) }, [busy, hasUndownloadedAccounts, onBlockedChange])
+  useEffect(() => () => onBlockedChange?.(false), [onBlockedChange])
+  useEffect(() => {
+    if (!busy && !hasUndownloadedAccounts) return
+    const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', guard)
+    return () => window.removeEventListener('beforeunload', guard)
+  }, [busy, hasUndownloadedAccounts])
 
   async function submit(dryRun: boolean) {
     if (!file || pending.current || !canImport) return
@@ -98,13 +107,17 @@ export default function StudentImportPanel() {
     }
   }
 
-  function downloadAccounts() {
-    if (!result?.createdAccounts.length) return
-    const csv = [labels.csvHeaders, ...result.createdAccounts.map((account) => [account.username, account.temporaryPassword])]
-      .map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(','))
-      .join('\r\n')
-    download(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }), labels.fileName)
-    setAccountsDownloaded(true)
+  async function downloadAccounts() {
+    if (!result?.createdAccounts.length || pending.current) return
+    pending.current = true
+    try {
+      await downloadCredentialWorkbook(labels.credentials, result.createdAccounts)
+      setAccountsDownloaded(true)
+    } catch (error) {
+      message.error(errorMessage(error))
+    } finally {
+      pending.current = false
+    }
   }
 
   return (

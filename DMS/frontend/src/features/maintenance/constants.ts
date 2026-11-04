@@ -22,20 +22,7 @@ export const maintenanceTicketFlow = [
   'CLOSED',
 ]
 
-/** Mã hạng mục/mức độ đúng thứ tự form; nhãn đọc từ registry dùng chung statusConfig. */
-export const maintenanceCategoryCodes = [
-  'ELECTRIC',
-  'WATER',
-  'FURNITURE',
-  'DOOR_LOCK',
-  'OTHER',
-] as const
-
 export const maintenanceSeverityCodes = ['LOW', 'MEDIUM', 'HIGH'] as const
-
-export const maintenanceCategoryOptions = maintenanceCategoryCodes.map(
-  (value) => ({ value, label: crudValueLabels[value] ?? value }),
-)
 
 export const maintenanceSeverityOptions = maintenanceSeverityCodes.map(
   (value) => ({ value, label: crudValueLabels[value] ?? value }),

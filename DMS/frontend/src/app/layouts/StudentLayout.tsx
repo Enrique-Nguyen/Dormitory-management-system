@@ -1,6 +1,5 @@
 import { Permission } from '../../constants/authorization'
-import { Button, Flex, Layout, Menu, Tooltip } from 'antd'
-import { MoonOutlined, SunOutlined } from '@ant-design/icons'
+import { Flex, Layout, Menu } from 'antd'
 import { Link, Outlet, useLocation } from 'react-router'
 import NotificationBell from '../../components/layout/NotificationBell'
 import UserMenu from '../../components/layout/UserMenu'
@@ -13,7 +12,7 @@ import {
 } from '../../constants/navigation'
 import { useViewport } from '../../hooks/useViewport'
 import { hasAnyPermission, hasPermission } from '../../services/api/auth'
-import { useAppTheme } from '../themeStore'
+import ThemeSwitcher from '../../components/layout/ThemeSwitcher'
 
 // Thông báo đã có chuông trên header nên không lặp trong menu
 const moreNav = studentMoreNav.filter((item) => item.path !== '/student/notifications')
@@ -28,7 +27,6 @@ export default function StudentLayout() {
   const isMobile = viewport === 'mobile'
   const { pathname } = useLocation()
   const { data: me } = useMe()
-  const { mode, toggleMode } = useAppTheme()
   const visibleNav = allNav.filter((item) => hasAnyPermission(me, item.permissions))
   const visibleMoreNav = moreNav.filter((item) => hasAnyPermission(me, item.permissions))
   const active = findActivePath(visibleNav, pathname)
@@ -58,26 +56,7 @@ export default function StudentLayout() {
         )}
         {isMobile && <div style={{ flex: 1 }} />}
         <Flex align="center" gap={4}>
-          <Tooltip
-            title={
-              mode === 'dark'
-                ? 'Chuyển sang Giao diện Sáng'
-                : 'Chuyển sang Giao diện Tối'
-            }
-          >
-            <Button
-              type="text"
-              shape="circle"
-              icon={mode === 'dark' ? <SunOutlined /> : <MoonOutlined />}
-              onClick={toggleMode}
-              style={{
-                width: 36,
-                height: 36,
-                color: mode === 'dark' ? '#fbbf24' : 'var(--color-text-secondary)',
-              }}
-              aria-label="Đổi chế độ sáng tối"
-            />
-          </Tooltip>
+          <ThemeSwitcher />
           {hasPermission(me, Permission.NOTIFICATION_READ) && (
             <NotificationBell to="/student/notifications" />
           )}

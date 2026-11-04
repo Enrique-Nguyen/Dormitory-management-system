@@ -6,7 +6,7 @@ import {
   Alert,
   BedCard,
   Button,
-  Card,
+  DetailSection as Card,
   DataTable,
   LeaderDialog,
   PageHeader,
@@ -95,6 +95,7 @@ export default function RoomDetailPage({
   return (
     <>
       <PageHeader
+        showHeading
         title={`Phòng ${title}`}
         status={operation && <Tag>{operation.label}</Tag>}
         subtitle={[

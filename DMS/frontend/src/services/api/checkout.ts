@@ -103,6 +103,7 @@ export interface StorageRecordItem {
   previousBedId?: number | null
   packageCount: number
   description: string
+  locationId: number
   location: string
   depositedAt: string
   receivedBy?: number | null
@@ -115,12 +116,15 @@ export interface StorageSearchRequest {
   page: number
   size: number
   q?: string
+  sort?: string[]
+  returned?: boolean
+  contractId?: number
 }
 
 export interface CreateStorageRequest {
   packageCount: number
   description: string
-  location: string
+  locationId: number
   depositedAt: string
 }
 

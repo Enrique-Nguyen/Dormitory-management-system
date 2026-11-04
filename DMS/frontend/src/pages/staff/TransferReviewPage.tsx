@@ -5,7 +5,8 @@ import { useParams } from 'react-router'
 import {
   ActionBar,
   BedPicker,
-  Card,
+  DetailSection as Card,
+  DetailLayout,
   DataTable,
   Descriptions,
   PageHeader,
@@ -113,6 +114,7 @@ export default function TransferReviewPage({
   return (
     <>
       <PageHeader
+        showHeading
         title={`Yêu cầu chuyển phòng #${detail.id}`}
         status={<StatusBadge entity="request" status={detail.status} />}
         subtitle={`${detail.studentName} · ${detail.studentCode}`}
@@ -196,8 +198,8 @@ export default function TransferReviewPage({
           />
         )}
       />
-      <div className={canApprove ? 'dms-split-view' : undefined}>
-        <div>
+      <DetailLayout>
+        <div className="dms-detail-group">
           <TransferSummary detail={detail} />
           <Card title="Kết quả xử lý">
             <Descriptions
@@ -234,7 +236,6 @@ export default function TransferReviewPage({
             onFilterChange={setFilter}
           />
         )}
-      </div>
       <Card title="Lịch sử xử lý">
         <DataTable<TimelineEntry>
           dataSource={detail.timeline}
@@ -265,6 +266,7 @@ export default function TransferReviewPage({
           ]}
         />
       </Card>
+      </DetailLayout>
     </>
   )
 }

@@ -55,6 +55,7 @@ import vn.edu.tlu.dms.room.repository.RoomTypeRepository;
 import vn.edu.tlu.dms.room.service.OccupancyQuery;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
 import vn.edu.tlu.dms.room.service.RoomService;
+import vn.edu.tlu.dms.room.service.FloorService;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -97,6 +98,8 @@ public class RoomServiceImpl implements RoomService {
 
     private final EntityManager entityManager;
 
+    private final FloorService floors;
+
     public RoomServiceImpl(
             RoomRepository rooms,
             BedRepository beds,
@@ -110,7 +113,8 @@ public class RoomServiceImpl implements RoomService {
             AuditService audit,
             OccupancyQuery occupancy,
             List<PlacementContextLookup> placementLookups,
-            EntityManager entityManager) {
+            EntityManager entityManager,
+            FloorService floors) {
         this.rooms = rooms;
         this.beds = beds;
         this.types = types;
@@ -124,6 +128,7 @@ public class RoomServiceImpl implements RoomService {
         this.occupancy = occupancy;
         this.placementLookups = placementLookups;
         this.entityManager = entityManager;
+        this.floors = floors;
     }
 
     @Override
@@ -256,6 +261,7 @@ public class RoomServiceImpl implements RoomService {
         r.setBuildingId(input.buildingId());
         r.setRoomTypeId(input.roomTypeId());
         r.setFloor(requireValue(input.floor(), "floor"));
+        floors.requireActiveFloor(r.getBuildingId(), r.getFloor());
         r.setCode(trimRequiredText(input.code(), "code"));
         r.setGender(requireValue(input.gender(), "gender"));
         r.setStatus(RoomStatus.ACTIVE);
@@ -285,7 +291,8 @@ public class RoomServiceImpl implements RoomService {
         if (sensitive) {
             requireRoomWithoutOpenAssignments(r);
         }
-        if (input.floor() != null) {
+        if (input.floor() != null && !input.floor().equals(r.getFloor())) {
+            floors.requireActiveFloor(r.getBuildingId(), input.floor());
             r.setFloor(input.floor());
         }
         if (input.code() != null) {

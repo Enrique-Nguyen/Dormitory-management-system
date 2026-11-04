@@ -16,7 +16,6 @@ export default function AdminLayout() {
     <SidebarShell
       groups={adminNav}
       badges={badges}
-      portalName="Quản trị"
       homePath="/admin/users"
       notificationsPath="/admin/inbox"
     />

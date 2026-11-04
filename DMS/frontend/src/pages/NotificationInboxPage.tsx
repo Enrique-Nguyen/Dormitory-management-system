@@ -1,6 +1,6 @@
-import { CheckOutlined, ReloadOutlined } from '@ant-design/icons'
+import { CheckOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons'
 import { App } from 'antd'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import {
   Alert,
@@ -20,8 +20,14 @@ import {
   useMarkRead,
   useUnreadCount,
 } from '../features/notification'
+import { downloadWorkbook, EXCEL_MAX_EXPORT_ROWS } from '../features/crud/excel'
+import { excelUiLabels, resources } from '../features/crud/resources'
 import { useIsMobile } from '../hooks/useViewport'
-import type { NotificationResponse } from '../services/api/notification'
+import {
+  searchNotifications,
+  type NotificationResponse,
+  type NotificationSearchQuery,
+} from '../services/api/notification'
 import { errorMessage } from '../utils/errorMessages'
 
 type ReadFilter = 'all' | 'unread' | 'read'
@@ -41,6 +47,8 @@ const readFilterOptions: { value: ReadFilter; label: string }[] = [
  */
 export default function NotificationInboxPage() {
   const { message } = App.useApp()
+  const config = resources.notificationInbox
+  const [exporting, setExporting] = useState(false)
   const isMobile = useIsMobile()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -55,13 +63,52 @@ export default function NotificationInboxPage() {
   const pageParam = Number(searchParams.get('page') ?? '1')
   const page = Number.isSafeInteger(pageParam) && pageParam > 0 ? pageParam : 1
 
-  const inbox = useInbox({
+  const query: NotificationSearchQuery = {
     page: page - 1,
     size: PAGE_SIZE,
     q: q || undefined,
     sort: ['createdAt,desc'],
     unread: readFilter === 'all' ? undefined : readFilter === 'unread',
-  })
+  }
+  const inbox = useInbox(query)
+
+  async function exportNotifications() {
+    setExporting(true)
+    try {
+      const rows: NotificationResponse[] = []
+      // Giữ cả unread=false và thứ tự của hộp thư trên mọi trang xuất.
+      for (let exportPage = 0; ; exportPage++) {
+        const result = await searchNotifications({
+          ...query,
+          page: exportPage,
+          size: 100,
+        })
+        if (
+          result.totalElements > EXCEL_MAX_EXPORT_ROWS ||
+          rows.length + result.content.length > EXCEL_MAX_EXPORT_ROWS
+        ) {
+          void message.warning(excelUiLabels.tooManyExportRows)
+          return
+        }
+        rows.push(...result.content)
+        if (!result.content.length || rows.length >= result.totalElements) break
+      }
+      if (!rows.length) {
+        void message.info(excelUiLabels.exportEmpty)
+        return
+      }
+      await downloadWorkbook(
+        config.title,
+        config.columns,
+        rows.map((row) => ({ ...row })),
+      )
+      void message.success(excelUiLabels.exportSuccess)
+    } catch (error) {
+      void message.error(errorMessage(error))
+    } finally {
+      setExporting(false)
+    }
+  }
   const unreadCount = useUnreadCount()
   const unread = unreadCount.data ?? 0
   const markRead = useMarkRead()
@@ -176,8 +223,22 @@ export default function NotificationInboxPage() {
               options={readFilterOptions}
               onChange={(value) => updateQuery({ unread: value })}
             />
+            <Button
+              icon={<DownloadOutlined />}
+              loading={exporting}
+              onClick={() => void exportNotifications()}
+            >
+              {excelUiLabels.export}
+            </Button>
           </FilterBar>
         </div>
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title={excelUiLabels.readonlyHint}
+          description={config.note}
+        />
         {inbox.error ? (
           <Alert
             type="error"

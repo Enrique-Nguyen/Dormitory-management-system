@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms.account.service.impl;
 
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import vn.edu.tlu.dms.account.api.ManagementUnitRequest;
@@ -10,6 +11,7 @@ import vn.edu.tlu.dms.account.service.ManagementUnitService;
 import vn.edu.tlu.dms.common.constants.DmsConstants;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
@@ -63,6 +65,14 @@ public class ManagementUnitServiceImpl
     @Override
     protected Set<String> sortableFields() {
         return Set.of("id", "code", "name");
+    }
+
+    @Override
+    protected Specification<ManagementUnit> searchScope(SearchRequest search) {
+        return (root, query, builder) ->
+                search.code() == null || search.code().isBlank()
+                        ? builder.conjunction()
+                        : builder.equal(root.get("code"), search.code().trim());
     }
 
     @Override

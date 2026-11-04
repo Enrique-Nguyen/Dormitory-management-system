@@ -335,6 +335,9 @@ class InvoiceCrudScopeIntegrationTest {
                 "INSERT INTO room_type(name, bed_count, price_main, price_summer)"
                         + " VALUES(?, 1, 100, 100) RETURNING id",
                 Long.class, "Type " + code);
+        jdbc.update(
+                "INSERT INTO building_floor(building_id,floor,name) VALUES(?,1,'Tang 1') ON CONFLICT DO NOTHING",
+                building);
         Long room = jdbc.queryForObject(
                 "INSERT INTO room(building_id, room_type_id, code, floor, gender)"
                         + " VALUES(?, ?, ?, 1, 'M') RETURNING id",

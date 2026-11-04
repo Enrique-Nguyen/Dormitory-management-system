@@ -44,6 +44,7 @@ export const Resource = {
   STUDENT: 'STUDENT',
   MANAGEMENT_UNIT: 'MANAGEMENT_UNIT',
   BUILDING: 'BUILDING',
+  CATALOG: 'CATALOG',
   PRIORITY_CATEGORY: 'PRIORITY_CATEGORY',
   ROOM_TYPE: 'ROOM_TYPE',
   SEMESTER: 'SEMESTER',
@@ -73,7 +74,7 @@ export const Resource = {
 export type Resource = (typeof Resource)[keyof typeof Resource]
 
 /**
- * Danh mục 106 mã quyền khớp DmsConstants.Permission; không phải mọi nghiệp vụ đều có đủ CRUD.
+ * Danh mục mã quyền khớp DmsConstants.Permission; không phải mọi nghiệp vụ đều có đủ CRUD.
  * Đây chỉ là tên quyền để gọi/hiển thị, không tự cấp quyền cho bất kỳ vai trò nào.
  * Nguồn quyền được cấp vẫn là Me.permissions do /api/auth/me trả về.
  */
@@ -94,6 +95,10 @@ export const Permission = {
   BUILDING_CREATE: `${Resource.BUILDING}_${Action.CREATE}`,
   BUILDING_UPDATE: `${Resource.BUILDING}_${Action.UPDATE}`,
   BUILDING_DELETE: `${Resource.BUILDING}_${Action.DELETE}`,
+  CATALOG_READ: `${Resource.CATALOG}_${Action.READ}`,
+  CATALOG_CREATE: `${Resource.CATALOG}_${Action.CREATE}`,
+  CATALOG_UPDATE: `${Resource.CATALOG}_${Action.UPDATE}`,
+  CATALOG_DELETE: `${Resource.CATALOG}_${Action.DELETE}`,
   PRIORITY_CATEGORY_READ: `${Resource.PRIORITY_CATEGORY}_${Action.READ}`,
   PRIORITY_CATEGORY_CREATE: `${Resource.PRIORITY_CATEGORY}_${Action.CREATE}`,
   PRIORITY_CATEGORY_UPDATE: `${Resource.PRIORITY_CATEGORY}_${Action.UPDATE}`,

@@ -13,8 +13,12 @@ import {
   Alert,
   Button,
   Card,
+  DetailLayout,
   FilterBar,
   FormGrid,
+  FormSection,
+  ListToolbar,
+  StatusFilter,
   Modal,
 } from '../components/ui/Surface'
 import Table from '../components/ui/DataTable'
@@ -26,37 +30,45 @@ import {
 } from '../constants/authorization'
 import {
   DeleteOutlined,
+  DownloadOutlined,
+  UploadOutlined,
   DollarCircleOutlined,
   EditOutlined,
   EyeOutlined,
   GlobalOutlined,
   KeyOutlined,
-  ReloadOutlined,
+  MoreOutlined,
+  PlusOutlined,
+  SaveOutlined,
   UnlockOutlined,
 } from '@ant-design/icons'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   App,
+  Dropdown,
   Form,
   Result,
   Space,
   Tag,
   Tooltip,
   Typography,
+  type MenuProps,
 } from 'antd'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import RecordDetailContent, { hasRecordDetailContent } from '../features/crud/RecordDetailContent'
 import {
+  useBlocker,
   useLocation,
   useNavigate,
   useParams,
   useSearchParams,
 } from 'react-router'
-import PageHeader from '../components/layout/PageHeader'
 import { useMe } from '../features/account/useMe'
 import {
   getLookupRecords,
   getRecordFormValues,
+  isNumericField,
+  isFieldVisible,
   createSearchRequest,
   searchByPage,
   saveOrUpdate,
@@ -69,9 +81,13 @@ import {
   validationFieldErrors,
   writeCrudRecord,
 } from '../features/crud/api'
-import { resources, billingUiLabels, crudDetailUiLabels, crudReferenceLabels, crudSecretFieldNames } from '../features/crud/resources'
-import { crudValueLabels, InvoiceStatus as InvoiceState } from '../constants/statusConfig'
-import type { CrudColumn, CrudField, CrudRecord } from '../features/crud/types'
+import { resources, billingUiLabels, crudDetailUiLabels, crudReferenceLabels, crudSecretFieldNames, crudStatusEntities, excelUiLabels, studentImportLabels } from '../features/crud/resources'
+import StudentImportPanel from '../features/account/StudentImportPanel'
+import CrudExcelPanel from '../features/crud/CrudExcelPanel'
+import ReferenceSelect, { ReferenceLabel } from '../features/crud/ReferenceSelect'
+import { downloadWorkbook, exportFilteredRecords } from '../features/crud/excel'
+import { crudValueLabels, getStatus, InvoiceStatus as InvoiceState } from '../constants/statusConfig'
+import type { CrudColumn, CrudField, CrudFormSection, CrudRecord } from '../features/crud/types'
 import { api } from '../services/api/client'
 import { hasPermission } from '../services/api/auth'
 import { errorMessage } from '../utils/errorMessages'
@@ -101,6 +117,23 @@ function display(value: unknown): string {
   return crudValueLabels[String(value)] ?? String(value)
 }
 
+function UserCell({ name, code, sub }: { name: string; code?: string; sub?: string }) {
+  const cleanName = String(name || '').trim()
+  const words = cleanName.split(/\s+/).filter(Boolean)
+  const initials = words.length >= 2
+    ? (words[0][0] + words[words.length - 1][0]).toUpperCase()
+    : cleanName.slice(0, 2).toUpperCase() || '—'
+  return (
+    <div className="dms-user-cell">
+      <span className="dms-user-avatar">{initials}</span>
+      <div className="dms-user-info">
+        <span className="dms-user-name">{cleanName}</span>
+        {(code || sub) && <span className="dms-user-sub font-mono text-xs">{sub ?? code}</span>}
+      </div>
+    </div>
+  )
+}
+
 /** Cột số/tiền/ngày dùng định dạng chung; trạng thái hóa đơn và hợp đồng dùng badge có nhãn. */
 function renderColumnCell(
   resource: string,
@@ -114,9 +147,48 @@ function renderColumnCell(
         dueDate={row.dueDate as string | null}
       />
     )
-  if (['deposits', 'myDeposits'].includes(resource) && column.key === 'status')
-    return <StatusBadge entity="contract" status={String(row.status)} />
+  if (column.key === 'status' && crudStatusEntities[resource])
+    return <StatusBadge entity={crudStatusEntities[resource]} status={String(row.status)} />
   const raw = readValue(row, column.key)
+
+  // Cột Mã: font-mono text-xs
+  const isCode =
+    column.key === 'code' ||
+    column.key === 'studentCode' ||
+    column.key === 'roomCode' ||
+    column.key === 'contractCode' ||
+    column.key === 'invoiceCode' ||
+    column.key === 'ticketCode' ||
+    column.key === 'username' ||
+    (typeof column.key === 'string' && column.key.toLowerCase().endsWith('code'))
+  if (isCode && raw != null && raw !== '') {
+    return <span className="font-mono text-xs dms-cell-code">{String(raw)}</span>
+  }
+
+  // Cột Tên / Nhân sự / Sinh viên: UserCell
+  const isUserCol =
+    column.key === 'fullName' ||
+    column.key === 'student.fullName' ||
+    column.key === 'studentName' ||
+    column.key === 'user.fullName' ||
+    column.key === 'requester' ||
+    column.key === 'creator' ||
+    column.key === 'proposer' ||
+    column.key === 'student' ||
+    (resource === 'users' && (column.key === 'fullName' || column.key === 'name')) ||
+    (resource === 'students' && (column.key === 'fullName' || column.key === 'name')) ||
+    (resource === 'adminStudents' && (column.key === 'fullName' || column.key === 'name'))
+
+  if (isUserCol && raw != null && raw !== '') {
+    const code =
+      (row.studentCode as string) ??
+      (row.code as string) ??
+      (row.username as string) ??
+      (readValue(row, 'student.studentCode') as string)
+    return <UserCell name={String(raw)} code={code && code !== raw ? code : undefined} />
+  }
+  if (resource === 'maintenance' && column.key === 'category')
+    return <ReferenceLabel endpoint="/catalogs/maintenance-categories" value={raw} />
   if (column.format === 'money' || column.format === 'number') {
     const value = typeof raw === 'number' ? raw : Number(raw)
     if (raw == null || raw === '' || !Number.isFinite(value)) return '—'
@@ -139,6 +211,7 @@ function renderColumnCell(
  * thay vì các ô input xám disabled khó đọc.
  */
 function referenceLabel(field: CrudField, record: CrudRecord, value?: unknown): unknown {
+  if (field.name === 'amenityIds') return undefined
   if (field.name === "priorityCategoryIds" && Array.isArray(record.priorities)) {
     const priority = (record.priorities as CrudRecord[]).find((item) =>
       String(item.categoryId ?? readValue(item, "category.id")) === String(value))
@@ -156,18 +229,30 @@ function referenceLabel(field: CrudField, record: CrudRecord, value?: unknown): 
     ?? (field.lookupLabel?.includes(".") ? readValue(record, field.lookupLabel) : undefined)
 }
 
-function renderViewFieldValue(field: CrudField, record: CrudRecord) {
+function renderViewFieldValue(field: CrudField, record: CrudRecord, resource?: string) {
   const value = readValue(record, field.name)
+  if (field.name === 'amenityIds') return <span className="dms-view-value">{display(record.amenities)}</span>
   if (field.lookup) {
     const values = Array.isArray(value) ? value : [value]
-    return <span>{values.map((item) => {
+    return <span className="dms-view-value">{values.map((item) => {
       const label = referenceLabel(field, record, item)
       return label != null ? display(label) : item == null ? "—" : "#" + String(item)
     }).join(", ") || "—"}</span>
   }
-  if (value == null || value === "") return <span>—</span>
+  if (value == null || value === "") return <span className="dms-view-empty">—</span>
+
+  // Trạng thái theo entity chuẩn DMS
+  if (field.name === 'status' && resource && crudStatusEntities[resource]) {
+    return (
+      <StatusBadge
+        entity={crudStatusEntities[resource]}
+        status={String(value)}
+      />
+    )
+  }
+
   if (field.kind === "boolean" || typeof value === "boolean") {
-    return <Tag color={value ? "success" : "default"}>{display(value)}</Tag>
+    return <Tag color={value ? "success" : "default"} style={{ marginInlineEnd: 0 }}>{value ? 'Có' : 'Không'}</Tag>
   }
 
   // Danh mục tùy chọn options
@@ -177,8 +262,9 @@ function renderViewFieldValue(field: CrudField, record: CrudRecord) {
     )
     if (matched) {
       const label = crudValueLabels[matched.label] ?? matched.label
+      const isStatusField = /status|trangThai|state/i.test(field.name)
       return (
-        <Tag color="blue" style={{ marginInlineEnd: 0, fontWeight: 500 }}>
+        <Tag color={isStatusField ? "blue" : undefined} style={{ marginInlineEnd: 0, fontWeight: 500 }}>
           {label}
         </Tag>
       )
@@ -187,44 +273,29 @@ function renderViewFieldValue(field: CrudField, record: CrudRecord) {
 
   // Ngày tháng
   if (field.kind === 'date') {
-    return <span>{formatDate(String(value))}</span>
+    return <span className="dms-view-value">{formatDate(String(value))}</span>
   }
   if (field.kind === 'datetime') {
-    return <span>{formatDateTime(String(value))}</span>
+    return <span className="dms-view-value">{formatDateTime(String(value))}</span>
   }
 
-  // Số lượng & tiền tệ
+  // Số lượng & tiền tệ: căn font monospace đẹp mắt
   if (field.kind === 'number' || typeof value === 'number') {
     const num = Number(value)
     const isMoney = /amount|price|cost|fee|total|deposit|balance/i.test(
       field.name,
     )
     return (
-      <span
-        style={{
-          fontFamily: 'var(--font-mono, monospace)',
-          fontWeight: 600,
-        }}
-      >
+      <span className="dms-view-value dms-view-value-mono">
         {isMoney ? formatMoney(num) : formatNumber(num)}
       </span>
     )
   }
 
-  // Đoạn văn dài textarea
-  if (field.kind === 'textarea') {
+  // Đoạn văn dài textarea hoặc các trường ghi chú, lý do, mô tả
+  if (field.kind === 'textarea' || /reason|note|description|remark|content/i.test(field.name)) {
     return (
-      <div
-        style={{
-          whiteSpace: 'pre-wrap',
-          lineHeight: 1.6,
-          color: 'var(--color-heading)',
-          padding: '8px 12px',
-          background: 'var(--color-surface-hover)',
-          borderRadius: 'var(--radius-sm)',
-          border: '1px solid var(--color-border-light)',
-        }}
-      >
+      <div className="dms-view-long-text">
         {String(value)}
       </div>
     )
@@ -236,13 +307,13 @@ function renderViewFieldValue(field: CrudField, record: CrudRecord) {
   )
   if (isCodeOrId && typeof value === 'string') {
     return (
-      <Typography.Text copyable={{ tooltips: ['Sao chép', 'Đã chép'] }}>
+      <Typography.Text copyable={{ tooltips: ['Sao chép', 'Đã chép'] }} className="dms-view-value">
         {String(value)}
       </Typography.Text>
     )
   }
 
-  return <span>{display(value)}</span>
+  return <span className="dms-view-value">{display(value)}</span>
 }
 
 function hasPeriodOpened(value: unknown) {
@@ -258,12 +329,25 @@ function LookupInput({
   disabled?: boolean
   record?: CrudRecord
 }) {
-  const selected = Form.useWatch(field.name, { preserve: true })
+  const form = Form.useFormInstance()
+  const selected = Form.useWatch(field.name, { form, preserve: true })
+  const parent = Form.useWatch(field.lookupDependsOn?.field ?? field.name, { form, preserve: true })
+  const remote = !!field.lookup && (field.lookup.startsWith('/catalogs/') || field.lookup === '/floors' || field.lookup === '/storage-locations' || !!field.lookupValue)
+  const missingParent = !!field.lookupDependsOn?.required && (parent == null || parent === '')
+  const selectionRequired = !!field.required || !!(record?.[field.name] != null && field.lookupDependsOn && parent != null
+    && String(parent) !== String(record[field.lookupDependsOn.field] ?? ''))
+  const allowClear = !field.required && (!record || record[field.name] == null || field.multiple === true)
+  const lookupFilters = {
+    ...field.lookupFilters,
+    ...(field.lookupDependsOn && parent != null && parent !== ''
+      ? { [field.lookupDependsOn.parameter ?? field.lookupDependsOn.field]: parent as string | number | boolean }
+      : {}),
+  }
   const { data, isLoading, error } = useQuery({
-    queryKey: ['crud-lookup', field.lookup, field.lookupFilters],
-    queryFn: () => getLookupRecords(field.lookup!, field.lookupFilters),
+    queryKey: ['crud-lookup', field.lookup, lookupFilters],
+    queryFn: () => getLookupRecords(field.lookup!, lookupFilters),
     // Chi tiết đã có ID/metadata: không tải danh mục khác mà vai trò có thể không được xem.
-    enabled: !!field.lookup && !disabled,
+    enabled: !!field.lookup && !remote && !missingParent && !disabled,
     // Danh mục tham chiếu ít đổi; refresh() vẫn invalidate sau mỗi lần ghi.
     staleTime: 5 * 60 * 1000,
   })
@@ -294,22 +378,40 @@ function LookupInput({
       name={field.name}
       rules={[
         {
-          required: !disabled && field.required,
+          required: !disabled && selectionRequired,
           message: `Chọn ${field.label.toLowerCase()}`,
         },
       ]}
     >
-      <Select
-        aria-label={field.label}
-        showSearch
-        optionFilterProp="label"
-        mode={field.multiple ? 'multiple' : undefined}
-        allowClear={!field.required}
-        loading={isLoading}
-        disabled={disabled}
-        options={options}
-        placeholder={error ? 'Không tải được danh sách, hãy thử lại' : 'Chọn…'}
-      />
+      {remote ? (
+        <ReferenceSelect
+          aria-label={field.label}
+          endpoint={field.lookup!}
+          filters={lookupFilters}
+          valueField={field.lookupValue}
+          labelField={field.lookupLabel}
+          multiple={field.multiple}
+          allowClear={allowClear}
+          disabled={disabled || missingParent}
+          placeholder={missingParent ? 'Chọn danh mục cấp trên trước' : undefined}
+          initialOptions={(Array.isArray(selected) ? selected : selected == null ? [] : [selected]).map((value: string | number) => ({
+            value,
+            label: String(referenceLabel(field, record ?? {}, value) ?? value),
+          }))}
+        />
+      ) : (
+        <Select
+          aria-label={field.label}
+          showSearch
+          optionFilterProp="label"
+          mode={field.multiple ? 'multiple' : undefined}
+          allowClear={allowClear}
+          loading={isLoading}
+          disabled={disabled || missingParent}
+          options={options}
+          placeholder={error ? 'Không tải được danh sách, hãy thử lại' : 'Chọn…'}
+        />
+      )}
     </Form.Item>
   )
 }
@@ -363,6 +465,18 @@ export default function CrudPage({ resource }: { resource: string }) {
   )
   const [activeRecord, setActiveRecord] = useState<CrudRecord | null>(null)
   const [maintenanceCreateOpen, setMaintenanceCreateOpen] = useState(false)
+  const [excelOpen, setExcelOpen] = useState(false)
+  const [excelBlocked, setExcelBlocked] = useState(false)
+  const [studentImportBlocked, setStudentImportBlocked] = useState(false)
+  const excelBlocker = useBlocker(({ currentLocation, nextLocation }) =>
+    (excelBlocked || studentImportBlocked) && currentLocation.pathname !== nextLocation.pathname)
+  useEffect(() => {
+    if (excelBlocker.state !== 'blocked') return
+    void message.warning(excelUiLabels.leaveBlocked)
+    excelBlocker.reset()
+  }, [excelBlocker, message])
+  const [exporting, setExporting] = useState(false)
+  const exportingRef = useRef(false)
   const isViewMode = modalMode === 'view'
   const editing =
     modalMode === 'edit'
@@ -379,6 +493,12 @@ export default function CrudPage({ resource }: { resource: string }) {
   useEffect(() => () => { modalRequestRef.current += 1 }, [resource])
   const [form] = Form.useForm()
   const [filterForm] = Form.useForm()
+  function clearDependentFields(changed: Record<string, unknown>, definitions: CrudField[], target: typeof form) {
+    for (const field of definitions) {
+      if (field.lookupDependsOn && Object.hasOwn(changed, field.lookupDependsOn.field))
+        target.setFieldValue(field.name, undefined)
+    }
+  }
   const scopeValue = Form.useWatch('scope', form)
   const typeValue = Form.useWatch('type', form)
   const userRoleValue = Form.useWatch('role', form)
@@ -419,10 +539,57 @@ export default function CrudPage({ resource }: { resource: string }) {
       : []
   /** Xóa dùng endpoint riêng khi backend không mở DELETE ở endpoint ghi. */
   const deleteEndpoint = config.deleteEndpoint ?? writeEndpoint
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+
   function changeQuery(patch: Partial<typeof query>) {
+    setSelectedRowKeys([])
     setSearchParams((previous) =>
       updateCrudQuery(previous, resource, { ...query, ...patch }),
     )
+  }
+
+  function handleBulkDelete() {
+    if (!canDelete || selectedRowKeys.length === 0) return
+    let reason = ''
+    modal.confirm({
+      title: `Xóa ${selectedRowKeys.length} bản ghi đã chọn?`,
+      content:
+        config.deleteAction === 'lock' ? (
+          <TextArea
+            placeholder="Lý do khóa (ít nhất 5 ký tự)"
+            onChange={(event) => {
+              reason = event.target.value
+            }}
+          />
+        ) : (
+          `Bạn có chắc chắn muốn xóa ${selectedRowKeys.length} bản ghi đã chọn? Thao tác sẽ được kiểm tra quyền và lịch sử dữ liệu tại máy chủ.`
+        ),
+      okText: config.deleteLabel ?? `Xóa (${selectedRowKeys.length})`,
+      cancelText: 'Hủy',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        if (config.deleteAction === 'lock' && reason.trim().length < 5) {
+          void message.error('Nhập lý do ít nhất 5 ký tự')
+          throw new Error('Thiếu lý do')
+        }
+        try {
+          for (const key of selectedRowKeys) {
+            await writeCrudRecord(
+              `${deleteEndpoint}/${key}${config.deleteAction ? `/${config.deleteAction}` : ''}`,
+              config.deleteAction ? 'post' : 'delete',
+              config.deleteAction === 'lock' ? { reason } : undefined,
+            )
+          }
+          void message.success(`Đã xóa ${selectedRowKeys.length} bản ghi`)
+          setSelectedRowKeys([])
+          await refresh()
+        } catch (e) {
+          handleApiError(e)
+          setSelectedRowKeys([])
+          await refresh()
+        }
+      },
+    })
   }
   const filterSignature = JSON.stringify(activeFilters)
   useEffect(() => {
@@ -432,7 +599,7 @@ export default function CrudPage({ resource }: { resource: string }) {
       ...JSON.parse(filterSignature),
     }
     for (const field of config.filters ?? []) {
-      if (initial[field.name] && (field.kind === 'number' || field.lookup))
+      if (initial[field.name] && isNumericField(field))
         initial[field.name] = Number(initial[field.name])
       else if (initial[field.name] && field.kind === 'datetime')
         initial[field.name] = toLocalDateTime(initial[field.name])
@@ -448,6 +615,35 @@ export default function CrudPage({ resource }: { resource: string }) {
         : searchByPage(config.endpoint, createSearchRequest(query, config)),
   })
   const rows = data?.content
+  const statusFilter = config.filters?.find((field) =>
+    crudDetailUiLabels.statusFilterNames.includes(field.name) && field.options?.length,
+  )
+  const statusOptions = [
+    { value: '', label: crudDetailUiLabels.all },
+    ...(statusFilter?.options ?? []).map((option) => ({
+      value: String(option.value),
+      label: statusFilter?.name === 'status' && crudStatusEntities[resource]
+        ? getStatus(crudStatusEntities[resource], String(option.value)).label
+        : crudValueLabels[option.label] ?? option.label,
+    })),
+  ]
+  const statusCounts = useQueries({
+    queries: statusOptions.map((option) => {
+      const filters = { ...activeFilters }
+      if (statusFilter) {
+        delete filters[statusFilter.name]
+        if (option.value !== '') filters[statusFilter.name] = option.value
+      }
+      return {
+        queryKey: ['crud', me?.id, resource, 'status-count', search, filters],
+        enabled: canRead && !config.singleton && !!statusFilter,
+        staleTime: 30_000,
+        queryFn: () => searchByPage(config.endpoint, createSearchRequest({
+          ...query, filters, page: 1, size: 1,
+        }, config)),
+      }
+    }),
+  })
   useEffect(() => {
     if (error) {
       filterForm.setFields(
@@ -487,7 +683,7 @@ export default function CrudPage({ resource }: { resource: string }) {
         !(
           resource === 'profile' &&
           role !== Role.STUDENT &&
-          ['hometown', 'emergencyContact'].includes(field.name)
+          ['hometownId', 'emergencyContact'].includes(field.name)
         ),
     )
     .filter(
@@ -528,14 +724,19 @@ export default function CrudPage({ resource }: { resource: string }) {
     writeFields.some((candidate) => candidate.name === field.name) &&
     !(modalMode === "edit" && resource === "users" && field.name === "role" && editing?.id === me?.id) &&
     !(modalMode === "edit" && config.closeAtOnlyAfterOpen && editing && hasPeriodOpened(editing.openAt) && field.name !== "closeAt")
-  const visible = (field: CrudField) =>
-    !field.visibleWhen ||
-    (isViewMode
-      ? activeRecord?.[field.visibleWhen.field]
-      : (field.visibleWhen.field === 'scope' ? scopeValue : typeValue)
-        ?? activeRecord?.[field.visibleWhen.field]
-        ?? config.createDefaults?.[field.visibleWhen.field]) ===
-      field.visibleWhen.value
+  const visible = useCallback(
+    (field: CrudField) =>
+      !field.visibleWhen ||
+      isFieldVisible(
+        field,
+        isViewMode
+          ? activeRecord?.[field.visibleWhen.field]
+          : (field.visibleWhen.field === 'scope' ? scopeValue : typeValue) ??
+              activeRecord?.[field.visibleWhen.field] ??
+              config.createDefaults?.[field.visibleWhen.field],
+      ),
+    [isViewMode, activeRecord, scopeValue, typeValue, config.createDefaults],
+  )
 
   const createDefaults = useMemo(
     () => ({
@@ -637,6 +838,85 @@ export default function CrudPage({ resource }: { resource: string }) {
       queryClient.invalidateQueries({ queryKey: ['me'] }),
     ])
   }
+  const studentAccountImport = resource === 'adminStudents' && hasPermission(me, Permission.STUDENT_CREATE)
+  const canImportExcel = !config.singleton && !config.readOnly && (canCreate || canUpdate)
+  const excelFields = [...new Map([
+    ...config.fields, ...(config.createFields ?? []), ...(config.editFields ?? []),
+  ].filter((field) => !field.sensitive && !crudSecretFieldNames.has(field.name))
+    .map((field) => [field.name, field])).values()]
+  const excelConfig = { ...config, fields: excelFields }
+
+  async function exportExcel() {
+    if (exportingRef.current) return
+    exportingRef.current = true
+    setExporting(true)
+    try {
+      const records = config.singleton
+        ? normalizePage((await api.get(config.endpoint)).data).content
+        : await exportFilteredRecords(config, query)
+      const exportColumns = [...new Map([
+        ...(!config.singleton ? [{ key: idKey, label: excelUiLabels.id }] : []),
+        ...config.columns,
+      ].filter((column) => !crudSecretFieldNames.has(column.key))
+        .map((column) => [column.key, column])).values()]
+      await downloadWorkbook(config.title, exportColumns, records)
+      void message.success(records.length ? excelUiLabels.exportSuccess : excelUiLabels.exportEmpty)
+    } catch (e) {
+      handleApiError(e)
+    } finally {
+      exportingRef.current = false
+      setExporting(false)
+    }
+  }
+
+  async function saveExcelRow(values: Record<string, unknown>) {
+    const hasId = values[idKey] != null && values[idKey] !== ''
+    if (hasId ? !canUpdate : !canCreate)
+      throw new Error(hasId ? excelUiLabels.noUpdate : excelUiLabels.noCreate)
+    if (!hasId && ['students', 'adminStudents'].includes(resource))
+      throw new Error(excelUiLabels.studentsImport)
+    let existing: CrudRecord | undefined
+    if (hasId) {
+      existing = config.useListRecordForEdit || config.inlineDetail
+        ? (await getLookupRecords(config.endpoint)).find((record) => String(record[idKey]) === String(values[idKey]))
+        : (await api.get(`${detailEndpoint}/${encodeURIComponent(String(values[idKey]))}`)).data as CrudRecord
+      if (!existing) throw new Error(excelUiLabels.recordMissing)
+      if (!canEditRow(existing)) throw new Error(excelUiLabels.stateLocked)
+    }
+    const allowedFields = (hasId
+      ? (config.editFields ?? config.fields).filter((field) => !field.createOnly)
+      : (config.createFields ?? config.fields).filter((field) => !field.editOnly))
+      .filter((field) => !field.sensitive && !crudSecretFieldNames.has(field.name))
+      .filter((field) => !(resource === 'users' && field.name === 'role' && (existing?.id === me?.id || existing?.role === Role.STUDENT)))
+      .filter((field) => !(hasId && config.closeAtOnlyAfterOpen && hasPeriodOpened(existing?.openAt) && field.name !== 'closeAt'))
+    const payload: Record<string, unknown> = hasId ? { [idKey]: values[idKey] } : { ...config.createDefaults }
+    const current = existing ? getRecordFormValues(existing, config, resource) : {}
+    for (const field of excelFields) {
+      const value = values[field.name]
+      if (value == null || value === '') continue
+      if (!allowedFields.some((candidate) => candidate.name === field.name)) {
+        const previous = field.kind === 'datetime' && current[field.name] != null
+          ? new Date(String(current[field.name])).toISOString() : current[field.name]
+        if (JSON.stringify(value) !== JSON.stringify(previous))
+          throw new Error(`${excelUiLabels.immutable}: ${field.label}`)
+        continue
+      }
+      if (field.visibleWhen && !isFieldVisible(field, values[field.visibleWhen.field] ?? current[field.visibleWhen.field] ?? config.createDefaults?.[field.visibleWhen.field]))
+        continue
+      payload[field.name] = value
+    }
+    if (existing && config.keepCreateOnlyOnEdit)
+      for (const field of config.fields.filter((candidate) => candidate.createOnly))
+        if (existing[field.name] != null) payload[field.name] = existing[field.name]
+    if (hasId && Object.keys(payload).length === 1) throw new Error(excelUiLabels.noChanges)
+    if (config.createFormat === 'multipart') {
+      const multipart = new FormData()
+      multipart.append('data', new Blob([JSON.stringify(payload)], { type: 'application/json' }))
+      return writeCrudRecord(`${writeEndpoint}/save-or-update`, 'post', multipart)
+    }
+    return saveOrUpdate(writeEndpoint, payload)
+  }
+
   function canResetPassword(row: CrudRecord) {
     return (
       ['users', 'students', 'adminStudents'].includes(resource) &&
@@ -952,19 +1232,55 @@ export default function CrudPage({ resource }: { resource: string }) {
     }
   }
   /** Trường hiển thị trong form; giữ nguyên điều kiện ẩn theo nghiệp vụ của màn hiện tại. */
-  const formFields = fields
-    .filter(visible)
-    .filter(
-      (field) =>
-        !(
-          modalMode === 'create' &&
-          resource === 'maintenance' &&
-          role === Role.STUDENT &&
-          field.name === 'roomId'
+  const formFields = useMemo(
+    () =>
+      fields
+        .filter(visible)
+        .filter(
+          (field) =>
+            !(
+              modalMode === 'create' &&
+              resource === 'maintenance' &&
+              role === Role.STUDENT &&
+              field.name === 'roomId'
+            ),
         ),
-    )
+    [fields, modalMode, resource, role, visible],
+  )
+  const formSections: CrudFormSection[] = useMemo(() => {
+    if (config.formSections && config.formSections.length > 0) {
+      return config.formSections
+    }
+    // Tự động phân chia 2 nhóm chuẩn V5: Thông tin chính và Thông tin bổ sung
+    const mainFieldNames: string[] = []
+    const additionalFieldNames: string[] = []
+    for (const f of formFields) {
+      const isLongOrMeta =
+        f.kind === 'textarea' ||
+        /note|reason|description|remark|content|address/i.test(f.name)
+      if (isLongOrMeta) {
+        additionalFieldNames.push(f.name)
+      } else {
+        mainFieldNames.push(f.name)
+      }
+    }
+    const sections: CrudFormSection[] = [
+      {
+        title: 'Thông tin chính',
+        fields: mainFieldNames.length > 0 ? mainFieldNames : formFields.map((f) => f.name),
+      },
+    ]
+    if (additionalFieldNames.length > 0 && mainFieldNames.length > 0) {
+      sections.push({
+        title: crudDetailUiLabels.additionalInformation,
+        fields: additionalFieldNames,
+      })
+    }
+    return sections
+  }, [config.formSections, formFields])
+
   const sectionedFieldNames = new Set(
-    config.formSections?.flatMap((section) => section.fields) ?? [],
+    formSections.flatMap((section) => section.fields),
   )
   const remainingFields = formFields.filter(
     (field) => !sectionedFieldNames.has(field.name),
@@ -977,12 +1293,43 @@ export default function CrudPage({ resource }: { resource: string }) {
     .filter((column) => !crudSecretFieldNames.has(column.key))
     .filter((column) => !formFields.some((field) => field.name === column.key))
     .map((column) => [column.key, column])).values()]
+  const viewItems = [
+    ...formFields.map((field) => ({
+      key: field.name,
+      label: field.label,
+      fullWidth:
+        field.kind === 'textarea' ||
+        /note|reason|description|remark|content|address/i.test(field.name),
+      content: renderViewFieldValue(field, displayRecord, resource),
+    })),
+    ...detailColumns.map((column) => ({
+      key: column.key,
+      label: column.label,
+      fullWidth: false,
+      content: renderColumnCell(resource, column, displayRecord),
+    })),
+  ]
+
+  interface ViewSection extends CrudFormSection {
+    items: typeof viewItems
+  }
+
+  const viewSections: ViewSection[] = formSections.map((section) => ({
+    ...section,
+    items: viewItems.filter((item) => section.fields.includes(item.key)),
+  }))
+  const additionalItems = viewItems.filter((item) => !sectionedFieldNames.has(item.key))
+  if (additionalItems.length > 0) viewSections.push({
+    title: crudDetailUiLabels.additionalInformation,
+    fields: additionalItems.map((item) => item.key),
+    items: additionalItems,
+  })
 
   function renderField(field: CrudField) {
     const isFieldDisabled = !isWritableField(field)
     if (isFieldDisabled) return (
       <Form.Item key={field.name} label={field.label}>
-        {renderViewFieldValue(field, displayRecord)}
+        {renderViewFieldValue(field, displayRecord, resource)}
       </Form.Item>
     )
 
@@ -1038,6 +1385,33 @@ export default function CrudPage({ resource }: { resource: string }) {
     )
   }
 
+  const modalTitleText =
+    modalMode === 'workflow'
+      ? `${crudDetailUiLabels.workflow} - ${config.title}`
+      : modalMode === 'view'
+      ? `Chi tiết ${config.title.toLowerCase()}`
+      : modalMode === 'edit'
+      ? `Chỉnh sửa ${config.title.toLowerCase()}`
+      : `Thêm ${config.title.toLowerCase()}`
+
+  const ModalHeaderIcon =
+    modalMode === 'view' || modalMode === 'workflow'
+      ? EyeOutlined
+      : modalMode === 'edit'
+      ? EditOutlined
+      : PlusOutlined
+
+  const modalSubtitle =
+    activeRecord && (modalMode === 'view' || modalMode === 'edit' || modalMode === 'workflow')
+      ? String(
+          activeRecord.code ??
+            activeRecord.contractCode ??
+            activeRecord.studentCode ??
+            activeRecord.roomCode ??
+            (activeRecord[idKey] ? `#${activeRecord[idKey]}` : ''),
+        )
+      : undefined
+
   if (!canRead)
     return (
       <Result
@@ -1048,111 +1422,168 @@ export default function CrudPage({ resource }: { resource: string }) {
     )
 
   return (
-    <div className={config.finance ? 'dms-finance-page' : undefined}>
-      <PageHeader
-        title={config.title}
-        subtitle={config.subtitle ?? 'Tìm kiếm và quản lý dữ liệu'}
-        extra={
-          <Space>
-            <Button
-              icon={<ReloadOutlined />}
-              loading={isFetching}
-              onClick={() => {
-                void refetch()
+    <div className={`dms-crud-page${config.finance ? ' dms-finance-page' : ''}`}>
+
+      {studentAccountImport && excelOpen && (
+        <Card title={studentImportLabels.panelTitle} style={{ marginBottom: 16 }}>
+          <StudentImportPanel onBlockedChange={setStudentImportBlocked} />
+        </Card>
+      )}
+      <Card className={`dms-crud-frame min-w-0 rounded-md border border-border bg-bg p-2 sm:p-3${config.finance ? ' dms-finance-card' : ''}`}>
+        <ListToolbar
+          key={resource}
+          filterLabel={crudDetailUiLabels.filters}
+          closeFiltersLabel={crudDetailUiLabels.closeFilters}
+          helpLabel={crudDetailUiLabels.help}
+          help={(config.note || (config.readOnly && !config.singleton)) && (
+            <>
+              {config.note && <p>{config.note}</p>}
+              {config.readOnly && !config.singleton && <p>{excelUiLabels.readonlyHint}</p>}
+            </>
+          )}
+          filterCount={Object.values(activeFilters).filter((value) => value !== '').length}
+          search={!config.singleton && (
+            <SearchInput
+              aria-label={`Tìm kiếm ${config.title.toLowerCase()}`}
+              placeholder={config.searchPlaceholder ?? `Tìm theo mã / tên ${config.title.toLowerCase()}…`}
+              allowClear
+              enterButton="Tìm kiếm"
+              key={`${resource}:${search}`}
+              defaultValue={search}
+              onSearch={(value) => {
+                changeQuery({ search: value.trim(), page: 1 })
               }}
-            >
-              Làm mới
-            </Button>
-            {canCreate && (
+            />
+          )}
+          selectedCount={selectedRowKeys.length}
+          onBulkDelete={canDelete && selectedRowKeys.length > 0 ? handleBulkDelete : undefined}
+          primaryAction={
+            canCreate && (
               <Button
                 type="primary"
+                icon={<PlusOutlined />}
                 onClick={() => {
                   if (resource === 'maintenance') setMaintenanceCreateOpen(true)
                   else void openEditor()
                 }}
+                className="dms-btn-primary"
               >
-                {config.createLabel ?? 'Thêm mới'}
+                {config.createLabel ?? `+ Thêm ${config.title.toLowerCase()}`}
               </Button>
-            )}
-          </Space>
-        }
-      />
-      {config.note && (
-        <Alert
-          style={{ marginBottom: 16 }}
-          type="info"
-          title={config.note}
-          showIcon
-        />
-      )}
-      <Card className={config.finance ? 'dms-finance-card' : undefined}>
-        {!config.singleton && (
-          <div
-            className={
-              'dms-toolbar' + (config.finance ? ' dms-finance-toolbar' : '')
-            }
-          >
-            {!config.singleton && (
-              <SearchInput
-                aria-label={`Tìm kiếm ${config.title.toLowerCase()}`}
-                placeholder={config.searchPlaceholder ?? 'Nhập từ khóa tìm kiếm'}
-                allowClear
-                enterButton="Tìm kiếm"
-                key={`${resource}:${search}`}
-                defaultValue={search}
-                onSearch={(value) => {
-                  changeQuery({ search: value.trim(), page: 1 })
+            )
+          }
+          actions={
+            <Space wrap size={8}>
+              {studentAccountImport && (
+                <Button icon={<UploadOutlined />} aria-expanded={excelOpen} onClick={() => setExcelOpen(true)}>
+                  {studentImportLabels.tab}
+                </Button>
+              )}
+              {canImportExcel && (
+                <CrudExcelPanel key={resource} resource={resource} config={excelConfig}
+                  triggerLabel={studentAccountImport ? studentImportLabels.update : excelUiLabels.import}
+                  canCreate={canCreate && !['students', 'adminStudents'].includes(resource)} canUpdate={canUpdate}
+                  onSave={saveExcelRow} onComplete={refresh} onBlockedChange={setExcelBlocked} />
+              )}
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: 'export',
+                      icon: <DownloadOutlined />,
+                      label: excelUiLabels.export,
+                      disabled: exporting,
+                      onClick: () => void exportExcel(),
+                    },
+                    ...(studentAccountImport ? [{
+                      key: 'student-import',
+                      icon: <UploadOutlined />,
+                      label: studentImportLabels.tab,
+                      onClick: () => setExcelOpen(true),
+                    }] : []),
+                    ...(canDelete && selectedRowKeys.length > 0 ? [{
+                      key: 'bulk-delete',
+                      icon: <DeleteOutlined />,
+                      danger: true,
+                      label: `Xóa ${selectedRowKeys.length} bản ghi đã chọn`,
+                      onClick: handleBulkDelete,
+                    }] : []),
+                  ],
                 }}
-              />
-            )}
-            {!!config.filters?.length && (
-              <Form
-                form={filterForm}
-                layout="vertical"
-                onFinish={(values) => {
-                  const filters: Record<string, string> = {}
-                  for (const field of config.filters ?? [])
-                    if (values[field.name] != null && values[field.name] !== '')
-                      filters[field.name] = String(values[field.name]).trim()
-                  changeQuery({ filters, page: 1 })
-                }}
+                trigger={['click']}
               >
-                <FilterBar>
-                  {config.filters.map((field) => (
-                    <Form.Item
-                      key={field.name}
-                      label={field.label}
-                      name={field.kind === 'select' ? undefined : field.name}
-                    >
-                      {field.kind === 'select' ? (
-                        <LookupInput field={{ ...field, required: false }} />
-                      ) : (
-                        renderCrudInput(field)
-                      )}
-                    </Form.Item>
-                  ))}
-                  <div className="dms-filter-actions">
-                    <Button
-                      type="primary"
-                      htmlType="submit"
-                      loading={isFetching}
-                    >
-                      Áp dụng bộ lọc
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        filterForm.resetFields()
-                        changeQuery({ filters: {}, search: '', page: 1 })
-                      }}
-                    >
-                      Xóa bộ lọc
-                    </Button>
-                  </div>
-                </FilterBar>
-              </Form>
-            )}
-          </div>
+                <Tooltip title="Thao tác khác">
+                  <Button icon={<MoreOutlined />} aria-label="Thao tác khác" className="dms-toolbar-more-btn" />
+                </Tooltip>
+              </Dropdown>
+            </Space>
+          }
+          filters={!config.singleton && !!config.filters?.length && (
+            <Form
+              form={filterForm}
+              layout="vertical"
+              onValuesChange={(changed) => clearDependentFields(changed, config.filters ?? [], filterForm)}
+              onFinish={(values) => {
+                const filters: Record<string, string> = {}
+                for (const field of config.filters ?? [])
+                  if (values[field.name] != null && values[field.name] !== '')
+                    filters[field.name] = String(values[field.name]).trim()
+                changeQuery({ filters, page: 1 })
+              }}
+            >
+              <FilterBar>
+                {config.filters.map((field) => (
+                  <Form.Item
+                    key={field.name}
+                    label={field.label}
+                    name={field.kind === 'select' ? undefined : field.name}
+                  >
+                    {field.kind === 'select' ? (
+                      <LookupInput field={{ ...field, required: false }} />
+                    ) : (
+                      renderCrudInput(field)
+                    )}
+                  </Form.Item>
+                ))}
+                <div className="dms-filter-actions">
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={isFetching}
+                  >
+                    Áp dụng bộ lọc
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      filterForm.resetFields()
+                      changeQuery({ filters: {}, search: '', page: 1 })
+                    }}
+                  >
+                    Xóa bộ lọc
+                  </Button>
+                </div>
+              </FilterBar>
+            </Form>
+          )}
+        />
+        {!config.singleton && statusFilter && (
+          <StatusFilter
+            label={statusFilter.label}
+            value={activeFilters[statusFilter.name] ?? ''}
+            options={statusOptions.map((option, index) => ({
+              ...option,
+              count: statusCounts[index]?.data?.totalElements,
+              loading: statusCounts[index]?.isPending,
+            }))}
+            onChange={(value) => {
+              const filters = { ...activeFilters }
+              if (value === '') delete filters[statusFilter.name]
+              else filters[statusFilter.name] = value
+              changeQuery({ filters, page: 1 })
+            }}
+          />
         )}
+
         {error ? (
           <Alert
             type="error"
@@ -1173,6 +1604,14 @@ export default function CrudPage({ resource }: { resource: string }) {
             loading={isLoading}
             rowKey={(row) => String(row[idKey] ?? JSON.stringify(row))}
             dataSource={rows}
+            rowSelection={
+              config.singleton || !canDelete
+                ? undefined
+                : {
+                    selectedRowKeys,
+                    onChange: (keys) => setSelectedRowKeys(keys),
+                  }
+            }
             locale={
               config.emptyTitle
                 ? {
@@ -1226,107 +1665,128 @@ export default function CrudPage({ resource }: { resource: string }) {
                 title: 'Thao tác',
                 key: 'actions',
                 width: canWrite ? 150 : 64,
-                render: (_: unknown, row: CrudRecord) => (
-                  <Space size={4} wrap={false}>
-                    <Tooltip title="Xem chi tiết">
-                      <Button
-                        size="small"
-                        icon={<EyeOutlined />}
-                        onClick={() => {
-                          void showDetail(row)
-                        }}
-                        aria-label="Xem chi tiết"
-                      />
-                    </Tooltip>
-                    {canEditRow(row) && (
-                      <Tooltip title="Sửa">
-                        <Button
-                          size="small"
-                          icon={<EditOutlined />}
-                          onClick={() => {
-                            void openEditor(row)
-                          }}
-                          aria-label="Sửa"
-                        />
-                      </Tooltip>
-                    )}
-                    {canDeleteRow(row) && (
-                      <Tooltip title={config.deleteLabel ?? 'Xóa'}>
-                        <Button
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                          onClick={() => deleteRecord(row)}
-                          aria-label={config.deleteLabel ?? 'Xóa'}
-                        />
-                      </Tooltip>
-                    )}
-                    {canResetPassword(row) && (
-                      <Tooltip title="Đặt lại mật khẩu">
-                        <Button
-                          size="small"
-                          icon={<KeyOutlined />}
-                          onClick={() => resetPassword(row)}
-                          aria-label="Đặt lại mật khẩu"
-                        />
-                      </Tooltip>
-                    )}
-                    {resource === 'users' &&
+                render: (_: unknown, row: CrudRecord) => {
+                  const hasSpecialActions =
+                    canResetPassword(row) ||
+                    (resource === 'users' &&
                       hasPermission(me, Permission.USER_UNLOCK) &&
-                      row.locked === true && (
-                        <Tooltip title="Mở khóa tài khoản">
-                          <Button
-                            size="small"
-                            icon={<UnlockOutlined />}
-                            onClick={() => unlockAccount(row)}
-                            aria-label="Mở khóa tài khoản"
-                          />
-                        </Tooltip>
-                      )}
-                    {resource === 'users' &&
+                      row.locked === true) ||
+                    (resource === 'users' &&
                       row.role === Role.STAFF &&
-                      hasPermission(me, Permission.USER_CROSS_UNIT_ACCESS) && (
-                        <Tooltip
-                          title={
-                            row.crossUnitAccess
+                      hasPermission(me, Permission.USER_CROSS_UNIT_ACCESS)) ||
+                    canConfirmInvoicePayment(row)
+
+                  const moreItems: MenuProps['items'] = [
+                    ...(canResetPassword(row)
+                      ? [
+                          {
+                            key: 'reset-pwd',
+                            icon: <KeyOutlined />,
+                            label: 'Đặt lại mật khẩu',
+                            onClick: () => resetPassword(row),
+                          },
+                        ]
+                      : []),
+                    ...(resource === 'users' &&
+                    hasPermission(me, Permission.USER_UNLOCK) &&
+                    row.locked === true
+                      ? [
+                          {
+                            key: 'unlock',
+                            icon: <UnlockOutlined />,
+                            label: 'Mở khóa tài khoản',
+                            onClick: () => unlockAccount(row),
+                          },
+                        ]
+                      : []),
+                    ...(resource === 'users' &&
+                    row.role === Role.STAFF &&
+                    hasPermission(me, Permission.USER_CROSS_UNIT_ACCESS)
+                      ? [
+                          {
+                            key: 'cross-unit',
+                            icon: <GlobalOutlined />,
+                            label: row.crossUnitAccess
                               ? 'Thu hồi quyền đọc tổng hợp'
-                              : 'Cấp quyền đọc tổng hợp'
-                          }
-                        >
-                          <Button
-                            size="small"
-                            icon={<GlobalOutlined />}
-                            onClick={() => changeCrossUnitAccess(row)}
-                            aria-label="Quyền đọc tổng hợp"
-                          />
-                        </Tooltip>
-                      )}
-                    {canConfirmInvoicePayment(row) && (
-                      <Tooltip title="Xác nhận đã thu tiền">
+                              : 'Cấp quyền đọc tổng hợp',
+                            onClick: () => changeCrossUnitAccess(row),
+                          },
+                        ]
+                      : []),
+                    ...(canConfirmInvoicePayment(row)
+                      ? [
+                          {
+                            key: 'confirm-payment',
+                            icon: <DollarCircleOutlined />,
+                            label: 'Xác nhận đã thu tiền',
+                            onClick: () => setPaymentInvoice(row),
+                          },
+                        ]
+                      : []),
+                  ]
+
+                  return (
+                    <Space size={4} wrap={false} className="dms-row-actions">
+                      <Tooltip title="Xem chi tiết toàn bộ thông tin (chỉ đọc, không sửa)">
                         <Button
                           size="small"
-                          type="primary"
-                          icon={<DollarCircleOutlined />}
-                          onClick={() => setPaymentInvoice(row)}
-                          aria-label="Xác nhận đã thu tiền"
+                          icon={<EyeOutlined />}
+                          onClick={() => {
+                            void showDetail(row)
+                          }}
+                          aria-label="Xem chi tiết toàn bộ thông tin (chỉ đọc, không sửa)"
+                          className="dms-action-btn dms-action-view"
                         />
                       </Tooltip>
-                    )}
-                  </Space>
-                ),
+                      {canEditRow(row) && (
+                        <Tooltip title="Sửa">
+                          <Button
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={() => {
+                              void openEditor(row)
+                            }}
+                            aria-label="Sửa"
+                            className="dms-action-btn dms-action-edit"
+                          />
+                        </Tooltip>
+                      )}
+                      {canDeleteRow(row) && (
+                        <Tooltip title={config.deleteLabel ?? 'Xóa'}>
+                          <Button
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => deleteRecord(row)}
+                            aria-label={config.deleteLabel ?? 'Xóa'}
+                            className="dms-action-btn dms-action-delete"
+                          />
+                        </Tooltip>
+                      )}
+                      {hasSpecialActions && (
+                        <Dropdown menu={{ items: moreItems }} trigger={['click']}>
+                          <Tooltip title="Thao tác khác">
+                            <Button
+                              size="small"
+                              icon={<MoreOutlined />}
+                              aria-label="Thao tác khác"
+                              className="dms-action-btn dms-action-more"
+                            />
+                          </Tooltip>
+                        </Dropdown>
+                      )}
+                    </Space>
+                  )
+                },
               },
             ]}
           />
         )}
       </Card>
       <Modal
-        title={
-          modalMode === 'workflow'
-            ? crudDetailUiLabels.workflow
-            : modalMode === 'view'
-            ? `Chi tiết ${config.title.toLowerCase()}`
-            : `${modalMode === 'edit' ? 'Sửa' : 'Thêm'} ${config.title.toLowerCase()}`
-        }
+        headerIcon={<ModalHeaderIcon />}
+        title={modalTitleText}
+        subtitle={modalSubtitle}
         open={modalMode !== null}
         forceRender
         onCancel={closeModal}
@@ -1337,25 +1797,55 @@ export default function CrudPage({ resource }: { resource: string }) {
         cancelButtonProps={{ disabled: busy }}
         okText="Lưu"
         cancelText="Đóng"
-        width={hasRecordDetailContent(resource) ? 1080 : 780}
-        style={{ top: 24 }}
-        styles={{ body: { maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto', overflowX: 'hidden' } }}
-        className={config.finance ? 'dms-finance-modal' : undefined}
+        width={960}
+        className={`dms-crud-modal${config.finance ? ' dms-finance-modal' : ''}`}
         footer={
-          <Space>
-            <Button onClick={closeModal} disabled={busy}>Đóng</Button>
-            {isViewMode && activeRecord && hasRecordDetailContent(resource) && (
-              <Button onClick={() => setModalMode('workflow')}>{crudDetailUiLabels.workflow}</Button>
-            )}
-            {isViewMode && activeRecord && canEditRow(activeRecord) && (
-              <Button type="primary" icon={<EditOutlined />} onClick={() => setModalMode("edit")}>
-                Chuyển sang sửa
+          <div className="dms-modal-footer-v5">
+            <div className="dms-modal-footer-left">
+              {isViewMode && activeRecord && hasRecordDetailContent(resource) && (
+                <Button
+                  onClick={() => setModalMode('workflow')}
+                  className="dms-btn-workflow"
+                >
+                  {crudDetailUiLabels.workflow}
+                </Button>
+              )}
+              {modalMode === 'workflow' && (
+                <Button
+                  onClick={() => setModalMode('view')}
+                  className="dms-btn-view"
+                >
+                  Quay lại xem chi tiết
+                </Button>
+              )}
+            </div>
+            <div className="dms-modal-footer-right">
+              <Button onClick={closeModal} disabled={busy} className="dms-btn-cancel">
+                Đóng
               </Button>
-            )}
-            {(modalMode === "create" || modalMode === "edit") && (
-              <Button type="primary" loading={busy} onClick={() => form.submit()}>Lưu</Button>
-            )}
-          </Space>
+              {isViewMode && activeRecord && canEditRow(activeRecord) && (
+                <Button
+                  type="primary"
+                  icon={<EditOutlined />}
+                  onClick={() => setModalMode('edit')}
+                  className="dms-btn-edit"
+                >
+                  Chuyển sang sửa
+                </Button>
+              )}
+              {(modalMode === 'create' || modalMode === 'edit') && (
+                <Button
+                  type="primary"
+                  loading={busy}
+                  icon={<SaveOutlined />}
+                  onClick={() => form.submit()}
+                  className="dms-btn-save"
+                >
+                  Lưu
+                </Button>
+              )}
+            </div>
+          </div>
         }
       >
         {activeRecord && !invoiceResource && !hasRecordDetailContent(resource) && (
@@ -1478,7 +1968,7 @@ export default function CrudPage({ resource }: { resource: string }) {
             </div>
           </div>
         )}
-        {activeRecord && hasRecordDetailContent(resource) && (
+        {activeRecord && (isViewMode || modalMode === 'workflow') && hasRecordDetailContent(resource) && (
           <RecordDetailContent
             key={resource + ":" + String(activeRecord[idKey]) + ":" + modalMode}
             resource={resource}
@@ -1487,26 +1977,55 @@ export default function CrudPage({ resource }: { resource: string }) {
             readOnly={modalMode !== "workflow"}
           />
         )}
-        {activeRecord && modalMode !== 'workflow' && !hasRecordDetailContent(resource) && (
-          <>
-            <div className="dms-view-grid">
-              {detailColumns.map((column) => (
-                <div key={column.key} className="dms-view-field">
-                  <div className="dms-view-label">{column.label}</div>
-                  <div className="dms-view-value">{renderColumnCell(resource, column, activeRecord)}</div>
+        {activeRecord && isViewMode && !hasRecordDetailContent(resource) && (
+          <DetailLayout className="dms-record-view">
+            {/* Section 1: Thông tin chính */}
+            {viewSections.slice(0, 1).filter((section) => section.items.length > 0).map((section) => (
+              <FormSection key={section.title} title={section.title} description={section.note} defaultOpen={true}>
+                <div className="dms-view-grid">
+                  {section.items.map((item) => (
+                    <div key={item.key} className={`dms-view-field${item.fullWidth ? ' dms-view-field-full' : ''}`}>
+                      <div className="dms-view-label">{item.label}</div>
+                      <div className="dms-view-value">{item.content}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </FormSection>
+            ))}
+
+            {/* Section 2: Điều kiện / Bảng con / Danh sách chi tiết */}
             {['items', 'transactions', 'timeline'].map((key) =>
-                !(key === "items" && invoiceResource) && Array.isArray(activeRecord[key]) ? (
-                  <Card key={key} title={crudDetailUiLabels.collections[key as keyof typeof crudDetailUiLabels.collections]}>
+              !(key === 'items' && invoiceResource) && Array.isArray(activeRecord[key]) && activeRecord[key].length > 0 ? (
+                <FormSection
+                  key={key}
+                  title={crudDetailUiLabels.collections[key as keyof typeof crudDetailUiLabels.collections] ?? key}
+                  defaultOpen={true}
+                >
+                  <div className="dms-subcollection-list">
                     {(activeRecord[key] as CrudRecord[]).map((item, index) => (
-                      <Typography.Paragraph key={index}>{display(item)}</Typography.Paragraph>
+                      <div key={index} className="dms-subcollection-item">
+                        {display(item)}
+                      </div>
                     ))}
-                  </Card>
-                ) : null,
-              )}
-          </>
+                  </div>
+                </FormSection>
+              ) : null,
+            )}
+
+            {/* Section 3: Phân loại / Thông tin bổ sung */}
+            {viewSections.slice(1).filter((section) => section.items.length > 0).map((section) => (
+              <FormSection key={section.title} title={section.title} description={section.note} defaultOpen={true}>
+                <div className="dms-view-grid">
+                  {section.items.map((item) => (
+                    <div key={item.key} className={`dms-view-field${item.fullWidth ? ' dms-view-field-full' : ''}`}>
+                      <div className="dms-view-label">{item.label}</div>
+                      <div className="dms-view-value">{item.content}</div>
+                    </div>
+                  ))}
+                </div>
+              </FormSection>
+            ))}
+          </DetailLayout>
         )}
         {modalMode !== 'workflow' && invoiceResource && activeRecord ? (
           <div className="dms-invoice-detail">
@@ -1551,7 +2070,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                 </strong>
               </div>
             </div>
-            <Card title={billingUiLabels.invoiceItems}>
+            <FormSection title={billingUiLabels.invoiceItems} defaultOpen={true}>
               {invoiceItems.length > 0 ? (
                 <Table<CrudRecord>
                   dataSource={invoiceItems}
@@ -1596,80 +2115,41 @@ export default function CrudPage({ resource }: { resource: string }) {
               ) : (
                 <EmptyState title={billingUiLabels.invoiceNoItems} />
               )}
-            </Card>
+            </FormSection>
           </div>
         ) : null}
           <Form
             form={form}
             component={modalMode === 'create' || modalMode === 'edit' ? 'form' : 'div'}
-            style={modalMode === null || modalMode === 'workflow' ? { display: 'none' } : undefined}
+            style={modalMode !== 'create' && modalMode !== 'edit' ? { display: 'none' } : undefined}
             key={resource}
             disabled={busy}
             layout="vertical"
             initialValues={formInitialValues}
+            onValuesChange={(changed) => clearDependentFields(changed, fields, form)}
             onFinish={(values) => {
               submitRecord(values)
             }}
             preserve={false}
           >
-            {config.formSections ? (
-              <div className="dms-form-sections">
-                {config.formSections.map((section) => {
-                  const sectionFields = formFields.filter((field) =>
-                    section.fields.includes(field.name),
-                  )
-                  if (sectionFields.length === 0) return null
-                  return (
-                    <section
-                      className="dms-form-section"
-                      key={section.title}
-                      aria-label={section.title}
-                    >
-                      <div className="dms-form-section-head">
-                        <h3 className="dms-form-section-title">
-                          {section.title}
-                        </h3>
-                        {section.note && (
-                          <span className="dms-form-section-note">
-                            {section.note}
-                          </span>
-                        )}
-                      </div>
-                      <FormGrid
-                        className={
-                          sectionFields.length === 1
-                            ? 'dms-form-grid-single'
-                            : undefined
-                        }
-                      >
-                        {sectionFields.map(renderField)}
-                      </FormGrid>
-                    </section>
-                  )
-                })}
-                {remainingFields.length > 0 && (
-                  <section className="dms-form-section" aria-label="Khác">
-                    <FormGrid
-                      className={
-                        remainingFields.length < 3
-                          ? 'dms-form-grid-single'
-                          : undefined
-                      }
-                    >
-                      {remainingFields.map(renderField)}
+            <DetailLayout>
+              {formSections.map((section) => {
+                const sectionFields = formFields.filter((field) => section.fields.includes(field.name))
+                if (sectionFields.length === 0) return null
+                return (
+                  <FormSection key={section.title} title={section.title} description={section.note} defaultOpen={true}>
+                    <FormGrid>
+                      {sectionFields.map(renderField)}
                     </FormGrid>
-                  </section>
-                )}
-              </div>
-            ) : (
-              <FormGrid
-                className={
-                  formFields.length < 3 ? 'dms-form-grid-single' : undefined
-                }
-              >
-                {formFields.map(renderField)}
-              </FormGrid>
-            )}
+                  </FormSection>
+                )
+              })}
+              {remainingFields.length > 0 && (
+                <FormSection title={crudDetailUiLabels.additionalInformation} defaultOpen={true}>
+                  <FormGrid>{remainingFields.map(renderField)}</FormGrid>
+                </FormSection>
+              )}
+            </DetailLayout>
           </Form>
 
       </Modal>

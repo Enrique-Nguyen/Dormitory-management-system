@@ -118,6 +118,9 @@ class SystemJobsIntegrationTest {
                                 + " VALUES(?,?,'Job building',1000000) RETURNING id",
                         unit,
                         "J-" + suffix);
+        jdbc.update(
+                "INSERT INTO building_floor(building_id,floor,name) VALUES(?,1,'Tang 1') ON CONFLICT DO NOTHING",
+                building);
         room =
                 id(
                         "INSERT INTO room(building_id,room_type_id,floor,code,gender)"

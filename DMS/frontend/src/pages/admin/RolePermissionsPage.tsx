@@ -1,7 +1,12 @@
 import { Checkbox, SearchInput, Select } from '../../components/ui/FormControls'
-import { Alert, Button, FilterBar, Tag } from '../../components/ui/Surface'
+import { Alert, Button, FilterBar, Modal, Tag } from '../../components/ui/Surface'
 import Table from '../../components/ui/DataTable'
-import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
+import {
+  DownloadOutlined,
+  ReloadOutlined,
+  SaveOutlined,
+  UploadOutlined,
+} from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   App,
@@ -9,6 +14,7 @@ import {
   Space,
   Tooltip,
   Typography,
+  Upload,
   type TableColumnsType,
 } from 'antd'
 import { useEffect, useState } from 'react'
@@ -21,7 +27,19 @@ import {
   rolePermissionLabels,
 } from '../../constants/navigation'
 import { meQueryKey, useMe } from '../../features/account/useMe'
-import { validationFieldErrors } from '../../features/crud/api'
+import {
+  CRUD_DEFAULT_PAGE_SIZE,
+  CRUD_PAGE_SIZES,
+  validationFieldErrors,
+} from '../../features/crud/api'
+import {
+  downloadWorkbook,
+  EXCEL_MAX_BYTES,
+  parseImportWorkbook,
+  type ImportWorkbookRow,
+} from '../../features/crud/excel'
+import { excelUiLabels as excelLabels } from '../../features/crud/resources'
+import type { CrudField } from '../../features/crud/types'
 import { hasPermission } from '../../services/api/auth'
 import { api } from '../../services/api/client'
 import { errorCodeOf, errorMessage } from '../../utils/errorMessages'
@@ -93,6 +111,289 @@ function changePrivilegeSelection(
     })
   } else next.delete(privilege.code)
   return next
+}
+
+const permissionImportFields: CrudField[] = [
+  { name: 'role', label: 'role', required: true },
+  { name: 'version', label: 'version', kind: 'number', min: 0, required: true },
+  { name: 'code', label: 'code', required: true },
+  { name: 'granted', label: 'granted', kind: 'boolean', required: true },
+]
+const permissionExportColumns = [
+  'role', 'version', 'screenCode', 'screenLabel', 'action',
+  'code', 'label', 'granted', 'assignable', 'required',
+].map((key) => ({ key, label: key }))
+
+interface PermissionImportPreview {
+  rows: ImportWorkbookRow[]
+  permissions: string[]
+}
+
+/** Chỉ thay các mã được nêu rõ trong file; kiểm tra phụ thuộc trên toàn bộ bản nháp. */
+function previewPermissionImport(
+  rows: ImportWorkbookRow[],
+  matrix: RolePermissionMatrix,
+  version: number,
+  selection: Set<string>,
+): PermissionImportPreview {
+  const catalog = new Map(
+    matrix.screens.flatMap((screen) =>
+      screen.privileges.map((privilege) => [privilege.code, privilege] as const),
+    ),
+  )
+  const counts = new Map<unknown, number>()
+  rows.forEach(({ payload }) => {
+    counts.set(payload.code, (counts.get(payload.code) ?? 0) + 1)
+  })
+  const next = new Set(selection)
+  const validated = rows.map((row) => {
+    const { role, version: rowVersion, code, granted } = row.payload
+    const errors = [...row.errors]
+    if (role !== matrix.role)
+      errors.push(`role: ${excelLabels.invalidValue} (${matrix.role})`)
+    if (
+      !Number.isSafeInteger(rowVersion) ||
+      rowVersion !== version ||
+      version !== matrix.version
+    )
+      errors.push(`version: ${excelLabels.invalidValue} (${version})`)
+    const privilege = typeof code === 'string' ? catalog.get(code) : undefined
+    if (!privilege || !knownPrivilege(privilege))
+      errors.push(`code: ${excelLabels.invalidValue}`)
+    if ((counts.get(code) ?? 0) > 1)
+      errors.push(
+        `code: ${excelLabels.invalidValue} (${code}; ${excelLabels.total}: ${counts.get(code)})`,
+      )
+    if (typeof granted !== 'boolean')
+      errors.push(`granted: ${excelLabels.invalidValue}`)
+    if (privilege && typeof granted === 'boolean') {
+      const changed = granted !== selection.has(privilege.code)
+      if (
+        (matrix.readOnly || !privilege.assignable || privilege.required) &&
+        changed
+      )
+        errors.push(`${privilege.code}: ${excelLabels.immutable}`)
+      if (privilege.required && !granted)
+        errors.push(`${privilege.code}: ${excelLabels.required}`)
+      if (!errors.length) {
+        if (granted) next.add(privilege.code)
+        else next.delete(privilege.code)
+      }
+    }
+    return { ...row, errors }
+  })
+
+  matrix.screens.forEach((screen) => {
+    const read = screen.privileges.find((entry) => entry.action === Action.READ)
+    const writes = screen.privileges.filter(
+      (entry) => entry.action !== Action.READ && next.has(entry.code),
+    )
+    if (
+      !writes.length ||
+      (read && knownPrivilege(read) && next.has(read.code))
+    ) return
+    const affected = validated.filter(
+      (row) => row.payload.code === read?.code ||
+        writes.some((entry) => entry.code === row.payload.code),
+    )
+    // Không tự cấp READ hoặc âm thầm xóa các quyền ngoài file để sửa phụ thuộc.
+    const dependentRows = affected.length ? affected : validated.slice(0, 1)
+    dependentRows.forEach((row) => {
+      row.errors.push(`${screen.label}: ${Action.READ} — ${excelLabels.required}`)
+    })
+  })
+  return { rows: validated, permissions: [...next] }
+}
+
+interface PermissionExcelProps {
+  matrix: RolePermissionMatrix
+  screens: MatrixScreen[]
+  version: number
+  selection: Set<string>
+  canUpdate: boolean
+  busy: boolean
+  onApply: (permissions: Set<string>) => void
+}
+
+/** Nhập Excel chỉ cập nhật state cục bộ; API lưu vẫn thuộc nút Lưu quyền hiện có. */
+function PermissionExcel({
+  matrix, screens, version, selection, canUpdate, busy, onApply,
+}: PermissionExcelProps) {
+  const { message } = App.useApp()
+  const [open, setOpen] = useState(false)
+  const [file, setFile] = useState<File>()
+  const [preview, setPreview] = useState<PermissionImportPreview | null>(null)
+  const [feedback, setFeedback] = useState<string | null>(null)
+  const [parsing, setParsing] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const canImport = canUpdate && !matrix.readOnly && version === matrix.version && !busy
+  const invalidRows = preview?.rows.filter((row) => row.errors.length > 0).length ?? 0
+  const canApply = canImport && !parsing && !!preview?.rows.length && !invalidRows
+  const draftHint = 'Nhập Excel chỉ thay đổi bản nháp, không gửi lên máy chủ. Kiểm tra và bấm Lưu quyền để lưu theo phiên bản hiện tại.'
+
+  async function download(template: boolean) {
+    if (downloading || busy) return
+    const source = template ? matrix.screens : screens
+    const rows = source.flatMap((screen) => screen.privileges.map((privilege) => ({
+      role: matrix.role,
+      version,
+      screenCode: screen.code,
+      screenLabel: screen.label,
+      action: privilege.action,
+      code: privilege.code,
+      label: privilege.label,
+      granted: selection.has(privilege.code),
+      assignable: privilege.assignable,
+      required: privilege.required,
+    })))
+    if (!rows.length) {
+      message.info(excelLabels.exportEmpty)
+      return
+    }
+    setDownloading(true)
+    try {
+      await downloadWorkbook(
+        `${rolePermissionLabels.matrixTitle}-${matrix.role}-${version}${template ? `-${excelLabels.fileNameSuffix}` : ''}`,
+        template
+          ? permissionImportFields.map(({ name, label }) => ({ key: name, label }))
+          : permissionExportColumns,
+        rows,
+      )
+      if (!template) message.success(excelLabels.exportSuccess)
+    } catch (error) {
+      message.error(errorMessage(error))
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  async function inspect() {
+    if (!file || parsing || !canImport) return
+    setPreview(null)
+    setFeedback(null)
+    setParsing(true)
+    try {
+      // Mã quyền là khóa text, không phải ID số của khung CRUD.
+      const rows = await parseImportWorkbook(file, permissionImportFields, 'code')
+      setPreview(previewPermissionImport(rows, matrix, version, selection))
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : excelLabels.invalidFile)
+    } finally {
+      setParsing(false)
+    }
+  }
+
+  return (
+    <>
+      <Space wrap>
+        <Button icon={<DownloadOutlined />} disabled={busy || downloading} onClick={() => void download(false)}>
+          {excelLabels.export}
+        </Button>
+        <Button icon={<DownloadOutlined />} disabled={busy || downloading} onClick={() => void download(true)}>
+          {excelLabels.template}
+        </Button>
+        <Button icon={<UploadOutlined />} disabled={!canImport} onClick={() => setOpen(true)}>
+          {excelLabels.import}
+        </Button>
+      </Space>
+      <Modal
+        open={open}
+        title={`${rolePermissionLabels.matrixTitle} — ${excelLabels.preview}`}
+        width={1000}
+        footer={null}
+        closable={!parsing}
+        keyboard={!parsing}
+        mask={{ closable: false }}
+        onCancel={() => { if (!parsing) setOpen(false) }}
+      >
+        <Space orientation="vertical" size={16} style={{ width: '100%' }}>
+          <Alert type="info" showIcon title={draftHint} description="Dùng file mẫu với các cột role, version, code, granted (true/false). Vai trò và phiên bản phải trùng bản đang mở; mã quyền không trùng, phải thuộc danh mục máy chủ. Không đổi quyền bắt buộc hoặc ngoài phạm vi; quyền ghi cần quyền READ. Chỉ các dòng được nêu rõ mới thay đổi, kể cả ngoài bộ lọc; quyền không có trong file được giữ nguyên. Toàn bộ file phải hợp lệ trước khi áp dụng." />
+          <Space wrap>
+            <Upload
+              accept=".xlsx"
+              maxCount={1}
+              disabled={parsing || !canImport}
+              fileList={file ? [{ uid: 'permissions', name: file.name, status: 'done' }] : []}
+              beforeUpload={(selected) => {
+                if (parsing || !canImport) return Upload.LIST_IGNORE
+                if (!selected.name.toLowerCase().endsWith('.xlsx') || !selected.size || selected.size > EXCEL_MAX_BYTES) {
+                  message.error(excelLabels.invalidFile)
+                  return Upload.LIST_IGNORE
+                }
+                setFile(selected)
+                setPreview(null)
+                setFeedback(null)
+                return false
+              }}
+              onRemove={() => {
+                if (parsing) return false
+                setFile(undefined)
+                setPreview(null)
+                setFeedback(null)
+              }}
+            >
+              <Button icon={<UploadOutlined />} disabled={parsing || !canImport}>{excelLabels.choose}</Button>
+            </Upload>
+            <Button loading={parsing} disabled={!file || parsing || !canImport} onClick={() => void inspect()}>
+              {excelLabels.preview}
+            </Button>
+            <Button type="primary" disabled={!canApply} onClick={() => setConfirming(true)}>
+              {excelLabels.apply}
+            </Button>
+          </Space>
+          {feedback && <Alert type="error" showIcon title={feedback} />}
+          {preview && (
+            <>
+              <Typography.Text>
+                {excelLabels.total}: {preview.rows.length} — {excelLabels.valid}: {preview.rows.length - invalidRows} — {excelLabels.errors}: {invalidRows}
+              </Typography.Text>
+              <Table<ImportWorkbookRow>
+                rowKey="rowNumber"
+                showStt={false}
+                dataSource={preview.rows}
+                pagination={{ pageSize: CRUD_DEFAULT_PAGE_SIZE, showSizeChanger: true, pageSizeOptions: CRUD_PAGE_SIZES }}
+                scroll={{ x: 800 }}
+                columns={[
+                  { title: excelLabels.row, dataIndex: 'rowNumber', width: 100 },
+                  { title: 'role', render: (_, row) => String(row.payload.role ?? '') },
+                  { title: 'version', render: (_, row) => String(row.payload.version ?? '') },
+                  { title: 'code', render: (_, row) => String(row.payload.code ?? '') },
+                  { title: 'granted', render: (_, row) => String(row.payload.granted ?? '') },
+                  { title: excelLabels.result, render: (_, row) => <Tag color={row.errors.length ? 'error' : 'success'}>{row.errors.length ? excelLabels.failed : excelLabels.ready}</Tag> },
+                  { title: excelLabels.reason, render: (_, row) => row.errors.join('; ') },
+                ]}
+              />
+            </>
+          )}
+        </Space>
+      </Modal>
+      <Modal
+        open={confirming && open}
+        title={excelLabels.confirm}
+        okText={excelLabels.apply}
+        okButtonProps={{ disabled: !canApply }}
+        onCancel={() => setConfirming(false)}
+        onOk={() => {
+          if (!canApply || !preview) return
+          const checked = previewPermissionImport(preview.rows, matrix, version, selection)
+          if (checked.rows.some((row) => row.errors.length)) {
+            setPreview(checked)
+            setConfirming(false)
+            return
+          }
+          onApply(new Set(checked.permissions))
+          setConfirming(false)
+          setOpen(false)
+          setPreview(null)
+          setFile(undefined)
+          message.success(excelLabels.complete)
+        }}
+      >
+        {draftHint}
+      </Modal>
+    </>
+  )
 }
 
 /** Bảng quyền theo màn hình/thao tác. Danh mục và giới hạn vai trò đều do backend cung cấp. */
@@ -389,6 +690,13 @@ export default function RolePermissionsPage() {
   const groups = [
     ...new Set(matrix?.screens.map((screen) => screen.group) ?? []),
   ]
+  // Hủy preview cũ nếu đổi vai trò, danh mục, phiên bản hoặc bản nháp trong lúc đọc file.
+  const excelDraftKey = JSON.stringify([
+    role,
+    matrixQuery.dataUpdatedAt,
+    currentDraft?.version ?? matrix?.version,
+    [...selection].sort(),
+  ])
 
   return (
     <>
@@ -485,6 +793,18 @@ export default function RolePermissionsPage() {
                 </Button>
               </Space>
             </Flex>
+            {matrix && (
+              <PermissionExcel
+                key={excelDraftKey}
+                matrix={matrix}
+                screens={screens}
+                version={currentDraft?.version ?? matrix.version}
+                selection={selection}
+                canUpdate={canUpdate}
+                busy={busy}
+                onApply={updateSelection}
+              />
+            )}
             <Table<MatrixScreen>
               rowKey="code"
               columns={columns}

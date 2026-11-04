@@ -18,6 +18,12 @@ DECLARE
     ticket BIGINT;
     row_id BIGINT;
     target_bed BIGINT;
+    school_id_value BIGINT;
+    faculty_id_value BIGINT;
+    cohort_id_value BIGINT;
+    hometown_id_value BIGINT;
+    storage_unit_id BIGINT;
+    storage_location_id BIGINT;
     first_day DATE;
     last_day DATE;
     state TEXT;
@@ -36,13 +42,28 @@ BEGIN
     INSERT INTO app_user(username,role,full_name,locked,must_change_password)
     VALUES ('dt.admin','ADMIN','DataTest - Quản trị viên',FALSE,FALSE);
     UPDATE app_user SET cross_unit_access=FALSE WHERE username='dt.ql.1';
+    -- Cùng trường giả với phần cơ sở; khoa và quê quán được tra trong đúng phạm vi cha.
+    INSERT INTO school(code,name) VALUES ('DT-SCHOOL','DataTest - Trường')
+        ON CONFLICT DO NOTHING;
+    SELECT id INTO STRICT school_id_value FROM school WHERE name='DataTest - Trường';
+    INSERT INTO faculty(code,name,school_id)
+        VALUES ('DT-FACULTY-IT','Công nghệ thông tin',school_id_value)
+        ON CONFLICT DO NOTHING;
+    SELECT id INTO STRICT faculty_id_value FROM faculty
+        WHERE school_id=school_id_value AND name='Công nghệ thông tin';
+    INSERT INTO student_cohort(code,name) VALUES ('DT-COHORT-K65','K65')
+        ON CONFLICT DO NOTHING;
+    SELECT id INTO STRICT cohort_id_value FROM student_cohort WHERE name='K65';
+    INSERT INTO hometown(code,name,parent_id) VALUES ('DT-HOMETOWN-EXTRA','Địa chỉ DataTest',NULL)
+        ON CONFLICT DO NOTHING;
+    SELECT id INTO STRICT hometown_id_value FROM hometown WHERE parent_id IS NULL AND name='Địa chỉ DataTest';
     FOR i IN 13..40 LOOP
         INSERT INTO app_user(username,role,full_name,phone,locked,must_change_password)
         VALUES ('990026'||lpad(i::TEXT,4,'0'),'STUDENT','DataTest - Sinh viên '||lpad(i::TEXT,2,'0'),
                 '09'||lpad(i::TEXT,8,'0'),i=36,i=35) RETURNING id INTO student;
-        INSERT INTO student_profile(user_id,student_code,gender,date_of_birth,faculty,cohort,hometown,emergency_contact)
+        INSERT INTO student_profile(user_id,student_code,gender,date_of_birth,school_id,faculty_id,cohort_id,hometown_id,emergency_contact)
         VALUES(student,'990026'||lpad(i::TEXT,4,'0'),CASE WHEN i%2=1 THEN 'M' ELSE 'F' END,
-               DATE '2005-01-01'+i,'Công nghệ thông tin','K65','Địa chỉ DataTest','Liên hệ DataTest');
+               DATE '2005-01-01'+i,school_id_value,faculty_id_value,cohort_id_value,hometown_id_value,'Liên hệ DataTest');
     END LOOP;
     UPDATE app_user SET locked=FALSE,must_change_password=FALSE,phone='0900000000'
     WHERE username LIKE 'dt.%' OR username ~ '^990026[0-9]{4}$';
@@ -162,9 +183,17 @@ BEGIN
           (student,contract,chosen_bed,'STAY',first_day+10,first_day+10,last_day,'MOVE_OUT',2500000,900000,staff);
     INSERT INTO summer_choice(contract_id,semester_id,choice,status,decided_by,decided_at)
     VALUES(contract,summer,'TEMP_LEAVE','APPROVED',staff,first_day) RETURNING id INTO row_id;
-    INSERT INTO storage_record(contract_id,summer_choice_id,previous_bed_id,package_count,description,location,
+    SELECT bd.management_unit_id INTO STRICT storage_unit_id
+        FROM bed b JOIN room r ON r.id=b.room_id JOIN building bd ON bd.id=r.building_id
+        WHERE b.id=chosen_bed;
+    INSERT INTO storage_location(management_unit_id,code,name)
+        VALUES(storage_unit_id,'DT-STORAGE-B2','Kho DataTest - Kệ B2')
+        ON CONFLICT DO NOTHING;
+    SELECT id INTO STRICT storage_location_id FROM storage_location
+        WHERE management_unit_id=storage_unit_id AND name='Kho DataTest - Kệ B2';
+    INSERT INTO storage_record(contract_id,summer_choice_id,previous_bed_id,package_count,description,location_id,
                                deposited_at,received_by,returned_at,returned_by)
-    VALUES(contract,row_id,chosen_bed,3,'DataTest - Ba kiện đồ đã nhận','Kho DataTest - Kệ B2',first_day,staff,first_day+10,staff);
+    VALUES(contract,row_id,chosen_bed,3,'DataTest - Ba kiện đồ đã nhận',storage_location_id,first_day,staff,first_day+10,staff);
     INSERT INTO deposit_transaction(contract_id,type,amount,confirmed_by,created_at,note)
     VALUES(contract,'DEPOSIT',2000000,staff,first_day-30,'DataTest - Thu cọc lịch sử'),
           (contract,'REFUND',-2000000,staff,last_day,'DataTest - Hoàn cọc sau khi trả phòng');

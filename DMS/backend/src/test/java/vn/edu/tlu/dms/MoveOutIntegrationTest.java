@@ -80,6 +80,10 @@ class MoveOutIntegrationTest {
         staffId = createUser(Role.STAFF, unitId, "Cán bộ " + suffix);
         when(currentUser.get()).thenReturn(new Actor(staffId, Role.STAFF, unitId, false, false));
         studentId = createStudent("SV" + suffix);
+        jdbc.update(
+                "INSERT INTO academic_year(code,name) VALUES(?,?) ON CONFLICT DO NOTHING",
+                "2070-2071",
+                "2070-2071");
         semesterId =
                 jdbc.queryForObject(
                         "INSERT INTO semester(academic_year,type,name,start_date,end_date)"
@@ -109,6 +113,9 @@ class MoveOutIntegrationTest {
                         unitId,
                         "B" + suffix,
                         "Tòa " + suffix);
+        jdbc.update(
+                "INSERT INTO building_floor(building_id,floor,name) VALUES(?,1,'Tang 1') ON CONFLICT DO NOTHING",
+                buildingId);
         roomId =
                 jdbc.queryForObject(
                         "INSERT INTO room(building_id,room_type_id,floor,code,gender)"

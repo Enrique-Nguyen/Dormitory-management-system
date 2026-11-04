@@ -118,6 +118,25 @@ public class AuditServiceImpl implements AuditService {
                 "id,desc");
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<Map<String, Object>> searchActionsByPage(SearchRequest input) {
+        return searchFilterValues(input, "action");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<Map<String, Object>> searchEntityTypesByPage(SearchRequest input) {
+        return searchFilterValues(input, "entity_type");
+    }
+
+    private PageResponse<Map<String, Object>> searchFilterValues(SearchRequest input, String column) {
+        guard.requirePermission(Permission.AUDIT_READ);
+        return queries.search("SELECT DISTINCT " + column + " AS code," + column
+                        + " AS name FROM audit_log WHERE " + column + " ILIKE ?",
+                List.of(LikePattern.contains(input.q().trim())), input, Set.of("code", "name"), "code,asc");
+    }
+
     @Transactional(readOnly = true)
     @Override
     public List<EntityLogEntry> listEntityLog(String entityType, Long entityId, String action) {

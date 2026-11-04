@@ -70,12 +70,14 @@ export default function RecordDetailContent({
 
   const DetailContent = contentByResource[resource]
   return (
-    <DetailContent
-      key={`${resource}-${recordId}`}
-      recordId={recordId}
-      role={role}
-      embedded
-      readOnly={readOnly}
-    />
+    <div className="dms-record-detail">
+      <DetailContent
+        key={`${resource}-${recordId}`}
+        recordId={recordId}
+        role={role}
+        embedded
+        readOnly={readOnly}
+      />
+    </div>
   )
 }

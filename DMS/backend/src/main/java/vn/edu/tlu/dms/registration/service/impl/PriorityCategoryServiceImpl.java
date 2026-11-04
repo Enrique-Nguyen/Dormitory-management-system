@@ -82,10 +82,18 @@ public class PriorityCategoryServiceImpl
     protected Specification<PriorityCategory> searchScope(SearchRequest search) {
         Actor actor = currentUser.get();
         // Không công khai diện đã ngừng dùng cho sinh viên/KTV khi chuyển sang phân trang.
-        return (root, query, builder) ->
-                actor.is(Role.STUDENT) || actor.is(Role.TECHNICIAN)
-                        ? builder.isTrue(root.get("active"))
-                        : builder.conjunction();
+        Specification<PriorityCategory> scope =
+                (root, query, builder) ->
+                        actor.is(Role.STUDENT) || actor.is(Role.TECHNICIAN)
+                                ? builder.isTrue(root.get("active"))
+                                : builder.conjunction();
+        if (search.active() != null) {
+            scope =
+                    scope.and(
+                            (root, query, builder) ->
+                                    builder.equal(root.get("active"), search.active()));
+        }
+        return scope;
     }
 
     @Override

@@ -10,8 +10,9 @@ import {
   ActionBar,
   Alert,
   Button,
-  Card,
+  DetailSection as Card,
   Descriptions,
+  DetailLayout,
   EmptyState,
   PageHeader,
   PageSkeleton,
@@ -103,6 +104,7 @@ export default function ExtensionDetailPage({
     return (
       <>
         <PageHeader
+        showHeading
           title="Không tìm thấy yêu cầu gia hạn"
           breadcrumb={embedded ? undefined : [{ label: 'Yêu cầu chờ xử lý', to: listPath }]}
         />
@@ -198,6 +200,7 @@ export default function ExtensionDetailPage({
   return (
     <>
       <PageHeader
+        showHeading
         title={`Yêu cầu gia hạn #${detail.id}`}
         status={<StatusBadge entity="request" status={detail.status} />}
         subtitle={
@@ -250,10 +253,10 @@ export default function ExtensionDetailPage({
         />
       )}
 
-      <div className="dms-split-view">
+      <DetailLayout>
         <Card title="Thông tin yêu cầu">
           <Descriptions
-            column={1}
+            column={{ xs: 1, sm: 2 }}
             size="small"
             items={[
               {
@@ -332,7 +335,7 @@ export default function ExtensionDetailPage({
             />
           )}
         </Card>
-      </div>
+      </DetailLayout>
 
       {!readOnly && reviewMode && hasPermission(me, Permission.CONTRACT_EXTENSION_UPDATE) && allowedActions.includes(reviewMode === 'approve' ? ExtensionAction.APPROVE : ExtensionAction.REJECT) && (
         <ExtensionReviewModal

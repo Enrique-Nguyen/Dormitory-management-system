@@ -129,6 +129,9 @@ class ContractExtensionIntegrationTest {
                         unitId,
                         "B" + suffix,
                         "Tòa " + suffix);
+        jdbc.update(
+                "INSERT INTO building_floor(building_id,floor,name) VALUES(?,1,'Tang 1') ON CONFLICT DO NOTHING",
+                buildingId);
         Long roomId =
                 jdbc.queryForObject(
                         "INSERT INTO room(building_id,room_type_id,floor,code,gender,status)"
