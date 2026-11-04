@@ -308,7 +308,9 @@ public class NotificationServiceImpl implements NotificationService {
         }
         return switch (source) {
             case NotificationSource.SUMMER_PERIOD_OPENED -> portal + "/summer";
-            case NotificationSource.APPLICATION_APPROVED, NotificationSource.BED_HELD ->
+            case NotificationSource.APPLICATION_APPROVED,
+                    NotificationSource.APPLICATION_REJECTED,
+                    NotificationSource.BED_HELD ->
                     id == null ? null : portal + "/applications/" + id;
             case NotificationSource.INVOICE_ISSUED -> portal + "/invoices";
             case NotificationSource.TICKET_STATUS_CHANGED ->

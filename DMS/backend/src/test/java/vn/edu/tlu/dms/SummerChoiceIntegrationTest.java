@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.service.RolePermissionService;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.registration.api.PendingItemController.Item;
+import vn.edu.tlu.dms.registration.api.SummerCrudController.Input;
 import vn.edu.tlu.dms.registration.service.PendingItemService;
 import vn.edu.tlu.dms.registration.service.SummerCrudService;
 import vn.edu.tlu.dms.support.FutureSemesterFixture;
@@ -60,6 +63,8 @@ class SummerChoiceIntegrationTest {
     @Autowired PendingItemService pendingItems;
 
     @Autowired JdbcTemplate jdbc;
+
+    @Autowired ObjectMapper mapper;
 
     @MockitoBean CurrentUser currentUser;
 
@@ -332,6 +337,181 @@ class SummerChoiceIntegrationTest {
 
         asStaff(unitId + 1_000L);
         assertThat(pendingItems.searchByPage(new SearchRequest()).content()).isEmpty();
+    }
+
+    /** Lựa chọn bị từ chối được sinh viên sửa và gửi lại về PENDING khi đợt hè còn mở. */
+    @Test
+    void studentResubmitsRejectedChoiceWhileSummerPeriodOpen() {
+        summers.reject(choiceId, "Chưa đủ điều kiện lưu trú hè");
+        openSummerPeriod(summerSemesterId);
+        asStudent();
+        assertThat(actions(detail(summers.getChoice(choiceId))))
+                .containsExactly(BusinessAction.EDIT);
+
+        summers.saveOrUpdate(new Input(choiceId, null, null, SummerChoice.LEAVE));
+
+        assertThat(choiceRow(choiceId).get("status")).isEqualTo(SummerStatus.PENDING);
+        assertThat(choiceRow(choiceId).get("decided_by")).isNull();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT choice FROM summer_choice WHERE id=?",
+                                String.class,
+                                choiceId))
+                .isEqualTo(SummerChoice.LEAVE);
+        assertThat(
+                        count(
+                                """
+                                SELECT COUNT(*) FROM status_history
+                                WHERE entity_type = ? AND entity_id = ? AND from_status = ?
+                                  AND to_status = ?
+                                """,
+                                EntityType.SUMMER_CHOICE,
+                                choiceId,
+                                SummerStatus.REJECTED,
+                                SummerStatus.PENDING))
+                .isEqualTo(1L);
+        assertThat(
+                        count(
+                                "SELECT COUNT(*) FROM audit_log WHERE action = ? AND entity_id = ?",
+                                AuditAction.SUMMER_CHOICE_RESUBMIT,
+                                choiceId))
+                .isEqualTo(1L);
+    }
+
+    /** Không có đợt hè đang mở cho học kỳ và đơn vị thì không tạo hoặc sửa được lựa chọn. */
+    @Test
+    void createAndEditRequireOpenSummerPeriod() {
+        Long semesterId = newSummerSemester();
+        asStudent();
+
+        assertThatThrownBy(
+                        () ->
+                                summers.saveOrUpdate(
+                                        new Input(
+                                                null, contractId, semesterId, SummerChoice.STAY)))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.PERIOD_NOT_OPEN));
+        assertThatThrownBy(
+                        () ->
+                                summers.saveOrUpdate(
+                                        new Input(choiceId, null, null, SummerChoice.LEAVE)))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.PERIOD_NOT_OPEN));
+
+        openSummerPeriod(semesterId);
+        Map<String, Object> created =
+                detail(
+                        summers.saveOrUpdate(
+                                new Input(null, contractId, semesterId, SummerChoice.STAY)));
+        assertThat(created.get("status")).isEqualTo(SummerStatus.PENDING);
+    }
+
+    /** Rút lựa chọn chuyển CANCELLED, giữ bản ghi/lịch sử; gửi lại cùng học kỳ mở lại bản ghi đó. */
+    @Test
+    void deleteCancelsChoiceAndCreateReopensIt() {
+        asStudent();
+        summers.deleteChoice(choiceId);
+
+        assertThat(choiceRow(choiceId).get("status")).isEqualTo(SummerStatus.CANCELLED);
+        assertThat(
+                        count(
+                                """
+                                SELECT COUNT(*) FROM status_history
+                                WHERE entity_type = ? AND entity_id = ? AND to_status = ?
+                                """,
+                                EntityType.SUMMER_CHOICE,
+                                choiceId,
+                                SummerStatus.CANCELLED))
+                .isEqualTo(1L);
+        assertThat(
+                        count(
+                                "SELECT COUNT(*) FROM audit_log WHERE action = ? AND entity_id = ?",
+                                AuditAction.SUMMER_CHOICE_CANCEL,
+                                choiceId))
+                .isEqualTo(1L);
+
+        openSummerPeriod(summerSemesterId);
+        Map<String, Object> reopened =
+                detail(
+                        summers.saveOrUpdate(
+                                new Input(
+                                        null,
+                                        contractId,
+                                        summerSemesterId,
+                                        SummerChoice.TEMP_LEAVE)));
+        assertThat(reopened.get("id")).isEqualTo(choiceId);
+        assertThat(choiceRow(choiceId).get("status")).isEqualTo(SummerStatus.PENDING);
+        assertThat(count("SELECT COUNT(*) FROM summer_choice WHERE contract_id = ?", contractId))
+                .isEqualTo(1L);
+    }
+
+    /** Lựa chọn PENDING đã tồn tại thì gửi trùng vẫn báo SUMMER_CHOICE_EXISTS. */
+    @Test
+    void createDuplicatePendingChoiceIsRejected() {
+        openSummerPeriod(summerSemesterId);
+        asStudent();
+
+        assertThatThrownBy(
+                        () ->
+                                summers.saveOrUpdate(
+                                        new Input(
+                                                null,
+                                                contractId,
+                                                summerSemesterId,
+                                                SummerChoice.LEAVE)))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e ->
+                                assertThat(e.getErrorCode())
+                                        .isEqualTo(ErrorCode.SUMMER_CHOICE_EXISTS));
+    }
+
+    /** Cán bộ tìm lựa chọn hè theo mã sinh viên hoặc mã hợp đồng, không chỉ họ tên. */
+    @Test
+    void staffSearchMatchesStudentCodeAndContractCode() {
+        for (String keyword : List.of(suffix + "01", "HD-" + suffix)) {
+            var page =
+                    summers.searchByPage(
+                            mapper.convertValue(Map.of("q", keyword), SearchRequest.class), false);
+            assertThat(page.content())
+                    .extracting(row -> row.get("id"))
+                    .containsExactly(choiceId);
+        }
+    }
+
+    /** Lựa chọn của hợp đồng đã kết thúc không còn là lựa chọn hè hiện hành của sinh viên. */
+    @Test
+    void myCurrentChoiceIgnoresChoicesOfEndedContract() {
+        jdbc.update("UPDATE dormitory_contract SET status = 'EXPIRED' WHERE id = ?", contractId);
+        asStudent();
+
+        assertThat(summers.getMyCurrentChoice()).isNull();
+    }
+
+    private void asStudent() {
+        when(currentUser.get()).thenReturn(new Actor(studentId, Role.STUDENT, null, false, false));
+    }
+
+    /** Mở đợt đăng ký hè cho học kỳ và đơn vị của fixture, đang trong hạn tại thời điểm test. */
+    private void openSummerPeriod(Long semesterId) {
+        Long periodId =
+                jdbc.queryForObject(
+                        """
+                        INSERT INTO registration_period(semester_id, kind, name, open_at, close_at,
+                            created_by)
+                        VALUES(?, 'SUMMER', ?, now() - interval '1 hour', now() + interval '7 days', ?)
+                        RETURNING id
+                        """,
+                        Long.class,
+                        semesterId,
+                        "Đợt hè " + suffix + semesterId,
+                        staffId);
+        jdbc.update(
+                "INSERT INTO registration_period_unit(period_id, management_unit_id) VALUES(?, ?)",
+                periodId,
+                unitId);
     }
 
     private void asStaff(Long unit) {

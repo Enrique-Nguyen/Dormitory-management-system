@@ -106,6 +106,25 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
 
     @Override
     @Transactional
+    public Long lockBedForAssignment(Long bedId, Long studentId) {
+        if (bedId == null) {
+            throw BusinessException.invalid(ApiField.BED_ID, ValidationMessage.REQUIRED);
+        }
+        if (studentId == null) {
+            throw BusinessException.notFound();
+        }
+        var locked = lockBeds(List.of(bedId));
+        if (locked.isEmpty()) {
+            throw BusinessException.notFound();
+        }
+        var bed = locked.get(0);
+        guard.requireUnit(bed.unitId());
+        references.lockStudentProfile(studentId);
+        return bed.unitId();
+    }
+
+    @Override
+    @Transactional
     public Assignment convertHoldToStay(Long contractId, Long actorId) {
         var open =
                 findOpenRow(contractId)

@@ -44,6 +44,9 @@ import java.util.Map;
  *
  * <p>Do nhiều nguồn không dùng chung một truy vấn phân trang, mỗi nguồn được đọc theo cửa sổ
  * {@code (page + 1) * size} bản ghi mới nhất (tối đa {@link #MAX_SCAN_PER_SOURCE}) rồi mới gộp.
+ * Mỗi nguồn được yêu cầu sort tường minh "mới nhất trước" để cửa sổ đúng là các bản ghi mới nhất,
+ * không phụ thuộc sort mặc định của từng màn danh sách. Không gộp bằng một truy vấn UNION vì
+ * registration không được đọc bảng của module contract (SAD 4.2).
  */
 @Service
 @Transactional(readOnly = true)
@@ -131,12 +134,13 @@ public class PendingItemServiceImpl implements PendingItemService {
 
     private Chunk load(Type type, SearchRequest input, int window) {
         String status = statusFor(type);
+        String sort = newestSortFor(type);
         var items = new ArrayList<Item>();
         long total = 0;
         int page = 0;
         int size = Math.min(SOURCE_PAGE_SIZE, window);
         while (true) {
-            var request = searchRequest(page, size, status, input.q());
+            var request = searchRequest(page, size, status, sort, input.q());
             var chunk = fetch(type, request);
             if (page == 0) {
                 total = chunk.total();
@@ -200,16 +204,23 @@ public class PendingItemServiceImpl implements PendingItemService {
 
     private Chunk contractChunk(SearchRequest request) {
         var page = mapPage(contracts.searchByPage(request, false));
+        // Nạp tên sinh viên của cả trang một lượt thay vì truy vấn từng hợp đồng.
+        var users =
+                accounts.users(
+                        page.content().stream()
+                                .map(row -> longValue(row.get(ApiField.STUDENT_ID)))
+                                .toList());
         var items =
                 page.content().stream()
                         .map(
                                 row -> {
-                                    Long studentId = longValue(row.get("studentId"));
+                                    Long studentId = longValue(row.get(ApiField.STUDENT_ID));
+                                    var user = studentId == null ? null : users.get(studentId);
                                     return new Item(
                                             Type.CONTRACT.name(),
                                             longValue(row.get("id")),
                                             studentId,
-                                            studentName(studentId),
+                                            user == null ? null : user.fullName(),
                                             string(row.get("status")),
                                             null);
                                 })
@@ -243,10 +254,12 @@ public class PendingItemServiceImpl implements PendingItemService {
                 raw, new TypeReference<PageResponse<Map<String, Object>>>() {});
     }
 
-    private SearchRequest searchRequest(int page, int size, String status, String keyword) {
+    private SearchRequest searchRequest(
+            int page, int size, String status, String sort, String keyword) {
         var body = new LinkedHashMap<String, Object>();
         body.put(ApiField.PAGE, page);
         body.put(ApiField.SIZE, size);
+        body.put(ApiField.SORT, List.of(sort));
         body.put(ApiField.STATUS, List.of(status));
         if (keyword != null && !keyword.isBlank()) {
             body.put(ApiField.QUERY, keyword);
@@ -263,8 +276,12 @@ public class PendingItemServiceImpl implements PendingItemService {
         };
     }
 
-    private String studentName(Long studentId) {
-        return studentId == null ? null : accounts.user(studentId).fullName();
+    /** Sort "mới nhất trước" theo cột mà từng nguồn cho phép sort. */
+    private static String newestSortFor(Type type) {
+        return switch (type) {
+            case APPLICATION -> "submittedAt,desc";
+            case CONTRACT, EXTENSION, TRANSFER, SUMMER_CHOICE -> "createdAt,desc";
+        };
     }
 
     private static Long longValue(Object value) {
