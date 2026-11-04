@@ -86,7 +86,7 @@ import StudentImportPanel from '../features/account/StudentImportPanel'
 import CrudExcelPanel from '../features/crud/CrudExcelPanel'
 import ReferenceSelect, { ReferenceLabel } from '../features/crud/ReferenceSelect'
 import { downloadWorkbook, exportFilteredRecords } from '../features/crud/excel'
-import { crudValueLabels, getStatus, InvoiceStatus as InvoiceState } from '../constants/statusConfig'
+import { BillingAction, crudValueLabels, getStatus } from '../constants/statusConfig'
 import type { CrudColumn, CrudField, CrudFormSection, CrudRecord } from '../features/crud/types'
 import { api } from '../services/api/client'
 import { hasPermission } from '../services/api/auth'
@@ -929,12 +929,12 @@ export default function CrudPage({ resource }: { resource: string }) {
       row.id !== me?.id
     )
   }
+  /** Chỉ hiện xác nhận thu tiền khi GET chi tiết hóa đơn trả action này trong allowedActions. */
   function canConfirmInvoicePayment(row: CrudRecord) {
-    // Trùng điều kiện allowedActions của GET /api/invoices/{id}: chỉ hóa đơn chưa thu.
     return (
       resource === 'invoices' &&
-      canUpdate &&
-      row.status === InvoiceState.UNPAID
+      Array.isArray(row.allowedActions) &&
+      row.allowedActions.includes(BillingAction.CONFIRM_PAYMENT)
     )
   }
   function showTemporaryPassword(result: unknown, username?: unknown) {
@@ -1671,8 +1671,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                       row.locked === true) ||
                     (resource === 'users' &&
                       row.role === Role.STAFF &&
-                      hasPermission(me, Permission.USER_CROSS_UNIT_ACCESS)) ||
-                    canConfirmInvoicePayment(row)
+                      hasPermission(me, Permission.USER_CROSS_UNIT_ACCESS))
 
                   const moreItems: MenuProps['items'] = [
                     ...(canResetPassword(row)
@@ -1708,16 +1707,6 @@ export default function CrudPage({ resource }: { resource: string }) {
                               ? 'Thu hồi quyền đọc tổng hợp'
                               : 'Cấp quyền đọc tổng hợp',
                             onClick: () => changeCrossUnitAccess(row),
-                          },
-                        ]
-                      : []),
-                    ...(canConfirmInvoicePayment(row)
-                      ? [
-                          {
-                            key: 'confirm-payment',
-                            icon: <DollarCircleOutlined />,
-                            label: 'Xác nhận đã thu tiền',
-                            onClick: () => setPaymentInvoice(row),
                           },
                         ]
                       : []),
@@ -1803,6 +1792,16 @@ export default function CrudPage({ resource }: { resource: string }) {
               <Button onClick={closeModal} disabled={busy} className="dms-btn-cancel">
                 Đóng
               </Button>
+              {isViewMode && activeRecord && canConfirmInvoicePayment(activeRecord) && (
+                <Button
+                  type="primary"
+                  icon={<DollarCircleOutlined />}
+                  onClick={() => setPaymentInvoice(activeRecord)}
+                  disabled={busy}
+                >
+                  Xác nhận đã thu tiền
+                </Button>
+              )}
               {isViewMode && activeRecord && canEditRow(activeRecord) && (
                 <Button
                   type="primary"
