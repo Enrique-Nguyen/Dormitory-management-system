@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Phiên bản | **0.15** |
+| Phiên bản | **0.16** |
 | Ngày | 04/11/2026 |
 | Học phần | Chuyên đề CNTT, lớp 65CNTT, Nhóm 3 |
 | Giảng viên | Hoàng Quốc Dũng |
@@ -15,6 +15,7 @@
 
 | Phiên bản | Ngày | Người thực hiện | Nội dung |
 |---|---|---|---|
+| 0.16 | 04/11/2026 | Nhóm 3 | Theo review chuyên sâu module đăng ký KTX: FR-REG-01 KTV được xem đợt của đơn vị mình, tạo/sửa/xóa đợt ghi audit; FR-REG-05 danh sách đơn của Staff mặc định sắp điểm giảm dần, sinh viên không thấy trọng số diện ưu tiên; FR-REG-08 giường giữ chỗ phải thuộc đơn vị nguyện vọng của đơn, kể cả với ADMIN; FR-REG-14 lựa chọn hè chỉ tạo/sửa khi đợt hè của đơn vị đang mở, lựa chọn bị từ chối được sửa và gửi lại, rút lựa chọn chờ duyệt chuyển CANCELLED thay vì xóa. |
 | 0.15 | 04/11/2026 | Nhóm 3 | Chuẩn hóa danh mục dùng chung cho form, bộ lọc và Excel; trường/khoa/khóa/địa giới, tầng theo tòa, năm học, tiện nghi, hạng mục sửa chữa và vị trí kho dùng dữ liệu quản trị có tham chiếu. |
 | 0.14 | 31/10/2026 | Nhóm 3 | Theo quyết định DEC-BIL-01: khi đã có lịch sử chỉ số, phải nhập đủ kỳ liên tiếp; không tạo kỳ mới nếu còn thiếu kỳ liền trước. Kỳ đầu vẫn nhập chỉ số đầu, thay đồng hồ theo quy tắc hiện hành. |
 | 0.13 | 22/10/2026 | TV5 Nguyễn Tiến Lộc | Đồng bộ phân hệ 6 & 7: chuẩn hóa nghiệp vụ sổ cọc (thu cọc ban đầu, trừ cọc FIFO, bù cọc, hoàn cọc), tra cứu công nợ sinh viên/phòng, tự động phát hành hóa đơn phòng và điện nước theo đợt/chỉ số, cùng tổng hợp KPI Staff Dashboard |
@@ -226,20 +227,20 @@ Quy ước chung cho mọi yêu cầu:
 
 | Mã | Yêu cầu | Vai trò | Ưu tiên |
 |---|---|---|---|
-| FR-REG-01 | Staff tạo đợt đăng ký: học kỳ, ngày mở, ngày đóng, chỉ tiêu theo tòa; đợt có thể áp dụng cho một hoặc cả hai đơn vị | Staff | Must |
+| FR-REG-01 | Staff tạo đợt đăng ký: học kỳ, ngày mở, ngày đóng, chỉ tiêu theo tòa; đợt có thể áp dụng cho một hoặc cả hai đơn vị. Tạo/sửa/xóa đợt ghi audit. Kỹ thuật viên được xem đợt có đơn vị của mình (chỉ đọc) | Staff | Must |
 | FR-REG-02 | Sinh viên soạn đơn khi đợt đang mở: **đơn vị nguyện vọng**, loại phòng mong muốn, diện ưu tiên tự khai, ghi chú. Mỗi sinh viên tối đa **một đơn mỗi đợt** | Student | Must |
 | FR-REG-03 | Không cho nộp đơn khi sinh viên đang có hợp đồng PENDING hoặc ACTIVE (sinh viên đang ở dùng gia hạn, FR-CON-06) | Student | Must |
 | FR-REG-04 | Sinh viên nộp đơn (DRAFT → SUBMITTED) hoặc hủy đơn (DRAFT, SUBMITTED, và APPROVED khi chưa sinh hợp đồng PENDING / ACTIVE; đơn APPROVED đã có hợp đồng bị chặn 409 `APPLICATION_HAS_CONTRACT`, xem mục 10.1) | Student | Must |
-| FR-REG-05 | Hệ thống tính **điểm ưu tiên** khi nộp theo trọng số cấu hình; Staff xem danh sách đơn của đơn vị mình sắp theo điểm | Hệ thống, Staff | Must ✂ |
+| FR-REG-05 | Hệ thống tính **điểm ưu tiên** khi nộp theo trọng số cấu hình; Staff xem danh sách đơn của đơn vị mình, mặc định sắp theo điểm giảm dần rồi thời điểm nộp tăng dần. Sinh viên xem diện ưu tiên đã khai nhưng không thấy trọng số | Hệ thống, Staff | Must ✂ |
 | FR-REG-06 | Staff xác nhận diện ưu tiên sinh viên khai (đúng / không đúng); điểm được tính lại theo kết quả xác nhận | Staff | Should |
 | FR-REG-07 | Staff duyệt (→ APPROVED) hoặc từ chối (→ REJECTED, bắt buộc lý do) đơn thuộc đơn vị mình | Staff | Must |
-| FR-REG-08 | Staff phân giường cho đơn APPROVED: chọn giường trống phù hợp giới tính, loại phòng, phòng Hoạt động thuộc đơn vị mình. Hệ thống thực hiện trong một transaction: tạo phân phòng loại **giữ chỗ** (chụp đơn giá từ loại phòng), tạo hợp đồng PENDING, chuyển đơn sang ASSIGNED | Staff | Must |
+| FR-REG-08 | Staff phân giường cho đơn APPROVED: chọn giường trống phù hợp giới tính, loại phòng, phòng Hoạt động thuộc **đơn vị nguyện vọng của đơn** (áp dụng cả với ADMIN liên đơn vị; sai đơn vị → `BED_UNIT_MISMATCH`). Hệ thống thực hiện trong một transaction: tạo phân phòng loại **giữ chỗ** (chụp đơn giá từ loại phòng), tạo hợp đồng PENDING, chuyển đơn sang ASSIGNED | Staff | Must |
 | FR-REG-09 | Hai yêu cầu đồng thời vào cùng một giường: chỉ một thành công, yêu cầu còn lại nhận lỗi "Giường vừa được phân, chọn giường khác"; không có bản ghi thừa | Hệ thống | Must |
 | FR-REG-10 | Gửi lặp cùng một yêu cầu phân phòng không tạo phân phòng thứ hai (trả lỗi 409) | Hệ thống | Must |
 | FR-REG-11 | Staff hủy giữ chỗ để phân lại (ASSIGNED → APPROVED, bắt buộc lý do); sinh viên tự hủy giữ chỗ (ASSIGNED → CANCELLED). Cả hai đóng phân phòng và chuyển hợp đồng sang CANCELLED trong cùng transaction | Staff, Student | Must |
 | FR-REG-12 | Sinh viên xem trạng thái đơn, lý do từ chối, giường được giữ và hạn kích hoạt | Student | Must |
 | FR-REG-13 | Staff mở **đợt đăng ký học kỳ hè**; khi mở, hệ thống tạo thông báo cho mọi sinh viên có hợp đồng ACTIVE thuộc đơn vị | Staff, Hệ thống | Must |
-| FR-REG-14 | Sinh viên đang ở chọn một trong ba lựa chọn cho hè: **ở hè**, **tạm rời hè** (tiếp tục năm học sau), **rời KTX**. Staff duyệt lựa chọn | Student, Staff | Must |
+| FR-REG-14 | Sinh viên đang ở chọn một trong ba lựa chọn cho hè: **ở hè**, **tạm rời hè** (tiếp tục năm học sau), **rời KTX**. Chỉ hợp đồng đang ACTIVE và chỉ khi đợt đăng ký hè của học kỳ đó đang mở cho đơn vị của sinh viên. Sinh viên sửa lựa chọn đang chờ hoặc bị từ chối (sửa lựa chọn bị từ chối là gửi lại, về chờ duyệt); rút lựa chọn đang chờ chuyển sang **Đã hủy** (giữ lịch sử), gửi lại cùng học kỳ mở lại chính bản ghi đó. Staff duyệt lựa chọn | Student, Staff | Must |
 | FR-REG-15 | Sinh viên **ở hè**: khi duyệt, ngày kết thúc hợp đồng được gia hạn qua học kỳ hè (ghi như một gia hạn, FR-CON-06) và sinh viên được phát hành hóa đơn phí phòng học kỳ hè như HK1, HK2. Staff có thể chuyển sinh viên sang giường khác cùng đơn vị để gom phòng ở hè (dùng FR-CON-08) | Staff, Hệ thống | Must |
 
 ### 3.4. Hợp đồng (CON)
@@ -359,7 +360,7 @@ Mục này mô tả ở mức nghiệp vụ. Tên bảng, kiểu dữ liệu và
 | `RoomTransferRequest` | id, contract_id, lý do, giường đích, trạng thái, người xử lý | |
 | `MoveOutRecord` | id, contract_id, tình trạng tài sản, ghi chú, công nợ tại thời điểm trả, tiền hoàn cọc, người xác nhận, thời gian | 1–1 với hợp đồng |
 | `MaintenanceRequest` | id, **mã** (TK-1024), requester_id, room_id hoặc (building_id, tầng), assigned_to, loại sự cố, mức độ, mô tả, trạng thái, **nguyên nhân** (hao mòn tự nhiên / hư hỏng do sử dụng), **chi phí sửa chữa** | Nguyên nhân, chi phí chỉ có ở ticket của phòng. Ảnh sự cố (≤ 3) ở bảng phụ |
-| `SummerChoice` | id, contract_id, semester_id (hè), lựa chọn (ở hè / tạm rời hè / rời KTX), trạng thái, người duyệt | Một lựa chọn cho mỗi (hợp đồng, học kỳ hè) |
+| `SummerChoice` | id, contract_id, semester_id (hè), lựa chọn (ở hè / tạm rời hè / rời KTX), trạng thái (chờ / duyệt / từ chối / đã hủy), người duyệt | Một lựa chọn cho mỗi (hợp đồng, học kỳ hè) |
 | `StorageRecord` | id, contract_id, số kiện, mô tả, vị trí kho, giường cũ, ngày gửi, người nhận gửi, ngày nhận lại, người trả | Phiếu gửi đồ khi tạm rời hè; giường cũ dùng để gợi ý khi phân lại đầu HK1 |
 | `StatusHistory` | id, loại đối tượng (đơn / hợp đồng / ticket / yêu cầu…), id đối tượng, từ trạng thái, đến trạng thái, người, thời gian, lý do | Dùng chung cho mọi đối tượng có trạng thái; dữ liệu cho timeline |
 | `UtilityRate` | id, loại (điện / nước), đơn giá, hiệu lực từ | |

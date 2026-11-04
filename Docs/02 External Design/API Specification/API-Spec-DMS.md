@@ -1,6 +1,6 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.22**, 04/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.23**, 04/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.15 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.13, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
@@ -8,6 +8,7 @@
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.23 | 04/11/2026 | Sửa theo review module đăng ký KTX (SRS 0.16): `POST /api/applications/{id}/assign` trả `409 BED_UNIT_MISMATCH` khi giường không thuộc đơn vị nguyện vọng (kể cả ADMIN); danh sách đơn của Staff mặc định `priorityScore,desc` rồi `submittedAt,asc`; sinh viên nhận `weight: null` ở diện ưu tiên; thông báo `APPLICATION_REJECTED` mới, duyệt/từ chối/giữ chỗ đều báo sinh viên; KTV đọc được đợt đăng ký của đơn vị mình, tạo/sửa/xóa đợt ghi audit; lựa chọn hè chỉ tạo/sửa khi đợt hè đang mở (`409 PERIOD_NOT_OPEN`), sửa bản REJECTED là gửi lại về PENDING, `DELETE` chuyển CANCELLED thay vì xóa cứng và tạo lại cùng học kỳ mở lại bản ghi đó; `q` của danh sách hè khớp họ tên, tài khoản, mã sinh viên, mã hợp đồng. |
 | 0.22 | 04/11/2026 | Sửa theo review Điện nước/Hóa đơn/Tiền cọc: phạm vi hóa đơn phí phòng của Staff chỉ tính đơn nguyện vọng APPROVED/ASSIGNED trong đợt của học kỳ; `issue-utility` phát hành cho mọi phòng có người ở trong tháng (kể cả đã trả phòng sau đó), không còn lọc phòng ACTIVE/đang ở; trừ cọc chỉ cho hợp đồng ACTIVE, nếu không `409 CONTRACT_NOT_ACTIVE`; hoàn cọc trực tiếp bắt buộc có `move_out_record` và `amount` đúng `refund_amount` đã chốt, nếu không `409 INVALID_STATE_TRANSITION`; đơn giá mới không được có `effectiveFrom` trước hôm nay (`400 VALIDATION_FAILED`, trường `effectiveFrom`); sửa chỉ số gửi `replacementReason: ""` xóa cả nhóm thay đồng hồ; bỏ endpoint `POST /api/contracts/{id}/initial-deposit` (thu cọc ban đầu chỉ qua `POST /api/contracts/{id}/activate`); item của `deposit-balances/search-by-page` trả `allowedActions: []`, hành động chỉ tính ở `GET /api/contracts/{id}/deposit-balance`; nút xác nhận thanh toán chỉ dựa trên `allowedActions` của chi tiết hóa đơn. |
 | 0.21 | 04/11/2026 | Danh mục dùng chung, lookup form/bộ lọc, tham chiếu hồ sơ bằng ID, tiện nghi nhiều lựa chọn, tầng theo tòa và vị trí kho; giữ mã tự nhiên của năm học/hạng mục sửa chữa. |
 | 0.20 | 31/10/2026 | DMS-PREF-01: thêm `GET /api/me/preferences` và `POST /api/me/preferences/save-or-update` lưu sở thích giao diện theo tài khoản (theme mode, accent preset, mật độ bảng); chủ sở hữu lấy từ `CurrentUser`, chưa có dòng trả mặc định không ghi CSDL, version lệch trả 409 `CONCURRENT_UPDATE`. |
@@ -86,7 +87,7 @@ Phạm vi vẫn là khung CRUD và React đơn giản. Từ phiên bản 0.10, m
 - Đơn đăng ký: `/api/applications/save-or-update` chỉ tạo/sửa bản DRAFT. Nộp, duyệt, từ chối và hủy giữ endpoint hành động. `/api/me/applications/search-by-page` luôn lấy sinh viên hiện tại phía server.
 - Hợp đồng: `/api/contracts/save-or-update`, tạo nhận `applicationId`, `startDate`, `endDate`; chỉ tạo PENDING từ đơn APPROVED, chưa phân giường hay thu cọc. Khi sửa chỉ đổi ngày; DELETE `/{id}` chỉ khi PENDING chưa có phân phòng, tiền cọc hoặc lịch sử. Không nhận trạng thái từ client.
 - Gia hạn/chuyển phòng: `/api/extension-requests/save-or-update`, `/api/transfer-requests/save-or-update`; tạo nhận `contractId` và nội dung yêu cầu, sửa giữ hợp đồng nguồn. Sinh viên sở hữu chỉ CRUD yêu cầu PENDING; Staff chỉ đọc. Nhánh `/api/me/.../search-by-page` giữ scope cá nhân. Chưa tự xét duyệt hay chuyển giường.
-- Lựa chọn hè: `/api/summer-choices/save-or-update`, body có `contractId`, `semesterId`, `choice` (STAY/TEMP_LEAVE/LEAVE). Chỉ sinh viên sở hữu CRUD PENDING; sửa không đổi hợp đồng/học kỳ nguồn. Chưa cập nhật chỗ ở/hợp đồng.
+- Lựa chọn hè: `/api/summer-choices/save-or-update`, body có `contractId`, `semesterId`, `choice` (STAY/TEMP_LEAVE/LEAVE). Chỉ sinh viên sở hữu tạo/sửa khi đợt hè của học kỳ đang mở cho đơn vị của mình; sửa bản PENDING hoặc REJECTED (REJECTED → PENDING là gửi lại); sửa không đổi hợp đồng/học kỳ nguồn. Xóa là rút: PENDING → CANCELLED, giữ bản ghi và lịch sử. Chưa cập nhật chỗ ở/hợp đồng.
 - Chỉ số: `/api/utility-readings/save-or-update`, lưu một bản ghi gồm `roomId`, `meterType`, `billingMonth`, `startReading`, `endReading`. `billingMonth` là ngày đầu tháng. Chỉ số đã dùng trong hóa đơn hoặc có kỳ sau bị khóa sửa/xóa; khi sửa không đổi phòng/loại/kỳ. Khi sửa, `replacementReason` là chuỗi rỗng sẽ xóa cả nhóm thay đồng hồ (`oldMeterFinal`, `newMeterStart`, `replacementReason`); gửi null hoặc bỏ qua thì giữ nguyên.
 - Đơn giá: `/api/utility-rates/save-or-update`; bản mới phải có `effectiveFrom` từ hôm nay trở đi (lùi ngày trả 400 VALIDATION_FAILED, trường `effectiveFrom`) để không đổi giá của kỳ đã qua. Chỉ sửa/xóa bản giá tương lai đủ điều kiện theo người tạo/phạm vi. Giá đã có hiệu lực được giữ nguyên, thay giá bằng bản mới.
 - Hóa đơn: `/api/invoices/save-or-update`; tạo nhận `type`, `totalAmount`, `dueDate` và `studentId`/`semesterId` cho ROOM_FEE hoặc `roomId`/`billingMonth` cho UTILITY. Chỉ tạo UNPAID, chưa có dòng chi tiết/tự tính tiền. Sửa tổng tiền/hạn đóng; DELETE `/{id}` chỉ khi chưa có dòng/lịch sử và chưa thanh toán.
@@ -365,24 +366,24 @@ Khung có DELETE phòng/giường chưa từng sử dụng; khi đã có lịch 
 |---|---|---|---|---|
 | POST | `/api/priority-categories/search-by-page` | \* | Diện ưu tiên đang dùng (PageResponse); Staff, Admin thấy cả trọng số | FR-REG-05 |
 | POST | `/api/admin/priority-categories/save-or-update` | A | Tạo/sửa bằng ID trong body. `{ id, code, name, weight, active }` | FR-REG-05 |
-| POST | `/api/registration-periods/search-by-page` | St | Đợt áp dụng cho đơn vị mình; lọc `semesterId`, `kind`, `open` | FR-REG-01 |
+| POST | `/api/registration-periods/search-by-page` | St, T | Đợt áp dụng cho đơn vị mình (KTV chỉ đọc); lọc `semesterId`, `kind`, `open` | FR-REG-01 |
 | POST | `/api/registration-periods/save-or-update` | St | Tạo/sửa đợt bằng ID trong body (mục 4.2); đã mở chỉ được lùi closeAt. Đợt SUMMER mới tạo thông báo sau commit. Staff chỉ ghi đợt mà đơn vị mình là đơn vị duy nhất; đợt dùng chung trả 404 | FR-REG-01, 13 |
-| GET | `/api/registration-periods/{id}` | St | Chi tiết + chỉ tiêu + thống kê số đơn theo trạng thái | FR-REG-01 |
+| GET | `/api/registration-periods/{id}` | St, T | Chi tiết + chỉ tiêu + thống kê số đơn theo trạng thái | FR-REG-01 |
 | POST | `/api/me/registration-periods/open/search-by-page` | S | Đợt đang mở mà tôi được nộp, kèm `myApplicationId` nếu đã có đơn | FR-REG-02 |
 | POST | `/api/applications/save-or-update` | S | Tạo/sửa đơn DRAFT bằng ID trong body (mục 4.3). ADMIN có thể tạo hộ với studentId rõ ràng; STUDENT không được chọn người sở hữu khác | FR-REG-02, 03 |
 | POST | `/api/applications/{id}/submit` | S | DRAFT → SUBMITTED; tính điểm ưu tiên | FR-REG-04, 05 |
 | POST | `/api/applications/{id}/cancel` | S | DRAFT / SUBMITTED / APPROVED (chưa có hợp đồng PENDING/ACTIVE, có hợp đồng trả 409 `APPLICATION_HAS_CONTRACT`) / ASSIGNED → CANCELLED. Đang ASSIGNED thì đóng giữ chỗ và hủy hợp đồng PENDING cùng lúc | FR-REG-04, 11 |
 | POST | `/api/me/applications/search-by-page` | S | Đơn của tôi, mới nhất trước | FR-REG-12 |
-| POST | `/api/applications/search-by-page` | St | Đơn thuộc đơn vị nguyện vọng = đơn vị mình. Khung lọc `periodId`, `status`, `q`; sắp priorityScore/submittedAt theo whitelist. Bộ lọc loại phòng/giới tính là kế hoạch mở rộng | FR-REG-05 |
+| POST | `/api/applications/search-by-page` | St | Đơn thuộc đơn vị nguyện vọng = đơn vị mình. Khung lọc `periodId`, `status`, `q`; sắp priorityScore/submittedAt theo whitelist, mặc định `priorityScore,desc` rồi `submittedAt,asc`. Bộ lọc loại phòng/giới tính là kế hoạch mở rộng | FR-REG-05 |
 | GET | `/api/applications/{id}` | S, St | Chi tiết (mục 4.3); sinh viên thấy lý do từ chối, giường đang giữ, hạn kích hoạt | FR-REG-12 |
 | POST | `/api/applications/{id}/priorities/{categoryId}/verify` | St | `{ verified: true \| false, note }`; `note` tùy chọn ≤500 ký tự, lưu trên dòng `application_priority` và trả lại ở `priorities[].note`; tính lại điểm | FR-REG-06 |
 | POST | `/api/applications/{id}/approve` | St | SUBMITTED → APPROVED | FR-REG-07 |
 | POST | `/api/applications/{id}/reject` | St | SUBMITTED → REJECTED, `{ reason }` | FR-REG-07 |
 | POST | `/api/applications/{id}/assign` | St | APPROVED → ASSIGNED: phân giường (mục 4.4) | FR-REG-08, 09, 10 |
 | POST | `/api/applications/{id}/release-hold` | St | ASSIGNED → APPROVED, `{ reason }`: hủy giữ chỗ để phân lại | FR-REG-11 |
-| POST | `/api/summer-choices/save-or-update` | S | Tạo/sửa hồ sơ hè PENDING: `{id, contractId, semesterId, choice}`; sửa không đổi hợp đồng/học kỳ nguồn. Chưa tự gia hạn, trả phòng hay phân giường | FR-REG-14, FR-CON-11 |
+| POST | `/api/summer-choices/save-or-update` | S | Tạo/sửa hồ sơ hè: `{id, contractId, semesterId, choice}`. Cần hợp đồng ACTIVE và đợt hè đang mở, nếu không `409 PERIOD_NOT_OPEN`. Tạo trùng bản PENDING/APPROVED → `409 SUMMER_CHOICE_EXISTS`; bản CANCELLED/REJECTED cùng học kỳ được mở lại về PENDING. Sửa PENDING hoặc REJECTED (gửi lại), không đổi hợp đồng/học kỳ nguồn. Chưa tự gia hạn, trả phòng hay phân giường | FR-REG-14, FR-CON-11 |
 | GET | `/api/me/summer-choice` | S | Lựa chọn hè hiện tại của tôi (`null` nếu chưa chọn) | FR-REG-14 |
-| POST | `/api/summer-choices/search-by-page` | St | Khung tìm `q` trong phạm vi; lọc semesterId/choice/status là kế hoạch mở rộng | FR-REG-14 |
+| POST | `/api/summer-choices/search-by-page` | St | `q` khớp họ tên, tài khoản, mã sinh viên, mã hợp đồng trong phạm vi; lọc semesterId/choice/status là kế hoạch mở rộng | FR-REG-14 |
 | GET | `/api/summer-choices/{id}` | S, St | Chi tiết | FR-REG-14 |
 | POST | `/api/summer-choices/{id}/approve` | St | `STAY`: gia hạn hợp đồng qua hè (ghi như một gia hạn, `source = SUMMER_STAY`). `TEMP_LEAVE`: chỉ duyệt, việc gửi đồ làm ở `/storage-records`. `LEAVE`: chỉ duyệt, trả phòng làm ở `/move-out` | FR-REG-15, FR-CON-11, 13 |
 | POST | `/api/summer-choices/{id}/reject` | St | `{ reason }` | FR-REG-14 |
@@ -393,7 +394,7 @@ Khung có DELETE phòng/giường chưa từng sử dụng; khi đã có lịch 
 | DELETE | `/api/admin/priority-categories/{id}` | A | Chỉ xóa diện chưa được dùng | FR-REG-05 |
 | DELETE | `/api/registration-periods/{id}` | St | Chỉ xóa đợt chưa mở, chưa có đơn | FR-REG-01 |
 | POST | `/api/me/summer-choices/search-by-page` | S | Lựa chọn hè của người đăng nhập, không nhận chủ sở hữu tùy ý | FR-REG-14 |
-| DELETE | `/api/summer-choices/{id}` | S | Chỉ xóa hồ sơ PENDING đủ điều kiện | FR-REG-14 |
+| DELETE | `/api/summer-choices/{id}` | S | Rút hồ sơ PENDING: chuyển CANCELLED, ghi lịch sử và audit, không xóa cứng | FR-REG-14 |
 
 ### 3.4. `contract`: hợp đồng, gia hạn, chuyển phòng, trả phòng, gửi đồ
 
@@ -633,6 +634,8 @@ Lỗi: `409 PERIOD_NOT_OPEN`, `409 APPLICATION_EXISTS` (đã có đơn trong đ�
 }
 ```
 
+Sinh viên xem đơn của mình nhận `weight: null` ở mọi phần tử `priorities`; Staff/ADMIN nhận trọng số thật.
+
 - `priorityScore`: tổng trọng số các diện chưa bị xác nhận "không đúng" (`verified != false`).
 - `hold` chỉ có khi `ASSIGNED`.
 
@@ -693,7 +696,8 @@ Một transaction (SAD 6.2): khóa giường, khóa sinh viên, kiểm tra lại
 | `409 BED_TAKEN` | Giường vừa bị chiếm (kể cả do request đồng thời, bắt từ `ux_assignment_open_bed`). `details: { bedId, bedCode }` |
 | `409 BED_NOT_AVAILABLE` | Giường / phòng không `ACTIVE`. `details: { bedCode, bedStatus, roomStatus }` |
 | `409 GENDER_MISMATCH` | Giới tính phòng khác sinh viên |
-| `404 NOT_FOUND` | Giường thuộc đơn vị khác |
+| `404 NOT_FOUND` | Giường thuộc đơn vị khác (Staff ngoài phạm vi) |
+| `409 BED_UNIT_MISMATCH` | Giường không thuộc đơn vị nguyện vọng của đơn, áp dụng cả với ADMIN. `details: { bedId, managementUnitId }` |
 | `409 STUDENT_ALREADY_ASSIGNED` | Sinh viên đã có phân phòng hiệu lực (gửi lặp) |
 | `409 INVALID_STATE_TRANSITION` | Đơn không còn `APPROVED` |
 
@@ -1042,7 +1046,7 @@ Các action thu/trừ/bù/hoàn cọc giữ đường dẫn ở mục 3.6 và ki
 
 `USER` chỉ do hệ thống tạo. `title` ≤ 150 ký tự, `body` ≤ 5.000 ký tự, văn bản thuần (không HTML).
 
-Mỗi item trong `content` của hộp thư (`POST /api/notifications/search-by-page`): `{ id, scope, title, body, source, link, createdAt, isRead }`. `source` là `MANUAL` hoặc loại sự kiện tự động (`APPLICATION_APPROVED`, `BED_HELD`, `INVOICE_ISSUED`, `DEPOSIT_DEDUCTED`, `TICKET_STATUS_CHANGED`, `CONTRACT_EXPIRING`, `TOPUP_OVERDUE`, `SUMMER_PERIOD_OPENED`). `link` là đường dẫn frontend (`/student/invoices/4410`) để bấm vào mở đúng màn. `link` **không lưu** trong CSDL: mapper ở backend suy ra từ `source_type`, `source_id` của bảng `notification` và vai trò người gọi (sinh viên và Staff mở hai màn khác nhau); thông báo do Staff đăng có `link = null`.
+Mỗi item trong `content` của hộp thư (`POST /api/notifications/search-by-page`): `{ id, scope, title, body, source, link, createdAt, isRead }`. `source` là `MANUAL` hoặc loại sự kiện tự động (`APPLICATION_APPROVED`, `APPLICATION_REJECTED`, `BED_HELD`, `INVOICE_ISSUED`, `DEPOSIT_DEDUCTED`, `TICKET_STATUS_CHANGED`, `CONTRACT_EXPIRING`, `TOPUP_OVERDUE`, `SUMMER_PERIOD_OPENED`). `link` là đường dẫn frontend (`/student/invoices/4410`) để bấm vào mở đúng màn. `link` **không lưu** trong CSDL: mapper ở backend suy ra từ `source_type`, `source_id` của bảng `notification` và vai trò người gọi (sinh viên và Staff mở hai màn khác nhau); thông báo do Staff đăng có `link = null`.
 
 ### 4.18. Dashboard
 
@@ -1147,6 +1151,7 @@ Mã bổ sung cho Keycloak:
 | `BED_TAKEN` | 409 | Giường {bedCode} vừa được phân cho sinh viên khác. Vui lòng chọn giường khác |
 | `BED_NOT_AVAILABLE` | 409 | Giường {bedCode} hoặc phòng đang không hoạt động |
 | `GENDER_MISMATCH` | 409 | Phòng {roomCode} dành cho {roomGender}, không phù hợp với sinh viên |
+| `BED_UNIT_MISMATCH` | 409 | Giường không thuộc đơn vị nguyện vọng của đơn |
 | `ROOM_OCCUPIED` | 409 | Phòng {roomCode} còn {count} sinh viên đang ở hoặc giữ chỗ |
 | `BED_OCCUPIED` | 409 | Giường {bedCode} đang có người ở hoặc giữ chỗ |
 | `ROOM_CODE_EXISTS` | 409 | Mã phòng {code} đã có trong tòa này |
