@@ -4,6 +4,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
@@ -104,19 +105,19 @@ public class PriorityCategoryServiceImpl
     @Override
     protected void apply(PriorityCategory entity, PriorityCategoryRequest input, boolean creating) {
         if (creating) {
-            requireValue(input.code(), "code");
+            requireValue(input.code(), ApiField.CODE);
         }
         if (input.code() != null) {
-            entity.setCode(trimRequiredText(input.code(), "code"));
+            entity.setCode(trimRequiredText(input.code(), ApiField.CODE));
         }
         if (creating) {
-            requireValue(input.name(), "name");
+            requireValue(input.name(), ApiField.NAME);
         }
         if (input.name() != null) {
-            entity.setName(trimRequiredText(input.name(), "name"));
+            entity.setName(trimRequiredText(input.name(), ApiField.NAME));
         }
         if (creating) {
-            requireValue(input.weight(), "weight");
+            requireValue(input.weight(), ApiField.WEIGHT);
         }
         if (input.weight() != null) {
             entity.setWeight(input.weight());

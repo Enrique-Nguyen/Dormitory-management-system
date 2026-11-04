@@ -9,6 +9,12 @@ import vn.edu.tlu.dms.account.repository.StudentProfileRepository;
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
 @Service
 @Transactional(readOnly = true)
 public class AccountReferenceServiceImpl implements AccountReferenceService {
@@ -46,5 +52,32 @@ public class AccountReferenceServiceImpl implements AccountReferenceService {
                 u.getRole(),
                 u.getManagementUnitId(),
                 gender);
+    }
+
+    @Override()
+    public Map<Long, UserRef> users(Collection<Long> ids) {
+        List<Long> wanted =
+                ids == null
+                        ? List.of()
+                        : ids.stream().filter(Objects::nonNull).distinct().toList();
+        if (wanted.isEmpty()) {
+            return Map.of();
+        }
+        var genders = new HashMap<Long, String>();
+        students.findAllById(wanted).forEach(p -> genders.put(p.getUserId(), p.getGender()));
+        var result = new HashMap<Long, UserRef>();
+        users.findAllById(wanted)
+                .forEach(
+                        u ->
+                                result.put(
+                                        u.getId(),
+                                        new UserRef(
+                                                u.getId(),
+                                                u.getFullName(),
+                                                u.getUsername(),
+                                                u.getRole(),
+                                                u.getManagementUnitId(),
+                                                genders.get(u.getId()))));
+        return result;
     }
 }

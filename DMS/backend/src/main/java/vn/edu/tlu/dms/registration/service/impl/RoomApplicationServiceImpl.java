@@ -3,12 +3,14 @@ package vn.edu.tlu.dms.registration.service.impl;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Predicate;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.account.service.AccountReferenceService.UserRef;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentEndReason;
@@ -42,6 +44,7 @@ import vn.edu.tlu.dms.registration.api.ApplicationDtos.Response;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.StudentRef;
 import vn.edu.tlu.dms.registration.domain.ApplicationPriority;
 import vn.edu.tlu.dms.registration.domain.ApplicationPriorityId;
+import vn.edu.tlu.dms.registration.domain.ApplicationStatusChangedEvent;
 import vn.edu.tlu.dms.registration.domain.RegistrationPeriodUnitId;
 import vn.edu.tlu.dms.registration.domain.RoomApplication;
 import vn.edu.tlu.dms.registration.domain.RoomApplicationPolicy;
@@ -80,6 +83,16 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
 
     private static final LiveContract NO_CONTRACT = new LiveContract(null, false, false, null, null);
 
+    /** Sinh viên xem đơn của mình theo thời gian tạo mới nhất trước. */
+    private static final String STUDENT_DEFAULT_SORT = "createdAt,desc";
+
+    /**
+     * Staff xét đơn theo điểm ưu tiên giảm dần rồi nộp sớm trước (FR-REG-05). Nhiều tiêu chí được
+     * truyền như danh sách sort giống tham số client gửi.
+     */
+    private static final List<String> STAFF_DEFAULT_SORT =
+            List.of("priorityScore,desc", "submittedAt,asc");
+
     private final RoomApplicationRepository applications;
 
     private final RegistrationPeriodRepository periods;
@@ -114,6 +127,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
 
     private final EntityManager entityManager;
 
+    private final ApplicationEventPublisher events;
+
     public RoomApplicationServiceImpl(
             RoomApplicationRepository applications,
             RegistrationPeriodRepository periods,
@@ -131,7 +146,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
             OccupancyQuery occupancyQuery,
             ConfigService configs,
             AuditService audit,
-            EntityManager entityManager) {
+            EntityManager entityManager,
+            ApplicationEventPublisher events) {
         this.applications = applications;
         this.periods = periods;
         this.periodUnits = periodUnits;
@@ -149,6 +165,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         this.configs = configs;
         this.audit = audit;
         this.entityManager = entityManager;
+        this.events = events;
     }
 
     @Override
@@ -192,14 +209,17 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         guard.requirePermission(Permission.ROOM_APPLICATION_READ);
         guard.requireRole(mine ? new String[] {Role.STUDENT} : new String[] {Role.STAFF});
         var actor = current.get();
+        // Sort mặc định theo vai trò; client vẫn chỉ được sort theo các cột cho phép.
+        List<String> requestedSort =
+                (sort == null || sort.isEmpty()) && !mine ? STAFF_DEFAULT_SORT : sort;
         var pageable =
                 PageQuery.of(
                         page,
                         size,
-                        sort,
+                        requestedSort,
                         Set.of("id", "priorityScore", "submittedAt", "createdAt"),
-                        "createdAt,desc");
-        return PageResponse.from(
+                        STUDENT_DEFAULT_SORT);
+        var result =
                 applications
                         .findAll(
                                 (r, q, b) -> {
@@ -231,8 +251,14 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                                     }
                                     return b.and(filters.toArray(Predicate[]::new));
                                 },
-                                pageable)
-                        .map(a -> toApplicationResponse(a, false)));
+                                pageable);
+        // Nạp thông tin sinh viên của cả trang trong một lượt để tránh truy vấn N+1.
+        var users =
+                accounts.users(
+                        result.getContent().stream().map(RoomApplication::getStudentId).toList());
+        return PageResponse.from(
+                result.map(
+                        a -> toApplicationResponse(a, false, null, users.get(a.getStudentId()))));
     }
 
     @Override()
@@ -333,6 +359,9 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         RoomApplicationPolicy.requireAction(
                 a, current.get(), action, contract.live(), contract.holdActive());
         if (action.equals(BusinessAction.SUBMIT)) {
+            // Khóa hồ sơ sinh viên (sau đơn) rồi mới kiểm tra hợp đồng để không lọt hợp đồng mới
+            // được tạo đồng thời từ đơn khác của cùng sinh viên.
+            rooms.lockStudentProfile(a.getStudentId());
             validateApplicationPeriod(a);
             if (rooms.hasPendingOrActiveContract(a.getStudentId())) {
                 throw BusinessException.conflict(ErrorCode.CONTRACT_EXISTS);
@@ -363,13 +392,19 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         applications.saveAndFlush(a);
         history.record(
                 EntityType.APPLICATION, id, before, a.getStatus(), current.get().id(), reason);
+        if (BusinessAction.APPROVE.equals(action) || BusinessAction.REJECT.equals(action)) {
+            events.publishEvent(
+                    new ApplicationStatusChangedEvent(
+                            id, a.getStudentId(), a.getStatus(), reason, null));
+        }
         return toApplicationResponse(a, true);
     }
 
     /**
-     * Phân giường cho đơn APPROVED: khóa đơn, tạo hợp đồng PENDING theo học kỳ của đợt rồi giữ chỗ
-     * HOLD qua module room. Thứ tự gọi service giữ nguyên thứ tự khóa bed → student → contract của
-     * module room/contract; lỗi ở bất kỳ bước nào đều rollback cả hợp đồng và phân phòng.
+     * Phân giường cho đơn APPROVED: khóa đơn, khóa giường rồi hồ sơ sinh viên, đối chiếu giường thuộc
+     * đơn vị nguyện vọng, sau đó mới tạo hợp đồng PENDING theo học kỳ của đợt và giữ chỗ HOLD qua
+     * module room. Thứ tự này giữ đúng thứ tự khóa bed → student_profile → dormitory_contract; lỗi
+     * ở bất kỳ bước nào đều rollback cả hợp đồng và phân phòng.
      */
     @Override
     @Transactional
@@ -385,6 +420,18 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         // Policy chỉ cho ASSIGN khi APPROVED và chưa có hợp đồng PENDING/ACTIVE.
         RoomApplicationPolicy.requireAction(
                 a, current.get(), BusinessAction.ASSIGN, existing.live(), existing.holdActive());
+        Long bedUnitId = occupancy.lockBedForAssignment(bedId, a.getStudentId());
+        if (!a.getPreferredUnitId().equals(bedUnitId)) {
+            // ADMIN thao tác liên đơn vị vẫn không được giữ chỗ ngoài đơn vị nguyện vọng của đơn.
+            throw new BusinessException(
+                    ErrorCode.BED_UNIT_MISMATCH,
+                    HttpStatus.CONFLICT,
+                    Map.of(
+                            ApiField.BED_ID,
+                            bedId,
+                            ApiField.MANAGEMENT_UNIT_ID,
+                            a.getPreferredUnitId()));
+        }
         var period = periods.findById(a.getPeriodId()).orElseThrow(BusinessException::notFound);
         var semester = rooms.getSemesterReference(period.getSemesterId());
         Long contractId =
@@ -406,6 +453,13 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                 Map.of(ApiField.STATUS, before),
                 assignmentValue(a, contractId, assignment),
                 null);
+        events.publishEvent(
+                new ApplicationStatusChangedEvent(
+                        id,
+                        a.getStudentId(),
+                        a.getStatus(),
+                        null,
+                        assignment.bedCode()));
         return toApplicationResponse(a, true, estimatedActivationDeadline());
     }
 
@@ -664,14 +718,24 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         return toApplicationResponse(a, detail, null);
     }
 
+    private Response toApplicationResponse(
+            RoomApplication a, boolean detail, OffsetDateTime activationDeadline) {
+        return toApplicationResponse(
+                a, detail, activationDeadline, accounts.user(a.getStudentId()));
+    }
+
     /**
      * Dựng chi tiết đơn; danh sách bỏ qua dữ liệu hợp đồng/giường để không phát sinh truy vấn
      * chéo module. {@code activationDeadline} chỉ có ngay sau phân giường vì hạn kích hoạt do
-     * module contract chụp lúc tạo hợp đồng.
+     * module contract chụp lúc tạo hợp đồng. Trọng số diện ưu tiên là tham số xét duyệt nội bộ nên
+     * không trả cho sinh viên.
      */
     private Response toApplicationResponse(
-            RoomApplication a, boolean detail, OffsetDateTime activationDeadline) {
-        var user = accounts.user(a.getStudentId());
+            RoomApplication a, boolean detail, OffsetDateTime activationDeadline, UserRef user) {
+        if (user == null) {
+            throw BusinessException.notFound();
+        }
+        boolean showWeight = !current.get().is(Role.STUDENT);
         var contract = detail ? liveContract(a) : NO_CONTRACT;
         var priorityRows =
                 detail
@@ -692,7 +756,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                                             return new Priority(
                                                     p.getCategoryId(),
                                                     category.getName(),
-                                                    category.getWeight(),
+                                                    showWeight ? category.getWeight() : null,
                                                     p.getVerified(),
                                                     p.getVerifiedBy(),
                                                     verifier == null

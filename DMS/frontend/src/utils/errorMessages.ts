@@ -119,6 +119,8 @@ const messages: Record<string, (d: Details) => string> = {
     `Phòng${d.roomCode ? ` ${String(d.roomCode)}` : ''} dành cho giới tính khác, không phù hợp với sinh viên. Chọn phòng khác.`,
   STUDENT_ALREADY_ASSIGNED: () =>
     'Sinh viên đã có chỗ ở hoặc đang giữ chỗ. Tải lại trang để xem phân phòng hiện tại.',
+  BED_UNIT_MISMATCH: () =>
+    'Giường không thuộc đơn vị nguyện vọng của đơn. Chọn giường trong đơn vị sinh viên đã đăng ký.',
   TRANSFER_CROSS_UNIT: () =>
     'Chỉ chuyển sang giường cùng đơn vị quản lý. Chọn giường khác.',
   SAME_BED: () => 'Giường đích trùng giường hiện tại. Chọn giường khác.',

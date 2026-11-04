@@ -28,6 +28,7 @@ public final class DmsConstants {
         public static final String BED_NOT_AVAILABLE = "BED_NOT_AVAILABLE";
         public static final String BED_OCCUPIED = "BED_OCCUPIED";
         public static final String BED_TAKEN = "BED_TAKEN";
+        public static final String BED_UNIT_MISMATCH = "BED_UNIT_MISMATCH";
         public static final String BOOTSTRAP_USERNAME_IN_USE = "BOOTSTRAP_USERNAME_IN_USE";
         public static final String CONCURRENT_UPDATE = "CONCURRENT_UPDATE";
         public static final String CONFIG_VALUE_INVALID = "CONFIG_VALUE_INVALID";
@@ -221,6 +222,7 @@ public final class DmsConstants {
         public static final String CLOSE_AT = "closeAt";
         public static final String PERIOD = "period";
         public static final String NAME = "name";
+        public static final String WEIGHT = "weight";
         public static final String UNIT_IDS = "unitIds";
         public static final String QUOTAS = "quotas";
         public static final String PERIOD_ID = "periodId";
@@ -1151,6 +1153,8 @@ public final class DmsConstants {
         public static final String PENDING = "PENDING";
         public static final String APPROVED = "APPROVED";
         public static final String REJECTED = "REJECTED";
+        /** Sinh viên rút lựa chọn còn chờ; giữ bản ghi và lịch sử thay cho xóa cứng (V14). */
+        public static final String CANCELLED = "CANCELLED";
 
         private SummerStatus() {}
     }
@@ -1321,6 +1325,7 @@ public final class DmsConstants {
         public static final String MANUAL = "MANUAL";
         public static final String SUMMER_PERIOD_OPENED = "SUMMER_PERIOD_OPENED";
         public static final String APPLICATION_APPROVED = "APPLICATION_APPROVED";
+        public static final String APPLICATION_REJECTED = "APPLICATION_REJECTED";
         public static final String BED_HELD = "BED_HELD";
         public static final String INVOICE_ISSUED = "INVOICE_ISSUED";
         public static final String TICKET_STATUS_CHANGED = "TICKET_STATUS_CHANGED";
@@ -1433,6 +1438,11 @@ public final class DmsConstants {
         public static final String APPLICATION_PRIORITY_VERIFY = "APPLICATION_PRIORITY_VERIFY";
         public static final String SUMMER_CHOICE_APPROVE = "SUMMER_CHOICE_APPROVE";
         public static final String SUMMER_CHOICE_REJECT = "SUMMER_CHOICE_REJECT";
+        public static final String SUMMER_CHOICE_RESUBMIT = "SUMMER_CHOICE_RESUBMIT";
+        public static final String SUMMER_CHOICE_CANCEL = "SUMMER_CHOICE_CANCEL";
+        public static final String REGISTRATION_PERIOD_CREATE = "REGISTRATION_PERIOD_CREATE";
+        public static final String REGISTRATION_PERIOD_UPDATE = "REGISTRATION_PERIOD_UPDATE";
+        public static final String REGISTRATION_PERIOD_DELETE = "REGISTRATION_PERIOD_DELETE";
 
         private AuditAction() {}
     }
@@ -1450,6 +1460,7 @@ public final class DmsConstants {
         public static final String MAINTENANCE = "MAINTENANCE";
         public static final String MOVE_OUT = "MOVE_OUT";
         public static final String NOTIFICATION = "NOTIFICATION";
+        public static final String REGISTRATION_PERIOD = "REGISTRATION_PERIOD";
         public static final String ROOM = "ROOM";
         public static final String STORAGE = "STORAGE";
         public static final String SUMMER_CHOICE = "SUMMER_CHOICE";

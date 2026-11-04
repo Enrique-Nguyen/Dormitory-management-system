@@ -53,9 +53,11 @@ public class PendingContractExpiredListener {
                 && !ApplicationStatus.APPROVED.equals(before)) {
             throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
+        // Lưu lý do hủy tự động lên đơn để chi tiết đơn hiển thị giống các luồng hủy có lý do.
         jdbc.update(
-                "UPDATE room_application SET status=? WHERE id=?",
+                "UPDATE room_application SET status=?,status_reason=? WHERE id=?",
                 ApplicationStatus.CANCELLED,
+                event.reason(),
                 event.applicationId());
         history.record(
                 EntityType.APPLICATION,

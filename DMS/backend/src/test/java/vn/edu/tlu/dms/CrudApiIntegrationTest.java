@@ -43,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.account.domain.AppUser;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MeterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
@@ -1301,6 +1302,72 @@ class CrudApiIntegrationTest {
                 .andExpect(jsonPath("$.name").value("ADMIN cập nhật"));
         mvc.perform(delete("/api/registration-periods/" + periodId).with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isNoContent());
+    }
+
+    /**
+     * KTV được cấp REGISTRATION_PERIOD_READ trong ma trận quyền nên tra cứu được đợt có đơn vị của
+     * mình; đợt chỉ thuộc đơn vị khác vẫn trả 404. Tạo/sửa/xóa đợt đều ghi audit.
+     */
+    @Test
+    void technicianReadsOwnUnitPeriodsAndPeriodWritesAreAudited() throws Exception {
+        Long semesterId = createSemester();
+        String created =
+                mvc.perform(
+                                post("/api/registration-periods/save-or-update")
+                                        .with(asUser(adminId, "ADMIN"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                """
+                                                {"semesterId":%d,"kind":"REGULAR","name":"Đợt KTV đọc",
+                                                "openAt":"2040-08-01T08:00:00+07:00","closeAt":"2040-08-31T08:00:00+07:00",
+                                                "unitIds":[%d]}
+                                                """
+                                                        .formatted(semesterId, firstUnitId)))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long periodId = mapper.readTree(created).get("id").asLong();
+        mvc.perform(
+                        get("/api/registration-periods/" + periodId)
+                                .with(asUser(technicianId, "TECHNICIAN")))
+                .andExpect(status().isOk());
+        mvc.perform(
+                        searchByPage("/api/registration-periods", "q", "Đợt KTV đọc")
+                                .with(asUser(technicianId, "TECHNICIAN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(periodId));
+
+        Long otherTechnicianId = createUser("TECHNICIAN", otherUnitId);
+        mvc.perform(
+                        get("/api/registration-periods/" + periodId)
+                                .with(asUser(otherTechnicianId, "TECHNICIAN")))
+                .andExpect(status().isNotFound());
+
+        mvc.perform(
+                        post("/api/registration-periods/save-or-update")
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(withId(periodId, "{\"name\":\"Đợt KTV đọc 2\"}")))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/registration-periods/" + periodId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isNoContent());
+        for (String action :
+                List.of(
+                        AuditAction.REGISTRATION_PERIOD_CREATE,
+                        AuditAction.REGISTRATION_PERIOD_UPDATE,
+                        AuditAction.REGISTRATION_PERIOD_DELETE)) {
+            assertThat(
+                            jdbc.queryForObject(
+                                    "SELECT count(*) FROM audit_log WHERE action=? AND entity_type=?"
+                                            + " AND entity_id=? AND actor_id=?",
+                                    Long.class,
+                                    action,
+                                    EntityType.REGISTRATION_PERIOD,
+                                    periodId,
+                                    adminId))
+                    .isEqualTo(1L);
+        }
     }
 
     @Test

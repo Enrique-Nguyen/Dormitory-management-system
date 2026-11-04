@@ -1,6 +1,6 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.13**, 04/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.14**, 04/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.15 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
 > DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak, ma trận quyền động V5, quyền V6, ghi chú xác minh diện ưu tiên V7 và sở thích giao diện V8; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
@@ -9,6 +9,7 @@
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.14 | 04/11/2026 | Flyway V14 thêm trạng thái `CANCELLED` cho `summer_choice` (sinh viên rút lựa chọn đang chờ thay cho xóa cứng; bản CANCELLED/REJECTED được mở lại về PENDING, giữ `UNIQUE(contract_id, semester_id)`). |
 | 0.13 | 04/11/2026 | Flyway V10–V13 chuẩn hóa danh mục, quan hệ hồ sơ, tầng theo tòa, vị trí kho và tiện nghi nhiều lựa chọn; giữ dữ liệu cũ bằng backfill trước khi bỏ các cột nhãn dư thừa. |
 | 0.12 | 31/10/2026 | Flyway V8 thêm bảng `user_preference` (1-1 với `app_user`) lưu sở thích giao diện theo tài khoản: theme mode, accent preset, mật độ bảng, version chống ghi đè; chủ sở hữu lấy từ `/api/me`, không nhận ID từ client. |
 | 0.1 | 10/10/2026 | Bản đầu tiên: ERD, DDL PostgreSQL 16, partial unique index, ánh xạ lỗi, JPA notes |
@@ -32,6 +33,10 @@ Flyway V4 thêm `app_user.keycloak_user_id VARCHAR(255)` với unique index từ
 Version DMS tiếp tục tăng khi khóa/reset/thay đổi quyền/logout tại DMS và được đưa vào JWT qua mapper từ thuộc tính chỉ Admin được sửa. Principal JWT không ghi Spring Session. Các mô tả BCrypt/session v0.4 bên dưới thuộc chế độ legacy-session; không áp dụng đăng nhập mặc định. V1–V3 giữ nguyên.
 
 DB và Keycloak không có transaction phân tán; rollback dùng thao tác bù, xóa danh tính sau commit. Mất kết nối lúc bù cần đối soát. Không thay thế migration bằng chạy lại snapshot SQL.
+
+### Lựa chọn hè V14 (04/11/2026)
+
+`V14__summer_choice_cancelled.sql` thay `summer_choice_status_check` bằng `CHECK (status IN ('PENDING','APPROVED','REJECTED','CANCELLED'))`. Sinh viên rút lựa chọn đang chờ thì chuyển `CANCELLED` và ghi `status_history`; gửi lại cùng học kỳ mở lại chính bản ghi đó (REJECTED/CANCELLED → PENDING), nên vẫn giữ `UNIQUE(contract_id, semester_id)`.
 
 ### Danh mục dùng chung V10–V13 (04/11/2026)
 
@@ -221,7 +226,7 @@ Mật khẩu chỉ lưu hash BCrypt; mật khẩu tạm trả một lần, khôn
 | `contract_extension_request` | Yêu cầu gia hạn; `source = SUMMER_STAY` khi ở hè | ≤ 1 yêu cầu PENDING mỗi hợp đồng | FR-CON-06, FR-REG-15 |
 | `room_transfer_request` | Yêu cầu chuyển phòng | ≤ 1 PENDING mỗi hợp đồng; APPROVED phải có giường đích | FR-CON-07 |
 | `move_out_record` | Biên bản trả phòng | 1-1 với hợp đồng; `refund_amount = max(số dư, 0)` | FR-CON-09, BR-10 |
-| `summer_choice` | Phương án hè: ở hè / tạm rời / rời KTX | `UNIQUE(contract_id, semester_id)` | FR-REG-14 |
+| `summer_choice` | Phương án hè: ở hè / tạm rời / rời KTX. Trạng thái `PENDING/APPROVED/REJECTED/CANCELLED` (V14) | `UNIQUE(contract_id, semester_id)`; không xóa cứng, rút → CANCELLED | FR-REG-14 |
 | `storage_record` | Phiếu gửi đồ; lưu **giường cũ** để gợi ý phân lại | ≤ 1 phiếu chưa nhận lại mỗi hợp đồng | FR-CON-11, 12 |
 
 ### 3.5. Tài chính
