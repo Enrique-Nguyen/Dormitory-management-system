@@ -1,13 +1,17 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.23**, 04/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.15 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.13, `DMS-UI-UX-Design.md` (mục 27.2)
+> **Phiên bản 0.27**, 05/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.17 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.13, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
 ### Lịch sử thay đổi
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.27 | 05/11/2026 | Nhãn kỳ thu khi hóa đơn đã có semesterId nhưng chưa có tên/năm học hiện Học kỳ (ID: …); không suy đoán tên kỳ, không gọi thêm API. Giữ cách hiển thị đầy đủ khi response đã đủ metadata. |
+| 0.26 | 05/11/2026 | Quyết định TV5: CRUD hóa đơn dựa vào nguồn MANUAL/ISSUED lưu ở V15; MANUAL + UNPAID sửa tổng tiền/hạn đóng hoặc xóa theo quyền, không suy nguồn từ dòng/lịch sử. Giữ hạn cũ khi sửa tiền; chỉ kiểm ngày quá khứ khi tạo/đổi hạn. Backend phải được build và chạy bản mới để trả metadata học kỳ và allowedActions. |
+| 0.25 | 05/11/2026 | Danh sách/chi tiết hóa đơn trả `allowedActions` theo quyền động, phạm vi ghi và điều kiện chưa sử dụng. Sửa/Xóa chỉ hiện với hóa đơn UNPAID chưa có dòng/lịch sử trạng thái; Staff đọc liên đơn vị không được thao tác ngoài đơn vị, sinh viên không có hành động ghi. `confirm-payment` tiếp tục chỉ trả từ chi tiết. |
+| 0.24 | 05/11/2026 | Response danh sách/chi tiết hóa đơn bổ sung `semesterName`, `semesterType`, `academicYear` từ học kỳ liên kết cho ROOM_FEE; UTILITY trả null cho các trường này. Cột Kỳ thu và chi tiết ở cổng quản lý/sinh viên hiển thị theo loại, không suy học kỳ từ ngày phát hành; giữ quyền/phân trang và các field cũ. |
 | 0.23 | 04/11/2026 | Sửa theo review module đăng ký KTX (SRS 0.16): `POST /api/applications/{id}/assign` trả `409 BED_UNIT_MISMATCH` khi giường không thuộc đơn vị nguyện vọng (kể cả ADMIN); danh sách đơn của Staff mặc định `priorityScore,desc` rồi `submittedAt,asc`; sinh viên nhận `weight: null` ở diện ưu tiên; thông báo `APPLICATION_REJECTED` mới, duyệt/từ chối/giữ chỗ đều báo sinh viên; KTV đọc được đợt đăng ký của đơn vị mình, tạo/sửa/xóa đợt ghi audit; lựa chọn hè chỉ tạo/sửa khi đợt hè đang mở (`409 PERIOD_NOT_OPEN`), sửa bản REJECTED là gửi lại về PENDING, `DELETE` chuyển CANCELLED thay vì xóa cứng và tạo lại cùng học kỳ mở lại bản ghi đó; `q` của danh sách hè khớp họ tên, tài khoản, mã sinh viên, mã hợp đồng. |
 | 0.22 | 04/11/2026 | Sửa theo review Điện nước/Hóa đơn/Tiền cọc: phạm vi hóa đơn phí phòng của Staff chỉ tính đơn nguyện vọng APPROVED/ASSIGNED trong đợt của học kỳ; `issue-utility` phát hành cho mọi phòng có người ở trong tháng (kể cả đã trả phòng sau đó), không còn lọc phòng ACTIVE/đang ở; trừ cọc chỉ cho hợp đồng ACTIVE, nếu không `409 CONTRACT_NOT_ACTIVE`; hoàn cọc trực tiếp bắt buộc có `move_out_record` và `amount` đúng `refund_amount` đã chốt, nếu không `409 INVALID_STATE_TRANSITION`; đơn giá mới không được có `effectiveFrom` trước hôm nay (`400 VALIDATION_FAILED`, trường `effectiveFrom`); sửa chỉ số gửi `replacementReason: ""` xóa cả nhóm thay đồng hồ; bỏ endpoint `POST /api/contracts/{id}/initial-deposit` (thu cọc ban đầu chỉ qua `POST /api/contracts/{id}/activate`); item của `deposit-balances/search-by-page` trả `allowedActions: []`, hành động chỉ tính ở `GET /api/contracts/{id}/deposit-balance`; nút xác nhận thanh toán chỉ dựa trên `allowedActions` của chi tiết hóa đơn. |
 | 0.21 | 04/11/2026 | Danh mục dùng chung, lookup form/bộ lọc, tham chiếu hồ sơ bằng ID, tiện nghi nhiều lựa chọn, tầng theo tòa và vị trí kho; giữ mã tự nhiên của năm học/hạng mục sửa chữa. |
@@ -90,7 +94,7 @@ Phạm vi vẫn là khung CRUD và React đơn giản. Từ phiên bản 0.10, m
 - Lựa chọn hè: `/api/summer-choices/save-or-update`, body có `contractId`, `semesterId`, `choice` (STAY/TEMP_LEAVE/LEAVE). Chỉ sinh viên sở hữu tạo/sửa khi đợt hè của học kỳ đang mở cho đơn vị của mình; sửa bản PENDING hoặc REJECTED (REJECTED → PENDING là gửi lại); sửa không đổi hợp đồng/học kỳ nguồn. Xóa là rút: PENDING → CANCELLED, giữ bản ghi và lịch sử. Chưa cập nhật chỗ ở/hợp đồng.
 - Chỉ số: `/api/utility-readings/save-or-update`, lưu một bản ghi gồm `roomId`, `meterType`, `billingMonth`, `startReading`, `endReading`. `billingMonth` là ngày đầu tháng. Chỉ số đã dùng trong hóa đơn hoặc có kỳ sau bị khóa sửa/xóa; khi sửa không đổi phòng/loại/kỳ. Khi sửa, `replacementReason` là chuỗi rỗng sẽ xóa cả nhóm thay đồng hồ (`oldMeterFinal`, `newMeterStart`, `replacementReason`); gửi null hoặc bỏ qua thì giữ nguyên.
 - Đơn giá: `/api/utility-rates/save-or-update`; bản mới phải có `effectiveFrom` từ hôm nay trở đi (lùi ngày trả 400 VALIDATION_FAILED, trường `effectiveFrom`) để không đổi giá của kỳ đã qua. Chỉ sửa/xóa bản giá tương lai đủ điều kiện theo người tạo/phạm vi. Giá đã có hiệu lực được giữ nguyên, thay giá bằng bản mới.
-- Hóa đơn: `/api/invoices/save-or-update`; tạo nhận `type`, `totalAmount`, `dueDate` và `studentId`/`semesterId` cho ROOM_FEE hoặc `roomId`/`billingMonth` cho UTILITY. Chỉ tạo UNPAID, chưa có dòng chi tiết/tự tính tiền. Sửa tổng tiền/hạn đóng; DELETE `/{id}` chỉ khi chưa có dòng/lịch sử và chưa thanh toán.
+- Hóa đơn: `/api/invoices/save-or-update`; tạo nhận `type`, `totalAmount`, `dueDate` và `studentId`/`semesterId` cho ROOM_FEE hoặc `roomId`/`billingMonth` cho UTILITY. Chỉ tạo UNPAID, chưa có dòng chi tiết/tự tính tiền. Server gán nguồn MANUAL, không nhận nguồn từ client. Sửa tổng tiền/hạn đóng hoặc DELETE `/{id}` khi nguồn MANUAL và UNPAID, đủ quyền/phạm vi; giữ lịch sử/audit và ràng buộc tham chiếu tài chính. ISSUED hoặc PAID khóa CRUD.
 - Sửa chữa: `/api/maintenance-requests/save-or-update`, giữ upload `multipart/form-data` với phần JSON `data` và phần `photos`. Tạo xử lý vị trí/ảnh; sửa ticket OPEN chỉ `category`, `severity`, `description`, giữ vị trí và ảnh đã có. DELETE `/{id}` chuyển CANCELLED và giữ lịch sử; action xử lý có sẵn giữ nguyên.
 - Thông báo: danh sách quản trị là `/api/notifications/published/search-by-page`, chi tiết GET `/api/notifications/published/{id}`. `/api/notifications/save-or-update` tạo/sửa thông báo thủ công của mình; sửa nội dung giữ phạm vi. DELETE `/api/notifications/{id}` giữ nguyên. Hộp thư là `/api/notifications/search-by-page`; đánh dấu đã đọc và đếm chưa đọc là endpoint chuyên biệt.
 - Hồ sơ và cấu hình chỉ sửa: GET `/api/me/profile`, POST `/api/me/profile/save-or-update`; cấu hình POST `/api/admin/configs/search-by-page`, POST `/api/admin/configs/save-or-update` với `{key,value}`, không tạo khóa mới. Sở thích giao diện dùng GET `/api/me/preferences` và POST `/api/me/preferences/save-or-update` (mục 4.19), thuộc đúng tài khoản đang đăng nhập.
@@ -967,6 +971,10 @@ Một transaction: chiếm giường qua `BedOccupancyService` (mở phân phòn
 
 ### 4.14. Phát hành hóa đơn
 
+**Thông tin kỳ thu trong response (05/11/2026):** `POST /api/invoices/search-by-page`, `POST /api/me/invoices/search-by-page`, `GET /api/invoices/{id}` và response xác nhận thanh toán giữ các field hiện có, bổ sung ba field chỉ đọc `semesterName`, `semesterType`, `academicYear`. Với ROOM_FEE, lấy tên/loại/năm học từ `semesterId` đã liên kết; ví dụ `{ "semesterId": 7, "semesterName": "Học kỳ 1", "semesterType": "HK1", "academicYear": "2026-2027", "billingMonth": null }`. Với UTILITY, ba field bổ sung là null, kỳ thu vẫn lấy từ `billingMonth`. Metadata chỉ được bổ sung sau khi đã lọc quyền và phân trang hóa đơn, không đòi thêm SEMESTER_READ của người xem; đọc nhãn các học kỳ trên cùng trang trong một lần. Không đổi payload lưu hóa đơn, điều kiện phát hành hoặc dữ liệu đã lưu.
+
+Giao diện dùng cột **Kỳ thu**: phí phòng hiện loại học kỳ và năm học (`HK1 · 2026-2027`, `Hè · 2026-2027`), điện nước hiện `Tháng 11/2026`. Chi tiết phí phòng hiện tên học kỳ đầy đủ và năm học; không có liên kết kỳ hiện `Thiếu thông tin kỳ thu`; có semesterId nhưng chưa nhận đủ metadata hiện `Học kỳ (ID: …)` theo đúng ID đã liên kết, cần build/chạy backend mới để hiện tên kỳ và năm học. Giao diện quản lý và sinh viên đều dùng metadata trong response hóa đơn, không gọi API danh mục để bù thông tin và không yêu cầu thêm SEMESTER_READ. Không đoán học kỳ từ ngày phát hành. Áp dụng cho cổng quản lý và sinh viên.
+
 Hai endpoint đã triển khai, đều yêu cầu quyền INVOICE_CREATE:
 
 - POST /api/invoices/issue-room-fee nhận { "semesterId": 7 }.
@@ -987,6 +995,8 @@ Response chung:
 Đối tượng đã có hóa đơn hoặc phòng thiếu chỉ số được bỏ qua. Một request là một transaction theo SRS UC-21; lỗi không dự kiến rollback cả request. Phí phòng khóa student_profile theo ID tăng dần rồi đọc lại phân phòng; điện nước khóa các phòng theo ID tăng dần, sau đó khóa chỉ số. Hai request phát hành đồng thời được tuần tự hóa trước kiểm tra tồn tại và không sinh trùng. Mỗi request ghi INVOICE_BATCH_ISSUE cùng transaction, kèm loại, học kỳ/kỳ điện nước, đơn vị và kết quả.
 
 Thông báo phát hành tự động theo thiết kế FR-BIL-07 chưa nằm trong thay đổi sửa review này; không coi là đã triển khai.
+
+**Thao tác hóa đơn (05/11/2026):** response danh sách hóa đơn trả `allowedActions` là mảng (không còn null): chỉ có `edit` khi đủ INVOICE_UPDATE, `delete` khi đủ INVOICE_DELETE, hóa đơn UNPAID và nguồn MANUAL được server lưu trong `invoice.creation_source`. Nguồn ISSUED luôn khóa CRUD; lịch sử trạng thái không tự khóa hóa đơn MANUAL. Các thao tác chỉ được cấp cho Staff đúng phạm vi ghi hoặc Admin; quyền đọc tổng hợp không mở rộng quyền ghi. Chi tiết trả cùng các thao tác CRUD này và thêm `confirm-payment` nếu UNPAID, có INVOICE_UPDATE và đúng phạm vi ghi, kể cả hóa đơn đã phát hành có chi tiết/lịch sử. Sinh viên, hóa đơn PAID hoặc bản ghi ngoài phạm vi ghi trả mảng rỗng. Trạng thái ghi được tra cứu gộp cho các ID trên trang đã lọc quyền/phân trang; không gọi từng ID và không nhận nguồn tạo do client tự khai. Giao diện dùng `allowedActions` để hiện Sửa/Xóa ở danh sách/chi tiết; máy chủ tiếp tục khóa và kiểm tra lại khi lưu/xóa.
 
 ### 4.15. Xác nhận thanh toán
 
@@ -1273,7 +1283,7 @@ Tên hành động = đoạn cuối URL. Policy ở backend (SAD 4.3) cài đún
 | | IN_PROGRESS | | | `add-note`, `resolve` |
 | | RESOLVED | `accept`, `reopen` (người tạo) | `accept`, `reopen` (ticket do Staff tạo, hoặc sinh viên tạo đã trả phòng) | |
 | | CLOSED | | `conclude` (ticket phòng, chưa kết luận) | |
-| Hóa đơn | UNPAID | | `confirm-payment`, `add-adjustment` (chưa phát hành, xem mục 3.6) | |
+| Hóa đơn | UNPAID | Staff đúng đơn vị / Admin, đủ quyền từng thao tác | `edit`, `delete` chỉ khi MANUAL + UNPAID; `confirm-payment` chỉ trong chi tiết. `add-adjustment` chưa phát hành (mục 3.6) | Nguồn ISSUED khóa CRUD, không khóa xác nhận thu tiền khi còn UNPAID |
 | Phiếu gửi đồ | chưa nhận lại | | `return-storage` | |
 
 *Ghi chú cho yêu cầu chuyển phòng:* Chỉ khi ở trạng thái `PENDING` mới có hành động. Sinh viên chủ yêu cầu có `cancel` (chỉ khi có quyền `ROOM_TRANSFER_DELETE`). Staff cùng đơn vị của giường hiện tại và ADMIN có `approve`, `reject` (chỉ khi có quyền `ROOM_TRANSFER_APPROVE`). Danh sách `allowedActions` trong chi tiết yêu cầu chuyển phòng luôn được lọc theo quyền thực tế của người xem (`guard.hasPermission(...)`), giúp giao diện chỉ hiển thị đúng các nút bấm người dùng được phép thực thi.

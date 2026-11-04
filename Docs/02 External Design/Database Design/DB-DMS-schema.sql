@@ -1,10 +1,11 @@
 -- =====================================================================
 -- DMS - Hệ thống quản lý ký túc xá sinh viên
--- Lược đồ nghiệp vụ, bản 0.7 (31/10/2026): Keycloak, ma trận quyền động, sở thích tài khoản
+-- Lược đồ nghiệp vụ, bản 0.8 (05/11/2026): bổ sung nguồn hóa đơn theo V15
 -- DBMS: PostgreSQL 16
 -- Căn cứ: SRS-DMS.md v0.14. Giải thích chi tiết: DB-Design-DMS.md v0.12
 -- Đây là snapshot bảng nghiệp vụ hiện tại, gồm bổ sung của migration V3–V8.
 -- Ứng dụng nâng cấp bằng Flyway V1–V8; V2 tạo bảng Spring Session riêng.
+-- Cột nguồn hóa đơn trong snapshot này bổ sung theo V15; khi nâng cấp dùng toàn bộ migration thực tế.
 --
 -- Quy ước:
 --   * Tên bảng, cột: snake_case, số ít.
@@ -463,6 +464,8 @@ CREATE TABLE invoice (
     id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     code             VARCHAR(20) NOT NULL UNIQUE,
     type             VARCHAR(10) NOT NULL CHECK (type IN ('ROOM_FEE','UTILITY')),
+    creation_source  VARCHAR(10) NOT NULL DEFAULT 'ISSUED'
+                     CONSTRAINT ck_invoice_creation_source CHECK (creation_source IN ('MANUAL','ISSUED')),
     -- phí phòng: theo (sinh viên, học kỳ)
     student_id       BIGINT REFERENCES student_profile(user_id),
     semester_id      BIGINT REFERENCES semester(id),

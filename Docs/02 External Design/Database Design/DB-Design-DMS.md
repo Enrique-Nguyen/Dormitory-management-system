@@ -1,7 +1,7 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.14**, 04/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
-> Căn cứ: `SRS-DMS.md` v0.15 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
+> **Phiên bản 0.15**, 05/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> Căn cứ: `SRS-DMS.md` v0.17 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
 > DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak, ma trận quyền động V5, quyền V6, ghi chú xác minh diện ưu tiên V7 và sở thích giao diện V8; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
 
@@ -9,6 +9,7 @@
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.15 | 05/11/2026 | Flyway V15 bổ sung `invoice.creation_source` MANUAL/ISSUED, server quyết định nguồn tạo; backfill MANUAL chỉ cho bản có audit CRUD_CREATE đúng ID và chưa có dòng tài chính, bản không xác định giữ ISSUED. CRUD theo nguồn và trạng thái, giữ audit/lịch sử và khóa ngoại. |
 | 0.14 | 04/11/2026 | Flyway V14 thêm trạng thái `CANCELLED` cho `summer_choice` (sinh viên rút lựa chọn đang chờ thay cho xóa cứng; bản CANCELLED/REJECTED được mở lại về PENDING, giữ `UNIQUE(contract_id, semester_id)`). |
 | 0.13 | 04/11/2026 | Flyway V10–V13 chuẩn hóa danh mục, quan hệ hồ sơ, tầng theo tòa, vị trí kho và tiện nghi nhiều lựa chọn; giữ dữ liệu cũ bằng backfill trước khi bỏ các cột nhãn dư thừa. |
 | 0.12 | 31/10/2026 | Flyway V8 thêm bảng `user_preference` (1-1 với `app_user`) lưu sở thích giao diện theo tài khoản: theme mode, accent preset, mật độ bảng, version chống ghi đè; chủ sở hữu lấy từ `/api/me`, không nhận ID từ client. |
@@ -236,7 +237,7 @@ Mật khẩu chỉ lưu hash BCrypt; mật khẩu tạm trả một lần, khôn
 | `deposit_transaction` | Sổ cọc: thu / trừ / bù / hoàn | Dấu số tiền theo loại; thu cọc 1 lần, hoàn cọc 1 lần; mỗi ticket trừ 1 lần mỗi hợp đồng; DEDUCTION bắt buộc có ticket và hạn bù | FR-BIL-09, BR-10 |
 | `utility_rate` | Đơn giá điện, nước có ngày hiệu lực | `UNIQUE(meter_type, effective_from)` | FR-BIL-01 |
 | `utility_reading` | Chỉ số tháng theo phòng; có cột thay đồng hồ; `consumption` là cột tính | `UNIQUE(room_id, meter_type, billing_month)`; cuối ≥ đầu | FR-BIL-02, 03, BR-03 |
-| `invoice` | Hai loại: `ROOM_FEE` (sinh viên, học kỳ), `UTILITY` (phòng, tháng) | CHECK đúng bộ cột theo loại; 2 partial unique index; PAID phải đủ người xác nhận, thời gian, hình thức | FR-BIL-04..08, BR-04 |
+| `invoice` | Hai loại: `ROOM_FEE` (sinh viên, học kỳ), `UTILITY` (phòng, tháng); V15 thêm `creation_source`: MANUAL hoặc ISSUED, bất biến qua API lưu | CHECK đúng bộ cột theo loại; 2 partial unique index; PAID phải đủ người xác nhận, thời gian, hình thức | FR-BIL-04..08, BR-04 |
 | `invoice_item` | Dòng hóa đơn; đơn giá chụp lúc phát hành | Dòng phí phòng trỏ về phân phòng; dòng điện nước trỏ về chỉ số; dòng điều chỉnh bắt buộc lý do | FR-BIL-04, 05, 12 |
 
 ### 3.6. Sửa chữa, thông báo, lịch sử
@@ -490,3 +491,9 @@ Flyway `V6__room_transfer_approve_permission.sql` bổ sung quyền duyệt chuy
 ### Bổ sung tra cứu sổ cọc v0.9 — 25/10/2026
 
 View v_deposit_balance giữ nguyên phạm vi ACTIVE/EXPIRED/TERMINATED. API danh sách và chi tiết lấy dormitory_contract làm gốc, LEFT JOIN view và tổng sổ cái để không bỏ sót PENDING. Thêm nhãn hợp đồng/sinh viên qua JOIN; không lưu dữ liệu suy ra và không sửa migration đã áp dụng. Giữ khóa hợp đồng trước kiểm tra trạng thái và ghi sổ cọc. Phát hành phí phòng khóa student_profile theo ID tăng dần; phát hành điện nước khóa phòng rồi chỉ số theo ID tăng dần trước kiểm tra hóa đơn.
+
+### Nguồn tạo hóa đơn — V15 (05/11/2026)
+
+`invoice.creation_source` là VARCHAR(10), NOT NULL, mặc định ISSUED và có CHECK MANUAL/ISSUED. Luồng CRUD gán MANUAL, luồng phát hành gán ISSUED; client không được gửi hoặc đổi nguồn. Hóa đơn MANUAL + UNPAID được sửa tổng tiền/hạn đóng hoặc xóa theo quyền/phạm vi, lịch sử trạng thái tự nó không khóa thao tác. Ngày hạn đóng cũ được giữ nguyên khi sửa tổng tiền; chỉ kiểm tra không ở quá khứ khi tạo hoặc đổi ngày. Hóa đơn ISSUED hoặc PAID khóa CRUD. Không xóa audit/lịch sử và không bỏ các tham chiếu tài chính để cưỡng ép xóa.
+
+Backfill chỉ phân loại MANUAL khi có audit INVOICE/CRUD_CREATE đúng ID và không có invoice_item; nguồn thiếu bằng chứng giữ ISSUED để tránh mở quyền sửa hóa đơn đã phát hành. Migration không đổi số tiền, kỳ thu, trạng thái thanh toán hoặc xóa dữ liệu. Dữ liệu tạo tay bằng API hiện có có audit để nhận diện; dữ liệu SQL cũ không có bằng chứng không tự nhận là tạo tay.
