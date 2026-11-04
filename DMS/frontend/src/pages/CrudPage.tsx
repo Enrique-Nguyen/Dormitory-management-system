@@ -386,6 +386,8 @@ function LookupInput({
       {remote ? (
         <ReferenceSelect
           aria-label={field.label}
+          getPopupContainer={(trigger) => trigger.parentElement ?? document.body}
+          popupClassName="dms-crud-select-popup"
           endpoint={field.lookup!}
           filters={lookupFilters}
           valueField={field.lookupValue}
@@ -402,6 +404,8 @@ function LookupInput({
       ) : (
         <Select
           aria-label={field.label}
+          getPopupContainer={(trigger) => trigger.parentElement ?? document.body}
+          popupClassName="dms-crud-select-popup"
           showSearch
           optionFilterProp="label"
           mode={field.multiple ? 'multiple' : undefined}
@@ -1485,7 +1489,10 @@ export default function CrudPage({ resource }: { resource: string }) {
                   canCreate={canCreate && !['students', 'adminStudents'].includes(resource)} canUpdate={canUpdate}
                   onSave={saveExcelRow} onComplete={refresh} onBlockedChange={setExcelBlocked} />
               )}
+              <span style={{ display: 'inline-flex', position: 'relative' }}>
               <Dropdown
+                getPopupContainer={(trigger) => trigger.parentElement!}
+                styles={{ root: { top: '100%', right: 0, bottom: 'auto', left: 'auto' } }}
                 menu={{
                   items: [
                     {
@@ -1516,6 +1523,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                   <Button icon={<MoreOutlined />} aria-label="Thao tác khác" className="dms-toolbar-more-btn" />
                 </Tooltip>
               </Dropdown>
+              </span>
             </Space>
           }
           filters={!config.singleton && !!config.filters?.length && (

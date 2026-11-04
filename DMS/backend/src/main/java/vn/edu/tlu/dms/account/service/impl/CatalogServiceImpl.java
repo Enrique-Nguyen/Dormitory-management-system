@@ -71,6 +71,14 @@ public class CatalogServiceImpl implements CatalogService {
             where.append(" AND (strpos(lower(code), lower(:q)) > 0 OR strpos(lower(name), lower(:q)) > 0)");
             parameters.addValue("q", input.q().trim());
         }
+        if (input.code() != null && !input.code().isBlank()) {
+            where.append(" AND strpos(lower(code), lower(:code)) > 0");
+            parameters.addValue("code", input.code().trim());
+        }
+        if (input.name() != null && !input.name().isBlank()) {
+            where.append(" AND strpos(lower(name), lower(:name)) > 0");
+            parameters.addValue("name", input.name().trim());
+        }
         if (input.active() != null) {
             where.append(" AND active = :active");
             parameters.addValue("active", input.active());
@@ -115,7 +123,7 @@ public class CatalogServiceImpl implements CatalogService {
         if (!creating && !code.equals(before.get(ApiField.CODE))) {
             throw BusinessException.invalid(ApiField.CODE, Catalog.IMMUTABLE_CODE);
         }
-        if (Catalog.ACADEMIC_YEARS.equals(kind)
+        if (creating && Catalog.ACADEMIC_YEARS.equals(kind)
                 && (!code.matches("[0-9]{4}-[0-9]{4}")
                 || Integer.parseInt(code.substring(5)) != Integer.parseInt(code.substring(0, 4)) + 1)) {
             throw BusinessException.invalid(ApiField.CODE, Catalog.INVALID_YEAR);

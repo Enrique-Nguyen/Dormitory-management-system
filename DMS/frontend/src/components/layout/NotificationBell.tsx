@@ -239,33 +239,37 @@ export default function NotificationBell({ to }: { to: string }) {
   )
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={setOpen}
-      trigger="click"
-      placement="bottomRight"
-      arrow={{ pointAtCenter: true }}
-      overlayInnerStyle={{ padding: 0, borderRadius: 12, overflow: 'hidden' }}
-      content={popoverContent}
-    >
-      <Button
-        type="text"
-        shape="circle"
-        aria-label={count > 0 ? `Thông báo, ${count} chưa đọc` : 'Thông báo'}
-        style={{
-          width: 36,
-          height: 36,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: open ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-          background: open ? 'var(--color-surface-hover)' : 'transparent',
-        }}
+    <span style={{ display: 'inline-flex', position: 'relative' }}>
+      <Popover
+        getPopupContainer={(trigger) => trigger.parentElement!}
+        styles={{ root: { top: '100%', right: 0, bottom: 'auto', left: 'auto' } }}
+        open={open}
+        onOpenChange={setOpen}
+        trigger="click"
+        placement="bottomRight"
+        arrow={{ pointAtCenter: true }}
+        overlayInnerStyle={{ padding: 0, borderRadius: 12, overflow: 'hidden' }}
+        content={popoverContent}
       >
-        <Badge count={count} size="small" overflowCount={99}>
-          <BellOutlined style={{ fontSize: 18 }} aria-hidden="true" />
-        </Badge>
-      </Button>
-    </Popover>
+        <Button
+          type="text"
+          shape="circle"
+          aria-label={count > 0 ? `Thông báo, ${count} chưa đọc` : 'Thông báo'}
+          style={{
+            width: 36,
+            height: 36,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: open ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+            background: open ? 'var(--color-surface-hover)' : 'transparent',
+          }}
+        >
+          <Badge count={count} size="small" overflowCount={99}>
+            <BellOutlined style={{ fontSize: 18 }} aria-hidden="true" />
+          </Badge>
+        </Button>
+      </Popover>
+    </span>
   )
 }

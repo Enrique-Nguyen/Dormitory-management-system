@@ -398,7 +398,11 @@ const catalogResource = (title: string, endpoint: string, nameLength = 200, code
   title,
   endpoint,
   createDefaults: { active: true },
-  filters: [booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng')],
+  filters: [
+    text('code', 'Mã', false, codeLength),
+    text('name', 'Tên', false, nameLength),
+    booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng'),
+  ],
   fields: [
     { ...text('code', 'Mã', true, codeLength), createOnly: true },
     text('name', 'Tên', true, nameLength),
@@ -440,6 +444,8 @@ export const resources: Record<string, CrudResource> = {
     createDefaults: { active: true },
     filters: [
       ref('buildingId', 'Tòa nhà', '/buildings', 'name', false),
+      { ...number('floor', 'Số tầng', 0), required: false },
+      text('name', 'Tên tầng', false),
       booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng'),
     ],
     fields: [
@@ -457,6 +463,8 @@ export const resources: Record<string, CrudResource> = {
     createDefaults: { active: true },
     filters: [
       ref('managementUnitId', 'Đơn vị', '/management-units', 'name', false),
+      text('code', 'Mã vị trí', false, 30),
+      text('name', 'Tên vị trí', false, 100),
       booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng'),
     ],
     fields: [
@@ -472,7 +480,10 @@ export const resources: Record<string, CrudResource> = {
     title: 'Đơn vị quản lý',
     endpoint: '/management-units',
     writeEndpoint: '/admin/management-units',
-    filters: [{ ...ref('code', 'Đơn vị', '/management-units', 'name', false), lookupValue: 'code' }],
+    filters: [
+      { ...ref('code', 'Đơn vị', '/management-units', 'name', false), lookupValue: 'code' },
+      text('name', 'Tên đơn vị', false),
+    ],
     fields: [text('code', 'Mã đơn vị', true, 20), text('name', 'Tên đơn vị')],
     columns: columns(['code', 'Mã'], ['name', 'Tên đơn vị']),
     useListRecordForEdit: true,
@@ -482,7 +493,12 @@ export const resources: Record<string, CrudResource> = {
     title: 'Tòa nhà',
     endpoint: '/buildings',
     writeEndpoint: '/admin/buildings',
-    filters: [ref('managementUnitId', 'Đơn vị', '/management-units', 'name', false)],
+    filters: [
+      ref('managementUnitId', 'Đơn vị', '/management-units', 'name', false),
+      text('code', 'Mã tòa', false, 10),
+      text('name', 'Tên tòa', false),
+      { ...number('depositAmount', 'Mức cọc (đ)', 0), required: false },
+    ],
     fields: [
       text('code', 'Mã tòa', true, 10),
       text('name', 'Tên tòa'),
@@ -502,7 +518,13 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.ROOM_TYPE,
     title: 'Loại phòng',
     endpoint: '/room-types',
-    filters: [booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng')],
+    filters: [
+      text('name', 'Tên loại', false, 50),
+      booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng'),
+      { ...number('bedCount', 'Số giường', 1), required: false },
+      { ...number('priceMain', 'Giá học kỳ (đ)', 0), required: false },
+      { ...number('priceSummer', 'Giá hè (đ)', 0), required: false },
+    ],
     fields: [
       text('name', 'Tên loại', true, 50),
       { ...number('bedCount', 'Số giường', 1), max: 12 },
@@ -526,6 +548,11 @@ export const resources: Record<string, CrudResource> = {
     title: 'Học kỳ',
     endpoint: '/semesters',
     filters: [
+      text('name', 'Tên học kỳ', false, 50),
+      { ...date('startDateFrom', 'Ngày bắt đầu từ'), required: false },
+      { ...date('startDateTo', 'Ngày bắt đầu đến'), required: false },
+      { ...date('endDateFrom', 'Ngày kết thúc từ'), required: false },
+      { ...date('endDateTo', 'Ngày kết thúc đến'), required: false },
       { ...select('type', 'Loại học kỳ', ['HK1', 'HK2', 'SUMMER']), required: false },
       { ...ref('academicYear', 'Năm học', '/catalogs/academic-years', 'name', false), lookupValue: 'code' },
     ],
@@ -551,7 +578,12 @@ export const resources: Record<string, CrudResource> = {
     createDefaults: { active: true },
     endpoint: '/priority-categories',
     writeEndpoint: '/admin/priority-categories',
-    filters: [booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng')],
+    filters: [
+      text('code', 'Mã', false, 30),
+      text('name', 'Tên diện', false),
+      { ...number('weight', 'Trọng số', 0), required: false },
+      booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng'),
+    ],
     fields: [
       text('code', 'Mã', true, 30),
       text('name', 'Tên diện'),
@@ -669,6 +701,8 @@ export const resources: Record<string, CrudResource> = {
       ref('buildingId', 'Tòa nhà', '/buildings', 'name', false),
       ref('roomTypeId', 'Loại phòng', '/room-types', 'name', false),
       floorRef(false),
+      booleanFilter('hasFreeBed', 'Giường trống', 'Còn giường trống', 'Không còn giường trống'),
+      booleanFilter('noLeader', 'Trưởng phòng', 'Chưa có trưởng phòng', 'Đã có trưởng phòng'),
       { ...select('gender', 'Giới tính', [RoomGender.M, RoomGender.F]), required: false },
       {
         ...select('status', 'Trạng thái', [
@@ -705,6 +739,11 @@ export const resources: Record<string, CrudResource> = {
     title: 'Đợt đăng ký',
     endpoint: '/registration-periods',
     filters: [
+      text('name', 'Tên đợt', false),
+      { name: 'openAtFrom', label: 'Mở từ', kind: 'datetime' },
+      { name: 'openAtTo', label: 'Mở đến', kind: 'datetime' },
+      { name: 'closeAtFrom', label: 'Đóng từ', kind: 'datetime' },
+      { name: 'closeAtTo', label: 'Đóng đến', kind: 'datetime' },
       ref('semesterId', 'Học kỳ', '/semesters', 'name', false),
       { ...select('kind', 'Loại đợt', ['REGULAR', 'SUMMER']), required: false },
       booleanFilter('open', 'Đang mở đăng ký', 'Đang mở', 'Chưa mở hoặc đã đóng'),
@@ -837,7 +876,14 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.CONTRACT,
     title: 'Hợp đồng',
     endpoint: '/contracts',
-    filters: [statusFilter(Object.values(ContractStatus))],
+    filters: [
+      statusFilter(Object.values(ContractStatus)),
+      ref('studentId', 'Sinh viên', '/students', 'fullName', false),
+      { ...date('startDateFrom', 'Ngày bắt đầu từ'), required: false },
+      { ...date('startDateTo', 'Ngày bắt đầu đến'), required: false },
+      { ...date('endDateFrom', 'Ngày kết thúc từ'), required: false },
+      { ...date('endDateTo', 'Ngày kết thúc đến'), required: false },
+    ],
     formSections: [
       {
         title: 'Thông tin sinh viên & Đơn',
@@ -883,7 +929,13 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.CONTRACT,
     title: 'Hợp đồng của tôi',
     endpoint: '/me/contracts',
-    filters: [statusFilter(Object.values(ContractStatus))],
+    filters: [
+      statusFilter(Object.values(ContractStatus)),
+      { ...date('startDateFrom', 'Ngày bắt đầu từ'), required: false },
+      { ...date('startDateTo', 'Ngày bắt đầu đến'), required: false },
+      { ...date('endDateFrom', 'Ngày kết thúc từ'), required: false },
+      { ...date('endDateTo', 'Ngày kết thúc đến'), required: false },
+    ],
     detailEndpoint: '/contracts',
     fields: [],
     columns: columns(
@@ -987,7 +1039,12 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.SUMMER_REGISTRATION,
     title: 'Lựa chọn kỳ hè',
     endpoint: '/summer-choices',
-    filters: [statusFilter(Object.values(SummerStatus))],
+    filters: [
+      statusFilter(Object.values(SummerStatus)),
+      { ...select('choice', 'Lựa chọn', Object.values(SummerChoice)), required: false },
+      ref('contractId', 'Hợp đồng', '/contracts', 'code', false),
+      ref('studentId', 'Sinh viên', '/students', 'fullName', false),
+    ],
     formSections: [
       {
         title: 'Thông tin tham chiếu',
@@ -1133,7 +1190,12 @@ export const resources: Record<string, CrudResource> = {
       },
     ],
     endpoint: '/utility-rates',
-    filters: [{ ...select('meterType', 'Loại đồng hồ', ['ELECTRIC', 'WATER']), required: false }],
+    filters: [
+      { ...select('meterType', 'Loại đồng hồ', ['ELECTRIC', 'WATER']), required: false },
+      { ...number('unitPrice', 'Đơn giá (đ)', 0), required: false },
+      { ...date('effectiveFromFrom', 'Hiệu lực từ ngày'), required: false },
+      { ...date('effectiveFromTo', 'Hiệu lực đến ngày'), required: false },
+    ],
     fields: [
       select('meterType', 'Loại', ['ELECTRIC', 'WATER']),
       {
@@ -1178,6 +1240,11 @@ export const resources: Record<string, CrudResource> = {
         ...select('status', 'Trạng thái', Object.values(InvoiceStatus)),
         required: false,
       },
+      { ...date('billingMonth', 'Kỳ hóa đơn'), required: false },
+      { ...number('totalAmountMin', 'Tổng tiền từ (đ)', 0), required: false },
+      { ...number('totalAmountMax', 'Tổng tiền đến (đ)', 0), required: false },
+      { ...date('dueDateFrom', 'Hạn đóng từ'), required: false },
+      { ...date('dueDateTo', 'Hạn đóng đến'), required: false },
     ],
     fields: invoiceFields,
     columns: [
@@ -1207,6 +1274,11 @@ export const resources: Record<string, CrudResource> = {
         ...select('status', 'Trạng thái', Object.values(InvoiceStatus)),
         required: false,
       },
+      { ...date('billingMonth', 'Kỳ hóa đơn'), required: false },
+      { ...number('totalAmountMin', 'Tổng tiền từ (đ)', 0), required: false },
+      { ...number('totalAmountMax', 'Tổng tiền đến (đ)', 0), required: false },
+      { ...date('dueDateFrom', 'Hạn đóng từ'), required: false },
+      { ...date('dueDateTo', 'Hạn đóng đến'), required: false },
     ],
     fields: [],
     columns: [
@@ -1269,6 +1341,8 @@ export const resources: Record<string, CrudResource> = {
     title: 'Yêu cầu sửa chữa',
     endpoint: '/maintenance-requests',
     filters: [
+      text('code', 'Mã yêu cầu', false, 50),
+      text('description', 'Mô tả', false, 1000),
       statusFilter(Object.values(MaintenanceStatus)),
       { ...ref('category', 'Hạng mục', '/catalogs/maintenance-categories', 'name', false), lookupValue: 'code' },
       { ...select('severity', 'Mức độ', ['LOW', 'MEDIUM', 'HIGH']), required: false },

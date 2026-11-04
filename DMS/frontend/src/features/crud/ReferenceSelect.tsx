@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { Select } from '../../components/ui/FormControls'
+import { Checkbox, Select } from '../../components/ui/FormControls'
 import { api } from '../../services/api/client'
 import { useMe } from '../account/useMe'
 import { findReferenceRecord, readValue, searchByPage } from './api'
@@ -38,6 +38,8 @@ interface ReferenceSelectProps extends Partial<FieldControlProps> {
   disabled?: boolean
   allowClear?: boolean
   placeholder?: string
+  getPopupContainer?: (trigger: HTMLElement) => HTMLElement
+  popupClassName?: string
   'aria-label'?: string
 }
 
@@ -101,6 +103,9 @@ export default function ReferenceSelect({
         if (target.scrollHeight - target.scrollTop - target.clientHeight < 40 && query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage()
       }}
       mode={multiple ? 'multiple' : undefined}
+      optionRender={multiple ? (option) => (
+        <span><Checkbox tabIndex={-1} checked={selectedValues.some((item) => String(item) === String(option.value))} aria-hidden="true" />{' '}{option.label}</span>
+      ) : undefined}
       disabled={disabled}
       allowClear={allowClear}
       loading={query.isFetching}

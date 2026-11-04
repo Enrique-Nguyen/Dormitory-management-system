@@ -9,6 +9,7 @@ import {
   DataTable,
   EmptyState,
   FilterBar,
+  Input,
   NotificationItem,
   PageHeader,
   SearchInput,
@@ -51,6 +52,15 @@ export default function NotificationInboxPage() {
   const [exporting, setExporting] = useState(false)
   const isMobile = useIsMobile()
   const [searchParams, setSearchParams] = useSearchParams()
+  const from = searchParams.get('from') ?? ''
+  const to = searchParams.get('to') ?? ''
+  const [draftFrom, setDraftFrom] = useState(from)
+  const [draftTo, setDraftTo] = useState(to)
+
+  useEffect(() => {
+    setDraftFrom(from)
+    setDraftTo(to)
+  }, [from, to])
 
   const q = searchParams.get('q')?.trim() ?? ''
   const unreadParam = searchParams.get('unread')
@@ -69,6 +79,8 @@ export default function NotificationInboxPage() {
     q: q || undefined,
     sort: ['createdAt,desc'],
     unread: readFilter === 'all' ? undefined : readFilter === 'unread',
+    from: from && !Number.isNaN(Date.parse(from)) ? new Date(from).toISOString() : undefined,
+    to: to && !Number.isNaN(Date.parse(to)) ? new Date(to).toISOString() : undefined,
   }
   const inbox = useInbox(query)
 
@@ -137,6 +149,8 @@ export default function NotificationInboxPage() {
     q?: string
     unread?: ReadFilter
     page?: number
+    from?: string
+    to?: string
   }) {
     const next = new URLSearchParams(searchParams)
     if (patch.q !== undefined) {
@@ -147,6 +161,12 @@ export default function NotificationInboxPage() {
     if (patch.unread !== undefined) {
       if (patch.unread === 'all') next.delete('unread')
       else next.set('unread', patch.unread === 'unread' ? 'true' : 'false')
+    }
+    for (const key of ['from', 'to'] as const) {
+      if (patch[key] !== undefined) {
+        if (patch[key]) next.set(key, patch[key])
+        else next.delete(key)
+      }
     }
     if ((patch.page ?? 1) > 1) next.set('page', String(patch.page))
     else next.delete('page')
@@ -223,6 +243,30 @@ export default function NotificationInboxPage() {
               options={readFilterOptions}
               onChange={(value) => updateQuery({ unread: value })}
             />
+            <Input
+              type="datetime-local"
+              aria-label="Thời gian tạo từ"
+              value={draftFrom}
+              onChange={(event) => setDraftFrom(event.target.value)}
+            />
+            <Input
+              type="datetime-local"
+              aria-label="Thời gian tạo đến"
+              value={draftTo}
+              onChange={(event) => setDraftTo(event.target.value)}
+            />
+            <Button onClick={() => {
+              if (draftFrom && draftTo && new Date(draftFrom).getTime() > new Date(draftTo).getTime()) {
+                void message.error('Thời gian bắt đầu phải trước hoặc bằng thời gian kết thúc.')
+                return
+              }
+              updateQuery({ from: draftFrom, to: draftTo })
+            }}>Áp dụng thời gian</Button>
+            <Button onClick={() => {
+              setDraftFrom('')
+              setDraftTo('')
+              updateQuery({ from: '', to: '' })
+            }}>Xóa thời gian</Button>
             <Button
               icon={<DownloadOutlined />}
               loading={exporting}

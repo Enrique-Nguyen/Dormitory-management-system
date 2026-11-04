@@ -1,6 +1,7 @@
 package vn.edu.tlu.dms.notification.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -15,17 +16,25 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.NotificationScope;
 import vn.edu.tlu.dms.common.constants.DmsConstants.NotificationSource;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
+import vn.edu.tlu.dms.common.exception.BusinessException;
+import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.notification.domain.Notification;
 import vn.edu.tlu.dms.notification.repository.NotificationRepository;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.lang.reflect.Method;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -48,6 +57,37 @@ class NotificationServiceImplTest {
                         jdbc,
                         mock(CurrentUser.class),
                         mock(ScopeGuard.class));
+    }
+
+    @Test
+    void searchBindsInclusiveTimeBoundsForCountAndPage() throws Exception {
+        CurrentUser currentUser = mock(CurrentUser.class);
+        when(currentUser.get()).thenReturn(new Actor(42L, Role.STUDENT, null, false, false));
+        service = new NotificationServiceImpl(repository, jdbc, currentUser, mock(ScopeGuard.class));
+        OffsetDateTime from = OffsetDateTime.parse("2025-12-31T17:00:00Z");
+        OffsetDateTime to = OffsetDateTime.parse("2026-01-01T17:00:00Z");
+        SearchRequest request = new ObjectMapper().registerModule(new JavaTimeModule()).readValue(
+                "{\"page\":1,\"size\":10,\"q\":\"abc\",\"unread\":true,"
+                        + "\"from\":\"2026-01-01T00:00:00+07:00\",\"to\":\"2026-01-02T00:00:00+07:00\"}",
+                SearchRequest.class);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq(42L), eq("%abc%"), eq("%abc%"), eq(from), eq(to)))
+                .thenReturn(3L);
+        service.searchByPage(request);
+        ArgumentCaptor<String> countSql = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> pageSql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc).queryForObject(countSql.capture(), eq(Long.class), eq(42L), eq("%abc%"), eq("%abc%"), eq(from), eq(to));
+        verify(jdbc).query(pageSql.capture(), org.mockito.ArgumentMatchers.<RowMapper<?>>any(), eq(42L), eq("%abc%"), eq("%abc%"), eq(from), eq(to), eq(10), eq(10L));
+        for (String sql : List.of(countSql.getValue(), pageSql.getValue())) {
+            assertThat(sql).contains("user_id = ?", "AND NOT is_read", "created_at >= ?", "created_at <= ?");
+        }
+    }
+
+    @Test
+    void searchRejectsReversedTimeRangeBeforeQuerying() throws Exception {
+        SearchRequest request = new ObjectMapper().registerModule(new JavaTimeModule()).readValue(
+                "{\"from\":\"2026-01-02T00:00:00Z\",\"to\":\"2026-01-01T00:00:00Z\"}", SearchRequest.class);
+        assertThatThrownBy(() -> service.searchByPage(request)).isInstanceOf(BusinessException.class);
+        verifyNoInteractions(jdbc);
     }
 
     @Test

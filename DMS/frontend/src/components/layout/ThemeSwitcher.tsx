@@ -317,7 +317,7 @@ export default function ThemeSwitcher() {
   ]
 
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center' }}>
+    <div style={{ display: 'inline-flex', alignItems: 'center', position: 'relative' }}>
       {/* Hidden color inputs — đặt ngoài Dropdown để không bị unmount khi menu đóng */}
       <input
         ref={colorInputRef}
@@ -357,6 +357,8 @@ export default function ThemeSwitcher() {
           }}
           menu={{ items, className: 'dms-theme-menu' }}
           trigger={['click']}
+          getPopupContainer={(trigger) => trigger.parentElement!}
+          styles={{ root: { top: '100%', right: 0, bottom: 'auto', left: 'auto' } }}
           placement="bottomRight"
         >
           <button

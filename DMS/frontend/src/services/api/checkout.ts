@@ -119,6 +119,14 @@ export interface StorageSearchRequest {
   sort?: string[]
   returned?: boolean
   contractId?: number
+  id?: number
+  packageCount?: number
+  location?: string
+  description?: string
+  depositedFrom?: string
+  depositedTo?: string
+  returnedFrom?: string
+  returnedTo?: string
 }
 
 export interface CreateStorageRequest {

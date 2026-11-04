@@ -17,4 +17,11 @@ public record CatalogSearch(
         @Size(max = 4) List<@Size(max = 100) String> sort,
         Boolean active,
         @Positive(message = ValidationMessage.ID_POSITIVE) Long parentId,
-        @Positive(message = ValidationMessage.ID_POSITIVE) Long schoolId) {}
+        @Positive(message = ValidationMessage.ID_POSITIVE) Long schoolId,
+        @Size(max = 30) String code,
+        @Size(max = 200) String name) {
+    public CatalogSearch(Integer page, Integer size, String q, List<String> sort, Boolean active,
+            Long parentId, Long schoolId) {
+        this(page, size, q, sort, active, parentId, schoolId, null, null);
+    }
+}

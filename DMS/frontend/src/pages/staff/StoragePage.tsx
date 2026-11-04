@@ -8,6 +8,8 @@ import {
   Card,
   DataTable,
   FilterBar,
+  Input,
+  InputNumber,
   PageHeader,
   SearchInput,
   Select,
@@ -51,12 +53,28 @@ export default function StoragePage() {
   const [exporting, setExporting] = useState(false)
   const [returned, setReturned] = useState<string>()
   const [contractId, setContractId] = useState<number | null>(null)
+  const [id, setId] = useState<number | null>(null)
+  const [packageCount, setPackageCount] = useState<number | null>(null)
+  const [location, setLocation] = useState('')
+  const [description, setDescription] = useState('')
+  const [depositedFrom, setDepositedFrom] = useState('')
+  const [depositedTo, setDepositedTo] = useState('')
+  const [returnedFrom, setReturnedFrom] = useState('')
+  const [returnedTo, setReturnedTo] = useState('')
   const query = {
     page: page - 1,
     size: pageSize,
     ...(keyword ? { q: keyword } : {}),
     ...(returned !== undefined ? { returned: returned === 'true' } : {}),
     ...(contractId ? { contractId } : {}),
+    ...(id ? { id } : {}),
+    ...(packageCount ? { packageCount } : {}),
+    ...(location.trim() ? { location: location.trim() } : {}),
+    ...(description.trim() ? { description: description.trim() } : {}),
+    ...(depositedFrom ? { depositedFrom } : {}),
+    ...(depositedTo ? { depositedTo } : {}),
+    ...(returnedFrom ? { returnedFrom } : {}),
+    ...(returnedTo ? { returnedTo } : {}),
     sort: ['id,desc'],
   }
   const records = useStorageRecords(query)
@@ -121,7 +139,7 @@ export default function StoragePage() {
         <FilterBar>
           <SearchInput
             value={searchText}
-            placeholder="Tìm theo tên sinh viên..."
+            placeholder="Tìm theo tên sinh viên hoặc mã hợp đồng..."
             onChange={(event) => {
               const value = event.target.value
               setSearchText(value)
@@ -135,6 +153,30 @@ export default function StoragePage() {
           <ReferenceSelect aria-label={config.filters?.[1].label} placeholder={config.filters?.[1].label}
             endpoint="/contracts" labelField="code" allowClear value={contractId ?? undefined}
             onChange={(value) => { setContractId(typeof value === 'number' ? value : null); setPage(1) }} />
+          <InputNumber aria-label="Mã phiếu" placeholder="Mã phiếu" min={1} precision={0} style={{ width: 160 }}
+            value={id} onChange={(value) => { setId(typeof value === 'number' ? value : null); setPage(1) }} />
+          <InputNumber aria-label="Số kiện" placeholder="Số kiện" min={1} precision={0} style={{ width: 160 }}
+            value={packageCount} onChange={(value) => { setPackageCount(typeof value === 'number' ? value : null); setPage(1) }} />
+          <Input aria-label="Vị trí" placeholder="Vị trí" maxLength={100} value={location} style={{ width: 200 }}
+            onChange={(event) => { setLocation(event.target.value); setPage(1) }} />
+          <Input aria-label="Mô tả" placeholder="Mô tả" maxLength={500} value={description} style={{ width: 200 }}
+            onChange={(event) => { setDescription(event.target.value); setPage(1) }} />
+          <label>Ngày gửi từ
+            <Input type="date" aria-label="Ngày gửi từ" value={depositedFrom} max={depositedTo || undefined}
+              onChange={(event) => { setDepositedFrom(event.target.value); setPage(1) }} />
+          </label>
+          <label>Ngày gửi đến
+            <Input type="date" aria-label="Ngày gửi đến" value={depositedTo} min={depositedFrom || undefined}
+              onChange={(event) => { setDepositedTo(event.target.value); setPage(1) }} />
+          </label>
+          <label>Ngày nhận từ
+            <Input type="date" aria-label="Ngày nhận từ" value={returnedFrom} max={returnedTo || undefined}
+              onChange={(event) => { setReturnedFrom(event.target.value); setPage(1) }} />
+          </label>
+          <label>Ngày nhận đến
+            <Input type="date" aria-label="Ngày nhận đến" value={returnedTo} min={returnedFrom || undefined}
+              onChange={(event) => { setReturnedTo(event.target.value); setPage(1) }} />
+          </label>
           <Button
             icon={<DownloadOutlined />}
             loading={exporting}
@@ -251,7 +293,7 @@ export default function StoragePage() {
             pageSizeOptions: CRUD_PAGE_SIZES,
             showTotal: (total) => `${total} phiếu`,
             onChange: (nextPage, nextSize) => {
-              setPage(nextPage)
+              setPage(nextSize === pageSize ? nextPage : 1)
               setPageSize(nextSize)
             },
           }}
