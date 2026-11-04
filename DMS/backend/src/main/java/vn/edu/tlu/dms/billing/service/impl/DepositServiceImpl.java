@@ -151,7 +151,10 @@ public class DepositServiceImpl implements DepositService {
         return toTransactionDto(tx);
     }
 
-    /** Ghi khoản trừ cọc gắn ticket, giữ nguyên lỗi ràng buộc để ánh xạ chính xác. */
+    /**
+     * Ghi khoản trừ cọc gắn ticket cho hợp đồng đang ACTIVE, giữ nguyên lỗi ràng buộc để ánh xạ
+     * chính xác. Hợp đồng đã kết thúc đã tất toán cọc khi trả phòng nên không nhận khoản trừ mới.
+     */
     @Override
     @Transactional
     public DepositDtos.Transaction deduct(
@@ -179,6 +182,10 @@ public class DepositServiceImpl implements DepositService {
 
         lockContract(contractId);
         checkContractWriteScope(contractId);
+
+        if (!ContractStatus.ACTIVE.equals(getBalance(contractId).status())) {
+            throw BusinessException.conflict(ErrorCode.CONTRACT_NOT_ACTIVE);
+        }
 
         // Một ticket chỉ trừ cọc một lần cho mỗi hợp đồng
         if (transactionRepository
@@ -271,7 +278,10 @@ public class DepositServiceImpl implements DepositService {
         return toTransactionDto(tx);
     }
 
-    /** Hoàn cọc cho hợp đồng đã kết thúc, kiểm tra số dư và không hoàn hai lần. */
+    /**
+     * Hoàn cọc cho hợp đồng đã kết thúc qua biên bản trả phòng: chỉ hoàn đúng số tiền đã tất toán
+     * trong biên bản, kiểm tra số dư và không hoàn hai lần.
+     */
     @Override
     @Transactional
     public DepositDtos.Transaction refund(Long contractId, Long amount, String note) {
@@ -296,10 +306,15 @@ public class DepositServiceImpl implements DepositService {
         if (!Set.of(ContractStatus.EXPIRED, ContractStatus.TERMINATED).contains(balance.status())) {
             throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
+        // Hoàn cọc chỉ sau khi trả phòng đã đối soát công nợ và ghi số tiền hoàn vào biên bản.
+        Long settledRefund = settledRefundAmount(contractId);
+        if (settledRefund == null || settledRefund <= 0) {
+            throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
+        }
         if (amount > balance.balance()) {
             throw BusinessException.conflict(ErrorCode.REFUND_EXCEEDS_BALANCE);
         }
-        if (!amount.equals(balance.balance())) {
+        if (!amount.equals(balance.balance()) || !amount.equals(settledRefund)) {
             throw BusinessException.invalid(
                     ApiField.AMOUNT, ValidationMessage.REFUND_FULL_BALANCE_REQUIRED);
         }
@@ -499,14 +514,31 @@ public class DepositServiceImpl implements DepositService {
         if (ContractStatus.ACTIVE.equals(status) && topupNeeded > 0) {
             return List.of(BusinessAction.DEPOSIT_TOPUP);
         }
-        if (Set.of(ContractStatus.EXPIRED, ContractStatus.TERMINATED).contains(status)
-                && balance > 0
+        Long settledRefund =
+                Set.of(ContractStatus.EXPIRED, ContractStatus.TERMINATED).contains(status)
+                                && balance > 0
+                        ? settledRefundAmount(contractId)
+                        : null;
+        if (settledRefund != null
+                && settledRefund == balance
                 && transactionRepository
                         .findByContractIdAndType(contractId, DepositType.REFUND)
                         .isEmpty()) {
             return List.of(BusinessAction.DEPOSIT_REFUND);
         }
         return List.of();
+    }
+
+    /** Số tiền hoàn đã chốt trong biên bản trả phòng; null khi hợp đồng chưa qua trả phòng. */
+    private Long settledRefundAmount(Long contractId) {
+        return jdbc
+                .query(
+                        "SELECT refund_amount FROM move_out_record WHERE contract_id = ?",
+                        (rs, rowNum) -> rs.getLong(1),
+                        contractId)
+                .stream()
+                .findFirst()
+                .orElse(null);
     }
 
     private void lockContract(Long contractId) {

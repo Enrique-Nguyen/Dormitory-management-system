@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.billing.api.InvoiceDtos;
 import vn.edu.tlu.dms.billing.service.InvoiceCrudService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceType;
@@ -203,6 +204,7 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
                                         SELECT 1 FROM room_application ap
                                         JOIN registration_period rp ON rp.id = ap.period_id
                                         WHERE ap.student_id = ? AND ap.preferred_unit_id = ?
+                                            AND ap.status IN (?, ?)
                                             AND rp.semester_id = ?)
                                     """,
                                     Boolean.class,
@@ -211,6 +213,8 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
                                     current.get().unitId(),
                                     studentId,
                                     current.get().unitId(),
+                                    ApplicationStatus.APPROVED,
+                                    ApplicationStatus.ASSIGNED,
                                     semesterId))) {
                 throw BusinessException.notFound();
             }
@@ -229,23 +233,31 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
             if (input.get("studentId") != null || input.get("semesterId") != null) {
                 throw BusinessException.invalid(ApiField.TYPE, ValidationMessage.UTILITY_TARGET);
             }
-            try {
-                if (LocalDate.parse(input.get("billingMonth").toString()).getDayOfMonth() != 1) {
-                    throw BusinessException.invalid(ApiField.BILLING_MONTH, ValidationMessage.FIRST_DAY_OF_MONTH);
-                }
-            } catch (RuntimeException e) {
-                throw BusinessException.invalid(ApiField.BILLING_MONTH, ValidationMessage.FIRST_DAY_OF_MONTH_VALID);
+            LocalDate billingMonth =
+                    date(input, "billingMonth", ApiField.BILLING_MONTH,
+                            ValidationMessage.FIRST_DAY_OF_MONTH_VALID);
+            if (billingMonth.getDayOfMonth() != 1) {
+                throw BusinessException.invalid(
+                        ApiField.BILLING_MONTH, ValidationMessage.FIRST_DAY_OF_MONTH);
             }
         }
         if (number(input, "totalAmount") < 0) {
             throw BusinessException.invalid(ApiField.TOTAL_AMOUNT, ValidationMessage.AMOUNT_NOT_NEGATIVE);
         }
+        LocalDate dueDate =
+                date(input, "dueDate", ApiField.DUE_DATE, ValidationMessage.DUE_DATE_FROM_TODAY);
+        if (dueDate.isBefore(LocalDate.now())) {
+            throw BusinessException.invalid(ApiField.DUE_DATE, ValidationMessage.DUE_DATE_NOT_PAST);
+        }
+    }
+
+    /** Đọc ngày ISO; chỉ lỗi định dạng/thiếu giá trị mới dùng thông báo chung của trường. */
+    private static LocalDate date(
+            Map<String, Object> input, String key, String field, String invalidMessage) {
         try {
-            if (LocalDate.parse(input.get("dueDate").toString()).isBefore(LocalDate.now())) {
-                throw BusinessException.invalid(ApiField.DUE_DATE, ValidationMessage.DUE_DATE_NOT_PAST);
-            }
+            return LocalDate.parse(input.get(key).toString());
         } catch (RuntimeException e) {
-            throw BusinessException.invalid(ApiField.DUE_DATE, ValidationMessage.DUE_DATE_FROM_TODAY);
+            throw BusinessException.invalid(field, invalidMessage);
         }
     }
 

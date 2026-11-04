@@ -26,6 +26,8 @@ import vn.edu.tlu.dms.billing.service.DepositService;
 import vn.edu.tlu.dms.billing.service.InvoiceService;
 import vn.edu.tlu.dms.billing.service.UtilityReadingService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentEndReason;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MeterType;
@@ -271,6 +273,7 @@ class DepositIntegrationTest {
 
         // Chuyển hợp đồng sang EXPIRED để hoàn cọc
         jdbc.update("UPDATE dormitory_contract SET status = 'EXPIRED' WHERE id = ?", contractId);
+        settleMoveOut(1000000L);
 
         // Hoàn cọc 1.500.000 đ (vượt quá 1.000.000 đ) phải bị từ chối
         assertThatThrownBy(() -> depositService.refund(contractId, 1500000L, "Hoàn quá mức"))
@@ -386,6 +389,7 @@ class DepositIntegrationTest {
         assertThatThrownBy(() -> depositService.refund(contractId, 1000000L, null))
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_STATE_TRANSITION);
         jdbc.update("UPDATE dormitory_contract SET status='TERMINATED' WHERE id=?", contractId);
+        settleMoveOut(1000000L);
         depositService.refund(contractId, 1000000L, null);
         assertThatThrownBy(() -> depositService.refund(contractId, 1L, null))
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DUPLICATE_REFUND);
@@ -542,6 +546,7 @@ class DepositIntegrationTest {
     void refundRejectsPartialSettlementBeforeFullRefund() {
         depositService.collectInitial(contractId, 1000000L, "Thu cọc");
         jdbc.update("UPDATE dormitory_contract SET status='TERMINATED' WHERE id=?", contractId);
+        settleMoveOut(1000000L);
         assertThatThrownBy(() -> depositService.refund(contractId, 1L, "Hoàn thiếu"))
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.VALIDATION_FAILED);
         assertThat(depositService.listTransactions(contractId)).hasSize(1);
@@ -597,6 +602,79 @@ class DepositIntegrationTest {
                                 Long.class,
                                 roomId))
                 .isEqualTo(2L);
+    }
+
+    @Test
+    void refundRequiresMoveOutSettlement() {
+        depositService.collectInitial(contractId, 1000000L, "Thu cọc");
+        jdbc.update("UPDATE dormitory_contract SET status='TERMINATED' WHERE id=?", contractId);
+        assertThat(depositService.getBalance(contractId).allowedActions()).isEmpty();
+        assertThatThrownBy(() -> depositService.refund(contractId, 1000000L, "Hoàn tắt"))
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_STATE_TRANSITION);
+        assertThat(depositService.listTransactions(contractId)).hasSize(1);
+        settleMoveOut(1000000L);
+        assertThat(depositService.getBalance(contractId).allowedActions())
+                .containsExactly(BusinessAction.DEPOSIT_REFUND);
+        depositService.refund(contractId, 1000000L, "Hoàn sau trả phòng");
+        assertThat(depositService.getBalance(contractId).balance()).isZero();
+    }
+
+    @Test
+    void deductRejectsContractThatIsNoLongerActive() {
+        depositService.collectInitial(contractId, 1000000L, "Thu cọc");
+        jdbc.update("UPDATE dormitory_contract SET status='TERMINATED' WHERE id=?", contractId);
+        assertThatThrownBy(
+                        () ->
+                                depositService.deduct(
+                                        contractId,
+                                        ticketId,
+                                        100000L,
+                                        LocalDate.now().plusDays(7),
+                                        "Trừ sau trả phòng"))
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTRACT_NOT_ACTIVE);
+        assertThat(depositService.listTransactions(contractId)).hasSize(1);
+    }
+
+    @Test
+    void utilityStillBillsRoomVacatedAfterBillingMonth() {
+        prepareStay();
+        prepareReadings(true);
+        jdbc.update(
+                "UPDATE room_assignment_history SET ended_at=?::date + 10, end_reason=? WHERE"
+                        + " contract_id=?",
+                billingMonth(),
+                AssignmentEndReason.MOVE_OUT,
+                contractId);
+        jdbc.update("UPDATE room SET status='CLOSED' WHERE id=?", roomId);
+        var issued = invoiceService.issueUtility(unitId, billingMonth());
+        assertThat(issued.totalCreated()).isEqualTo(1);
+        assertThat(issued.totalAmount()).isEqualTo(50000L);
+    }
+
+    @Test
+    void utilityIgnoresRoomVacatedBeforeBillingMonth() {
+        prepareStay();
+        prepareReadings(true);
+        jdbc.update(
+                "UPDATE room_assignment_history SET ended_at=?::date - 1, end_reason=? WHERE"
+                        + " contract_id=?",
+                billingMonth(),
+                AssignmentEndReason.MOVE_OUT,
+                contractId);
+        var issued = invoiceService.issueUtility(unitId, billingMonth());
+        assertThat(issued.totalCreated()).isZero();
+        assertThat(issued.totalSkipped()).isZero();
+    }
+
+    /** Giả lập biên bản trả phòng đã chốt số tiền hoàn bằng số dư cọc. */
+    private void settleMoveOut(long balance) {
+        jdbc.update(
+                "INSERT INTO move_out_record(contract_id,asset_condition,deposit_balance,"
+                        + "refund_amount,confirmed_by) VALUES(?,'OK',?,?,?)",
+                contractId,
+                balance,
+                Math.max(balance, 0L),
+                staffId);
     }
 
     private void prepareStay() {

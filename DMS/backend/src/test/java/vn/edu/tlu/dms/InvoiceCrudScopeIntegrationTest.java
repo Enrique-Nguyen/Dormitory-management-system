@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.billing.api.InvoiceDtos;
 import vn.edu.tlu.dms.billing.service.InvoiceCrudService;
 import vn.edu.tlu.dms.billing.service.InvoiceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentEndReason;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
@@ -34,6 +35,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SemesterType;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -64,6 +66,7 @@ class InvoiceCrudScopeIntegrationTest {
     private Long staffId;
     private Long studentId;
     private Long oldApplication;
+    private Long targetApplication;
     private Long contractId;
     private FutureSemesterFixture.Created oldSemester;
     private FutureSemesterFixture.Created targetSemester;
@@ -83,8 +86,9 @@ class InvoiceCrudScopeIntegrationTest {
         oldSemester = FutureSemesterFixture.create(jdbc, SemesterType.HK1, "Old " + suffix, 30);
         targetSemester = FutureSemesterFixture.create(jdbc, SemesterType.HK2, "Next " + suffix, 30);
         assertThat(oldSemester.endDate()).isBefore(targetSemester.startDate());
-        oldApplication = insertApplication(oldSemester.id(), oldUnit);
-        insertApplication(targetSemester.id(), targetUnit);
+        oldApplication = insertApplication(oldSemester.id(), oldUnit, ApplicationStatus.ASSIGNED);
+        targetApplication =
+                insertApplication(targetSemester.id(), targetUnit, ApplicationStatus.APPROVED);
         when(rolePermissions.getGrantedPermissions(anyString()))
                 .thenReturn(List.of(
                         Permission.INVOICE_READ,
@@ -133,6 +137,61 @@ class InvoiceCrudScopeIntegrationTest {
     void targetUnitCanCreateUpdateAndDeleteWithOnlyMatchingSemesterApplication() {
         asStaff(targetUnit, false);
         assertSuccessfulCrud();
+    }
+
+    @Test
+    void targetUnitCanConfirmPaymentWithApprovedApplication() {
+        Long id = insertDraft();
+        asStaff(targetUnit, false);
+
+        assertThat(invoices.getInvoiceById(id).allowedActions()).isNotEmpty();
+        invoices.confirmPayment(id, new InvoiceDtos.Payment(null, "Payer", PaymentMethod.CASH));
+
+        assertThat(stored(id).get("status")).isEqualTo(InvoiceStatus.PAID);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        ApplicationStatus.DRAFT,
+        ApplicationStatus.SUBMITTED,
+        ApplicationStatus.REJECTED,
+        ApplicationStatus.CANCELLED
+    })
+    void inactiveApplicationDoesNotPutInvoiceInUnitScope(String status) {
+        jdbc.update(
+                "UPDATE room_application SET status=?, status_reason=? WHERE id=?",
+                status,
+                ApplicationStatus.REJECTED.equals(status) ? "Rejected " + suffix : null,
+                targetApplication);
+        Long id = insertDraft();
+        long beforeAudit = auditCount();
+        asStaff(targetUnit, false);
+
+        assertStatus(() -> invoices.getInvoiceById(id), HttpStatus.NOT_FOUND);
+        assertStatus(
+                () -> invoices.confirmPayment(
+                        id, new InvoiceDtos.Payment(null, "Payer", PaymentMethod.CASH)),
+                HttpStatus.NOT_FOUND);
+        assertStatus(() -> crud.saveOrUpdate(updateInput(id)), HttpStatus.NOT_FOUND);
+        assertStatus(() -> crud.deleteUnusedInvoiceRecord(id), HttpStatus.NOT_FOUND);
+        jdbc.update("DELETE FROM invoice WHERE id=?", id);
+        assertStatus(() -> crud.saveOrUpdate(createInput()), HttpStatus.NOT_FOUND);
+
+        assertThat(invoiceCount()).isZero();
+        assertThat(auditCount()).isEqualTo(beforeAudit);
+    }
+
+    @Test
+    void aggregateReadDoesNotAllowConfirmingOtherUnitPayment() {
+        Long id = insertDraft();
+        asStaff(oldUnit, true);
+
+        assertThat(invoices.getInvoiceById(id).allowedActions()).isEmpty();
+        assertStatus(
+                () -> invoices.confirmPayment(
+                        id, new InvoiceDtos.Payment(null, "Payer", PaymentMethod.CASH)),
+                HttpStatus.NOT_FOUND);
+        assertThat(stored(id).get("status")).isEqualTo(InvoiceStatus.UNPAID);
     }
 
     @Test
@@ -242,6 +301,28 @@ class InvoiceCrudScopeIntegrationTest {
                 .containsExactly(AuditAction.CRUD_CREATE, AuditAction.CRUD_UPDATE, AuditAction.CRUD_DELETE);
     }
 
+    @Test
+    void pastDueDateKeepsSpecificValidationMessage() {
+        asStaff(targetUnit, false);
+        var input =
+                new InvoiceDtos.Save(
+                        null,
+                        InvoiceType.ROOM_FEE,
+                        studentId,
+                        targetSemester.id(),
+                        null,
+                        null,
+                        100L,
+                        LocalDate.now().minusDays(1));
+        assertThatThrownBy(() -> crud.saveOrUpdate(input))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        exception ->
+                                assertThat(exception.getDetails().toString())
+                                        .contains(ValidationMessage.DUE_DATE_NOT_PAST)
+                                        .doesNotContain(ValidationMessage.DUE_DATE_FROM_TODAY));
+    }
+
     private InvoiceDtos.Save createInput() {
         return new InvoiceDtos.Save(
                 null, InvoiceType.ROOM_FEE, studentId, targetSemester.id(), null, null, 100L, dueDate);
@@ -281,7 +362,7 @@ class InvoiceCrudScopeIntegrationTest {
                 prefix);
     }
 
-    private Long insertApplication(Long semester, Long unit) {
+    private Long insertApplication(Long semester, Long unit, String status) {
         Long period = jdbc.queryForObject(
                 "INSERT INTO registration_period(semester_id, kind, name, open_at, close_at, created_by)"
                         + " VALUES(?, ?, ?, now(), now() + interval '1 day', ?) RETURNING id",
@@ -291,12 +372,13 @@ class InvoiceCrudScopeIntegrationTest {
                 "Period " + suffix,
                 staffId);
         return jdbc.queryForObject(
-                "INSERT INTO room_application(student_id, period_id, preferred_unit_id)"
-                        + " VALUES(?, ?, ?) RETURNING id",
+                "INSERT INTO room_application(student_id, period_id, preferred_unit_id, status)"
+                        + " VALUES(?, ?, ?, ?) RETURNING id",
                 Long.class,
                 studentId,
                 period,
-                unit);
+                unit,
+                status);
     }
 
     private Long insertDraft() {
