@@ -615,6 +615,11 @@ class DepositIntegrationTest {
         settleMoveOut(1000000L);
         assertThat(depositService.getBalance(contractId).allowedActions())
                 .containsExactly(BusinessAction.DEPOSIT_REFUND);
+        // Danh sách không tính action từng dòng; chỉ GET chi tiết số dư trả allowedActions.
+        assertThat(depositService.searchBalancesByPage(new SearchRequest(), false).content())
+                .filteredOn(balance -> balance.contractId().equals(contractId))
+                .singleElement()
+                .satisfies(balance -> assertThat(balance.allowedActions()).isEmpty());
         depositService.refund(contractId, 1000000L, "Hoàn sau trả phòng");
         assertThat(depositService.getBalance(contractId).balance()).isZero();
     }

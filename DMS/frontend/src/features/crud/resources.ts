@@ -1221,7 +1221,7 @@ export const resources: Record<string, CrudResource> = {
       { key: 'status', label: 'Trạng thái' },
     ],
     readOnly: true,
-    note: 'Sổ tiền chỉ tra cứu. Thu/trừ/bù/hoàn cọc là nghiệp vụ chi tiết, không sửa/xóa giao dịch đã ghi.',
+    note: 'Không sửa/xóa giao dịch đã ghi. Mở sổ cọc để nộp bù hoặc hoàn cọc khi hệ thống cho phép; thu cọc ban đầu thực hiện khi kích hoạt hợp đồng.',
   },
   myDeposits: {
     finance: true,

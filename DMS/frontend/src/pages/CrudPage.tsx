@@ -2167,7 +2167,7 @@ export default function CrudPage({ resource }: { resource: string }) {
           }
           open
           onClose={() => setLedgerRecord(null)}
-          readOnly
+          readOnly={resource === 'myDeposits'}
         />
       )}
       {resource === 'maintenance' && (

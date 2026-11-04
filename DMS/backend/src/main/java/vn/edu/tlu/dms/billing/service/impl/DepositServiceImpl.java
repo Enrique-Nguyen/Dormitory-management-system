@@ -411,7 +411,10 @@ public class DepositServiceImpl implements DepositService {
                 .toList();
     }
 
-    /** Tìm sổ cọc theo mã hợp đồng hoặc tên sinh viên, giữ đúng phạm vi trước phân trang và đếm. */
+    /**
+     * Tìm sổ cọc theo mã hợp đồng hoặc tên sinh viên, giữ đúng phạm vi trước phân trang và đếm.
+     * allowedActions của từng dòng luôn rỗng; chỉ GET chi tiết số dư mới tính hành động.
+     */
     @Override
     @Transactional(readOnly = true)
     public PageResponse<DepositDtos.Balance> searchBalancesByPage(
@@ -462,15 +465,9 @@ public class DepositServiceImpl implements DepositService {
                                                 (String) row.get("contractCode"),
                                                 (String) row.get("studentName"),
                                                 (String) row.get("studentCode"),
-                                                allowedDepositActions(
-                                                        ((Number) row.get("contractId"))
-                                                                .longValue(),
-                                                        (String) row.get("status"),
-                                                        ((Number) row.get("balance")).longValue(),
-                                                        ((Number) row.get("topupNeeded"))
-                                                                .longValue(),
-                                                        ((Number) row.get("preferredUnitId"))
-                                                                .longValue())))
+                                                // Danh sách không tính action từng dòng; dùng GET
+                                                // deposit-balance để lấy allowedActions.
+                                                List.of()))
                         .toList();
 
         return new PageResponse<>(

@@ -41,11 +41,6 @@ public final class DepositDtos {
             String studentCode,
             List<String> allowedActions) {}
 
-    /** Yêu cầu thu tiền cọc ban đầu khi kích hoạt hợp đồng (FR-CON-01, BR-10). */
-    public record InitialDepositRequest(
-            @NotNull @Positive(message = "Số tiền cọc phải lớn hơn 0") Long amount,
-            @Size(max = 500) String note) {}
-
     /** Yêu cầu trừ cọc khi ticket hư hỏng do sử dụng được nghiệm thu đóng (FR-MNT-10). */
     public record DeductRequest(
             @NotNull Long maintenanceRequestId,
