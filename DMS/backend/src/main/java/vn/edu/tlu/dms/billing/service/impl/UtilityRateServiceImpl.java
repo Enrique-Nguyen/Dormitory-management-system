@@ -103,6 +103,11 @@ public class UtilityRateServiceImpl implements UtilityRateService {
         scopeGuard.requireRole(Role.STAFF);
         if (input.id() == null) {
             validateValues(input.meterType(), input.unitPrice(), input.effectiveFrom());
+            // Giá mới không được lùi ngày: kỳ đã qua giữ nguyên đơn giá đang áp dụng.
+            if (input.effectiveFrom().isBefore(LocalDate.now())) {
+                throw BusinessException.invalid(
+                        ApiField.EFFECTIVE_FROM, ValidationMessage.EFFECTIVE_FROM_NOT_PAST);
+            }
             var rate = new UtilityRate();
             rate.setMeterType(input.meterType());
             rate.setUnitPrice(input.unitPrice());

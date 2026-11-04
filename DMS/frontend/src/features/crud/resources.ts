@@ -1037,7 +1037,7 @@ export const resources: Record<string, CrudResource> = {
       },
       {
         title: 'Thay hoặc reset đồng hồ',
-        note: 'Bỏ trống nếu đồng hồ giữ nguyên.',
+        note: 'Bỏ trống nếu đồng hồ giữ nguyên. Khi sửa, xóa lý do và hai chỉ số để bỏ thông tin thay đồng hồ đã nhập nhầm.',
         fields: ['oldMeterFinal', 'newMeterStart', 'replacementReason'],
       },
     ],
@@ -1080,7 +1080,7 @@ export const resources: Record<string, CrudResource> = {
       {
         ...text('replacementReason', 'Lý do thay/reset đồng hồ', false, 300),
         kind: 'textarea',
-        hint: 'Bắt buộc khi thay hoặc reset đồng hồ.',
+        hint: 'Bắt buộc khi thay hoặc reset đồng hồ. Xóa trống để bỏ thông tin thay đồng hồ.',
       },
     ],
     columns: [

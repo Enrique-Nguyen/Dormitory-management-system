@@ -420,6 +420,8 @@ public final class DmsConstants {
         public static final String METER_TYPE_REQUIRED = "Phải chọn loại đồng hồ hợp lệ";
         public static final String UNIT_PRICE_POSITIVE = "Đơn giá phải lớn hơn 0";
         public static final String EFFECTIVE_FROM_REQUIRED = "Phải nhập ngày hiệu lực";
+        public static final String EFFECTIVE_FROM_NOT_PAST =
+                "Ngày hiệu lực của đơn giá mới không được trước hôm nay";
         public static final String READING_INPUT_REQUIRED = "Phải nhập thông tin chỉ số";
         public static final String READING_KEY_IMMUTABLE =
                 "Không đổi phòng, loại đồng hồ hoặc kỳ của bản ghi";

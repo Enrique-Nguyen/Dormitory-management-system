@@ -339,7 +339,27 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
         }
     }
 
+    /**
+     * Ghép dữ liệu sửa từng phần: trường null giữ giá trị cũ. Lý do thay đồng hồ gửi chuỗi rỗng
+     * là yêu cầu xóa cả nhóm thay đồng hồ; khi đó chỉ dùng chỉ số cũ/mới được gửi kèm.
+     */
     private Input mergeInput(Input input, Map<String, Object> row) {
+        if (input.replacementReason() != null && input.replacementReason().isBlank()) {
+            return new Input(
+                    input.id(),
+                    ((Number) row.get("roomId")).longValue(),
+                    (String) row.get("meterType"),
+                    (LocalDate) row.get("billingMonth"),
+                    input.startReading() == null
+                            ? integer(row.get("startReading"))
+                            : input.startReading(),
+                    input.endReading() == null
+                            ? integer(row.get("endReading"))
+                            : input.endReading(),
+                    input.oldMeterFinal(),
+                    input.newMeterStart(),
+                    null);
+        }
         return new Input(
                 input.id(),
                 ((Number) row.get("roomId")).longValue(),
