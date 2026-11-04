@@ -162,7 +162,7 @@ export default function ApplicationDetailView({
 
   // Chỉ gọi API giường/danh mục khi đơn đang chờ phân giường; cổng Sinh viên không phát sinh request.
   const beds = useAvailableBeds({ applicationId: id, ...filter }, canAssign)
-  const assignCatalog = useAssignCatalog(canAssign)
+  const assignCatalog = useAssignCatalog(canAssign, detail?.preferredUnitId)
   const needsCatalog =
     detail != null &&
     ((detail.periodId != null && !detail.period?.name) ||
@@ -417,12 +417,17 @@ export default function ApplicationDetailView({
       title: 'Diện ưu tiên',
       dataIndex: 'name',
     },
-    {
-      title: 'Trọng số',
-      dataIndex: 'weight',
-      align: 'center',
-      width: 100,
-    },
+    // Sinh viên không thấy trọng số (backend cũng trả null cho vai trò này).
+    ...(actorRole === Role.STUDENT
+      ? []
+      : [
+          {
+            title: 'Trọng số',
+            dataIndex: 'weight',
+            align: 'center' as const,
+            width: 100,
+          },
+        ]),
     {
       title: 'Xác nhận',
       dataIndex: 'verified',

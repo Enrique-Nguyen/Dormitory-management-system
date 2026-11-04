@@ -219,6 +219,12 @@ class SystemJobsIntegrationTest {
             assertThat(result).isEqualTo(new SystemJobService.RunResult(1, 0, 0));
             assertThat(contractStatus()).isEqualTo(ContractStatus.CANCELLED);
             assertThat(applicationStatus()).isEqualTo(ApplicationStatus.CANCELLED);
+            assertThat(
+                            jdbc.queryForObject(
+                                    "SELECT status_reason FROM room_application WHERE id=?",
+                                    String.class,
+                                    application))
+                    .isEqualTo(SystemJob.EXPIRED_REASON);
             assertThat(count("SELECT count(*) FROM room_assignment_history WHERE contract_id=?", contract))
                     .isZero();
             assertThat(historyCount(EntityType.CONTRACT, contract)).isEqualTo(1);

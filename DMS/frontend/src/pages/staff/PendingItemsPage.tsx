@@ -65,7 +65,6 @@ export default function PendingItemsPage() {
   const [keyword, setKeyword] = useState('')
   const [type, setType] = useState<string | undefined>()
   const [selectedItem, setSelectedItem] = useState<PendingItem | null>(null)
-  const [processing, setProcessing] = useState(false)
   const selectedId = selectedItem ? pendingItemEntityId(selectedItem) : null
   const selectedResource = selectedItem
     ? typeMeta(selectedItem.type).segment
@@ -193,7 +192,7 @@ export default function PendingItemsPage() {
             <Button
               size="small"
               icon={<EyeOutlined />}
-              onClick={() => { setProcessing(false); setSelectedItem(item) }}
+              onClick={() => setSelectedItem(item)}
               aria-label="Xem chi tiết"
             />
           </Tooltip>
@@ -319,25 +318,18 @@ export default function PendingItemsPage() {
       </Card>
       <Modal
         open={selectedItem !== null}
-        title={processing ? 'Xử lý yêu cầu chờ' : 'Chi tiết yêu cầu chờ xử lý'}
+        title="Chi tiết yêu cầu chờ xử lý"
         width={960}
-        onCancel={() => { setSelectedItem(null); setProcessing(false) }}
+        onCancel={() => setSelectedItem(null)}
         destroyOnHidden
-        footer={
-          <>
-            <Button onClick={() => { setSelectedItem(null); setProcessing(false) }}>Đóng</Button>
-            {!processing && (
-              <Button onClick={() => setProcessing(true)}>Xử lý nghiệp vụ</Button>
-            )}
-          </>
-        }
+        footer={<Button onClick={() => setSelectedItem(null)}>Đóng</Button>}
       >
         {selectedId != null && selectedResource && (
           <RecordDetailContent
             resource={selectedResource}
             recordId={Number(selectedId)}
             role={me?.role}
-            readOnly={!processing}
+            readOnly={false}
           />
         )}
       </Modal>

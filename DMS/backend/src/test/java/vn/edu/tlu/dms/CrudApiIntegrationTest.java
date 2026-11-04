@@ -3,6 +3,7 @@ package vn.edu.tlu.dms;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -42,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.tlu.dms.account.domain.AppUser;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MeterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
@@ -1302,6 +1304,72 @@ class CrudApiIntegrationTest {
                 .andExpect(status().isNoContent());
     }
 
+    /**
+     * KTV được cấp REGISTRATION_PERIOD_READ trong ma trận quyền nên tra cứu được đợt có đơn vị của
+     * mình; đợt chỉ thuộc đơn vị khác vẫn trả 404. Tạo/sửa/xóa đợt đều ghi audit.
+     */
+    @Test
+    void technicianReadsOwnUnitPeriodsAndPeriodWritesAreAudited() throws Exception {
+        Long semesterId = createSemester();
+        String created =
+                mvc.perform(
+                                post("/api/registration-periods/save-or-update")
+                                        .with(asUser(adminId, "ADMIN"))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                """
+                                                {"semesterId":%d,"kind":"REGULAR","name":"Đợt KTV đọc",
+                                                "openAt":"2040-08-01T08:00:00+07:00","closeAt":"2040-08-31T08:00:00+07:00",
+                                                "unitIds":[%d]}
+                                                """
+                                                        .formatted(semesterId, firstUnitId)))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        Long periodId = mapper.readTree(created).get("id").asLong();
+        mvc.perform(
+                        get("/api/registration-periods/" + periodId)
+                                .with(asUser(technicianId, "TECHNICIAN")))
+                .andExpect(status().isOk());
+        mvc.perform(
+                        searchByPage("/api/registration-periods", "q", "Đợt KTV đọc")
+                                .with(asUser(technicianId, "TECHNICIAN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(periodId));
+
+        Long otherTechnicianId = createUser("TECHNICIAN", otherUnitId);
+        mvc.perform(
+                        get("/api/registration-periods/" + periodId)
+                                .with(asUser(otherTechnicianId, "TECHNICIAN")))
+                .andExpect(status().isNotFound());
+
+        mvc.perform(
+                        post("/api/registration-periods/save-or-update")
+                                .with(asUser(adminId, "ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(withId(periodId, "{\"name\":\"Đợt KTV đọc 2\"}")))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/registration-periods/" + periodId).with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isNoContent());
+        for (String action :
+                List.of(
+                        AuditAction.REGISTRATION_PERIOD_CREATE,
+                        AuditAction.REGISTRATION_PERIOD_UPDATE,
+                        AuditAction.REGISTRATION_PERIOD_DELETE)) {
+            assertThat(
+                            jdbc.queryForObject(
+                                    "SELECT count(*) FROM audit_log WHERE action=? AND entity_type=?"
+                                            + " AND entity_id=? AND actor_id=?",
+                                    Long.class,
+                                    action,
+                                    EntityType.REGISTRATION_PERIOD,
+                                    periodId,
+                                    adminId))
+                    .isEqualTo(1L);
+        }
+    }
+
     @Test
     void adminCreatesAndProcessesApplicationOnBehalfWithoutChangingAuditActor() throws Exception {
         Long periodId = createOpenPeriod();
@@ -1957,6 +2025,33 @@ class CrudApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(rateId))
                 .andExpect(jsonPath("$.content[0].meterType").value("ELECTRIC"));
+    }
+
+    /** Đơn giá mới không được lùi ngày hiệu lực để tránh đổi giá của kỳ đã qua. */
+    @Test
+    void utilityRateCreateRejectsPastEffectiveDate() throws Exception {
+        mvc.perform(
+                        post("/api/utility-rates/save-or-update")
+                                .with(asUser(adminId, Role.ADMIN))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        "{\"meterType\":\"ELECTRIC\",\"unitPrice\":3500,\"effectiveFrom\":\""
+                                                + LocalDate.now().minusDays(1)
+                                                + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details.fieldErrors[0].field").value("effectiveFrom"));
+        mvc.perform(
+                        post("/api/utility-rates/save-or-update")
+                                .with(asUser(adminId, Role.ADMIN))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        "{\"meterType\":\"WATER\",\"unitPrice\":17000,\"effectiveFrom\":\""
+                                                + LocalDate.now()
+                                                + "\"}"))
+                .andExpect(status().isOk());
+        jdbc.update(
+                "DELETE FROM utility_rate WHERE meter_type='WATER' AND effective_from=?",
+                LocalDate.now());
     }
 
     /** Hồ sơ chỉ ghi người hiện tại; cấu hình tìm bằng key, không tạo key tùy ý. */
@@ -2718,6 +2813,33 @@ class CrudApiIntegrationTest {
                         .content(mapper.writeValueAsString(reading)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.startReading").value(20));
+    }
+
+    /** Lý do rỗng khi sửa xóa nhóm thay đồng hồ nhập nhầm; null vẫn giữ nguyên dữ liệu cũ. */
+    @Test
+    void readingUpdateClearsMeterReplacementOnlyWithBlankReason() throws Exception {
+        Long id = jdbc.queryForObject(
+                "INSERT INTO utility_reading(room_id,meter_type,billing_month,start_reading,end_reading,"
+                        + "old_meter_final,new_meter_start,replacement_reason,recorded_by)"
+                        + " VALUES (?,?,'2026-05-01',100,20,130,0,'Nhập nhầm',?) RETURNING id",
+                Long.class, firstRoomId, MeterType.ELECTRIC, staffId);
+        mvc.perform(post("/api/utility-readings/save-or-update")
+                        .with(asUser(staffId, Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(Map.of("id", id, "endReading", 25))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.oldMeterFinal").value(130))
+                .andExpect(jsonPath("$.replacementReason").value("Nhập nhầm"));
+        mvc.perform(post("/api/utility-readings/save-or-update")
+                        .with(asUser(staffId, Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(
+                                Map.of("id", id, "endReading", 140, "replacementReason", ""))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.oldMeterFinal").value(nullValue()))
+                .andExpect(jsonPath("$.newMeterStart").value(nullValue()))
+                .andExpect(jsonPath("$.replacementReason").value(nullValue()))
+                .andExpect(jsonPath("$.consumption").value(40));
     }
 
     /** Kỳ đã tồn tại trong dữ liệu có khoảng trống vẫn trả lỗi trùng như trước. */

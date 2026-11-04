@@ -11,6 +11,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SemesterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SummerChoice;
@@ -105,7 +106,12 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
             scope = "a.preferred_unit_id=?";
             args.add(current.get().unitId());
         }
-        args.add(LikePattern.contains(search.q()));
+        // Cán bộ tra theo họ tên, tên đăng nhập/mã sinh viên hoặc mã hợp đồng.
+        String keyword = LikePattern.contains(search.q());
+        args.add(keyword);
+        args.add(keyword);
+        args.add(keyword);
+        args.add(keyword);
         String statusFilter = "";
         if (search.statuses() != null && !search.statuses().isEmpty()) {
             statusFilter =
@@ -132,9 +138,11 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
                 "SELECT sc.*,c.student_id AS student_id,c.code AS contract_code,u.full_name FROM"
                         + " summer_choice sc JOIN dormitory_contract c ON c.id=sc.contract_id JOIN"
                         + " room_application a ON a.id=c.application_id JOIN app_user u ON"
-                        + " u.id=c.student_id WHERE "
+                        + " u.id=c.student_id LEFT JOIN student_profile sp ON sp.user_id=u.id"
+                        + " WHERE "
                         + scope
-                        + " AND u.full_name ILIKE ?"
+                        + " AND (u.full_name ILIKE ? OR u.username ILIKE ?"
+                        + " OR sp.student_code ILIKE ? OR c.code ILIKE ?)"
                         + statusFilter,
                 args,
                 search,
@@ -157,6 +165,10 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
         return toDetail(row);
     }
 
+    /**
+     * Lựa chọn hè hiện hành của sinh viên: chỉ xét hợp đồng ACTIVE và học kỳ hè chưa kết thúc để
+     * không hiển thị nhầm lựa chọn của năm học cũ.
+     */
     @Override()
     public Map<String, Object> getMyCurrentChoice() {
         guard.requirePermission(Permission.SUMMER_REGISTRATION_READ);
@@ -167,12 +179,14 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
                         SELECT sc.id
                         FROM summer_choice sc
                         JOIN dormitory_contract c ON c.id = sc.contract_id
-                        WHERE c.student_id = ?
-                        ORDER BY sc.created_at DESC, sc.id DESC
+                        JOIN semester s ON s.id = sc.semester_id
+                        WHERE c.student_id = ? AND c.status = ? AND s.end_date >= CURRENT_DATE
+                        ORDER BY s.start_date DESC, sc.created_at DESC, sc.id DESC
                         LIMIT 1
                         """,
                         (row, index) -> row.getLong(1),
-                        current.get().id());
+                        current.get().id(),
+                        ContractStatus.ACTIVE);
         return ids.isEmpty() ? null : getChoice(ids.get(0));
     }
 
@@ -270,11 +284,21 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
      * lại khi thực hiện, danh sách này chỉ phục vụ giao diện.
      */
     private List<String> allowedActions(Map<String, Object> row) {
-        if (!SummerStatus.PENDING.equals(row.get("status"))) {
-            return List.of();
-        }
+        String status = (String) row.get(ApiField.STATUS);
         var actor = current.get();
         var actions = new ArrayList<String>();
+        if (actor.is(Role.STUDENT)
+                && actor.id().equals(number(row, ApiField.STUDENT_ID))
+                && SummerStatus.REJECTED.equals(status)) {
+            // Lựa chọn bị từ chối được sinh viên sửa và gửi lại khi đợt hè còn mở.
+            if (guard.hasPermission(Permission.SUMMER_REGISTRATION_UPDATE)) {
+                actions.add(BusinessAction.EDIT);
+            }
+            return actions;
+        }
+        if (!SummerStatus.PENDING.equals(status)) {
+            return List.of();
+        }
         if (actor.isAdmin() || actor.is(Role.STAFF)) {
             if (!actor.isAdmin()
                     && !Objects.equals(actor.unitId(), number(row, "preferredUnitId"))) {
@@ -348,6 +372,19 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
                     ApiField.SEMESTER_ID, ValidationMessage.SUMMER_SEMESTER_REQUIRED);
         }
         validateChoice(input);
+        requireOpenSummerPeriod(
+                number(input, "semesterId"), number(c, "preferredUnitId"));
+        var existing =
+                jdbc.query(
+                        "SELECT id FROM summer_choice WHERE contract_id=? AND semester_id=?"
+                                + " FOR UPDATE",
+                        (row, index) -> row.getLong(1),
+                        number(input, "contractId"),
+                        number(input, "semesterId"));
+        if (!existing.isEmpty()) {
+            // Một lựa chọn cho mỗi (hợp đồng, học kỳ hè): bản ghi bị từ chối/đã rút được mở lại.
+            return reopenChoice(existing.get(0), (String) input.get(ApiField.CHOICE));
+        }
         var created =
                 insertRecord(
                         "summer_choice",
@@ -371,23 +408,111 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
         return (Map<String, Object>) record;
     }
 
+    /**
+     * Sinh viên đổi lựa chọn khi còn PENDING, hoặc sửa lựa chọn REJECTED để gửi lại (về PENDING).
+     * Cả hai chỉ được thực hiện khi đợt hè của học kỳ và đơn vị còn mở.
+     */
     private Object updateChoice(Long id, Map<String, Object> input) {
         guard.requirePermission(Permission.SUMMER_REGISTRATION_UPDATE);
-        loadEditable(id);
+        var row = loadEditable(id, Set.of(SummerStatus.PENDING, SummerStatus.REJECTED));
         if (input.size() != 1 || !input.containsKey(ApiField.CHOICE)) {
             throw BusinessException.invalid(
                     ApiField.CHOICE, ValidationMessage.SUMMER_CHOICE_EDIT);
         }
         validateChoice(input);
+        requireOpenSummerPeriod(number(row, "semesterId"), number(row, "preferredUnitId"));
+        if (SummerStatus.REJECTED.equals(row.get(ApiField.STATUS))) {
+            return reopenChoice(id, (String) input.get(ApiField.CHOICE));
+        }
         return updateRecord("summer_choice", id, FIELDS, input);
     }
 
+    /**
+     * Sinh viên rút lựa chọn còn PENDING: chuyển sang CANCELLED, giữ bản ghi và lịch sử thay cho
+     * xóa cứng; ghi lịch sử trạng thái và audit trong cùng transaction.
+     */
     @Transactional
     @Override()
     public void deleteChoice(Long id) {
         guard.requirePermission(Permission.SUMMER_REGISTRATION_DELETE);
-        loadEditable(id);
-        deleteRecord("summer_choice", id);
+        var row = loadEditable(id, Set.of(SummerStatus.PENDING));
+        Long actorId = current.get().id();
+        jdbc.update(
+                "UPDATE summer_choice SET status=?,decided_by=NULL,decided_at=NULL WHERE id=?",
+                SummerStatus.CANCELLED,
+                id);
+        history.record(
+                EntityType.SUMMER_CHOICE,
+                id,
+                SummerStatus.PENDING,
+                SummerStatus.CANCELLED,
+                actorId,
+                null);
+        audit.record(
+                actorId,
+                AuditAction.SUMMER_CHOICE_CANCEL,
+                EntityType.SUMMER_CHOICE,
+                id,
+                Map.of(ApiField.STATUS, SummerStatus.PENDING, ApiField.CHOICE, row.get("choice")),
+                Map.of(ApiField.STATUS, SummerStatus.CANCELLED),
+                null);
+    }
+
+    /**
+     * Mở lại lựa chọn REJECTED/CANCELLED về PENDING với phương án mới; xóa người/thời điểm quyết
+     * định cũ, ghi lịch sử và audit trong cùng transaction. Nơi gọi đã khóa bản ghi và kiểm tra đợt
+     * hè đang mở.
+     */
+    private Object reopenChoice(Long id, String choice) {
+        var row =
+                queries.one(
+                        "SELECT " + CHOICE_COLUMNS + " FROM summer_choice WHERE id=? FOR UPDATE",
+                        id);
+        String before = (String) row.get(ApiField.STATUS);
+        if (!SummerStatus.REJECTED.equals(before) && !SummerStatus.CANCELLED.equals(before)) {
+            throw BusinessException.conflict(ErrorCode.SUMMER_CHOICE_EXISTS);
+        }
+        Long actorId = current.get().id();
+        jdbc.update(
+                "UPDATE summer_choice SET choice=?,status=?,decided_by=NULL,decided_at=NULL"
+                        + " WHERE id=?",
+                choice,
+                SummerStatus.PENDING,
+                id);
+        history.record(
+                EntityType.SUMMER_CHOICE, id, before, SummerStatus.PENDING, actorId, null);
+        audit.record(
+                actorId,
+                AuditAction.SUMMER_CHOICE_RESUBMIT,
+                EntityType.SUMMER_CHOICE,
+                id,
+                Map.of(ApiField.STATUS, before, ApiField.CHOICE, row.get("choice")),
+                Map.of(ApiField.STATUS, SummerStatus.PENDING, ApiField.CHOICE, choice),
+                null);
+        return queries.one("SELECT " + CHOICE_COLUMNS + " FROM summer_choice WHERE id=?", id);
+    }
+
+    /**
+     * Đợt đăng ký hè của học kỳ phải đang mở cho đơn vị của hợp đồng ({@code openAt <= now <
+     * closeAt}); ngoài hạn trả 409 PERIOD_NOT_OPEN.
+     */
+    private void requireOpenSummerPeriod(Long semesterId, Long unitId) {
+        Boolean open =
+                jdbc.queryForObject(
+                        """
+                        SELECT EXISTS(
+                            SELECT 1 FROM registration_period p
+                            JOIN registration_period_unit pu ON pu.period_id = p.id
+                            WHERE p.kind = ? AND p.semester_id = ? AND pu.management_unit_id = ?
+                              AND p.open_at <= now() AND p.close_at > now())
+                        """,
+                        Boolean.class,
+                        RegistrationKind.SUMMER,
+                        semesterId,
+                        unitId);
+        if (!Boolean.TRUE.equals(open)) {
+            throw BusinessException.conflict(ErrorCode.PERIOD_NOT_OPEN);
+        }
     }
 
     @Transactional
@@ -471,16 +596,14 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
         contracts.recordSummerExtension(contractId, semester.endDate(), actorId, reason);
     }
 
-    private void loadEditable(Long id) {
+    /** Khóa lựa chọn của chính sinh viên và kiểm tra trạng thái sau khóa nằm trong tập cho phép. */
+    private Map<String, Object> loadEditable(Long id, Set<String> editableStatuses) {
         guard.requireRole(Role.STUDENT);
-        var row =
-                queries.one(
-                        "SELECT " + CHOICE_COLUMNS + " FROM summer_choice WHERE id=? FOR UPDATE",
-                        id);
-        requireContract(number(row, ApiField.CONTRACT_ID));
-        if (!SummerStatus.PENDING.equals(row.get(ApiField.STATUS))) {
+        var row = lockChoice(id);
+        if (!editableStatuses.contains(row.get(ApiField.STATUS))) {
             throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
+        return row;
     }
 
     private void validateChoice(Map<String, Object> input) {

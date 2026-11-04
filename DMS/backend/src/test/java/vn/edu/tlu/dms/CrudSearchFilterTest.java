@@ -499,7 +499,7 @@ class CrudSearchFilterTest {
     void registrationPeriodFiltersKeepOpenStudentScope() throws Exception {
         var repository = mock(vn.edu.tlu.dms.registration.repository.RegistrationPeriodRepository.class);
         var service = new vn.edu.tlu.dms.registration.service.impl.RegistrationPeriodServiceImpl(
-                repository, null, null, null, null, current, guard, null, null);
+                repository, null, null, null, null, current, guard, null, null, audit);
         when(current.get()).thenReturn(new Actor(10L, Role.STUDENT, null, false, false));
         var captured = new AtomicReference<Specification<vn.edu.tlu.dms.registration.domain.RegistrationPeriod>>();
         when(repository.findAll(any(Specification.class), any(Pageable.class))).thenAnswer(invocation -> {

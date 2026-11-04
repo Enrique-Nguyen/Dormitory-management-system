@@ -283,8 +283,10 @@ class CrudOperationalFilterTest {
                 "studentId", 42L, "q", KEYWORD, "page", 1, "size", 5));
         fixture.summer().searchByPage(input, student);
         assertThat(fixture.countSql()).contains(student ? "WHERE c.student_id=?" : "WHERE a.preferred_unit_id=?",
-                "AND u.full_name ILIKE ? AND sc.choice=? AND sc.contract_id=? AND c.student_id=?");
+                "AND (u.full_name ILIKE ? OR u.username ILIKE ? OR sp.student_code ILIKE ? OR c.code ILIKE ?)",
+                "AND sc.choice=? AND sc.contract_id=? AND c.student_id=?");
         fixture.assertPagedQuery(" | " + (student ? ACTOR_ID : UNIT_ID) + " | " + KEYWORD_PATTERN
+                + " | " + KEYWORD_PATTERN + " | " + KEYWORD_PATTERN + " | " + KEYWORD_PATTERN
                 + " | STAY | " + CONTRACT_ID + " | 42", input);
         verify(fixture.guard).requirePermission(Permission.SUMMER_REGISTRATION_READ);
     }
@@ -296,7 +298,7 @@ class CrudOperationalFilterTest {
         fixture.summer().searchByPage(input, false);
         assertThat(fixture.countSql()).contains("WHERE a.preferred_unit_id=?")
                 .doesNotContain("sc.choice=?", "sc.contract_id=?", "AND c.student_id=?");
-        fixture.assertPagedQuery(" | " + UNIT_ID + " | %%", input);
+        fixture.assertPagedQuery(" | " + UNIT_ID + " | %% | %% | %% | %%", input);
     }
 
     @Test

@@ -21,8 +21,10 @@ import {
   InvoiceStatus,
   InvoiceType,
   MaintenanceStatus,
+  RegistrationKind,
   RoomGender,
   RoomStatus,
+  SemesterType,
   StayRequestStatus,
   SummerStatus,
   TRANSFER_ACTION,
@@ -235,7 +237,6 @@ export const crudDetailUiLabels = {
   moreActions: 'Thao tác khác',
   countError: 'Không tải được số lượng',
   statusFilterNames: ['status', 'locked', 'active'],
-  workflow: 'Xử lý nghiệp vụ',
   collections: { items: 'Dòng hóa đơn', transactions: 'Giao dịch cọc', timeline: 'Lịch sử' },
 }
 
@@ -830,11 +831,21 @@ export const resources: Record<string, CrudResource> = {
     permission: Resource.ROOM_APPLICATION,
     title: 'Đơn đăng ký của tôi',
     endpoint: '/me/applications',
-    filters: [statusFilter(Object.values(ApplicationStatus)), ref('periodId', 'Đợt đăng ký', '/me/registration-periods/open', 'name', false)],
+    filters: [
+      statusFilter(Object.values(ApplicationStatus)),
+      {
+        ...ref('periodId', 'Đợt đăng ký', '/me/registration-periods/open', 'name', false),
+        lookupFilters: { kind: RegistrationKind.REGULAR },
+      },
+    ],
     writeEndpoint: '/applications',
     detailEndpoint: '/applications',
     fields: [
-      ref('periodId', 'Đợt đăng ký', '/me/registration-periods/open'),
+      // Đơn ở chỉ thuộc đợt thường; đợt hè có luồng lựa chọn riêng.
+      {
+        ...ref('periodId', 'Đợt đăng ký', '/me/registration-periods/open'),
+        lookupFilters: { kind: RegistrationKind.REGULAR },
+      },
       ref('preferredUnitId', 'Đơn vị nguyện vọng', '/management-units'),
       ref('preferredRoomTypeId', 'Loại phòng', '/room-types', 'name', false),
       {
@@ -1049,9 +1060,14 @@ export const resources: Record<string, CrudResource> = {
     fields: [
       {
         ...ref('contractId', 'Hợp đồng', '/me/contracts', 'code'),
+        lookupFilters: { status: ContractStatus.ACTIVE },
         createOnly: true,
       },
-      { ...ref('semesterId', 'Học kỳ hè', '/semesters'), createOnly: true },
+      {
+        ...ref('semesterId', 'Học kỳ hè', '/semesters'),
+        lookupFilters: { type: SemesterType.SUMMER },
+        createOnly: true,
+      },
       select('choice', 'Lựa chọn', Object.values(SummerChoice)),
     ],
     columns: columns(
@@ -1065,7 +1081,10 @@ export const resources: Record<string, CrudResource> = {
       { key: 'decidedAt', label: 'Thời gian quyết định' },
       { key: 'decisionReason', label: 'Lý do quyết định' },
     ],
-    editStates: [SummerStatus.PENDING],
+    // Bị từ chối vẫn sửa để gửi lại trong đợt hè còn mở; chỉ lựa chọn đang chờ mới rút được.
+    editStates: [SummerStatus.PENDING, SummerStatus.REJECTED],
+    deleteStates: [SummerStatus.PENDING],
+    deleteLabel: 'Rút',
     detailRoutes: {
       [Role.STAFF]: STAFF_SUMMER_PATH,
       [Role.ADMIN]: portalPath(Role.ADMIN, STAFF_SUMMER_PATH),
@@ -1095,7 +1114,7 @@ export const resources: Record<string, CrudResource> = {
       },
       {
         title: 'Thay hoặc reset đồng hồ',
-        note: 'Bỏ trống nếu đồng hồ giữ nguyên.',
+        note: 'Bỏ trống nếu đồng hồ giữ nguyên. Khi sửa, xóa lý do và hai chỉ số để bỏ thông tin thay đồng hồ đã nhập nhầm.',
         fields: ['oldMeterFinal', 'newMeterStart', 'replacementReason'],
       },
     ],
@@ -1138,7 +1157,7 @@ export const resources: Record<string, CrudResource> = {
       {
         ...text('replacementReason', 'Lý do thay/reset đồng hồ', false, 300),
         kind: 'textarea',
-        hint: 'Bắt buộc khi thay hoặc reset đồng hồ.',
+        hint: 'Bắt buộc khi thay hoặc reset đồng hồ. Xóa trống để bỏ thông tin thay đồng hồ.',
       },
     ],
     columns: [
@@ -1294,7 +1313,7 @@ export const resources: Record<string, CrudResource> = {
       { key: 'status', label: 'Trạng thái' },
     ],
     readOnly: true,
-    note: 'Sổ tiền chỉ tra cứu. Thu/trừ/bù/hoàn cọc là nghiệp vụ chi tiết, không sửa/xóa giao dịch đã ghi.',
+    note: 'Không sửa/xóa giao dịch đã ghi. Mở sổ cọc để nộp bù hoặc hoàn cọc khi hệ thống cho phép; thu cọc ban đầu thực hiện khi kích hoạt hợp đồng.',
   },
   myDeposits: {
     finance: true,

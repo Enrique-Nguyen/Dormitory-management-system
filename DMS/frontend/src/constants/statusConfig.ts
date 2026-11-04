@@ -327,10 +327,14 @@ export const RoomGender = { M: 'M', F: 'F' } as const
 export const StayRequestStatus = {
   PENDING: 'PENDING', APPROVED: 'APPROVED', REJECTED: 'REJECTED', CANCELLED: 'CANCELLED',
 } as const
-/** Trạng thái lựa chọn hè khớp `DmsConstants.SummerStatus`. */
+/** Trạng thái lựa chọn hè khớp `DmsConstants.SummerStatus`; CANCELLED là sinh viên tự rút. */
 export const SummerStatus = {
-  PENDING: 'PENDING', APPROVED: 'APPROVED', REJECTED: 'REJECTED',
+  PENDING: 'PENDING', APPROVED: 'APPROVED', REJECTED: 'REJECTED', CANCELLED: 'CANCELLED',
 } as const
+/** Loại đợt đăng ký khớp `DmsConstants.RegistrationKind`. */
+export const RegistrationKind = { REGULAR: 'REGULAR', SUMMER: 'SUMMER' } as const
+/** Loại học kỳ khớp `DmsConstants.SemesterType`. */
+export const SemesterType = { HK1: 'HK1', HK2: 'HK2', SUMMER: 'SUMMER' } as const
 /** Trạng thái phiếu bảo trì khớp `DmsConstants.MaintenanceStatus`. */
 export const MaintenanceStatus = {
   OPEN: 'OPEN', ASSIGNED: 'ASSIGNED', IN_PROGRESS: 'IN_PROGRESS', RESOLVED: 'RESOLVED',

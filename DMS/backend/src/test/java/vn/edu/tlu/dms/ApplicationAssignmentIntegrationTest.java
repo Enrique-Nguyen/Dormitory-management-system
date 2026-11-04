@@ -6,11 +6,15 @@ import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
@@ -25,11 +29,14 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
+import vn.edu.tlu.dms.registration.domain.ApplicationStatusChangedEvent;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Response;
 import vn.edu.tlu.dms.registration.service.RoomApplicationService;
 import vn.edu.tlu.dms.room.service.BedOccupancyService;
 
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -42,6 +49,7 @@ import java.util.UUID;
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 @Transactional
+@RecordApplicationEvents
 class ApplicationAssignmentIntegrationTest {
 
     private static final LocalDate SEMESTER_START = LocalDate.of(2070, 9, 1);
@@ -53,6 +61,10 @@ class ApplicationAssignmentIntegrationTest {
     @Autowired BedOccupancyService occupancy;
 
     @Autowired JdbcTemplate jdbc;
+
+    @Autowired ObjectMapper mapper;
+
+    @Autowired ApplicationEvents events;
 
     @MockitoBean CurrentUser currentUser;
 
@@ -470,6 +482,142 @@ class ApplicationAssignmentIntegrationTest {
                                 "SELECT COUNT(*) FROM dormitory_contract WHERE application_id=?",
                                 applicationId))
                 .isZero();
+    }
+
+    /** ADMIN liên đơn vị vẫn không giữ chỗ được giường ngoài đơn vị nguyện vọng của đơn. */
+    @Test
+    void adminCannotAssignBedOutsidePreferredUnit() {
+        Long adminId = createUser(Role.ADMIN, null, "Quản trị " + suffix);
+        when(currentUser.get()).thenReturn(new Actor(adminId, Role.ADMIN, null, false, false));
+        Long otherUnitId =
+                jdbc.queryForObject(
+                        "SELECT id FROM management_unit WHERE code<>'K1' ORDER BY id LIMIT 1",
+                        Long.class);
+        Long roomTypeId =
+                jdbc.queryForObject(
+                        "SELECT room_type_id FROM room WHERE id=?", Long.class, roomId);
+        Long otherBuildingId =
+                jdbc.queryForObject(
+                        "INSERT INTO building(management_unit_id,code,name,deposit_amount)"
+                                + " VALUES(?,?,?,2000000) RETURNING id",
+                        Long.class,
+                        otherUnitId,
+                        "X" + suffix,
+                        "Tòa khác " + suffix);
+        jdbc.update(
+                "INSERT INTO building_floor(building_id,floor,name) VALUES(?,1,'Tang 1')"
+                        + " ON CONFLICT DO NOTHING",
+                otherBuildingId);
+        Long otherRoomId =
+                jdbc.queryForObject(
+                        "INSERT INTO room(building_id,room_type_id,floor,code,gender)"
+                                + " VALUES(?,?,1,?,'M') RETURNING id",
+                        Long.class,
+                        otherBuildingId,
+                        roomTypeId,
+                        "Q" + suffix);
+        Long otherBedId = createBed(otherRoomId, "01");
+
+        assertThatThrownBy(() -> applications.assignBed(applicationId, otherBedId))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.BED_UNIT_MISMATCH));
+        assertThat(
+                        count(
+                                "SELECT COUNT(*) FROM dormitory_contract WHERE application_id=?",
+                                applicationId))
+                .isZero();
+        assertThat(
+                        count(
+                                "SELECT COUNT(*) FROM room_assignment_history WHERE student_id=?",
+                                studentId))
+                .isZero();
+    }
+
+    /** Duyệt, từ chối và giữ chỗ đều phát sự kiện để notification báo cho sinh viên (FR-NOT-04). */
+    @Test
+    void approveRejectAndAssignPublishStudentNotificationEvents() {
+        jdbc.update(
+                "UPDATE room_application SET status=? WHERE id=?",
+                ApplicationStatus.SUBMITTED,
+                applicationId);
+        applications.performApplicationAction(applicationId, BusinessAction.APPROVE, null);
+        Response assigned = applications.assignBed(applicationId, firstBedId);
+
+        Long otherStudentId = createStudent("SVR" + suffix);
+        Long rejectedId =
+                jdbc.queryForObject(
+                        "INSERT INTO room_application(student_id,period_id,preferred_unit_id,"
+                                + "status,submitted_at) VALUES(?,?,?,'SUBMITTED',now()) RETURNING id",
+                        Long.class,
+                        otherStudentId,
+                        periodId,
+                        unitId);
+        applications.performApplicationAction(
+                rejectedId, BusinessAction.REJECT, "Thiếu giấy tờ ưu tiên");
+
+        assertThat(events.stream(ApplicationStatusChangedEvent.class))
+                .extracting(
+                        ApplicationStatusChangedEvent::applicationId,
+                        ApplicationStatusChangedEvent::studentId,
+                        ApplicationStatusChangedEvent::status)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(
+                                applicationId, studentId, ApplicationStatus.APPROVED),
+                        org.assertj.core.groups.Tuple.tuple(
+                                applicationId, studentId, ApplicationStatus.ASSIGNED),
+                        org.assertj.core.groups.Tuple.tuple(
+                                rejectedId, otherStudentId, ApplicationStatus.REJECTED));
+        assertThat(
+                        events.stream(ApplicationStatusChangedEvent.class)
+                                .filter(e -> ApplicationStatus.ASSIGNED.equals(e.status()))
+                                .findFirst()
+                                .orElseThrow()
+                                .bedLabel())
+                .isEqualTo(assigned.hold().roomCode() + "-" + assigned.hold().bedCode());
+        assertThat(
+                        events.stream(ApplicationStatusChangedEvent.class)
+                                .filter(e -> ApplicationStatus.REJECTED.equals(e.status()))
+                                .findFirst()
+                                .orElseThrow()
+                                .reason())
+                .isEqualTo("Thiếu giấy tờ ưu tiên");
+    }
+
+    /** Danh sách của Staff mặc định sắp theo điểm ưu tiên giảm dần (FR-REG-05). */
+    @Test
+    void staffListDefaultsToPriorityScoreDescending() {
+        jdbc.update("UPDATE room_application SET priority_score=10 WHERE id=?", applicationId);
+        Long higherStudentId = createStudent("SVH" + suffix);
+        Long higherId =
+                jdbc.queryForObject(
+                        "INSERT INTO room_application(student_id,period_id,preferred_unit_id,"
+                                + "status,submitted_at,priority_score)"
+                                + " VALUES(?,?,?,'SUBMITTED',now(),50) RETURNING id",
+                        Long.class,
+                        higherStudentId,
+                        periodId,
+                        unitId);
+
+        var page =
+                applications.searchByPage(
+                        mapper.convertValue(Map.of("periodId", periodId), SearchRequest.class),
+                        false);
+
+        assertThat(page.content()).extracting(Response::id).containsExactly(higherId, applicationId);
+        assertThat(page.content().get(0).student().fullName()).isEqualTo("Sinh viên SVH" + suffix);
+    }
+
+    /** Sinh viên xem chi tiết đơn của mình không thấy trọng số diện ưu tiên; Staff vẫn thấy. */
+    @Test
+    void studentDetailHidesPriorityWeight() {
+        assertThat(applications.getApplicationById(applicationId).priorities())
+                .allSatisfy(priority -> assertThat(priority.weight()).isNotNull());
+
+        when(currentUser.get()).thenReturn(new Actor(studentId, Role.STUDENT, null, false, false));
+        assertThat(applications.getApplicationById(applicationId).priorities())
+                .isNotEmpty()
+                .allSatisfy(priority -> assertThat(priority.weight()).isNull());
     }
 
     private Long createUser(String role, Long unitId, String name) {

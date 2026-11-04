@@ -22,6 +22,18 @@ public interface BedOccupancyService {
     void lockOpenAssignment(Long contractId, Long studentId);
 
     /**
+     * Khóa giường đích rồi khóa hồ sơ sinh viên trước khi nơi gọi tạo hợp đồng PENDING, để phân
+     * giường giữ đúng thứ tự khóa bed → student_profile → dormitory_contract. Giường không tồn tại
+     * hoặc ngoài đơn vị của Staff trả 404. Không thay đổi phân phòng; việc kiểm tra giường trống,
+     * giới tính và tạo HOLD vẫn do {@link #occupyHold} thực hiện sau đó trong cùng transaction.
+     *
+     * @param bedId giường sẽ giữ chỗ
+     * @param studentId sinh viên của đơn đăng ký
+     * @return ID đơn vị quản lý của tòa chứa giường, để nơi gọi đối chiếu với đơn vị nguyện vọng
+     */
+    Long lockBedForAssignment(Long bedId, Long studentId);
+
+    /**
      * Phân giường giữ chỗ (HOLD) cho sinh viên theo hợp đồng PENDING. Khóa giường rồi khóa sinh
      * viên, kiểm tra lại giường/phòng ACTIVE, giường trống, sinh viên chưa có phân phòng hiệu lực
      * và giới tính; chụp đơn giá loại phòng vào phân phòng. Giường ngoài đơn vị của Staff trả 404.

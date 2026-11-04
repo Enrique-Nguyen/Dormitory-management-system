@@ -26,7 +26,6 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MeterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
-import vn.edu.tlu.dms.common.constants.DmsConstants.RoomStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SemesterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SummerChoice;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SummerStatus;
@@ -403,7 +402,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         return result;
     }
 
-    /** Phát hành điện nước trong đơn vị ghi, khóa phòng/chỉ số trước kiểm tra hóa đơn trùng. */
+    /**
+     * Phát hành điện nước trong đơn vị ghi cho mọi phòng có người ở trong tháng lập hóa đơn, khóa
+     * phòng/chỉ số trước kiểm tra hóa đơn trùng.
+     */
     @Transactional
     @Override
     public InvoiceDtos.BatchIssueResult issueUtility(
@@ -472,15 +474,20 @@ public class InvoiceServiceImpl implements InvoiceService {
                 SELECT r.id, r.code, r.leader_student_id
                 FROM room r
                 JOIN building bd ON bd.id = r.building_id
-                WHERE %s AND r.status = ?
+                WHERE %s
                   AND EXISTS (SELECT 1 FROM room_assignment_history h JOIN bed b ON b.id=h.bed_id
-                      WHERE b.room_id=r.id AND h.kind=? AND h.ended_at IS NULL)
+                      WHERE b.room_id=r.id AND h.kind=?
+                          AND h.stay_started_at < ?::date + INTERVAL '1 month'
+                          AND (h.ended_at IS NULL OR h.ended_at > ?::date))
                 ORDER BY r.id FOR UPDATE OF r
                 """
                         .formatted(unitCondition);
 
-        args.add(RoomStatus.ACTIVE);
+        // Phòng có người ở trong tháng lập hóa đơn (kể cả đã trả phòng/đổi trạng thái sau đó),
+        // cùng khoảng ở với phạm vi hóa đơn điện nước của sinh viên.
         args.add(AssignmentKind.STAY);
+        args.add(billingMonth);
+        args.add(billingMonth);
         List<Map<String, Object>> roomRows = jdbc.queryForList(sql, args.toArray());
 
         int created = 0;

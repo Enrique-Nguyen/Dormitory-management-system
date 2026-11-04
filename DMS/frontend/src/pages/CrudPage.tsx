@@ -86,7 +86,7 @@ import StudentImportPanel from '../features/account/StudentImportPanel'
 import CrudExcelPanel from '../features/crud/CrudExcelPanel'
 import ReferenceSelect, { ReferenceLabel } from '../features/crud/ReferenceSelect'
 import { downloadWorkbook, exportFilteredRecords } from '../features/crud/excel'
-import { crudValueLabels, getStatus, InvoiceStatus as InvoiceState } from '../constants/statusConfig'
+import { BillingAction, crudValueLabels, getStatus } from '../constants/statusConfig'
 import type { CrudColumn, CrudField, CrudFormSection, CrudRecord } from '../features/crud/types'
 import { api } from '../services/api/client'
 import { hasPermission } from '../services/api/auth'
@@ -464,7 +464,7 @@ export default function CrudPage({ resource }: { resource: string }) {
   const query = readCrudQuery(searchParams, resource, config)
   const { search, page, size, filters: activeFilters } = query
   const handleApiError = useApiErrorHandler()
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view' | 'workflow' | null>(
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view' | null>(
     null,
   )
   const [activeRecord, setActiveRecord] = useState<CrudRecord | null>(null)
@@ -774,7 +774,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     setModalMode(null)
     setActiveRecord(null)
     if (modalMode === 'edit' || modalMode === 'create') form.resetFields()
-    if (modalMode === 'workflow') void refresh()
+    if (modalMode === 'view' && hasRecordDetailContent(resource)) void refresh()
     if (routeId) {
       navigate(
         { pathname: '..', search: location.search },
@@ -829,6 +829,8 @@ export default function CrudPage({ resource }: { resource: string }) {
     return (
       canDelete &&
       canChangeRow(row) &&
+      (!config.deleteStates ||
+        config.deleteStates.includes(String(row.status))) &&
       !config.singleton &&
       !config.noDelete &&
       !(resource === 'users' && (row.locked === true || row.id === me?.id))
@@ -933,12 +935,12 @@ export default function CrudPage({ resource }: { resource: string }) {
       row.id !== me?.id
     )
   }
+  /** Chỉ hiện xác nhận thu tiền khi GET chi tiết hóa đơn trả action này trong allowedActions. */
   function canConfirmInvoicePayment(row: CrudRecord) {
-    // Trùng điều kiện allowedActions của GET /api/invoices/{id}: chỉ hóa đơn chưa thu.
     return (
       resource === 'invoices' &&
-      canUpdate &&
-      row.status === InvoiceState.UNPAID
+      Array.isArray(row.allowedActions) &&
+      row.allowedActions.includes(BillingAction.CONFIRM_PAYMENT)
     )
   }
   function showTemporaryPassword(result: unknown, username?: unknown) {
@@ -1390,23 +1392,21 @@ export default function CrudPage({ resource }: { resource: string }) {
   }
 
   const modalTitleText =
-    modalMode === 'workflow'
-      ? `${crudDetailUiLabels.workflow} - ${config.title}`
-      : modalMode === 'view'
+    modalMode === 'view'
       ? `Chi tiết ${config.title.toLowerCase()}`
       : modalMode === 'edit'
       ? `Chỉnh sửa ${config.title.toLowerCase()}`
       : `Thêm ${config.title.toLowerCase()}`
 
   const ModalHeaderIcon =
-    modalMode === 'view' || modalMode === 'workflow'
+    modalMode === 'view'
       ? EyeOutlined
       : modalMode === 'edit'
       ? EditOutlined
       : PlusOutlined
 
   const modalSubtitle =
-    activeRecord && (modalMode === 'view' || modalMode === 'edit' || modalMode === 'workflow')
+    activeRecord && (modalMode === 'view' || modalMode === 'edit')
       ? String(
           activeRecord.code ??
             activeRecord.contractCode ??
@@ -1681,8 +1681,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                       row.locked === true) ||
                     (resource === 'users' &&
                       row.role === Role.STAFF &&
-                      hasPermission(me, Permission.USER_CROSS_UNIT_ACCESS)) ||
-                    canConfirmInvoicePayment(row)
+                      hasPermission(me, Permission.USER_CROSS_UNIT_ACCESS))
 
                   const moreItems: MenuProps['items'] = [
                     ...(canResetPassword(row)
@@ -1718,16 +1717,6 @@ export default function CrudPage({ resource }: { resource: string }) {
                               ? 'Thu hồi quyền đọc tổng hợp'
                               : 'Cấp quyền đọc tổng hợp',
                             onClick: () => changeCrossUnitAccess(row),
-                          },
-                        ]
-                      : []),
-                    ...(canConfirmInvoicePayment(row)
-                      ? [
-                          {
-                            key: 'confirm-payment',
-                            icon: <DollarCircleOutlined />,
-                            label: 'Xác nhận đã thu tiền',
-                            onClick: () => setPaymentInvoice(row),
                           },
                         ]
                       : []),
@@ -1809,28 +1798,20 @@ export default function CrudPage({ resource }: { resource: string }) {
         className={`dms-crud-modal${config.finance ? ' dms-finance-modal' : ''}`}
         footer={
           <div className="dms-modal-footer-v5">
-            <div className="dms-modal-footer-left">
-              {isViewMode && activeRecord && hasRecordDetailContent(resource) && (
-                <Button
-                  onClick={() => setModalMode('workflow')}
-                  className="dms-btn-workflow"
-                >
-                  {crudDetailUiLabels.workflow}
-                </Button>
-              )}
-              {modalMode === 'workflow' && (
-                <Button
-                  onClick={() => setModalMode('view')}
-                  className="dms-btn-view"
-                >
-                  Quay lại xem chi tiết
-                </Button>
-              )}
-            </div>
             <div className="dms-modal-footer-right">
               <Button onClick={closeModal} disabled={busy} className="dms-btn-cancel">
                 Đóng
               </Button>
+              {isViewMode && activeRecord && canConfirmInvoicePayment(activeRecord) && (
+                <Button
+                  type="primary"
+                  icon={<DollarCircleOutlined />}
+                  onClick={() => setPaymentInvoice(activeRecord)}
+                  disabled={busy}
+                >
+                  Xác nhận đã thu tiền
+                </Button>
+              )}
               {isViewMode && activeRecord && canEditRow(activeRecord) && (
                 <Button
                   type="primary"
@@ -1976,13 +1957,13 @@ export default function CrudPage({ resource }: { resource: string }) {
             </div>
           </div>
         )}
-        {activeRecord && (isViewMode || modalMode === 'workflow') && hasRecordDetailContent(resource) && (
+        {activeRecord && isViewMode && hasRecordDetailContent(resource) && (
           <RecordDetailContent
-            key={resource + ":" + String(activeRecord[idKey]) + ":" + modalMode}
+            key={resource + ":" + String(activeRecord[idKey])}
             resource={resource}
             recordId={Number(activeRecord[idKey])}
             role={role}
-            readOnly={modalMode !== "workflow"}
+            readOnly={false}
           />
         )}
         {activeRecord && isViewMode && !hasRecordDetailContent(resource) && (
@@ -2035,7 +2016,7 @@ export default function CrudPage({ resource }: { resource: string }) {
             ))}
           </DetailLayout>
         )}
-        {modalMode !== 'workflow' && invoiceResource && activeRecord ? (
+        {invoiceResource && activeRecord ? (
           <div className="dms-invoice-detail">
             <div className="dms-invoice-detail-head">
               <div className="dms-wrap">
@@ -2195,7 +2176,7 @@ export default function CrudPage({ resource }: { resource: string }) {
           }
           open
           onClose={() => setLedgerRecord(null)}
-          readOnly
+          readOnly={resource === 'myDeposits'}
         />
       )}
       {resource === 'maintenance' && (

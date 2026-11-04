@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
@@ -20,6 +22,7 @@ import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
+import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.registration.api.RegistrationPeriodDtos.Input;
 import vn.edu.tlu.dms.registration.api.RegistrationPeriodDtos.Quota;
@@ -63,6 +66,8 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
 
     private final ApplicationEventPublisher events;
 
+    private final AuditService audit;
+
     public RegistrationPeriodServiceImpl(
             RegistrationPeriodRepository periods,
             RegistrationPeriodUnitRepository units,
@@ -72,7 +77,8 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
             CurrentUser current,
             ScopeGuard guard,
             JdbcTemplate jdbc,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events,
+            AuditService audit) {
         this.periods = periods;
         this.units = units;
         this.quotas = quotas;
@@ -82,13 +88,21 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         this.guard = guard;
         this.jdbc = jdbc;
         this.events = events;
+        this.audit = audit;
     }
 
-    /** Lọc phạm vi và từ khóa tại CSDL trước cả truy vấn dữ liệu và truy vấn đếm. */
+    /**
+     * Lọc phạm vi và từ khóa tại CSDL trước cả truy vấn dữ liệu và truy vấn đếm. Danh mục quản lý
+     * mở cho STAFF và TECHNICIAN (được cấp REGISTRATION_PERIOD_READ trong ma trận quyền), cả hai
+     * chỉ thấy đợt có đơn vị của mình.
+     */
     @Override
     public PageResponse<Response> searchByPage(SearchRequest search, boolean openForStudent) {
         guard.requirePermission(Permission.REGISTRATION_PERIOD_READ);
-        guard.requireRole(openForStudent ? new String[] {Role.STUDENT} : new String[] {Role.STAFF});
+        guard.requireRole(
+                openForStudent
+                        ? new String[] {Role.STUDENT}
+                        : new String[] {Role.STAFF, Role.TECHNICIAN});
         var actor = current.get();
         var pageable =
                 PageQuery.of(
@@ -165,7 +179,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     @Override()
     public Response getRegistrationPeriodById(Long id) {
         guard.requirePermission(Permission.REGISTRATION_PERIOD_READ);
-        guard.requireRole(Role.STAFF);
+        guard.requireRole(Role.STAFF, Role.TECHNICIAN);
         var period = periods.findById(id).orElseThrow(BusinessException::notFound);
         checkPeriodScope(id);
         return toPeriodResponse(period);
@@ -189,6 +203,15 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         applyPeriodInput(period, input, true);
         periods.saveAndFlush(period);
         replacePeriodChildren(period.getId(), input);
+        var created = toPeriodResponse(period);
+        audit.record(
+                current.get().id(),
+                AuditAction.REGISTRATION_PERIOD_CREATE,
+                EntityType.REGISTRATION_PERIOD,
+                period.getId(),
+                null,
+                created,
+                null);
         events.publishEvent(
                 new RegistrationPeriodCreatedEvent(
                         period.getId(),
@@ -196,7 +219,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                         period.getKind(),
                         input.unitIds(),
                         current.get().id()));
-        return toPeriodResponse(period);
+        return created;
     }
 
     /**
@@ -211,6 +234,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                 id);
         var period = periods.findById(id).orElseThrow(BusinessException::notFound);
         checkPeriodWriteScope(id);
+        var before = toPeriodResponse(period);
         if (!period.getOpenAt().isAfter(OffsetDateTime.now())) {
             if (input.semesterId() != null
                     || input.kind() != null
@@ -229,7 +253,16 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
             replacePeriodChildren(id, input);
         }
         periods.saveAndFlush(period);
-        return toPeriodResponse(period);
+        var after = toPeriodResponse(period);
+        audit.record(
+                current.get().id(),
+                AuditAction.REGISTRATION_PERIOD_UPDATE,
+                EntityType.REGISTRATION_PERIOD,
+                id,
+                before,
+                after,
+                null);
+        return after;
     }
 
     @Transactional
@@ -248,12 +281,21 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                                 id))) {
             throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
+        var before = toPeriodResponse(period);
         quotas.deleteAll(quotas.findAll((r, q, b) -> b.equal(r.get("periodId"), id)));
         quotas.flush();
         units.deleteAll(units.findAll((r, q, b) -> b.equal(r.get("periodId"), id)));
         units.flush();
         periods.deleteById(id);
         periods.flush();
+        audit.record(
+                current.get().id(),
+                AuditAction.REGISTRATION_PERIOD_DELETE,
+                EntityType.REGISTRATION_PERIOD,
+                id,
+                before,
+                null,
+                null);
     }
 
     private void applyPeriodInput(RegistrationPeriod p, Input input, boolean creating) {

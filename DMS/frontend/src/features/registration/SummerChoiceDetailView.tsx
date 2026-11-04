@@ -306,7 +306,10 @@ export default function SummerChoiceDetailView({
   }
   if (!readOnly && !embedded && studentOnly && hasPermission(me, Permission.SUMMER_REGISTRATION_UPDATE)) {
     actions[SummerChoiceAction.EDIT] = {
-      label: 'Sửa lựa chọn',
+      label:
+        detail.status === SummerChoiceStatus.REJECTED
+          ? 'Sửa và gửi lại'
+          : 'Sửa lựa chọn',
       icon: <EditOutlined />,
       onAction: () => navigate(listPath),
     }

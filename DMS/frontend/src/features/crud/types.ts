@@ -79,6 +79,8 @@ export interface CrudResource {
   /** Màn Tài chính dùng khung trình bày thống nhất cho danh sách và hộp thoại. */
   finance?: boolean
   editStates?: string[]
+  /** Trạng thái được xóa/rút; thiếu thì dùng chung editStates. */
+  deleteStates?: string[]
   deleteLabel?: string
   deleteAction?: string
   /** Tài nguyên chỉ có ghi sửa (cấu hình, bản ghi sẵn): không xóa dù được cấp quyền DELETE. */
