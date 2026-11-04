@@ -60,7 +60,7 @@ class CatalogMigrationIntegrationTest {
                 sql.executeUpdate("INSERT INTO room_type(name,bed_count,price_main,price_summer,amenities) VALUES ('Legacy type',2,0,0,repeat('A',450))");
                 sql.executeUpdate("INSERT INTO building(management_unit_id,code,name,deposit_amount) SELECT id,'LEGACY','Legacy building',1000 FROM management_unit WHERE code='K1'");
                 sql.executeUpdate("INSERT INTO room(building_id,room_type_id,floor,code,gender) SELECT b.id,t.id,0,'G01','M' FROM building b CROSS JOIN room_type t WHERE b.code='LEGACY' AND t.name='Legacy type'");
-                sql.executeUpdate("INSERT INTO semester(academic_year,type,name,start_date,end_date) VALUES ('2026-2027','HK1','Legacy term','2026-09-01','2027-01-01')");
+                sql.executeUpdate("INSERT INTO semester(academic_year,type,name,start_date,end_date) VALUES ('2908-2910','HK1','Legacy term','2026-09-01','2027-01-01')");
             }
             Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load().migrate();
             try (Connection connection = dataSource.getConnection(); Statement sql = connection.createStatement()) {
@@ -70,6 +70,14 @@ class CatalogMigrationIntegrationTest {
                     assertThat(row.getString(1)).isEqualTo(" Faculty preserved ");
                     assertThat(row.getString(2)).isEqualTo("K65");
                     assertThat(row.getString(3)).isEqualTo(" Hometown preserved ");
+                }
+                try (ResultSet row = sql.executeQuery("SELECT academic_year FROM semester WHERE name='Legacy term'")) {
+                    assertThat(row.next()).isTrue();
+                    assertThat(row.getString(1)).isEqualTo("2908-2910");
+                    try (ResultSet year = connection.createStatement().executeQuery("SELECT count(*) FROM academic_year WHERE code='2908-2910'")) {
+                        assertThat(year.next()).isTrue();
+                        assertThat(year.getInt(1)).isEqualTo(1);
+                    }
                 }
                 try (ResultSet row = sql.executeQuery("SELECT length(a.name) FROM room_type_amenity r JOIN amenity a ON a.id=r.amenity_id")) {
                     assertThat(row.next()).isTrue();

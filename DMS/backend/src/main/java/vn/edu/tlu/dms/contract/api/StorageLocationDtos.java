@@ -20,7 +20,9 @@ public final class StorageLocationDtos {
             @Size(max = 200) String q,
             @Size(max = 4) List<@Size(max = 100) String> sort,
             @Positive(message = ValidationMessage.ID_POSITIVE) Long managementUnitId,
-            Boolean active) {}
+            Boolean active,
+            @Size(max = 30) String code,
+            @Size(max = 100) String name) {}
 
     public record SaveRequest(
             @Positive(message = ValidationMessage.ID_POSITIVE) Long id,

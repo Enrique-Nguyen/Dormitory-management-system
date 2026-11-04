@@ -96,15 +96,11 @@ html[data-table-borders='false'] .dms-table-container .dms-data-table .ant-table
   color: var(--color-primary);
 }
 
-header[data-topbar='accent'] .dms-theme-trigger-btn,
-html[data-theme-style='classic']:not(.dark) .dms-topbar .dms-theme-trigger-btn,
-html[data-theme='classic']:not(.dark) .dms-topbar .dms-theme-trigger-btn {
+header[data-topbar='accent'] .dms-theme-trigger-btn {
   color: rgba(255, 255, 255, 0.95);
 }
 
-header[data-topbar='accent'] .dms-theme-trigger-btn:hover,
-html[data-theme-style='classic']:not(.dark) .dms-topbar .dms-theme-trigger-btn:hover,
-html[data-theme='classic']:not(.dark) .dms-topbar .dms-theme-trigger-btn:hover {
+header[data-topbar='accent'] .dms-theme-trigger-btn:hover {
   background-color: rgba(255, 255, 255, 0.15) !important;
   color: #ffffff;
 }
@@ -1564,6 +1560,12 @@ h6 {
   background: var(--color-surface);
   transition: border-color var(--transition-fast);
   margin-bottom: var(--space-4, 16px);
+}
+
+.dms-form-section:has(.ant-select-open) {
+  overflow: visible;
+  position: relative;
+  z-index: 1;
 }
 
 .dms-form-section:last-child {
@@ -3225,6 +3227,14 @@ a.dms-dashboard-queue-chip:focus-visible {
   padding-bottom: 0;
 }
 
+.dms-application-student-details .ant-descriptions-item-content {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
 .dms-descriptions .ant-descriptions-item-label {
   font-size: 13px;
   line-height: 1.5;
@@ -3388,6 +3398,10 @@ a.dms-dashboard-queue-chip:focus-visible {
   height: 36px !important;
   border-radius: var(--radius-sm, 6px) !important;
   font-weight: 500 !important;
+}
+
+.dms-crud-select-popup.ant-select-dropdown {
+  inset: calc(100% + 4px) auto auto 0 !important;
 }
 
 .dms-list-toolbar-filters:not([hidden]) {

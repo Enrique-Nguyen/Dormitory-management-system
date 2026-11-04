@@ -167,6 +167,11 @@ public class InvoiceServiceImpl implements InvoiceService {
                 filterStatuses,
                 filterStatuses ? statuses : List.of(InvoiceStatus.UNPAID),
                 LikePattern.contains(input.q().trim()),
+                input.billingMonth(),
+                input.totalAmountMin(),
+                input.totalAmountMax(),
+                input.dueDateFrom(),
+                input.dueDateTo(),
                 pageable);
         Set<Long> semesterIds = page.getContent().stream()
                 .filter(invoice -> InvoiceType.ROOM_FEE.equals(invoice.getType()))

@@ -204,6 +204,11 @@ public class ContractServiceImpl implements ContractService {
                                 statuses == null || statuses.isEmpty(),
                                 statuses == null || statuses.isEmpty() ? List.of("") : statuses,
                                 LikePattern.contains(input.q()),
+                                input.studentId(),
+                                input.startDateFrom(),
+                                input.startDateTo(),
+                                input.endDateFrom(),
+                                input.endDateTo(),
                                 PageRequest.of(input.page(), input.size(), Sort.by(orders)))
                         .map(contract -> toContractResponse(contract, false)));
     }

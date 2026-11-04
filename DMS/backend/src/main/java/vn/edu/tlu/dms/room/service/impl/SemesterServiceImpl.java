@@ -23,6 +23,7 @@ import vn.edu.tlu.dms.room.domain.Semester;
 import vn.edu.tlu.dms.room.repository.SemesterRepository;
 import vn.edu.tlu.dms.room.service.SemesterService;
 
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -90,6 +91,22 @@ public class SemesterServiceImpl
                                             root.get(ApiField.ACADEMIC_YEAR),
                                             search.academicYear().trim()));
         }
+        if (search.name() != null && !search.name().isBlank()) {
+            scope = scope.and((root, query, builder) -> builder.greaterThan(builder.locate(
+                    builder.lower(root.get("name")), search.name().trim().toLowerCase(Locale.ROOT)), 0));
+        }
+        if (search.startDateFrom() != null) {
+            scope = scope.and((root, query, builder) -> builder.greaterThanOrEqualTo(root.get("startDate"), search.startDateFrom()));
+        }
+        if (search.startDateTo() != null) {
+            scope = scope.and((root, query, builder) -> builder.lessThanOrEqualTo(root.get("startDate"), search.startDateTo()));
+        }
+        if (search.endDateFrom() != null) {
+            scope = scope.and((root, query, builder) -> builder.greaterThanOrEqualTo(root.get("endDate"), search.endDateFrom()));
+        }
+        if (search.endDateTo() != null) {
+            scope = scope.and((root, query, builder) -> builder.lessThanOrEqualTo(root.get("endDate"), search.endDateTo()));
+        }
         return scope;
     }
 
@@ -109,6 +126,8 @@ public class SemesterServiceImpl
         if (creating) {
             requireValue(input.academicYear(), "academicYear");
         }
+        boolean academicYearChanged = input.academicYear() != null
+                && !input.academicYear().trim().equals(entity.getAcademicYear());
         if (input.academicYear() != null) {
             String academicYear = trimRequiredText(input.academicYear(), ApiField.ACADEMIC_YEAR);
             if (creating || !academicYear.equals(entity.getAcademicYear())) {
@@ -138,7 +157,7 @@ public class SemesterServiceImpl
             throw BusinessException.invalid(ApiField.END_DATE, ValidationMessage.END_DATE_AFTER_START);
         }
         String[] years = entity.getAcademicYear().split("-");
-        if (Integer.parseInt(years[1]) != Integer.parseInt(years[0]) + 1) {
+        if ((creating || academicYearChanged) && Integer.parseInt(years[1]) != Integer.parseInt(years[0]) + 1) {
             throw BusinessException.invalid(ApiField.ACADEMIC_YEAR, ValidationMessage.ACADEMIC_YEAR_CONSECUTIVE);
         }
     }

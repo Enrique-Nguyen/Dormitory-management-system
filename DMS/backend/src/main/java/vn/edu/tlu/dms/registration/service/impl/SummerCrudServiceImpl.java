@@ -122,6 +122,18 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
                             + ")";
             args.addAll(search.statuses());
         }
+        if (search.choice() != null && !search.choice().isBlank()) {
+            statusFilter += " AND sc.choice=?";
+            args.add(search.choice().trim());
+        }
+        if (search.contractId() != null) {
+            statusFilter += " AND sc.contract_id=?";
+            args.add(search.contractId());
+        }
+        if (search.studentId() != null) {
+            statusFilter += " AND c.student_id=?";
+            args.add(search.studentId());
+        }
         return queries.search(
                 "SELECT sc.*,c.student_id AS student_id,c.code AS contract_code,u.full_name FROM"
                         + " summer_choice sc JOIN dormitory_contract c ON c.id=sc.contract_id JOIN"

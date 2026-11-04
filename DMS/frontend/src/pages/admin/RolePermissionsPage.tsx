@@ -410,6 +410,8 @@ export default function RolePermissionsPage() {
   const [draft, setDraft] = useState<PermissionDraft | null>(null)
   const [search, setSearch] = useState('')
   const [group, setGroup] = useState<string | undefined>()
+  const [actionFilter, setActionFilter] = useState<(typeof crudActions)[number] | undefined>()
+  const [grantFilter, setGrantFilter] = useState<'granted' | 'ungranted' | undefined>()
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null)
   const matrixQuery = useQuery({
     queryKey: matrixQueryKey(role),
@@ -685,7 +687,13 @@ export default function RolePermissionsPage() {
         (!group || screen.group === group) &&
         `${screen.label} ${screen.code} ${screen.group}`
           .toLocaleLowerCase('vi')
-          .includes(normalizedSearch),
+          .includes(normalizedSearch) &&
+        ((!actionFilter && !grantFilter) ||
+          screen.privileges.some((privilege) =>
+            crudActions.includes(privilege.action as (typeof crudActions)[number]) &&
+            (!actionFilter || privilege.action === actionFilter) &&
+            (!grantFilter || selection.has(privilege.code) === (grantFilter === 'granted')),
+          )),
     ) ?? []
   const groups = [
     ...new Set(matrix?.screens.map((screen) => screen.group) ?? []),
@@ -741,7 +749,30 @@ export default function RolePermissionsPage() {
             allowClear
             options={groups.map((value) => ({ value, label: value }))}
           />
+          <Select
+            aria-label="Lọc theo thao tác CRUD"
+            placeholder="Tất cả thao tác CRUD"
+            value={actionFilter}
+            onChange={setActionFilter}
+            allowClear
+            options={crudActions.map((value) => ({ value, label: actionLabels[value] }))}
+          />
+          <Select
+            aria-label="Lọc theo trạng thái cấp quyền"
+            placeholder="Tất cả trạng thái cấp quyền"
+            value={grantFilter}
+            onChange={setGrantFilter}
+            allowClear
+            options={[
+              { value: 'granted', label: 'Đã cấp' },
+              { value: 'ungranted', label: 'Chưa cấp' },
+            ]}
+          />
         </FilterBar>
+        <Typography.Text type="secondary">
+          Bộ lọc trạng thái áp dụng cho thao tác CRUD đã chọn; nếu chưa chọn thao tác,
+          màn hình khớp khi có ít nhất một quyền CRUD tương ứng. Các thao tác chọn hàng loạt vẫn áp dụng cho toàn bộ ma trận.
+        </Typography.Text>
         {matrixQuery.error ? (
           <Alert
             type="error"

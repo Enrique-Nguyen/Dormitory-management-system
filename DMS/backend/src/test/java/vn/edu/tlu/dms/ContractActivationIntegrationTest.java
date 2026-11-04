@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -27,11 +28,13 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.contract.api.ContractDtos;
+import vn.edu.tlu.dms.contract.repository.DormitoryContractRepository;
 import vn.edu.tlu.dms.contract.service.ContractService;
 import vn.edu.tlu.dms.room.service.BedOccupancyService;
 import vn.edu.tlu.dms.support.FutureSemesterFixture;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -51,6 +54,8 @@ class ContractActivationIntegrationTest {
     private static final long DEPOSIT = 1_000_000L;
 
     @Autowired ContractService contracts;
+
+    @Autowired DormitoryContractRepository contractRepository;
 
     @Autowired BedOccupancyService occupancy;
 
@@ -81,6 +86,35 @@ class ContractActivationIntegrationTest {
     private Long roomId;
 
     private Long bedId;
+
+    @Test
+    void contractSearchFiltersDataAndCountWithoutExpandingScope() {
+        LocalDate start = jdbc.queryForObject("SELECT start_date FROM dormitory_contract WHERE id=?", LocalDate.class, contractId);
+        LocalDate end = jdbc.queryForObject("SELECT end_date FROM dormitory_contract WHERE id=?", LocalDate.class, contractId);
+        var page = PageRequest.of(0, 1);
+        var found = contractRepository.searchAccessibleContracts(Role.STAFF, staffId, unitId, false,
+                false, false, List.of(ContractStatus.PENDING), "%HD" + suffix + "%", studentId,
+                start, start, end, end, page);
+        assertThat(found.getTotalElements()).isEqualTo(1);
+        assertThat(found.getContent()).extracting(c -> c.getId()).containsExactly(contractId);
+        var nextPage = contractRepository.searchAccessibleContracts(Role.STAFF, staffId, unitId, false,
+                false, false, List.of(ContractStatus.PENDING), "%HD" + suffix + "%", studentId,
+                start, start, end, end, PageRequest.of(1, 1));
+        assertThat(nextPage.getContent()).isEmpty();
+        assertThat(nextPage.getTotalElements()).isEqualTo(1);
+        var excluded = contractRepository.searchAccessibleContracts(Role.STAFF, staffId, unitId, false,
+                false, true, List.of(""), "%HD" + suffix + "%", studentId,
+                start.plusDays(1), null, null, null, page);
+        assertThat(excluded.getTotalElements()).isZero();
+        var mine = contractRepository.searchAccessibleContracts(Role.STUDENT, studentId + 1000000, null, false,
+                true, true, List.of(""), "%HD" + suffix + "%", studentId,
+                null, null, null, null, page);
+        assertThat(mine.getTotalElements()).isZero();
+        var outsideUnit = contractRepository.searchAccessibleContracts(Role.STAFF, staffId, -1L, false,
+                false, true, List.of(""), "%HD" + suffix + "%", studentId,
+                null, null, null, null, page);
+        assertThat(outsideUnit.getTotalElements()).isZero();
+    }
 
     @BeforeEach
     void createFixture() {

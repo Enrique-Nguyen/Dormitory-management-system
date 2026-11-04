@@ -34,6 +34,9 @@ export interface NotificationSearchQuery {
   sort?: string[]
   /** true: chỉ chưa đọc; false: chỉ đã đọc; bỏ trống: tất cả. */
   unread?: boolean
+  /** Giới hạn thời điểm tạo ISO 8601 có múi giờ, bao gồm cả hai biên. */
+  from?: string
+  to?: string
 }
 
 // API Spec: POST /api/notifications/search-by-page → PageResponse<NotificationResponse>
