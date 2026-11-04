@@ -1689,12 +1689,6 @@ html.dark .dms-subcollection-item {
   gap: 12px;
 }
 
-.dms-modal-footer-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .dms-modal-footer-right {
   display: flex;
   align-items: center;

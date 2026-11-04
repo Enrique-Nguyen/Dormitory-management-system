@@ -235,7 +235,6 @@ export const crudDetailUiLabels = {
   moreActions: 'Thao tác khác',
   countError: 'Không tải được số lượng',
   statusFilterNames: ['status', 'locked', 'active'],
-  workflow: 'Xử lý nghiệp vụ',
   collections: { items: 'Dòng hóa đơn', transactions: 'Giao dịch cọc', timeline: 'Lịch sử' },
 }
 
