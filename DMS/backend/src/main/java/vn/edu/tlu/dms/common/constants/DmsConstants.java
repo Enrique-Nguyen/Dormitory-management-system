@@ -123,6 +123,7 @@ public final class DmsConstants {
         public static final String SCHOOL_NAME = "schoolName";
         public static final String KIND = "kind";
         public static final String ALLOWED_ACTIONS = "allowedActions";
+        public static final String CREATION_SOURCE = "creationSource";
         public static final String STUDENT_CODE = "studentCode";
         public static final String FULL_NAME = "fullName";
         public static final String GENDER = "gender";
@@ -1304,6 +1305,14 @@ public final class DmsConstants {
         private InvoiceType() {}
     }
 
+    /** Nguồn hóa đơn chỉ do server ghi, dùng để phân biệt quyền CRUD với phát hành tự động. */
+    public static final class InvoiceSource {
+        public static final String MANUAL = "MANUAL";
+        public static final String ISSUED = "ISSUED";
+
+        private InvoiceSource() {}
+    }
+
     /** Phạm vi nhận thông báo; USER chỉ do hệ thống tạo, không nhận từ form thủ công. */
     public static final class NotificationScope {
         public static final String ALL = "ALL";
@@ -1467,6 +1476,7 @@ public final class DmsConstants {
         public static final String TRANSFER = "TRANSFER";
         public static final String USER = "USER";
         public static final String UTILITY_RATE = "UTILITY_RATE";
+        public static final String UTILITY_READING = Resource.UTILITY_READING;
 
         private EntityType() {}
     }

@@ -17,6 +17,7 @@ import vn.edu.tlu.dms.room.service.RoomReferenceService;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @Transactional(readOnly = true)
@@ -82,6 +83,20 @@ public class RoomReferenceServiceImpl implements RoomReferenceService {
     public SemesterRef getSemesterReference(Long id) {
         var r = semesters.findById(id).orElseThrow(BusinessException::notFound);
         return new SemesterRef(r.getId(), r.getType(), r.getStartDate(), r.getEndDate());
+    }
+
+    /** Gộp nhãn học kỳ để danh sách hóa đơn không truy vấn riêng cho từng dòng. */
+    @Override
+    public Map<Long, SemesterLabel> getSemesterLabels(Set<Long> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, SemesterLabel> labels = new LinkedHashMap<>();
+        semesters.findAllById(ids).forEach(semester -> labels.put(
+                semester.getId(),
+                new SemesterLabel(
+                        semester.getName(), semester.getType(), semester.getAcademicYear())));
+        return Map.copyOf(labels);
     }
 
     @Override()

@@ -10,6 +10,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceSource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
@@ -28,7 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Hồ sơ hóa đơn UNPAID chưa có dòng tiền: khung nhập/sửa/xóa; phát hành tự tính tiền để làm sau.
+ * CRUD hóa đơn tạo tay khi chưa thanh toán; hóa đơn phát hành tự động được giữ nguyên.
  */
 @Service
 @Transactional(readOnly = true)
@@ -111,12 +112,13 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
     private Object createInvoiceRecord(Map<String, Object> input) {
         guard.requirePermission(Permission.INVOICE_CREATE);
         guard.requireRole(Role.STAFF);
-        validate(input);
+        validate(input, true);
         String code =
                 jdbc.queryForObject(
                         "SELECT fn_next_code(?,'seq_invoice_code',true)",
                         String.class,
-                        InvoiceType.UTILITY.equals(input.get("type")) ? "DN" : "HP");
+                        InvoiceType.UTILITY.equals(input.get("type"))
+                                ? InvoiceType.UTILITY_PREFIX : InvoiceType.ROOM_FEE_PREFIX);
         return insertRecord(
                 "invoice",
                 FIELDS,
@@ -128,7 +130,9 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
                         "issued_by",
                         current.get().id(),
                         "status",
-                        InvoiceStatus.UNPAID));
+                        InvoiceStatus.UNPAID,
+                        "creation_source",
+                        InvoiceSource.MANUAL));
     }
 
     private Object updateUnpaidInvoiceRecord(Long id, Map<String, Object> input) {
@@ -141,7 +145,9 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
         }
         var merged = new HashMap<>(row);
         merged.putAll(input);
-        validate(merged);
+        boolean changedDueDate = input.containsKey(ApiField.DUE_DATE)
+                && !input.get(ApiField.DUE_DATE).toString().equals(row.get(ApiField.DUE_DATE).toString());
+        validate(merged, changedDueDate);
         return updateRecord("invoice", id, FIELDS, input);
     }
 
@@ -158,14 +164,7 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
         var row = queries.one("SELECT * FROM invoice WHERE id=? FOR UPDATE", id);
         requireScope(row);
         if (!InvoiceStatus.UNPAID.equals(row.get("status"))
-                || Boolean.TRUE.equals(
-                        jdbc.queryForObject(
-                                "SELECT EXISTS(SELECT 1 FROM invoice_item WHERE invoice_id=?) OR"
-                                        + " EXISTS(SELECT 1 FROM status_history WHERE"
-                                        + " entity_type='INVOICE' AND entity_id=?)",
-                                Boolean.class,
-                                id,
-                                id))) {
+                || !InvoiceSource.MANUAL.equals(row.get(ApiField.CREATION_SOURCE))) {
             throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
         return row;
@@ -223,7 +222,7 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
         }
     }
 
-    private void validate(Map<String, Object> input) {
+    private void validate(Map<String, Object> input, boolean checkFutureDueDate) {
         requireScope(input);
         if (InvoiceType.ROOM_FEE.equals(input.get("type"))) {
             if (input.get("roomId") != null || input.get("billingMonth") != null) {
@@ -246,7 +245,7 @@ public class InvoiceCrudServiceImpl extends AbstractSqlCrudServiceImpl
         }
         LocalDate dueDate =
                 date(input, "dueDate", ApiField.DUE_DATE, ValidationMessage.DUE_DATE_FROM_TODAY);
-        if (dueDate.isBefore(LocalDate.now())) {
+        if (checkFutureDueDate && dueDate.isBefore(LocalDate.now())) {
             throw BusinessException.invalid(ApiField.DUE_DATE, ValidationMessage.DUE_DATE_NOT_PAST);
         }
     }

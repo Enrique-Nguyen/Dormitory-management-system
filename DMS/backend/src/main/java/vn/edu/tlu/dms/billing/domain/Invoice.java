@@ -7,6 +7,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceSource;
+
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
@@ -28,6 +30,9 @@ public class Invoice {
 
     @Column(name = "type", nullable = false, length = 10)
     private String type;
+
+    @Column(name = "creation_source", nullable = false, length = 10)
+    private String creationSource = InvoiceSource.ISSUED;
 
     @Column(name = "student_id")
     private Long studentId;
@@ -93,6 +98,14 @@ public class Invoice {
 
     public void setType(String value) {
         this.type = value;
+    }
+
+    public String getCreationSource() {
+        return creationSource;
+    }
+
+    public void setCreationSource(String value) {
+        this.creationSource = value;
     }
 
     public Long getStudentId() {
