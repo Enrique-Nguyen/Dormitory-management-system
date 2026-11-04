@@ -11,6 +11,8 @@ export interface CrudField {
   min?: number
   max?: number
   createOnly?: boolean
+  /** Chỉ hỗ trợ chọn dữ liệu trên form; không gửi API hoặc đưa vào file nhập Excel. */
+  formOnly?: boolean
   /** Trường bí mật chỉ nhập khi tạo, không hiển thị khi xem/sửa. */
   sensitive?: boolean
   editOnly?: boolean

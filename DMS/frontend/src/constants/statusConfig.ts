@@ -349,4 +349,7 @@ export const depositTransactionLabels: Record<string, string> = {
 }
 
 export const InvoiceStatus = { UNPAID: 'UNPAID', PAID: 'PAID' } as const
-export const BillingAction = { CONFIRM_PAYMENT: 'confirm-payment', DEPOSIT_TOPUP: 'deposit-topup', DEPOSIT_REFUND: 'deposit-refund' } as const
+export const BillingAction = {
+  EDIT: 'edit', DELETE: 'delete',
+  CONFIRM_PAYMENT: 'confirm-payment', DEPOSIT_TOPUP: 'deposit-topup', DEPOSIT_REFUND: 'deposit-refund',
+} as const

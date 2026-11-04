@@ -121,6 +121,21 @@ const floorRef = (required = true): CrudField => ({
   lookupValue: 'floor',
   lookupDependsOn: { field: 'buildingId', required: true },
 })
+/** Các form TV5 chọn tòa trước phòng; tòa hỗ trợ lọc, dữ liệu lưu vẫn dùng roomId. */
+const roomLocationFields = (visibleWhen?: CrudField['visibleWhen']): CrudField[] => [
+  {
+    ...ref('buildingId', 'Tòa nhà', '/buildings'),
+    createOnly: true,
+    formOnly: true,
+    visibleWhen,
+  },
+  {
+    ...ref('roomId', 'Phòng', '/rooms', 'code'),
+    createOnly: true,
+    lookupDependsOn: { field: 'buildingId', required: true },
+    visibleWhen,
+  },
+]
 const studentFilters: CrudField[] = [
   { ...select('gender', 'Giới tính', Object.values(RoomGender)), required: false },
   ref('schoolId', 'Trường', '/catalogs/schools', 'name', false),
@@ -321,6 +336,13 @@ export const billingUiLabels = {
   payerHint: 'Ghi đúng người trực tiếp nộp tiền để đối chiếu sổ thu.',
   paymentNote: 'Sau khi xác nhận, hóa đơn chuyển sang Đã thanh toán và không thể hoàn tác.',
   confirmReceived: 'Xác nhận đã thu',
+  paymentConfirmed: (amount: string, code: string) => `Đã xác nhận thu ${amount} cho hóa đơn ${code}.`,
+  paymentConfirmedWithoutAmount: (code: string) => `Đã xác nhận thanh toán hóa đơn ${code}.`,
+  paymentMethodRequired: 'Vui lòng chọn phương thức thanh toán',
+  payerRequired: 'Vui lòng nhập người nộp tiền',
+  maxCharacters: (maximum: number) => `Tối đa ${maximum} ký tự`,
+  depositAmountRequired: 'Vui lòng nhập số tiền',
+  depositAmountPositive: 'Số tiền phải lớn hơn 0',
   cancel: 'Hủy', close: 'Đóng',
   issueTitle: 'Phát hành hóa đơn hàng loạt',
   issueLead: 'Mỗi lần phát hành áp dụng cho toàn bộ hồ sơ đủ điều kiện trong phạm vi quản lý.',
@@ -331,12 +353,23 @@ export const billingUiLabels = {
   issueUtilityHint: 'Tính từ chỉ số đã nhập của các phòng đang có người ở.',
   issueSemester: 'Học kỳ', issueMonth: 'Tháng điện nước',
   issueChooseSemester: 'Chọn học kỳ', issueChooseMonth: 'Chọn tháng',
+  issueSemesterRequired: 'Vui lòng chọn học kỳ', issueMonthRequired: 'Vui lòng chọn tháng',
+  issueSucceeded: (created: string, skipped: string, total: string) =>
+    `Đã tạo ${created} hóa đơn, bỏ qua ${skipped}; tổng tiền ${total}.`,
   issueNoSemesters: 'Chưa có học kỳ để phát hành.',
   issueSemesterLoadError: 'Không tải được danh sách học kỳ. Hãy đóng hộp thoại và thử lại.',
   issueNote: 'Hóa đơn đã tồn tại trong kỳ sẽ được bỏ qua; hóa đơn mới được tính theo dữ liệu hiện có.',
   issueSubmit: 'Xác nhận phát hành',
   invoiceTotal: 'Tổng tiền', invoiceDue: 'Hạn đóng', invoicePaidAt: 'Đã thu lúc',
   invoiceMonth: 'Kỳ điện nước',
+  invoicePeriod: 'Kỳ thu', invoiceSemester: 'Học kỳ',
+  invoiceMissingPeriod: 'Thiếu thông tin kỳ thu', invoiceMonthPrefix: 'Tháng',
+  invoiceSemesterReference: 'Học kỳ (ID: {id})',
+  invoiceSemesterTypes: {
+    [SemesterType.HK1]: 'HK1',
+    [SemesterType.HK2]: 'HK2',
+    [SemesterType.SUMMER]: 'Hè',
+  } as Record<string, string>,
   invoiceItems: 'Dòng hóa đơn', invoiceNoItems: 'Hóa đơn chưa có dòng chi tiết',
   itemType: 'Hạng mục', quantity: 'Số lượng', unitPrice: 'Đơn giá',
   amount: 'Thành tiền', note: 'Ghi chú',
@@ -375,11 +408,7 @@ const invoiceFields: CrudField[] = [
     createOnly: true,
     visibleWhen: { field: 'type', value: InvoiceType.ROOM_FEE },
   },
-  {
-    ...ref('roomId', 'Phòng', '/rooms', 'code'),
-    createOnly: true,
-    visibleWhen: { field: 'type', value: InvoiceType.UTILITY },
-  },
+  ...roomLocationFields({ field: 'type', value: InvoiceType.UTILITY }),
   {
     ...date('billingMonth', 'Kỳ điện nước'),
     createOnly: true,
@@ -1048,8 +1077,8 @@ export const resources: Record<string, CrudResource> = {
     formSections: [
       {
         title: 'Phạm vi ghi chỉ số',
-        note: 'Chọn phòng, đồng hồ và kỳ trước khi nhập chỉ số.',
-        fields: ['roomId', 'meterType', 'billingMonth'],
+        note: 'Chọn tòa nhà trước, sau đó chọn phòng thuộc tòa, đồng hồ và kỳ ghi chỉ số.',
+        fields: ['buildingId', 'roomId', 'meterType', 'billingMonth'],
       },
       {
         title: 'Chỉ số tiêu thụ',
@@ -1068,7 +1097,7 @@ export const resources: Record<string, CrudResource> = {
       { ...date('billingMonth', 'Tháng ghi chỉ số'), required: false },
     ],
     fields: [
-      { ...ref('roomId', 'Phòng', '/rooms', 'code'), createOnly: true },
+      ...roomLocationFields(),
       {
         ...select('meterType', 'Đồng hồ', ['ELECTRIC', 'WATER']),
         createOnly: true,
@@ -1163,8 +1192,8 @@ export const resources: Record<string, CrudResource> = {
     formSections: [
       {
         title: 'Loại và hồ sơ liên quan',
-        note: 'Chọn loại hóa đơn để hiện đúng hồ sơ cần nhập.',
-        fields: ['type', 'studentId', 'semesterId', 'roomId'],
+        note: 'Chọn loại hóa đơn; với điện nước, chọn tòa nhà trước rồi chọn phòng thuộc tòa.',
+        fields: ['type', 'studentId', 'semesterId', 'buildingId', 'roomId'],
       },
       {
         title: 'Kỳ thu và số tiền',
@@ -1183,13 +1212,13 @@ export const resources: Record<string, CrudResource> = {
     columns: [
       { key: 'code', label: 'Mã' },
       { key: 'type', label: 'Loại' },
-      monthColumn('billingMonth', 'Kỳ'),
+      monthColumn('billingMonth', billingUiLabels.invoicePeriod),
       money('totalAmount', 'Tổng tiền'),
       dateColumn('dueDate', 'Hạn đóng'),
       { key: 'status', label: 'Trạng thái' },
     ],
     editStates: [InvoiceStatus.UNPAID],
-    note: 'CRUD chỉ áp dụng hồ sơ chưa có dòng chi tiết. Phát hành tự tính tiền tại Dashboard; hóa đơn đã thanh toán hoặc có lịch sử không được sửa/xóa.',
+    note: 'Hóa đơn tạo tay chưa thanh toán được sửa tổng tiền, hạn đóng hoặc xóa theo quyền. Hóa đơn phát hành từ Dashboard và hóa đơn đã thanh toán không được sửa/xóa.',
   },
   myInvoices: {
     finance: true,
@@ -1212,7 +1241,7 @@ export const resources: Record<string, CrudResource> = {
     columns: [
       { key: 'code', label: 'Mã' },
       { key: 'type', label: 'Loại' },
-      monthColumn('billingMonth', 'Kỳ'),
+      monthColumn('billingMonth', billingUiLabels.invoicePeriod),
       money('totalAmount', 'Tổng tiền'),
       dateColumn('dueDate', 'Hạn đóng'),
       { key: 'status', label: 'Trạng thái' },

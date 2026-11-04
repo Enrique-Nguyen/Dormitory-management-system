@@ -50,9 +50,11 @@ export default function IssueInvoicesModal({ open, onClose, currentUnitId }: Pro
             billingMonth: values.billingMonth.startOf('month').format('YYYY-MM-DD'),
           })
       message.success(
-        'Đã tạo ' + formatNumber(result.totalCreated) + ' hóa đơn, bỏ qua '
-        + formatNumber(result.totalSkipped) + '; tổng tiền '
-        + formatMoney(result.totalAmount) + '.',
+        billingUiLabels.issueSucceeded(
+          formatNumber(result.totalCreated),
+          formatNumber(result.totalSkipped),
+          formatMoney(result.totalAmount),
+        ),
       )
       form.resetFields()
       onClose()
@@ -120,7 +122,7 @@ export default function IssueInvoicesModal({ open, onClose, currentUnitId }: Pro
               name="semesterId"
               label={billingUiLabels.issueSemester}
               extra={semesterHint}
-              rules={[{ required: true, message: 'Vui lòng chọn học kỳ' }]}
+              rules={[{ required: true, message: billingUiLabels.issueSemesterRequired }]}
             >
               <Select
                 loading={loadingSemesters}
@@ -133,7 +135,7 @@ export default function IssueInvoicesModal({ open, onClose, currentUnitId }: Pro
             <Form.Item
               name="billingMonth"
               label={billingUiLabels.issueMonth}
-              rules={[{ required: true, message: 'Vui lòng chọn tháng' }]}
+              rules={[{ required: true, message: billingUiLabels.issueMonthRequired }]}
             >
               <DatePicker
                 picker="month"

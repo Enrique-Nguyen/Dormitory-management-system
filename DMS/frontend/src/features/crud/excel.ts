@@ -87,7 +87,7 @@ export async function exportFilteredRecords(config: CrudResource, query: CrudQue
 
 export function workbookFields(config: CrudResource): CrudField[] {
   return [...new Map([...config.fields, ...(config.createFields ?? []), ...(config.editFields ?? [])]
-    .filter((field) => !field.sensitive && !secretKey.test(field.name))
+    .filter((field) => !field.formOnly && !field.sensitive && !secretKey.test(field.name))
     .map((field) => [field.name, field])).values()]
 }
 
