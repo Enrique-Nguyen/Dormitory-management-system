@@ -35,7 +35,10 @@ async function saveWorkbook(workbook: ExcelJS.Workbook, title: string): Promise<
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `${title.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')}.xlsx`
+  const fileName = Array.from(title, (character) =>
+    character.charCodeAt(0) < 32 || /[<>:"/\\|?*]/.test(character) ? '_' : character,
+  ).join('')
+  link.download = `${fileName}.xlsx`
   document.body.appendChild(link)
   link.click()
   link.remove()

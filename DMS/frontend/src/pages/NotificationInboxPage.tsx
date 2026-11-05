@@ -54,13 +54,11 @@ export default function NotificationInboxPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const from = searchParams.get('from') ?? ''
   const to = searchParams.get('to') ?? ''
-  const [draftFrom, setDraftFrom] = useState(from)
-  const [draftTo, setDraftTo] = useState(to)
-
-  useEffect(() => {
-    setDraftFrom(from)
-    setDraftTo(to)
-  }, [from, to])
+  const [dateRange, setDateRange] = useState({ from, to, draftFrom: from, draftTo: to })
+  if (dateRange.from !== from || dateRange.to !== to) {
+    setDateRange({ from, to, draftFrom: from, draftTo: to })
+  }
+  const { draftFrom, draftTo } = dateRange
 
   const q = searchParams.get('q')?.trim() ?? ''
   const unreadParam = searchParams.get('unread')
@@ -247,13 +245,13 @@ export default function NotificationInboxPage() {
               type="datetime-local"
               aria-label="Thời gian tạo từ"
               value={draftFrom}
-              onChange={(event) => setDraftFrom(event.target.value)}
+              onChange={(event) => setDateRange({ ...dateRange, draftFrom: event.target.value })}
             />
             <Input
               type="datetime-local"
               aria-label="Thời gian tạo đến"
               value={draftTo}
-              onChange={(event) => setDraftTo(event.target.value)}
+              onChange={(event) => setDateRange({ ...dateRange, draftTo: event.target.value })}
             />
             <Button onClick={() => {
               if (draftFrom && draftTo && new Date(draftFrom).getTime() > new Date(draftTo).getTime()) {
@@ -263,8 +261,7 @@ export default function NotificationInboxPage() {
               updateQuery({ from: draftFrom, to: draftTo })
             }}>Áp dụng thời gian</Button>
             <Button onClick={() => {
-              setDraftFrom('')
-              setDraftTo('')
+              setDateRange({ ...dateRange, draftFrom: '', draftTo: '' })
               updateQuery({ from: '', to: '' })
             }}>Xóa thời gian</Button>
             <Button

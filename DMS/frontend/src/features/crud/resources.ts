@@ -243,6 +243,7 @@ export const dashboardUiLabels = {
 /** Nhãn thao tác hóa đơn, xác nhận thanh toán và sổ cọc dùng lại trên các màn hiện có. */
 export const crudDetailUiLabels = {
   information: 'Thông tin chung',
+  mainInformation: 'Thông tin chính',
   additionalInformation: 'Thông tin bổ sung',
   filters: 'Bộ lọc',
   help: 'Hướng dẫn',

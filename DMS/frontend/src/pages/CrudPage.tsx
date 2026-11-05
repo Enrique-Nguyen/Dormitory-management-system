@@ -455,6 +455,39 @@ function renderCrudInput(field: CrudField, disabled?: boolean) {
   }
 }
 
+/** Tính nhóm trường từ cấu hình hiện tại, không giữ cache của cấu hình có thể thay đổi. */
+function resolveFormSections(fields: CrudField[], configuredSections?: CrudFormSection[]): CrudFormSection[] {
+  if (configuredSections && configuredSections.length > 0) {
+    return configuredSections
+  }
+  // Tự động phân chia 2 nhóm chuẩn V5: Thông tin chính và Thông tin bổ sung
+  const mainFieldNames: string[] = []
+  const additionalFieldNames: string[] = []
+  for (const f of fields) {
+    const isLongOrMeta =
+      f.kind === 'textarea' ||
+      /note|reason|description|remark|content|address/i.test(f.name)
+    if (isLongOrMeta) {
+      additionalFieldNames.push(f.name)
+    } else {
+      mainFieldNames.push(f.name)
+    }
+  }
+  const sections: CrudFormSection[] = [
+    {
+      title: crudDetailUiLabels.mainInformation,
+      fields: mainFieldNames.length > 0 ? mainFieldNames : fields.map((f) => f.name),
+    },
+  ]
+  if (additionalFieldNames.length > 0 && mainFieldNames.length > 0) {
+    sections.push({
+      title: crudDetailUiLabels.additionalInformation,
+      fields: additionalFieldNames,
+    })
+  }
+  return sections
+}
+
 export default function CrudPage({ resource }: { resource: string }) {
   const config = resources[resource]
   const { data: me } = useMe()
@@ -1251,52 +1284,18 @@ export default function CrudPage({ resource }: { resource: string }) {
     }
   }
   /** Trường hiển thị trong form; giữ nguyên điều kiện ẩn theo nghiệp vụ của màn hiện tại. */
-  const formFields = useMemo(
-    () =>
-      fields
-        .filter(visible)
-        .filter(
-          (field) =>
-            !(
-              modalMode === 'create' &&
-              resource === 'maintenance' &&
-              role === Role.STUDENT &&
-              field.name === 'roomId'
-            ),
+  const formFields = fields
+    .filter(visible)
+    .filter(
+      (field) =>
+        !(
+          modalMode === 'create' &&
+          resource === 'maintenance' &&
+          role === Role.STUDENT &&
+          field.name === 'roomId'
         ),
-    [fields, modalMode, resource, role, visible],
-  )
-  const formSections: CrudFormSection[] = useMemo(() => {
-    if (config.formSections && config.formSections.length > 0) {
-      return config.formSections
-    }
-    // Tự động phân chia 2 nhóm chuẩn V5: Thông tin chính và Thông tin bổ sung
-    const mainFieldNames: string[] = []
-    const additionalFieldNames: string[] = []
-    for (const f of formFields) {
-      const isLongOrMeta =
-        f.kind === 'textarea' ||
-        /note|reason|description|remark|content|address/i.test(f.name)
-      if (isLongOrMeta) {
-        additionalFieldNames.push(f.name)
-      } else {
-        mainFieldNames.push(f.name)
-      }
-    }
-    const sections: CrudFormSection[] = [
-      {
-        title: 'Thông tin chính',
-        fields: mainFieldNames.length > 0 ? mainFieldNames : formFields.map((f) => f.name),
-      },
-    ]
-    if (additionalFieldNames.length > 0 && mainFieldNames.length > 0) {
-      sections.push({
-        title: crudDetailUiLabels.additionalInformation,
-        fields: additionalFieldNames,
-      })
-    }
-    return sections
-  }, [config.formSections, formFields])
+    )
+  const formSections = resolveFormSections(formFields, config.formSections)
 
   const sectionedFieldNames = new Set(
     formSections.flatMap((section) => section.fields),
