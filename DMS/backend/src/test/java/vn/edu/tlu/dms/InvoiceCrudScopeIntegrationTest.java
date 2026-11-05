@@ -197,7 +197,12 @@ class InvoiceCrudScopeIntegrationTest {
         Long id = insertDraft();
         asStaff(targetUnit, false);
         LocalDate originalDue = overdue ? LocalDate.now().minusDays(1) : dueDate;
-        jdbc.update("UPDATE invoice SET due_date=? WHERE id=?", originalDue, id);
+        if (overdue) {
+            // Hóa đơn quá hạn đã được phát hành trước hạn nộp, đúng ràng buộc của CSDL.
+            jdbc.update(
+                    "UPDATE invoice SET issued_at=?::date, due_date=? WHERE id=?",
+                    originalDue.minusDays(1), originalDue, id);
+        }
         jdbc.update(
                 "INSERT INTO status_history(entity_type,entity_id,to_status,actor_id) VALUES(?,?,?,?)",
                 EntityType.INVOICE, id, InvoiceStatus.UNPAID, staffId);
@@ -208,6 +213,7 @@ class InvoiceCrudScopeIntegrationTest {
         // Form sửa gửi lại ngày hiện có: quá hạn không được ngăn sửa tổng tiền của bản tạo tay.
         crud.saveOrUpdate(new InvoiceDtos.Save(id, null, null, null, null, null, 200L, originalDue));
         assertThat(stored(id).get("total_amount")).isEqualTo(200L);
+        assertThat(stored(id).get("due_date").toString()).isEqualTo(originalDue.toString());
         crud.deleteUnusedInvoiceRecord(id);
 
         assertThat(invoiceCount()).isZero();
