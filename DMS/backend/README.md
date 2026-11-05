@@ -92,6 +92,28 @@ Response nghiệp vụ hiện là DTO phục vụ khung: một số tham chiếu
 
 Xem [README chung](../../README.md). Windows local dùng start-local.ps1; máy khác dùng Compose và đặt secret backend từ môi trường. Không có tài khoản/mật khẩu mặc định trong Git.
 
+### Sự cố: `Migration checksum mismatch for migration version 10` (05/11/2026)
+
+**Triệu chứng:** `mvnw spring-boot:run` dừng với `Process terminated with exit code: 1`. Lỗi thật nằm trong log khởi động: `FlywayValidateException: Validate failed ... Migration checksum mismatch for migration version 10`.
+
+**Nguyên nhân:** commit `1436022` sửa `V10__shared_catalogs.sql` sau khi file đã được áp dụng trên CSDL dev. Thay đổi gồm hai phần: bỏ khối sửa dữ liệu năm học `2908-2910`, và nới `ck_academic_year_code` từ `YYYY-YYYY` có năm sau = năm trước + 1 thành chỉ kiểm định dạng `YYYY-YYYY`. Máy nào đã chạy V10 trước commit này đều có checksum `-1224946798`, khác với checksum của file hiện tại (`1020332633`).
+
+**Cách xử lý trên CSDL dev local** (không dùng cho môi trường có dữ liệu thật):
+
+- Cách 1, giữ dữ liệu: trước hết kiểm tra không có `academic_year`/`semester` nào ở dạng lỗi `2908-2910`. Sau đó cho schema khớp với V10 hiện tại và cập nhật checksum (tương đương `flyway repair`):
+
+  ```sql
+  BEGIN;
+  ALTER TABLE academic_year DROP CONSTRAINT ck_academic_year_code;
+  ALTER TABLE academic_year ADD CONSTRAINT ck_academic_year_code CHECK (code ~ '^[0-9]{4}-[0-9]{4}$');
+  UPDATE flyway_schema_history SET checksum = 1020332633 WHERE version = '10' AND checksum = -1224946798;
+  COMMIT;
+  ```
+
+- Cách 2, bỏ dữ liệu local: chạy `docker compose down -v` trong `DMS/`, sau đó `docker compose up -d` để Flyway migrate lại từ đầu.
+
+**Phòng tránh:** đúng quy tắc 9 ở trên, không sửa migration đã chạy, kể cả V5 trở đi. Muốn đổi ràng buộc hoặc dữ liệu thì thêm `V<n>__*.sql` mới.
+
 ## Luồng đăng nhập Keycloak
 
 SecurityConfig xác thực JWT (issuer/audience/chữ ký/expiry), CurrentUserImpl ghép subject bất biến vào app_user.keycloak_user_id và kiểm tra role/version/locked. V4 cho phép bỏ password_hash local khi chuyển tài khoản; giữ V1–V3. IdentityAccountService/Impl gọi Admin REST, có thao tác bù khi rollback và xóa sau commit; chưa có transaction phân tán/outbox retry bền vững. Quyền Staff reset và scope nghiệp vụ giữ nguyên.
