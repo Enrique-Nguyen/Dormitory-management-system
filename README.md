@@ -98,7 +98,28 @@ rtk proxy cmd /c npm.cmd ci
 rtk proxy cmd /c npm.cmd run build
 ```
 
-Kiểm tra sau khi chạy: phí phòng hiện học kỳ/năm học ở cả quản lý và sinh viên; điện nước hiện tháng/năm; hóa đơn tạo tay UNPAID có thao tác theo quyền; hóa đơn phát hành hoặc PAID không có Sửa/Xóa. Backend log phải ghi áp dụng/xác nhận V15 thành công. Trạng thái kiểm chứng hiện tại của bản sửa: TypeScript, bundle, kiểm tra hàm định dạng và điều kiện nút frontend đạt; kiểm thử Java, build Java và chạy V15 chưa được thực hiện trong phiên sửa vì môi trường agent không tìm thấy rtk. Cần chạy các bước trên hoặc CI trước khi coi PR đã được kiểm chứng đầy đủ.
+Kiểm tra sau khi chạy: phí phòng hiện học kỳ/năm học ở cả quản lý và sinh viên; điện nước hiện tháng/năm; hóa đơn tạo tay UNPAID có thao tác theo quyền; hóa đơn phát hành hoặc PAID không có Sửa/Xóa. Backend log phải ghi áp dụng/xác nhận V15 thành công. Bản `develop` tại `14e76d9` đã được kiểm chứng ngày 05/11/2026: Maven verify đạt 530/530 test trên PostgreSQL Testcontainers và CI backend/frontend thành công. Kết quả cài mới này không thay thế kiểm tra nâng cấp một CSDL đã áp dụng V10 bản cũ.
+
+## Phục hồi lỗi checksum V10 sau khi pull (05/11/2026)
+
+V10 từng được phát hành với checksum `-1224946798`, rồi thay nội dung trong commit `1436022` thành checksum `1020332633`. Máy đã chạy bản đầu có thể báo `Migration checksum mismatch for migration version 10`, dù CI dùng CSDL mới vẫn xanh. Hai bản còn khác ràng buộc `academic_year`; không chỉ khác chú thích. Flyway phải tiếp tục kiểm tra checksum, không bật bỏ qua validation hoặc tự chạy repair khi ứng dụng khởi động.
+
+Source hiện tại giữ nguyên V1–V15. Migration mới `V16__academic_year_legacy_compatibility.sql` đồng bộ ràng buộc năm học về định dạng `YYYY-YYYY`, giữ nguyên các dòng dữ liệu cũ. Kiểm tra tạo năm học mới tại Service vẫn yêu cầu hai năm liên tiếp. V16 không thể chạy trước khi xử lý lỗi xác thực V10.
+
+Chỉ khi thông báo lỗi khớp đúng cặp checksum nêu trên, dừng backend, sao lưu CSDL, rồi chạy [script phục hồi riêng V10](DMS/scripts/recover-v10-checksum.sql) một lần. Ví dụ dưới dùng container và tên database/user mặc định của Compose; nếu máy dùng cấu hình khác phải thay bằng cấu hình của máy đó. Từ thư mục gốc repository, trong PowerShell:
+
+```powershell
+rtk proxy docker exec dms-postgres pg_dump -U dms -d dms -Fc -f /tmp/dms-before-v10.dump
+rtk proxy docker cp dms-postgres:/tmp/dms-before-v10.dump "$env:TEMP/dms-before-v10.dump"
+rtk proxy docker cp DMS/scripts/recover-v10-checksum.sql dms-postgres:/tmp/recover-v10-checksum.sql
+rtk proxy docker exec dms-postgres psql -U dms -d dms -v ON_ERROR_STOP=1 -f /tmp/recover-v10-checksum.sql
+```
+
+Script chỉ nhận hai checksum đã xác minh, kiểm tra cấu trúc danh mục/ràng buộc năm học và từ chối khi có migration thất bại hoặc checksum khác. Nó chỉ cập nhật checksum của đúng V10 đã áp dụng thành công; không sửa các version khác, không đánh dấu migration lỗi thành thành công và không xóa dữ liệu. Giao dịch thất bại sẽ rollback. Bản đã có checksum hiện tại chạy lại không thay đổi lịch sử.
+
+Sau đó chạy backend **từ source có V16**, ví dụ `rtk proxy .\mvnw.cmd spring-boot:run` trong `DMS/backend`, để Flyway áp dụng V16. Không chạy JAR cũ và không chạy lại V10. CSDL cài mới hoặc đã có checksum đúng không cần phục hồi; backend tự chạy V16. Không dùng script này để xử lý các lỗi Flyway khác. Bộ `MigrationCompatibilityTest` kiểm tra cả nâng cấp từ bản cũ, chạy lặp, checksum lạ, cấu trúc lạ và migration thất bại trên CSDL riêng.
+
+Phân tích null của Java vẫn được giữ. Các `@SuppressWarnings("null")` trong unit test chỉ dành cho hàm dùng matcher Mockito: matcher cố ý trả giá trị tạm `null` khi khai báo `when/verify`, không phải giá trị đưa vào code nghiệp vụ thật. Không dùng ngoại lệ này để bỏ qua lỗi null trong Service.
 
 ## CSDL và migration
 

@@ -1,6 +1,6 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.15**, 05/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.16**, 05/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.17 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
 > DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak, ma trận quyền động V5, quyền V6, ghi chú xác minh diện ưu tiên V7 và sở thích giao diện V8; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
@@ -9,6 +9,7 @@
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.16 | 05/11/2026 | V16 đồng bộ `ck_academic_year_code` về kiểm tra định dạng để giữ danh mục cũ. Bổ sung quy trình phục hồi có kiểm tra cho hai checksum V10 đã phát hành; giữ nguyên V1–V15, không tự sửa lịch sử khi khởi động. |
 | 0.15 | 05/11/2026 | Flyway V15 bổ sung `invoice.creation_source` MANUAL/ISSUED, server quyết định nguồn tạo; backfill MANUAL chỉ cho bản có audit CRUD_CREATE đúng ID và chưa có dòng tài chính, bản không xác định giữ ISSUED. CRUD theo nguồn và trạng thái, giữ audit/lịch sử và khóa ngoại. |
 | 0.14 | 04/11/2026 | Flyway V14 thêm trạng thái `CANCELLED` cho `summer_choice` (sinh viên rút lựa chọn đang chờ thay cho xóa cứng; bản CANCELLED/REJECTED được mở lại về PENDING, giữ `UNIQUE(contract_id, semester_id)`). |
 | 0.13 | 04/11/2026 | Flyway V10–V13 chuẩn hóa danh mục, quan hệ hồ sơ, tầng theo tòa, vị trí kho và tiện nghi nhiều lựa chọn; giữ dữ liệu cũ bằng backfill trước khi bỏ các cột nhãn dư thừa. |
@@ -52,6 +53,12 @@ Nguồn nâng cấp chính thức là các migration mới trong backend; các m
 | V13 | Tạo `room_type_amenity(room_type_id,amenity_id)` khóa chính kép; chuyển mỗi mô tả tiện nghi cũ thành một mục nguyên vẹn, hỗ trợ tên tối đa 500 ký tự rồi bỏ cột `room_type.amenities`. |
 
 Khóa ngoại chặn xóa mục đang dùng; ngừng hoạt động chỉ chặn gán mới. Mã danh mục và cặp tòa/số tầng, đơn vị/mã vị trí không đổi qua sửa. V10 bổ sung `CATALOG_READ` vào ma trận hiện có và tăng version; quyền ghi danh mục vẫn phải được cấp rõ ràng. Không sửa migration V1–V9 đã áp dụng.
+
+### Tương thích CSDL đã chạy V10 — V16 (05/11/2026)
+
+V10 đã có hai bản trong lịch sử Git: bản đầu checksum `-1224946798` kiểm tra hai năm liên tiếp, bản hiện tại checksum `1020332633` chỉ kiểm tra định dạng để bảo toàn nhãn cũ. V16 thay ràng buộc `ck_academic_year_code` bằng `CHECK (code ~ '^[0-9]{4}-[0-9]{4}$')` trên cả cài mới và nâng cấp, không gộp/xóa/đổi học kỳ, năm học hoặc liên kết nghiệp vụ. Service tiếp tục kiểm tra hai năm liên tiếp khi tạo năm học mới.
+
+Máy có V10 cũ cần xử lý lỗi checksum trước khi Flyway có thể chạy V16. Quy trình có sao lưu và dừng backend được ghi tại mục “Phục hồi lỗi checksum V10 sau khi pull” của README gốc; script `DMS/scripts/recover-v10-checksum.sql` chỉ sửa đúng checksum V10 đã biết sau khi kiểm tra cấu trúc và không có migration thất bại. Không thay thế bằng repair tự động hoặc cập nhật toàn bộ schema history. V1–V15 giữ nguyên nội dung. `MigrationCompatibilityTest` kiểm chứng quy trình trên PostgreSQL riêng.
 
 ## 1. Phạm vi và quy ước
 
