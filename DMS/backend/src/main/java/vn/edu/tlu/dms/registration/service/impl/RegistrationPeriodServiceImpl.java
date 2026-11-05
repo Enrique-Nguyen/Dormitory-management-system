@@ -38,6 +38,7 @@ import vn.edu.tlu.dms.registration.service.RegistrationPeriodService;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -117,7 +118,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                                 (r, q, b) -> {
                                     var filters = new ArrayList<Predicate>();
                                     if (!openForStudent && !actor.canReadAllUnits()) {
-                                        var sub = q.subquery(Long.class);
+                                        var sub = Objects.requireNonNull(q).subquery(Long.class);
                                         var unit = sub.from(RegistrationPeriodUnit.class);
                                         sub.select(unit.get("periodId"))
                                                 .where(
@@ -172,7 +173,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                                     }
                                     return b.and(filters.toArray(Predicate[]::new));
                                 },
-                                pageable)
+                                Objects.requireNonNull(pageable))
                         .map(this::toPeriodResponse));
     }
 
@@ -180,7 +181,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     public Response getRegistrationPeriodById(Long id) {
         guard.requirePermission(Permission.REGISTRATION_PERIOD_READ);
         guard.requireRole(Role.STAFF, Role.TECHNICIAN);
-        var period = periods.findById(id).orElseThrow(BusinessException::notFound);
+        var period = periods.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
         checkPeriodScope(id);
         return toPeriodResponse(period);
     }
@@ -232,7 +233,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                 "SELECT id FROM registration_period WHERE id=? FOR UPDATE",
                 (r, i) -> r.getLong(1),
                 id);
-        var period = periods.findById(id).orElseThrow(BusinessException::notFound);
+        var period = periods.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
         checkPeriodWriteScope(id);
         var before = toPeriodResponse(period);
         if (!period.getOpenAt().isAfter(OffsetDateTime.now())) {
@@ -269,7 +270,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     @Override()
     public void deleteUnusedPeriod(Long id) {
         guard.requirePermission(Permission.REGISTRATION_PERIOD_DELETE);
-        var period = periods.findById(id).orElseThrow(BusinessException::notFound);
+        var period = periods.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
         jdbc.queryForObject(
                 "SELECT id FROM registration_period WHERE id=? FOR UPDATE", Long.class, id);
         checkPeriodWriteScope(id);
@@ -286,7 +287,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         quotas.flush();
         units.deleteAll(units.findAll((r, q, b) -> b.equal(r.get("periodId"), id)));
         units.flush();
-        periods.deleteById(id);
+        periods.deleteById(Objects.requireNonNull(id));
         periods.flush();
         audit.record(
                 current.get().id(),
@@ -349,7 +350,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                 throw BusinessException.forbidden();
             }
         }
-        String kind = periods.findById(id).orElseThrow(BusinessException::notFound).getKind();
+        String kind = periods.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound).getKind();
         var chosenQuotas =
                 input.quotas() == null
                         ? quotas.findAll((r, q, b) -> b.equal(r.get("periodId"), id)).stream()
@@ -395,7 +396,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
 
     private List<Long> periodUnitIds(Long id) {
         return units.findAll((r, q, b) -> b.equal(r.get("periodId"), id)).stream()
-                .map(RegistrationPeriodUnit::getManagementUnitId)
+                .map(element -> element.getManagementUnitId())
                 .toList();
     }
 

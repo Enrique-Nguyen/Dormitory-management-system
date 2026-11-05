@@ -2,6 +2,7 @@ package vn.edu.tlu.dms.account.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.springframework.lang.NonNull;
 import org.springframework.aop.Advisor;
 import org.springframework.aop.support.StaticMethodMatcherPointcut;
 import org.springframework.beans.factory.ObjectProvider;
@@ -43,6 +44,7 @@ import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 
 import java.lang.reflect.Method;
+import java.util.Objects;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -67,12 +69,12 @@ public class SecurityConfig {
         var mappedApi =
                 new StaticMethodMatcherPointcut() {
                     @Override
-                    public boolean matches(Method method, Class<?> targetClass) {
+                    public boolean matches(@NonNull Method method, @NonNull Class<?> targetClass) {
                         return targetClass.getPackageName().startsWith("vn.edu.tlu.dms")
                                 && AnnotatedElementUtils.hasAnnotation(
                                         targetClass, RestController.class)
                                 && AnnotatedElementUtils.hasAnnotation(
-                                        method, RequestMapping.class);
+                                        Objects.requireNonNull(method), RequestMapping.class);
                     }
                 };
         return new AuthorizationManagerBeforeMethodInterceptor(
@@ -114,7 +116,7 @@ public class SecurityConfig {
                         return List.of();
                     }
                     return roles.stream()
-                            .map(Object::toString)
+                            .map(element -> element.toString())
                             .filter(ROLES::contains)
                             .map(
                                     role ->

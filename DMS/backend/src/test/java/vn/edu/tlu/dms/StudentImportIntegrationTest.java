@@ -1,5 +1,7 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
+import org.springframework.lang.NonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
@@ -87,15 +89,17 @@ class StudentImportIntegrationTest {
                 .provisionAccount(any(), any());
     }
 
+    @NonNull
+
     private RequestPostProcessor token(String role) {
-        return jwt().jwt(
+        return Objects.requireNonNull(jwt().jwt(
                         builder ->
                                 builder.subject(subject)
                                         .claim("realm_access", Map.of("roles", List.of(role)))
                                         .claim("dms_security_version", 0))
                 .authorities(
                         new org.springframework.security.core.authority.SimpleGrantedAuthority(
-                                "ROLE_" + role));
+                                "ROLE_" + role)));
     }
 
     private MockMultipartFile file(String[]... rows) throws Exception {
@@ -127,7 +131,7 @@ class StudentImportIntegrationTest {
     private ResultActions upload(MockMultipartFile file, boolean dryRun) throws Exception {
         return mvc.perform(
                 multipart("/api/admin/student-imports")
-                        .file(file)
+                        .file(Objects.requireNonNull(file))
                         .param("dryRun", Boolean.toString(dryRun))
                         .with(token("ADMIN")));
     }
@@ -246,7 +250,7 @@ class StudentImportIntegrationTest {
         for (String body : List.of("{\"faculty\":\"CNTT\"}", "{\"cohortId\":0}",
                 "{\"hometownId\":-1}", "{\"schoolId\":\"invalid\"}")) {
             mvc.perform(post("/api/admin/students/save-or-update").with(token("ADMIN"))
-                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                            .contentType(MediaType.APPLICATION_JSON_VALUE).content(Objects.requireNonNull(body)))
                     .andExpect(status().isBadRequest());
         }
         verifyNoInteractions(identities);
@@ -314,21 +318,21 @@ class StudentImportIntegrationTest {
         mvc.perform(get("/api/me/profile").with(token("STUDENT")))
                 .andExpect(status().isOk()).andExpect(jsonPath("faculty").value("CNTT"));
         mvc.perform(post("/api/me/profile/save-or-update").with(token("STUDENT"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("hometownId", hometownId))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("hometownId", hometownId)))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("hometownId").value(hometownId))
                 .andExpect(jsonPath("hometown").value("Home test"));
         mvc.perform(post("/api/me/profile/save-or-update").with(token("STUDENT"))
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                         .content("{\"facultyId\":1}"))
                 .andExpect(status().isBadRequest());
     }
 
     private ResultActions save(String endpoint, Map<String, Object> body) throws Exception {
-        return mvc.perform(post(endpoint).with(token("ADMIN"))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsBytes(body)));
+        return mvc.perform(post(Objects.requireNonNull(endpoint)).with(token("ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(Objects.requireNonNull(mapper.writeValueAsBytes(body))));
     }
 
     @Test
@@ -360,7 +364,7 @@ class StudentImportIntegrationTest {
                 .andExpect(status().isForbidden());
         mvc.perform(
                         multipart("/api/admin/student-imports")
-                                .file(file(valid("9900100001")))
+                                .file(Objects.requireNonNull(file(valid("9900100001"))))
                                 .with(token("STAFF")))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(identities);

@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms.common.api;
 
+import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,6 @@ class GlobalExceptionHandlerTest {
                 handler.integrity(new DataIntegrityViolationException("ledger", cause), request);
         assertThat(response.getStatusCode()).isEqualTo(status);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().errorCode()).isEqualTo(code);
+        assertThat(Objects.requireNonNull(response.getBody()).errorCode()).isEqualTo(code);
     }
 }

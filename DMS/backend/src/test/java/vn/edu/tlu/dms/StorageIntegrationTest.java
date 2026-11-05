@@ -432,7 +432,7 @@ class StorageIntegrationTest {
         var local = locations.searchByPage(new StorageLocationDtos.Search(0, 1, suffix,
                 List.of("name,desc"), null, true, "LOC-", suffix));
         assertThat(local.totalElements()).isEqualTo(1);
-        assertThat(local.content()).extracting(StorageLocationDtos.Location::id).containsExactly(locationId);
+        assertThat(local.content()).extracting((StorageLocationDtos.Location element) -> element.id()).containsExactly(locationId);
         assertThat(locations.searchByPage(new StorageLocationDtos.Search(0, 10, suffix,
                 null, otherUnit, null, null, null)).totalElements()).isZero();
         assertError(() -> locations.getById(other), ErrorCode.NOT_FOUND);

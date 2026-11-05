@@ -132,7 +132,7 @@ public class UserServiceImpl implements UserService {
                     }
                     return b.and(filters.toArray(Predicate[]::new));
                 };
-        return PageResponse.from(users.findAll(spec, pageable).map(this::toUserProfileResponse));
+        return PageResponse.from(users.findAll(spec, Objects.requireNonNull(pageable)).map(this::toUserProfileResponse));
     }
 
     @Override
@@ -261,7 +261,7 @@ public class UserServiceImpl implements UserService {
             references.requireUnit(input.managementUnitId());
             u.setManagementUnitId(input.managementUnitId());
         }
-        var p = students.findById(id).orElse(null);
+        var p = students.findById(Objects.requireNonNull(id)).orElse(null);
         if (p != null) {
             if (input.studentCode() != null) {
                 p.setStudentCode(trimRequiredText(input.studentCode(), "studentCode"));
@@ -405,7 +405,7 @@ public class UserServiceImpl implements UserService {
         if (input.phone() != null) {
             u.setPhone(input.phone().trim());
         }
-        var p = students.findById(u.getId()).orElse(null);
+        var p = students.findById(Objects.requireNonNull(u.getId())).orElse(null);
         if (p != null) {
             if (input.hometownId() != null) {
                 StudentCatalogReferences.reference(
@@ -425,7 +425,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private Profile toUserProfileResponse(AppUser u) {
-        var p = students.findById(u.getId()).orElse(null);
+        var p = students.findById(Objects.requireNonNull(u.getId())).orElse(null);
         return new Profile(
                 u.getId(),
                 u.getUsername(),
@@ -451,7 +451,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private AppUser findUserById(Long id) {
-        return users.findById(id).orElseThrow(BusinessException::notFound);
+        return users.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
     }
 
     private String trimRequiredText(String value, String field) {

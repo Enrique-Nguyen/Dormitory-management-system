@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -329,10 +330,10 @@ class SummerChoiceIntegrationTest {
     void pendingItemsIncludeSummerChoiceInStaffScopeOnly() {
         var page = pendingItems.searchByPage(new SearchRequest());
 
-        assertThat(page.content()).extracting(Item::type).contains("SUMMER_CHOICE");
+        assertThat(page.content()).extracting((Item element) -> element.type()).contains("SUMMER_CHOICE");
         assertThat(page.content())
                 .filteredOn(item -> "SUMMER_CHOICE".equals(item.type()))
-                .extracting(Item::entityId)
+                .extracting((Item element) -> element.entityId())
                 .contains(choiceId);
 
         asStaff(unitId + 1_000L);
@@ -614,7 +615,7 @@ class SummerChoiceIntegrationTest {
     }
 
     private Long count(String sql, Object... args) {
-        return jdbc.queryForObject(sql, Long.class, args);
+        return jdbc.queryForObject(Objects.requireNonNull(sql), Long.class, args);
     }
 
     private Long insertUser(String username, String role, Long unit, String fullName) {

@@ -42,6 +42,7 @@ import java.time.LocalDate;
  * hằng số trong Service. Test thuần, không CSDL; khóa dòng và xung đột thật thuộc
  * DepositIntegrationTest vì cần transaction.
  */
+// Mockito dùng null tạm cho matcher; ngoại lệ chỉ áp dụng ở các hàm giả lập bên dưới.
 class DepositTopupGuardTest {
 
     private static final Long CONTRACT_ID = 21L;
@@ -74,6 +75,7 @@ class DepositTopupGuardTest {
                 .isEmpty();
     }
 
+    @SuppressWarnings("null")
     @Test
     void topupIsRejectedWhenContractIsNotActive() {
         fixture.givenBalance(ContractStatus.PENDING, 0L);
@@ -115,6 +117,7 @@ class DepositTopupGuardTest {
         assertNothingWritten();
     }
 
+    @SuppressWarnings("null")
     @Test
     void topupOfExactlyTheMissingAmountIsRecorded() {
         fixture.givenBalance(ContractStatus.ACTIVE, 1_700_000L);
@@ -169,6 +172,7 @@ class DepositTopupGuardTest {
         assertNothingWritten(fixture);
     }
 
+    @SuppressWarnings("null")
     private void assertNothingWritten(Fixture target) {
         verify(target.transactions, never()).saveAndFlush(any(DepositTransaction.class));
         verify(target.audit, never()).record(any(), any(), any(), any(), any(), any(), any());
@@ -195,6 +199,7 @@ class DepositTopupGuardTest {
             this(new Actor(STAFF_ID, Role.STAFF, UNIT_ID, false, false));
         }
 
+        @SuppressWarnings("null")
         private Fixture(Actor actor) {
             service =
                     new DepositServiceImpl(

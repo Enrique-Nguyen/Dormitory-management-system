@@ -8,6 +8,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -33,7 +34,7 @@ public final class PageQuery {
                 throw BusinessException.invalid(
                         ApiField.SORT, ValidationMessage.SORT_DIRECTION_INVALID);
             }
-            orders.add(new Sort.Order(Sort.Direction.fromString(direction), parts[0]));
+            orders.add(new Sort.Order(Sort.Direction.fromString(direction), Objects.requireNonNull(parts[0])));
         }
         if (orders.stream().noneMatch(order -> order.getProperty().equals("id"))) {
             orders.add(Sort.Order.asc("id"));

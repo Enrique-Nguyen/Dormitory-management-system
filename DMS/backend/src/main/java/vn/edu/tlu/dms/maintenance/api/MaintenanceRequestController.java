@@ -32,6 +32,7 @@ import vn.edu.tlu.dms.maintenance.service.MaintenanceRequestService;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Objects;
 import java.util.List;
 
 @RestController
@@ -73,10 +74,10 @@ public class MaintenanceRequestController {
         return ResponseEntity.ok()
                 .header("X-Content-Type-Options", "nosniff")
                 .contentType(
-                        type == null
+                        Objects.requireNonNull(type == null
                                 ? MediaType.APPLICATION_OCTET_STREAM
-                                : MediaType.parseMediaType(type))
-                .body(new FileSystemResource(path));
+                                : MediaType.parseMediaType(type)))
+                .body(new FileSystemResource(Objects.requireNonNull(path)));
     }
 
     @RequirePrivilege(Permission.MAINTENANCE_READ)

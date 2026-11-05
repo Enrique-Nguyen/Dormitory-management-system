@@ -19,6 +19,7 @@ import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.Set;
 
 /** Sở thích giao diện thuộc đúng tài khoản đang đăng nhập, lấy ID từ {@link CurrentUser}. */
@@ -42,7 +43,7 @@ public class UserPreferenceServiceImpl implements UserPreferenceService {
     @Override
     public Preference preferences() {
         guard.requirePermission(Permission.PROFILE_READ);
-        return toResponse(preferences.findById(current.get().id()).orElse(null));
+        return toResponse(preferences.findById(Objects.requireNonNull(current.get().id())).orElse(null));
     }
 
     @Override

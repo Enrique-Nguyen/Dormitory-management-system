@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
@@ -47,9 +48,7 @@ import java.util.UUID;
 @Import(TestcontainersConfiguration.class)
 class ContractActivationIntegrationTest {
 
-    private static final LocalDate CONTRACT_START = LocalDate.of(2099, 9, 1);
 
-    private static final LocalDate CONTRACT_END = LocalDate.of(2100, 1, 31);
 
     private static final long DEPOSIT = 1_000_000L;
 
@@ -89,7 +88,7 @@ class ContractActivationIntegrationTest {
 
     @Test
     void contractSearchFiltersDataAndCountWithoutExpandingScope() {
-        LocalDate start = jdbc.queryForObject("SELECT start_date FROM dormitory_contract WHERE id=?", LocalDate.class, contractId);
+        LocalDate start = Objects.requireNonNull(jdbc.queryForObject("SELECT start_date FROM dormitory_contract WHERE id=?", LocalDate.class, contractId));
         LocalDate end = jdbc.queryForObject("SELECT end_date FROM dormitory_contract WHERE id=?", LocalDate.class, contractId);
         var page = PageRequest.of(0, 1);
         var found = contractRepository.searchAccessibleContracts(Role.STAFF, staffId, unitId, false,
@@ -104,7 +103,7 @@ class ContractActivationIntegrationTest {
         assertThat(nextPage.getTotalElements()).isEqualTo(1);
         var excluded = contractRepository.searchAccessibleContracts(Role.STAFF, staffId, unitId, false,
                 false, true, List.of(""), "%HD" + suffix + "%", studentId,
-                start.plusDays(1), null, null, null, page);
+                Objects.requireNonNull(start).plusDays(1), null, null, null, page);
         assertThat(excluded.getTotalElements()).isZero();
         var mine = contractRepository.searchAccessibleContracts(Role.STUDENT, studentId + 1000000, null, false,
                 true, true, List.of(""), "%HD" + suffix + "%", studentId,

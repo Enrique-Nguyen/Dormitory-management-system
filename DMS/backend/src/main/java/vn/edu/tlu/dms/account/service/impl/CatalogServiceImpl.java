@@ -90,7 +90,7 @@ public class CatalogServiceImpl implements CatalogService {
             parameters.addValue("relation", relationId);
         }
         String order = sort(input.sort());
-        Long total = jdbc.queryForObject("SELECT count(*) FROM " + d.table() + where, parameters, Long.class);
+        Long total = Objects.requireNonNull(jdbc.queryForObject("SELECT count(*) FROM " + d.table() + where, parameters, Long.class));
         parameters.addValue("limit", size).addValue("offset", (long) page * size);
         var rows = jdbc.queryForList("SELECT * FROM " + d.table() + where + " ORDER BY " + order
                 + " LIMIT :limit OFFSET :offset", parameters);
@@ -116,11 +116,11 @@ public class CatalogServiceImpl implements CatalogService {
         Definition d = definition(kind);
         validateRelations(kind, input.parentId(), input.schoolId());
         // Serialize hierarchy writers before acquiring row locks, including concurrent reparenting.
-        jdbc.queryForList("SELECT pg_advisory_xact_lock(hashtext(:kind))", Map.of("kind", "catalog:" + kind));
+        jdbc.queryForList("SELECT pg_advisory_xact_lock(hashtext(:kind))", Objects.requireNonNull(Map.of("kind", "catalog:" + kind)));
         Map<String, Object> before = creating ? null : row(d, input.id(), " FOR UPDATE");
         String code = text(input.code(), before, ApiField.CODE, d.codeLength());
         String name = text(input.name(), before, ApiField.NAME, d.nameLength());
-        if (!creating && !code.equals(before.get(ApiField.CODE))) {
+        if (!creating && !code.equals(Objects.requireNonNull(before).get(ApiField.CODE))) {
             throw BusinessException.invalid(ApiField.CODE, Catalog.IMMUTABLE_CODE);
         }
         if (creating && Catalog.ACADEMIC_YEARS.equals(kind)
@@ -129,14 +129,14 @@ public class CatalogServiceImpl implements CatalogService {
             throw BusinessException.invalid(ApiField.CODE, Catalog.INVALID_YEAR);
         }
         boolean active = input.active() != null ? input.active()
-                : creating || Boolean.TRUE.equals(before.get(ApiField.ACTIVE));
+                : creating || Boolean.TRUE.equals(Objects.requireNonNull(before).get(ApiField.ACTIVE));
         Long relation = input.parentId() != null ? input.parentId() : input.schoolId();
         if (relation == null && !creating && d.relation() != null) {
-            relation = (Long) before.get(d.relation());
+            relation = (Long) Objects.requireNonNull(before).get(d.relation());
         }
-        if (!creating && Catalog.FACULTIES.equals(kind) && !Objects.equals(relation, before.get(d.relation()))
-                && jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM student_profile WHERE faculty_id=:id)",
-                        Map.of("id", input.id()), Boolean.class)) {
+        if (!creating && Catalog.FACULTIES.equals(kind) && !Objects.equals(relation, Objects.requireNonNull(before).get(d.relation()))
+                && Objects.requireNonNull(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM student_profile WHERE faculty_id=:id)",
+                        Objects.requireNonNull(Map.of("id", input.id())), Boolean.class))) {
             throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
         if (relation != null) {
@@ -171,9 +171,9 @@ public class CatalogServiceImpl implements CatalogService {
     public void delete(String kind, Long id) {
         guard.requirePermission(Permission.CATALOG_DELETE);
         Definition d = definition(kind);
-        jdbc.queryForList("SELECT pg_advisory_xact_lock(hashtext(:kind))", Map.of("kind", "catalog:" + kind));
+        jdbc.queryForList("SELECT pg_advisory_xact_lock(hashtext(:kind))", Objects.requireNonNull(Map.of("kind", "catalog:" + kind)));
         Map<String, Object> before = row(d, id, " FOR UPDATE");
-        jdbc.update("DELETE FROM " + d.table() + " WHERE id=:id", Map.of("id", id));
+        jdbc.update("DELETE FROM " + d.table() + " WHERE id=:id", Objects.requireNonNull(Map.of("id", id)));
         audit.record(currentUser.get().id(), AuditAction.CATALOG_DELETE, EntityType.CATALOG, id,
                 auditValue(kind, before), null, null);
     }
@@ -183,7 +183,7 @@ public class CatalogServiceImpl implements CatalogService {
         Definition d = definition(kind);
         if (id == null) return null;
         positive(id);
-        var rows = jdbc.queryForList("SELECT * FROM " + d.table() + " WHERE id=:id FOR SHARE", Map.of("id", id));
+        var rows = jdbc.queryForList("SELECT * FROM " + d.table() + " WHERE id=:id FOR SHARE", Objects.requireNonNull(Map.of("id", id)));
         if (rows.isEmpty() || !Boolean.TRUE.equals(rows.get(0).get(ApiField.ACTIVE))) {
             throw BusinessException.invalid(ApiField.ID, Catalog.INVALID_VALUE);
         }
@@ -195,7 +195,7 @@ public class CatalogServiceImpl implements CatalogService {
         Definition d = definition(kind);
         if (value == null || value.isBlank()) return null;
         var rows = jdbc.queryForList("SELECT * FROM " + d.table()
-                + " WHERE (code=:value OR name=:value) FOR SHARE", Map.of("value", value));
+                + " WHERE (code=:value OR name=:value) FOR SHARE", Objects.requireNonNull(Map.of("value", value)));
         if (rows.size() != 1 || !Boolean.TRUE.equals(rows.get(0).get(ApiField.ACTIVE))) {
             throw BusinessException.invalid(ApiField.NAME, Catalog.INVALID_VALUE);
         }
@@ -206,7 +206,7 @@ public class CatalogServiceImpl implements CatalogService {
     public void requireActiveCode(String kind, String code) {
         Definition d = definition(kind);
         if (code == null) throw BusinessException.invalid(ApiField.CODE, Catalog.INVALID_VALUE);
-        var rows = jdbc.queryForList("SELECT * FROM " + d.table() + " WHERE code=:code FOR SHARE", Map.of("code", code));
+        var rows = jdbc.queryForList("SELECT * FROM " + d.table() + " WHERE code=:code FOR SHARE", Objects.requireNonNull(Map.of("code", code)));
         if (rows.size() != 1 || !Boolean.TRUE.equals(rows.get(0).get(ApiField.ACTIVE))) {
             throw BusinessException.invalid(ApiField.CODE, Catalog.INVALID_VALUE);
         }
@@ -220,7 +220,7 @@ public class CatalogServiceImpl implements CatalogService {
 
     private Map<String, Object> row(Definition d, Long id, String lock) {
         positive(id);
-        var rows = jdbc.queryForList("SELECT * FROM " + d.table() + " WHERE id=:id" + lock, Map.of("id", id));
+        var rows = jdbc.queryForList("SELECT * FROM " + d.table() + " WHERE id=:id" + lock, Objects.requireNonNull(Map.of("id", id)));
         if (rows.isEmpty()) throw BusinessException.notFound();
         return rows.get(0);
     }
@@ -230,7 +230,7 @@ public class CatalogServiceImpl implements CatalogService {
     }
 
     private String text(String value, Map<String, Object> before, String field, int max) {
-        String result = value == null && before != null ? (String) before.get(field) : value;
+        String result = value == null && before != null ? (String) Objects.requireNonNull(before).get(field) : value;
         if (result == null || result.isBlank() || result.length() > max) {
             throw BusinessException.invalid(field, Catalog.INVALID_VALUE);
         }
@@ -247,7 +247,7 @@ public class CatalogServiceImpl implements CatalogService {
     private void checkHierarchy(Long id, Long parentId) {
         var ancestors = jdbc.queryForList("WITH RECURSIVE ancestors AS (SELECT id,parent_id FROM hometown WHERE id=:parent"
                 + " UNION SELECT h.id,h.parent_id FROM hometown h JOIN ancestors a ON h.id=a.parent_id) SELECT id FROM ancestors",
-                Map.of("parent", parentId), Long.class);
+                Objects.requireNonNull(Map.of("parent", parentId)), Long.class);
         if (ancestors.isEmpty() || (id != null && ancestors.contains(id))) {
             throw BusinessException.invalid(ApiField.PARENT_ID, Catalog.INVALID_HIERARCHY);
         }
@@ -257,7 +257,7 @@ public class CatalogServiceImpl implements CatalogService {
         if (id == null) return;
         String sql = Catalog.HOMETOWNS.equals(kind) ? "SELECT count(*) FROM hometown WHERE parent_id=:id AND active"
                 : Catalog.SCHOOLS.equals(kind) ? "SELECT count(*) FROM faculty WHERE school_id=:id AND active" : null;
-        if (sql != null && jdbc.queryForObject(sql, Map.of("id", id), Long.class) > 0) {
+        if (sql != null && Objects.requireNonNull(jdbc.queryForObject(sql, Objects.requireNonNull(Map.of("id", id)), Long.class)) > 0) {
             throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
     }
@@ -289,13 +289,13 @@ public class CatalogServiceImpl implements CatalogService {
             Object parentId = result.remove("parent_id");
             result.put(ApiField.PARENT_ID, parentId);
             if (parentId != null) result.put(ApiField.PARENT_NAME, jdbc.queryForObject(
-                    "SELECT name FROM hometown WHERE id=:id", Map.of("id", parentId), String.class));
+                    "SELECT name FROM hometown WHERE id=:id", Objects.requireNonNull(Map.of("id", parentId)), String.class));
         }
         if (result.containsKey("school_id")) {
             Object schoolId = result.remove("school_id");
             result.put(ApiField.SCHOOL_ID, schoolId);
             if (schoolId != null) result.put(ApiField.SCHOOL_NAME, jdbc.queryForObject(
-                    "SELECT name FROM school WHERE id=:id", Map.of("id", schoolId), String.class));
+                    "SELECT name FROM school WHERE id=:id", Objects.requireNonNull(Map.of("id", schoolId)), String.class));
         }
         var actions = new ArrayList<String>();
         if (guard.hasPermission(Permission.CATALOG_UPDATE)) actions.add(Action.UPDATE);

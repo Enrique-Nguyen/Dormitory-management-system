@@ -14,6 +14,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.service.RolePermissionService;
 
+import java.util.Objects;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -97,8 +98,8 @@ public class ScopeGuard {
      * dùng khai báo lớp nếu hàm chưa khai. Thiếu/rỗng quyền luôn bị chặn, không mặc định cho qua.
      */
     public boolean hasDeclaredPrivilege(MethodInvocation invocation) {
-        Class<?> targetClass = ClassUtils.getUserClass(invocation.getThis());
-        var method = AopUtils.getMostSpecificMethod(invocation.getMethod(), targetClass);
+        Class<?> targetClass = ClassUtils.getUserClass(Objects.requireNonNull(invocation.getThis()));
+        var method = AopUtils.getMostSpecificMethod(Objects.requireNonNull(invocation.getMethod()), targetClass);
         var required = AnnotatedElementUtils.findMergedAnnotation(method, RequirePrivilege.class);
         if (required == null) {
             required =

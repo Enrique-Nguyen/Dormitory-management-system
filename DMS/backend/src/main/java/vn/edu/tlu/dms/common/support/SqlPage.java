@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,8 +33,8 @@ public class SqlPage {
     public PageResponse<Map<String, Object>> search(String sql, List<?> args, int page, int size) {
         PageQuery.of(page, size, null, Set.of("id"), "id,desc");
         Long count =
-                jdbc.queryForObject(
-                        "SELECT count(*) FROM (" + sql + ") results", Long.class, args.toArray());
+                Objects.requireNonNull(jdbc.queryForObject(
+                        "SELECT count(*) FROM (" + sql + ") results", Long.class, args.toArray()));
         var parameters = new ArrayList<Object>(args);
         parameters.add(size);
         parameters.add((long) page * size);
@@ -58,8 +59,8 @@ public class SqlPage {
                                                 + order.getDirection().name())
                         .collect(Collectors.joining(", "));
         Long count =
-                jdbc.queryForObject(
-                        "SELECT count(*) FROM (" + sql + ") results", Long.class, args.toArray());
+                Objects.requireNonNull(jdbc.queryForObject(
+                        "SELECT count(*) FROM (" + sql + ") results", Long.class, args.toArray()));
         var parameters = new ArrayList<Object>(args);
         parameters.add(input.size());
         parameters.add(pageable.getOffset());
@@ -86,13 +87,13 @@ public class SqlPage {
     }
 
     public Map<String, Object> one(String sql, Object... args) {
-        return jdbc.query(sql, SqlPage::mapRow, args).stream()
+        return jdbc.query(Objects.requireNonNull(sql), SqlPage::mapRow, args).stream()
                 .findFirst()
                 .orElseThrow(BusinessException::notFound);
     }
 
     public List<Map<String, Object>> list(String sql, Object... args) {
-        return jdbc.query(sql, SqlPage::mapRow, args);
+        return jdbc.query(Objects.requireNonNull(sql), SqlPage::mapRow, args);
     }
 
     /** Chuẩn hóa snake_case sang camelCase và ngày/giờ sang chuỗi JSON; không trả mật khẩu. */

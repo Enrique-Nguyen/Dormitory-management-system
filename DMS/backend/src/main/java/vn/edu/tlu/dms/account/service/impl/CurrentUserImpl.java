@@ -14,6 +14,7 @@ import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 
+import java.util.Objects;
 import java.util.Collection;
 import java.util.Map;
 
@@ -37,7 +38,7 @@ public class CurrentUserImpl implements CurrentUser {
         }
         var attributes = RequestContextHolder.getRequestAttributes();
         if (attributes != null
-                && attributes.getAttribute(ACTOR_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST)
+                && attributes.getAttribute(Objects.requireNonNull(ACTOR_ATTRIBUTE), RequestAttributes.SCOPE_REQUEST)
                         instanceof CachedActor cached
                 && cached.subject().equals(jwt.getSubject())) {
             return cached.actor();
@@ -45,7 +46,7 @@ public class CurrentUserImpl implements CurrentUser {
         var actor = getKeycloakActor(jwt);
         if (attributes != null) {
             attributes.setAttribute(
-                    ACTOR_ATTRIBUTE,
+                    Objects.requireNonNull(ACTOR_ATTRIBUTE),
                     new CachedActor(jwt.getSubject(), actor),
                     RequestAttributes.SCOPE_REQUEST);
         }

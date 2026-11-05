@@ -168,7 +168,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                         "createdAt,desc");
         var sort =
                 Sort.by(
-                        pageable.getSort().stream()
+                        Objects.requireNonNull(pageable.getSort().stream()
                                 .map(
                                         order ->
                                                 new Sort.Order(
@@ -176,7 +176,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                                         "createdAt".equals(order.getProperty())
                                                                 ? "created_at"
                                                                 : order.getProperty()))
-                                .toList());
+                                .toList()));
         Long roomId =
                 actor.is(Role.STUDENT)
                         ? rooms.findCurrentStayingRoomId(actor.id()).orElse(-1L)
@@ -468,7 +468,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         }
         List<Occupant> candidates =
                 occupancy.findOccupantsAt(request.getRoomId(), request.getCreatedAt()).stream()
-                        .sorted(Comparator.comparing(Occupant::contractId))
+                        .sorted(Comparator.comparing(element -> element.contractId()))
                         .toList();
         if (candidates.isEmpty()) {
             throw BusinessException.conflict(ErrorCode.NO_OCCUPANT_TO_CHARGE);
@@ -529,7 +529,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
     private List<ChargeableStudent> chargeableStudents(MaintenanceRequest request) {
         return occupancy.findOccupantsAt(request.getRoomId(), request.getCreatedAt()).stream()
-                .sorted(Comparator.comparing(Occupant::contractId))
+                .sorted(Comparator.comparing(element -> element.contractId()))
                 .map(
                         occupant ->
                                 new ChargeableStudent(
@@ -595,7 +595,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                 entry.dueDate()));
             }
         }
-        deductions.sort(Comparator.comparing(Deduction::contractId));
+        deductions.sort(Comparator.comparing(element -> element.contractId()));
         return deductions;
     }
 
@@ -666,7 +666,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                     (r, i) -> r.getLong(1),
                     id);
         }
-        var request = requests.findById(id).orElseThrow(BusinessException::notFound);
+        var request = requests.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
         if (writing) {
             entityManager.refresh(request);
         }

@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms.support;
 
+import java.util.Objects;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
@@ -50,9 +51,9 @@ public final class FutureSemesterFixture {
 
     /** Tạo học kỳ tương lai không trùng ràng buộc và trả về toàn bộ dữ liệu đã ghi. */
     public static Created create(JdbcTemplate jdbc, String type, String name, int lengthDays) {
-        LocalDate start = jdbc.queryForObject(
+        LocalDate start = Objects.requireNonNull(jdbc.queryForObject(
                 "SELECT COALESCE(MAX(end_date), CURRENT_DATE + 365) + 1 FROM semester",
-                LocalDate.class);
+                LocalDate.class));
         for (int probe = 0; probe < MAX_PROBE; probe++) {
             LocalDate end = start.plusDays(lengthDays);
             String academicYear = yearLabel(start);

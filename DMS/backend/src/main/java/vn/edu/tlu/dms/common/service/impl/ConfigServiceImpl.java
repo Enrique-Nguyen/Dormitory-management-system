@@ -23,6 +23,7 @@ import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.ConfigService;
 
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Set;
@@ -76,7 +77,7 @@ public class ConfigServiceImpl implements ConfigService {
                     throw BusinessException.invalid(
                             ApiField.SORT, ValidationMessage.SORT_DIRECTION_INVALID);
                 }
-                orders.add(new Sort.Order(Sort.Direction.fromString(direction), parts[0]));
+                orders.add(new Sort.Order(Sort.Direction.fromString(Objects.requireNonNull(direction)), Objects.requireNonNull(parts[0])));
             }
         }
         orders.add(Sort.Order.asc("key"));
@@ -106,7 +107,7 @@ public class ConfigServiceImpl implements ConfigService {
     @Override()
     public int positiveInt(String key) {
         try {
-            int value = Integer.parseInt(repository.findById(key)
+            int value = Integer.parseInt(repository.findById(Objects.requireNonNull(key))
                     .orElseThrow(() -> BusinessException.conflict(ErrorCode.CONFIG_VALUE_INVALID)).getValue());
             if (value < 1 || value > 3650) {
                 throw new NumberFormatException();

@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
@@ -558,9 +559,9 @@ class ApplicationAssignmentIntegrationTest {
 
         assertThat(events.stream(ApplicationStatusChangedEvent.class))
                 .extracting(
-                        ApplicationStatusChangedEvent::applicationId,
-                        ApplicationStatusChangedEvent::studentId,
-                        ApplicationStatusChangedEvent::status)
+                        (ApplicationStatusChangedEvent element) -> element.applicationId(),
+                        (ApplicationStatusChangedEvent element) -> element.studentId(),
+                        (ApplicationStatusChangedEvent element) -> element.status())
                 .containsExactly(
                         org.assertj.core.groups.Tuple.tuple(
                                 applicationId, studentId, ApplicationStatus.APPROVED),
@@ -604,7 +605,7 @@ class ApplicationAssignmentIntegrationTest {
                         mapper.convertValue(Map.of("periodId", periodId), SearchRequest.class),
                         false);
 
-        assertThat(page.content()).extracting(Response::id).containsExactly(higherId, applicationId);
+        assertThat(page.content()).extracting((Response element) -> element.id()).containsExactly(higherId, applicationId);
         assertThat(page.content().get(0).student().fullName()).isEqualTo("Sinh viên SVH" + suffix);
     }
 
@@ -676,6 +677,6 @@ class ApplicationAssignmentIntegrationTest {
     }
 
     private int count(String sql, Object... args) {
-        return jdbc.queryForObject(sql, Integer.class, args);
+        return Objects.requireNonNull(jdbc.queryForObject(Objects.requireNonNull(sql), Integer.class, args));
     }
 }

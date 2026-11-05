@@ -44,6 +44,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+// Mockito dùng null tạm cho matcher; ngoại lệ chỉ áp dụng ở các hàm giả lập bên dưới.
+
 class RoomCatalogServiceTest {
 
     private final RoomTypeRepository roomTypes = mock(RoomTypeRepository.class);
@@ -58,6 +60,7 @@ class RoomCatalogServiceTest {
     private final SemesterServiceImpl semesterService =
             new SemesterServiceImpl(semesters, guard, current, audit, catalogs);
 
+    @SuppressWarnings("null")
     @BeforeEach
     void setUp() {
         when(current.get()).thenReturn(new Actor(10L, Role.ADMIN, null, false, false));
@@ -122,6 +125,7 @@ class RoomCatalogServiceTest {
         verify(catalogs, never()).requireActive(any(), any());
     }
 
+    @SuppressWarnings("null")
     @Test
     void rejectedNewAmenityDoesNotReplaceExistingLinksOrSave() {
         RoomType entity = existingRoomType();
@@ -136,10 +140,11 @@ class RoomCatalogServiceTest {
         verify(roomTypes, never()).saveAndFlush(any());
     }
 
+    @SuppressWarnings("null")
     @Test
     void usedRoomTypeStillCannotChangeBedCount() {
         existingRoomType();
-        when(rooms.exists(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(true);
+        when(rooms.exists(org.mockito.ArgumentMatchers.<org.springframework.data.jpa.domain.Specification<vn.edu.tlu.dms.room.domain.Room>>argThat(specification -> specification != null))).thenReturn(true);
 
         assertThatThrownBy(() -> roomTypeService.saveOrUpdate(new RoomTypeRequest(
                 1L, null, (short) 6, null, null, null, null, null)))
@@ -174,6 +179,7 @@ class RoomCatalogServiceTest {
         verify(catalogs, never()).requireActiveCode(any(), any());
     }
 
+    @SuppressWarnings("null")
     @Test
     void inactiveChangedAcademicYearIsRejectedBeforeSaving() {
         existingSemester();

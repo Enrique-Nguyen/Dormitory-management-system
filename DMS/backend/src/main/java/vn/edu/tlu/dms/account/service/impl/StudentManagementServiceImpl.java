@@ -237,9 +237,9 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                 selected.cohortId(),
                 selected.hometownId(),
                 in.emergencyContact());
-        var newUser = users.findById(id).orElseThrow(BusinessException::notFound);
+        var newUser = users.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
         identities.provisionAccount(newUser, temporary);
-        users.saveAndFlush(newUser);
+        users.saveAndFlush(Objects.requireNonNull(newUser));
         audit.record(
                 current.get().id(),
                 AuditAction.STUDENT_CREATE,
@@ -377,7 +377,7 @@ public class StudentManagementServiceImpl implements StudentManagementService {
                         id))) {
             throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
-        var deletedUser = users.findById(id).orElseThrow(BusinessException::notFound);
+        var deletedUser = users.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
         // Khóa danh tính trước; nếu xóa sau commit thất bại thì tài khoản ngoài vẫn không đăng nhập
         // được.
         boolean previouslyLocked = deletedUser.getLocked();

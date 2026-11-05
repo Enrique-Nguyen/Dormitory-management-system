@@ -163,13 +163,13 @@ class MaintenanceConcludeIntegrationTest {
         assertThat(response.repairCost()).isEqualTo(100_000L);
         assertThat(response.concluded()).isTrue();
         assertThat(response.deductions())
-                .extracting(Deduction::contractId)
+                .extracting((Deduction element) -> element.contractId())
                 .containsExactlyElementsOf(contractIds);
         assertThat(response.deductions())
-                .extracting(Deduction::amount)
+                .extracting((Deduction element) -> element.amount())
                 .containsExactly(33_333L, 33_333L, 33_334L);
         assertThat(response.deductions())
-                .extracting(Deduction::topUpDueDate)
+                .extracting((Deduction element) -> element.topUpDueDate())
                 .containsOnly(expectedDueDate);
 
         // Chia tiền theo hợp đồng tăng dần; người cuối nhận phần dư.
@@ -221,10 +221,10 @@ class MaintenanceConcludeIntegrationTest {
         // Màn chi tiết đọc lại đúng các khoản trừ cọc đã ghi.
         var detail = maintenance.getMaintenanceRequestById(ticketId);
         assertThat(detail.deductions())
-                .extracting(Deduction::contractId)
+                .extracting((Deduction element) -> element.contractId())
                 .containsExactlyElementsOf(contractIds);
         assertThat(detail.deductions())
-                .extracting(Deduction::amount)
+                .extracting((Deduction element) -> element.amount())
                 .containsExactly(33_333L, 33_333L, 33_334L);
     }
 
@@ -234,7 +234,7 @@ class MaintenanceConcludeIntegrationTest {
                 maintenance.conclude(
                         ticketId, new Conclude("MISUSE", 99_999L, List.of(), null));
         assertThat(response.deductions())
-                .extracting(Deduction::amount)
+                .extracting((Deduction element) -> element.amount())
                 .containsExactly(33_333L, 33_333L, 33_333L);
         assertThat(deductionAmounts(ticketId))
                 .containsExactly(-33_333L, -33_333L, -33_333L);
@@ -408,10 +408,10 @@ class MaintenanceConcludeIntegrationTest {
                                 List.of(studentIds.get(0), studentIds.get(1)),
                                 "Chỉ hai bạn làm hỏng thiết bị"));
         assertThat(response.deductions())
-                .extracting(Deduction::contractId)
+                .extracting((Deduction element) -> element.contractId())
                 .containsExactly(contractIds.get(0), contractIds.get(1));
         assertThat(response.deductions())
-                .extracting(Deduction::amount)
+                .extracting((Deduction element) -> element.amount())
                 .containsExactly(50_000L, 50_000L);
         assertThat(deductionCountForContract(ticketId, contractIds.get(2))).isZero();
     }
@@ -459,7 +459,7 @@ class MaintenanceConcludeIntegrationTest {
         var chargeable = maintenance.findChargeableStudents(ticketId);
         assertThat(chargeable).hasSize(3);
         assertThat(chargeable)
-                .extracting(ChargeableStudent::contractId)
+                .extracting((ChargeableStudent element) -> element.contractId())
                 .containsExactlyElementsOf(contractIds);
         assertThat(chargeable)
                 .extracting(item -> item.student().studentCode())

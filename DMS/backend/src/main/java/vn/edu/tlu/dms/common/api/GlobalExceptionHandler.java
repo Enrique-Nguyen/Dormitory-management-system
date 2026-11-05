@@ -29,6 +29,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.dto.ApiError;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 
+import java.util.Objects;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -189,7 +190,7 @@ public class GlobalExceptionHandler {
                         // DELETE vướng bản ghi con = đang được dùng; ghi mà cha không tồn tại =
                         // tham
                         // chiếu sai, người dùng cần sửa dữ liệu nhập chứ không phải giải phóng.
-                        if (HttpMethod.DELETE.matches(request.getMethod())) {
+                        if (HttpMethod.DELETE.matches(Objects.requireNonNull(request.getMethod()))) {
                             code = ErrorCode.RESOURCE_IN_USE;
                         } else {
                             code = ErrorCode.VALIDATION_FAILED;

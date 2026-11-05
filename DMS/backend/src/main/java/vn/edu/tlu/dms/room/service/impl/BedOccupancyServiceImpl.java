@@ -342,7 +342,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
     private List<LockedBed> lockBeds(List<Long> bedIds) {
         String placeholders = String.join(",", bedIds.stream().map(id -> "?").toList());
         return jdbc.query(
-                LOCK_BEDS_SQL.formatted(placeholders),
+                Objects.requireNonNull(LOCK_BEDS_SQL.formatted(placeholders)),
                 (rs, i) ->
                         new LockedBed(
                                 rs.getLong("id"),
@@ -418,7 +418,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
 
     /** FR-ROOM-10, BR-11: trưởng phòng mất phân phòng trong phòng thì tự gỡ và ghi audit. */
     private void removeLeaderIfNeeded(Long roomId, Long studentId, Long actorId) {
-        var room = rooms.findById(roomId).orElseThrow(BusinessException::notFound);
+        var room = rooms.findById(Objects.requireNonNull(roomId)).orElseThrow(BusinessException::notFound);
         entityManager.refresh(room);
         if (!studentId.equals(room.getLeaderStudentId())) {
             return;
@@ -436,7 +436,7 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
     }
 
     private boolean exists(String sql, Object... args) {
-        return Boolean.TRUE.equals(jdbc.queryForObject(sql, Boolean.class, args));
+        return Boolean.TRUE.equals(jdbc.queryForObject(Objects.requireNonNull(sql), Boolean.class, args));
     }
 
     private Assignment toAssignment(RoomAssignmentHistory row, LockedBed bed) {

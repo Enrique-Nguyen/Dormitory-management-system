@@ -21,6 +21,7 @@ import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.CrudService;
 import vn.edu.tlu.dms.common.support.PageQuery;
 
+import java.util.Objects;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -93,7 +94,7 @@ public abstract class AbstractCrudServiceImpl<E, I, R> implements CrudService<I,
     protected void beforeDelete(E entity) {}
 
     protected E findEntityById(Long id) {
-        return repository.findById(id).orElseThrow(BusinessException::notFound);
+        return repository.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
     }
 
     @Override
@@ -121,7 +122,7 @@ public abstract class AbstractCrudServiceImpl<E, I, R> implements CrudService<I,
                 };
         return PageResponse.from(
                 searchRepository
-                        .findAll(searchScope(search).and(keywordFilter), pageable)
+                        .findAll(searchScope(search).and(keywordFilter), Objects.requireNonNull(pageable))
                         .map(this::toResponse));
     }
 
@@ -152,7 +153,7 @@ public abstract class AbstractCrudServiceImpl<E, I, R> implements CrudService<I,
         E entity = creating ? newEntity() : findEntityById(id);
         R before = creating ? null : toResponse(entity);
         apply(entity, input, creating);
-        R response = toResponse(repository.saveAndFlush(entity));
+        R response = toResponse(repository.saveAndFlush(Objects.requireNonNull(entity)));
         recordCatalogAudit(entity, action, before, response);
         return response;
     }
@@ -164,7 +165,7 @@ public abstract class AbstractCrudServiceImpl<E, I, R> implements CrudService<I,
         E entity = findEntityById(id);
         beforeDelete(entity);
         R before = toResponse(entity);
-        repository.delete(entity);
+        repository.delete(Objects.requireNonNull(entity));
         repository.flush();
         recordCatalogAudit(entity, Action.DELETE, before, null);
     }

@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -630,20 +631,20 @@ class InvoiceCrudScopeIntegrationTest {
     }
 
     private long invoiceCount() {
-        return jdbc.queryForObject(
+        return Objects.requireNonNull(jdbc.queryForObject(
                 "SELECT count(*) FROM invoice WHERE student_id=? AND semester_id=?",
                 Long.class,
                 studentId,
-                targetSemester.id());
+                targetSemester.id()));
     }
 
     private long auditCount() {
         entityManager.flush();
-        return jdbc.queryForObject(
+        return Objects.requireNonNull(jdbc.queryForObject(
                 "SELECT count(*) FROM audit_log WHERE actor_id IN (?, ?) AND entity_type=?",
                 Long.class,
                 staffId,
                 currentUser.get().id(),
-                EntityType.INVOICE);
+                EntityType.INVOICE));
     }
 }

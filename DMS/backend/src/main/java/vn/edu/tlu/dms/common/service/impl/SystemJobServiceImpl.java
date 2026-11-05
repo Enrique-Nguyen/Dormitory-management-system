@@ -12,6 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.service.SystemJobService;
 
+import java.util.Objects;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
@@ -26,7 +27,7 @@ public class SystemJobServiceImpl implements SystemJobService {
 
     public SystemJobServiceImpl(AuditService audit, PlatformTransactionManager manager) {
         this.audit = audit;
-        this.transaction = new TransactionTemplate(manager);
+        this.transaction = new TransactionTemplate(Objects.requireNonNull(manager));
         this.transaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 

@@ -92,8 +92,16 @@ public class FloorServiceImpl implements FloorService {
         guard.requirePermission(creating ? Permission.CATALOG_CREATE : Permission.CATALOG_UPDATE);
         guard.requireRole(Role.STAFF);
         Map<String, Object> before = creating ? null : accessible(input.id(), true);
-        Long buildingId = creating ? input.buildingId() : ((Number) before.get(ApiField.BUILDING_ID)).longValue();
-        Short floor = creating ? input.floor() : ((Number) before.get("floor")).shortValue();
+        Long buildingId;
+        Short floor;
+        if (creating) {
+            buildingId = input.buildingId();
+            floor = input.floor();
+        } else {
+            var existing = Objects.requireNonNull(before);
+            buildingId = ((Number) existing.get(ApiField.BUILDING_ID)).longValue();
+            floor = ((Number) existing.get("floor")).shortValue();
+        }
         if (buildingId == null) throw BusinessException.invalid(ApiField.BUILDING_ID, ValidationMessage.REQUIRED);
         if (floor == null || floor < 0) throw BusinessException.invalid("floor", ValidationMessage.REQUIRED);
         if (!creating && ((input.buildingId() != null && !Objects.equals(input.buildingId(), buildingId))
@@ -102,9 +110,9 @@ public class FloorServiceImpl implements FloorService {
         }
         var building = queries.one("SELECT management_unit_id FROM building WHERE id=? FOR SHARE", buildingId);
         guard.requireUnit(((Number) building.get("managementUnitId")).longValue());
-        String name = input.name() != null ? input.name().trim() : creating ? null : (String) before.get(ApiField.NAME);
+        String name = input.name() != null ? input.name().trim() : creating ? null : (String) Objects.requireNonNull(before).get(ApiField.NAME);
         if (name == null || name.isBlank()) throw BusinessException.invalid(ApiField.NAME, ValidationMessage.NOT_BLANK);
-        boolean active = input.active() != null ? input.active() : creating || Boolean.TRUE.equals(before.get(ApiField.ACTIVE));
+        boolean active = input.active() != null ? input.active() : creating || Boolean.TRUE.equals(Objects.requireNonNull(before).get(ApiField.ACTIVE));
         Long id = input.id();
         if (creating) {
             id = jdbc.queryForObject("INSERT INTO building_floor(building_id,floor,name,active) VALUES (?,?,?,?) RETURNING id", Long.class, buildingId, floor, name, active);
@@ -123,7 +131,7 @@ public class FloorServiceImpl implements FloorService {
         guard.requirePermission(Permission.CATALOG_DELETE);
         guard.requireRole(Role.STAFF);
         var before = accessible(id, true);
-        guard.requireUnit(((Number) before.get("managementUnitId")).longValue());
+        guard.requireUnit(((Number) Objects.requireNonNull(before).get("managementUnitId")).longValue());
         jdbc.update("DELETE FROM building_floor WHERE id=?", id);
         audit.record(current.get().id(), AuditAction.CATALOG_DELETE, EntityType.CATALOG, id, before, null, null);
     }

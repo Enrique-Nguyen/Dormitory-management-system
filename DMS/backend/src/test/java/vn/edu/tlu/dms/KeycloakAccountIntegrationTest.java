@@ -1,5 +1,7 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
+import org.springframework.lang.NonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
@@ -107,14 +109,16 @@ class KeycloakAccountIntegrationTest {
                 .toList();
     }
 
+    @NonNull
+
     private RequestPostProcessor token(String identity, String role, long version) {
-        return jwt().jwt(
+        return Objects.requireNonNull(jwt().jwt(
                         builder ->
                                 builder.subject(identity)
                                         .claim("preferred_username", username)
                                         .claim("realm_access", Map.of("roles", List.of(role)))
                                         .claim("dms_security_version", version))
-                .authorities(new SimpleGrantedAuthority("ROLE_" + role));
+                .authorities(new SimpleGrantedAuthority("ROLE_" + role)));
     }
 
     @Test
@@ -184,8 +188,8 @@ class KeycloakAccountIntegrationTest {
         mvc.perform(
                         post("/api/admin/users/save-or-update")
                                 .with(token(subject, "ADMIN", 0))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(targetId, "{\"role\":\"TECHNICIAN\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(targetId, "{\"role\":\"TECHNICIAN\"}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("TECHNICIAN"))
                 .andExpect(jsonPath("$.crossUnitAccess").value(false));
@@ -201,8 +205,8 @@ class KeycloakAccountIntegrationTest {
         mvc.perform(get("/api/auth/me").with(token(targetSubject, "TECHNICIAN", 1)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("TECHNICIAN"))
-                .andExpect(jsonPath("$.permissions").value(hasItem("MAINTENANCE_UPDATE")))
-                .andExpect(jsonPath("$.permissions").value(not(hasItem("ROOM_CREATE"))));
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("MAINTENANCE_UPDATE"))))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(not(hasItem("ROOM_CREATE")))));
         mvc.perform(searchByPage("/api/rooms").with(token(targetSubject, "TECHNICIAN", 1)))
                 .andExpect(status().isForbidden());
     }
@@ -219,8 +223,8 @@ class KeycloakAccountIntegrationTest {
         mvc.perform(
                         post("/api/admin/users/save-or-update")
                                 .with(token(subject, "ADMIN", 0))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(targetId, "{\"role\":\"ADMIN\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(targetId, "{\"role\":\"ADMIN\"}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("ADMIN"))
                 .andExpect(jsonPath("$.managementUnitId").doesNotExist())
@@ -237,8 +241,8 @@ class KeycloakAccountIntegrationTest {
         mvc.perform(get("/api/auth/me").with(token(targetSubject, "ADMIN", 1)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.managementUnit").doesNotExist())
-                .andExpect(jsonPath("$.permissions").value(hasItem("USER_CREATE")))
-                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_CREATE")));
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("USER_CREATE"))))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("ROOM_CREATE"))));
         mvc.perform(searchByPage("/api/rooms").with(token(targetSubject, "ADMIN", 1)))
                 .andExpect(status().isOk());
     }
@@ -250,13 +254,13 @@ class KeycloakAccountIntegrationTest {
         mvc.perform(
                         post("/api/admin/users/save-or-update")
                                 .with(token(subject, "ADMIN", 0))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        withId(
+                                        Objects.requireNonNull(withId(
                                                 id,
                                                 "{\"role\":\"TECHNICIAN\",\"managementUnitId\":"
                                                         + unitId
-                                                        + "}")))
+                                                        + "}"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
         assertThat(
@@ -266,7 +270,7 @@ class KeycloakAccountIntegrationTest {
         mvc.perform(get("/api/auth/me").with(token(subject, "ADMIN", 0)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("ADMIN"))
-                .andExpect(jsonPath("$.permissions").value(hasItem("USER_CREATE")));
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("USER_CREATE"))));
     }
 
     /** Đổi đơn vị giữ nguyên role nhưng token cũ không được tiếp tục sử dụng phạm vi cũ. */
@@ -287,11 +291,11 @@ class KeycloakAccountIntegrationTest {
         mvc.perform(
                         post("/api/admin/users/save-or-update")
                                 .with(token(subject, "ADMIN", 0))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        withId(
+                                        Objects.requireNonNull(withId(
                                                 targetId,
-                                                "{\"managementUnitId\":" + nextUnit + "}")))
+                                                "{\"managementUnitId\":" + nextUnit + "}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("STAFF"))
                 .andExpect(jsonPath("$.managementUnitId").value(nextUnit));
@@ -316,7 +320,7 @@ class KeycloakAccountIntegrationTest {
         mvc.perform(
                         post("/api/admin/users/" + targetId + "/lock")
                                 .with(token(subject, "ADMIN", 0))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content("{\"reason\":\"Khóa tài khoản kiểm thử\"}"))
                 .andExpect(status().isNoContent());
         mvc.perform(get("/api/auth/me").with(originalToken))
@@ -460,10 +464,10 @@ class KeycloakAccountIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.permissions.length()").value(Permission.ALL.size()))
                 .andExpect(
-                        jsonPath("$.permissions").value(hasItem(Permission.ROLE_PERMISSION_READ)))
+                        jsonPath("$.permissions").value(Objects.requireNonNull(hasItem(Permission.ROLE_PERMISSION_READ))))
                 .andExpect(
                         jsonPath("$.permissions")
-                                .value(hasItem(Permission.ROLE_PERMISSION_UPDATE)));
+                                .value(Objects.requireNonNull(hasItem(Permission.ROLE_PERMISSION_UPDATE))));
     }
 
     /** Ô không phù hợp với vai trò bị khóa; không biến quyền màn hình thành thay đổi vai trò. */
@@ -501,10 +505,10 @@ class KeycloakAccountIntegrationTest {
             mvc.perform(
                             put("/api/admin/role-permissions/STAFF")
                                     .with(actor)
-                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .contentType(MediaType.APPLICATION_JSON_VALUE)
                                     .content(
-                                            matrixBody(
-                                                    0, migrationPermissionsForRole(Role.STAFF))))
+                                            Objects.requireNonNull(matrixBody(
+                                                    0, migrationPermissionsForRole(Role.STAFF)))))
                     .andExpect(status().isForbidden());
         }
         mvc.perform(get("/api/admin/role-permissions/STAFF")).andExpect(status().isUnauthorized());
@@ -538,8 +542,8 @@ class KeycloakAccountIntegrationTest {
         mvc.perform(searchByPage("/api/rooms").with(oldToken)).andExpect(status().isForbidden());
         mvc.perform(get("/api/auth/me").with(oldToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.permissions").value(not(hasItem(Permission.ROOM_READ))))
-                .andExpect(jsonPath("$.permissions").value(hasItem(Permission.PROFILE_READ)));
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(not(hasItem(Permission.ROOM_READ)))))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem(Permission.PROFILE_READ))));
 
         updateMatrix(Role.STAFF, 1, migrationPermissionsForRole(Role.STAFF))
                 .andExpect(status().isOk())
@@ -578,10 +582,10 @@ class KeycloakAccountIntegrationTest {
         assertThat(privilegeProbe.invocationCount()).isEqualTo(1);
         mvc.perform(get("/api/auth/me").with(oldToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.permissions").value(hasItem(Permission.MAINTENANCE_READ)))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem(Permission.MAINTENANCE_READ))))
                 .andExpect(
                         jsonPath("$.permissions")
-                                .value(not(hasItem(Permission.MAINTENANCE_UPDATE))));
+                                .value(Objects.requireNonNull(not(hasItem(Permission.MAINTENANCE_UPDATE)))));
     }
 
     /** Giữ quyền đọc hồ sơ để tài khoản bị thu hồi nghiệp vụ vẫn lấy /me và đăng xuất được. */
@@ -816,8 +820,8 @@ class KeycloakAccountIntegrationTest {
         return mvc.perform(
                 put("/api/admin/role-permissions/" + role)
                         .with(token(subject, Role.ADMIN, 0))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(matrixBody(version, permissions)));
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(matrixBody(version, permissions))));
     }
 
     private String matrixBody(long version, List<String> permissions) throws Exception {
@@ -825,17 +829,19 @@ class KeycloakAccountIntegrationTest {
     }
 
     private long matrixVersion(String role) {
-        return jdbc.queryForObject(
-                "SELECT version FROM role_permission_matrix WHERE role=?", Long.class, role);
+        return Objects.requireNonNull(jdbc.queryForObject(
+                "SELECT version FROM role_permission_matrix WHERE role=?", Long.class, role));
     }
 
     private long matrixAuditCount() {
-        return jdbc.queryForObject(
+        return Objects.requireNonNull(jdbc.queryForObject(
                 "SELECT count(*) FROM audit_log WHERE actor_id=? AND"
                         + " action='ROLE_PERMISSION_UPDATE'",
                 Long.class,
-                id);
+                id));
     }
+
+    @NonNull
 
     private RequestPostProcessor useRole(String role) {
         Long unitId = null;
@@ -972,8 +978,8 @@ class KeycloakAccountIntegrationTest {
             body.put(key, value);
         }
         return post(base + "/search-by-page")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(body));
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(Objects.requireNonNull(mapper.writeValueAsString(body)));
     }
 
     /** Giữ nguyên payload cập nhật từng phần; id chỉ chọn bản ghi, không cho phép tạo ngầm. */

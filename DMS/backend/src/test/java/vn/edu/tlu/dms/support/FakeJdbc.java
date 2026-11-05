@@ -1,6 +1,9 @@
 package vn.edu.tlu.dms.support;
 
+import java.util.Objects;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.lang.reflect.InvocationHandler;
@@ -93,18 +96,19 @@ public class FakeJdbc extends JdbcTemplate {
                 "Chưa chuẩn bị dữ liệu giả cho câu SQL: "
                         + sql
                         + " (đã đăng ký: "
-                        + routes.stream().map(Route::marker).toList()
+                        + routes.stream().map((Route element) -> element.marker()).toList()
                         + ")");
     }
 
     @Override
-    public <T> List<T> query(String sql, RowMapper<T> rowMapper, Object... args) {
+    @NonNull
+    public <T> List<T> query(@NonNull String sql, @NonNull RowMapper<T> rowMapper, @Nullable Object... args) {
         record(sql, args);
         List<T> results = new ArrayList<>();
         int index = 0;
         for (Map<String, Object> row : rowsFor(sql)) {
             try {
-                results.add(rowMapper.mapRow(resultSet(row), index++));
+                results.add(rowMapper.mapRow(Objects.requireNonNull(resultSet(row)), index++));
             } catch (java.sql.SQLException exception) {
                 throw new IllegalStateException(
                         "RowMapper thật lỗi khi đọc dòng giả " + row, exception);
@@ -114,21 +118,24 @@ public class FakeJdbc extends JdbcTemplate {
     }
 
     @Override
-    public List<Map<String, Object>> queryForList(String sql, Object... args) {
+    @NonNull
+    public List<Map<String, Object>> queryForList(@NonNull String sql, @Nullable Object... args) {
         record(sql, args);
-        return rowsFor(sql).stream()
+        return Objects.requireNonNull(rowsFor(sql).stream()
                 .map(row -> (Map<String, Object>) new LinkedHashMap<String, Object>(row))
-                .toList();
+                .toList());
     }
 
     @Override
-    public <T> List<T> queryForList(String sql, Class<T> elementType, Object... args) {
+    @NonNull
+    public <T> List<T> queryForList(@NonNull String sql, @NonNull Class<T> elementType, @Nullable Object... args) {
         record(sql, args);
-        return rowsFor(sql).stream().map(row -> convert(firstValue(row), elementType)).toList();
+        return Objects.requireNonNull(rowsFor(sql).stream().map(row -> convert(firstValue(row), elementType)).toList());
     }
 
     @Override
-    public <T> T queryForObject(String sql, Class<T> elementType, Object... args) {
+    @Nullable
+    public <T> T queryForObject(@NonNull String sql, @NonNull Class<T> elementType, @Nullable Object... args) {
         record(sql, args);
         List<Map<String, Object>> rows = rowsFor(sql);
         if (rows.isEmpty()) {
@@ -138,28 +145,29 @@ public class FakeJdbc extends JdbcTemplate {
     }
 
     @Override
-    public <T> T queryForObject(String sql, RowMapper<T> rowMapper, Object... args) {
+    @Nullable
+    public <T> T queryForObject(@NonNull String sql, @NonNull RowMapper<T> rowMapper, @Nullable Object... args) {
         record(sql, args);
         List<Map<String, Object>> rows = rowsFor(sql);
         if (rows.isEmpty()) {
             throw new IllegalStateException("Câu SQL giả không trả dòng nào: " + sql);
         }
         try {
-            return rowMapper.mapRow(resultSet(rows.get(0)), 0);
+            return rowMapper.mapRow(Objects.requireNonNull(resultSet(rows.get(0))), 0);
         } catch (java.sql.SQLException exception) {
             throw new IllegalStateException("RowMapper thật lỗi khi đọc dòng giả", exception);
         }
     }
 
     @Override
-    public int update(String sql, Object... args) {
+    public int update(@NonNull String sql, @Nullable Object... args) {
         record(sql, args);
         return affectedRows;
     }
 
-    private void record(String sql, Object... args) {
+    private void record(String sql, @Nullable Object... args) {
         StringBuilder line = new StringBuilder(sql);
-        for (Object arg : args) {
+        for (Object arg : args == null ? new Object[0] : args) {
             line.append(" | ").append(arg);
         }
         statements.add(line.toString());

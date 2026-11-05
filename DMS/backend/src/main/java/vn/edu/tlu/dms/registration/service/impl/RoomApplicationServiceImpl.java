@@ -59,6 +59,7 @@ import vn.edu.tlu.dms.room.service.OccupancyQuery;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -251,11 +252,11 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                                     }
                                     return b.and(filters.toArray(Predicate[]::new));
                                 },
-                                pageable);
+                                Objects.requireNonNull(pageable));
         // Nạp thông tin sinh viên của cả trang trong một lượt để tránh truy vấn N+1.
         var users =
                 accounts.users(
-                        result.getContent().stream().map(RoomApplication::getStudentId).toList());
+                        result.getContent().stream().map(element -> element.getStudentId()).toList());
         return PageResponse.from(
                 result.map(
                         a -> toApplicationResponse(a, false, null, users.get(a.getStudentId()))));
@@ -342,7 +343,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         if (input.priorityCategoryIds() != null) {
             replaceApplicationPriorities(id, input.priorityCategoryIds());
         }
-        applications.saveAndFlush(a);
+        applications.saveAndFlush(Objects.requireNonNull(a));
         return toApplicationResponse(a, true);
     }
 
@@ -432,7 +433,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                             ApiField.MANAGEMENT_UNIT_ID,
                             a.getPreferredUnitId()));
         }
-        var period = periods.findById(a.getPeriodId()).orElseThrow(BusinessException::notFound);
+        var period = periods.findById(Objects.requireNonNull(a.getPeriodId())).orElseThrow(BusinessException::notFound);
         var semester = rooms.getSemesterReference(period.getSemesterId());
         Long contractId =
                 contracts.createPendingForApplication(
@@ -621,7 +622,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                 .mapToInt(
                         p ->
                                 categories
-                                        .findById(p.getCategoryId())
+                                        .findById(Objects.requireNonNull(p.getCategoryId()))
                                         .orElseThrow(BusinessException::notFound)
                                         .getWeight())
                 .sum();
@@ -635,7 +636,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                     (r, i) -> r.getLong(1),
                     id);
         }
-        var a = applications.findById(id).orElseThrow(BusinessException::notFound);
+        var a = applications.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
         if (writing) {
             entityManager.refresh(a);
         }
@@ -675,7 +676,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
     }
 
     private void validateApplicationPeriod(RoomApplication a) {
-        var p = periods.findById(a.getPeriodId()).orElseThrow(BusinessException::notFound);
+        var p = periods.findById(Objects.requireNonNull(a.getPeriodId())).orElseThrow(BusinessException::notFound);
         var now = OffsetDateTime.now();
         if (!p.getKind().equals(RegistrationKind.REGULAR)
                 || now.isBefore(p.getOpenAt())
@@ -746,7 +747,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                                         p -> {
                                             var category =
                                                     categories
-                                                            .findById(p.getCategoryId())
+                                                            .findById(Objects.requireNonNull(p.getCategoryId()))
                                                             .orElseThrow(
                                                                     BusinessException::notFound);
                                             var verifier =

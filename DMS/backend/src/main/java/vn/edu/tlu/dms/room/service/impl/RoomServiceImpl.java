@@ -177,7 +177,7 @@ public class RoomServiceImpl implements RoomService {
                                                 keyword.trim().toLowerCase(Locale.ROOT)),
                                         '\\'));
                     }
-                    var building = q.subquery(Long.class);
+                    var building = Objects.requireNonNull(q).subquery(Long.class);
                     var bd = building.from(Building.class);
                     building.select(bd.get("id"))
                             .where(
@@ -224,9 +224,9 @@ public class RoomServiceImpl implements RoomService {
                     }
                     return b.and(filters.toArray(Predicate[]::new));
                 };
-        var found = rooms.findAll(spec, pageable);
+        var found = rooms.findAll(spec, Objects.requireNonNull(pageable));
         // Nạp số liệu công suất của cả trang bằng một truy vấn thay vì mỗi phòng một truy vấn.
-        var occupancyByRoom = loadOccupancy(found.getContent().stream().map(Room::getId).toList());
+        var occupancyByRoom = loadOccupancy(found.getContent().stream().map(element -> element.getId()).toList());
         return PageResponse.from(
                 found.map(r -> toRoomResponse(r, false, occupancyByRoom.get(r.getId()))));
     }
@@ -256,7 +256,7 @@ public class RoomServiceImpl implements RoomService {
         requireValue(input.roomTypeId(), "roomTypeId");
         guard.requireUnit(references.getBuildingManagementUnitId(input.buildingId()));
         references.requireActiveRoomType(input.roomTypeId());
-        var type = types.findById(input.roomTypeId()).orElseThrow(BusinessException::notFound);
+        var type = types.findById(Objects.requireNonNull(input.roomTypeId())).orElseThrow(BusinessException::notFound);
         var r = new Room();
         r.setBuildingId(input.buildingId());
         r.setRoomTypeId(input.roomTypeId());
@@ -305,12 +305,12 @@ public class RoomServiceImpl implements RoomService {
             references.requireActiveRoomType(input.roomTypeId());
             r.setRoomTypeId(input.roomTypeId());
         }
-        rooms.saveAndFlush(r);
+        rooms.saveAndFlush(Objects.requireNonNull(r));
         if (typeChanged) {
             // Số giường phải khớp loại phòng mới, nếu không công suất hiển thị và giá sẽ lệch nhau.
             syncBeds(
                     r,
-                    types.findById(r.getRoomTypeId())
+                    types.findById(Objects.requireNonNull(r.getRoomTypeId()))
                             .orElseThrow(BusinessException::notFound)
                             .getBedCount());
         }
@@ -430,17 +430,17 @@ public class RoomServiceImpl implements RoomService {
         guard.requirePermission(Permission.ROOM_DELETE);
         lockRoomBedsInAscendingOrder(id);
         var r = findAccessibleRoom(id, true);
-        if (jdbc.queryForObject(
+        if (Objects.requireNonNull(jdbc.queryForObject(
                 "SELECT EXISTS (SELECT 1 FROM room_assignment_history a JOIN bed b ON b.id=a.bed_id"
                         + " WHERE b.room_id=?)",
                 Boolean.class,
-                id)) {
+                id))) {
             throw BusinessException.conflict(ErrorCode.ROOM_OCCUPIED);
         }
         var rows = beds.findAll((b, q, cb) -> cb.equal(b.get("roomId"), id));
         beds.deleteAll(rows);
         beds.flush();
-        rooms.delete(r);
+        rooms.delete(Objects.requireNonNull(r));
         rooms.flush();
         audit.record(
                 current.get().id(),
@@ -480,12 +480,12 @@ public class RoomServiceImpl implements RoomService {
         lockRoomBedsInAscendingOrder(id);
         var r = findAccessibleRoom(id, true);
         boolean staying =
-                jdbc.queryForObject(
+                Objects.requireNonNull(jdbc.queryForObject(
                         "SELECT EXISTS (SELECT 1 FROM v_current_stay WHERE room_id=? AND"
                                 + " student_id=? AND assignment_kind='STAY')",
                         Boolean.class,
                         id,
-                        studentId);
+                        studentId));
         if (!staying) {
             throw new BusinessException(
                     ErrorCode.LEADER_NOT_STAYING,
@@ -681,7 +681,7 @@ public class RoomServiceImpl implements RoomService {
     private void syncBeds(Room r, int target) {
         var all = new ArrayList<>(beds.findAll((b, q, cb) -> cb.equal(b.get("roomId"), r.getId())));
         all.forEach(entityManager::refresh);
-        all.sort(Comparator.comparing(Bed::getCode));
+        all.sort(Comparator.comparing(element -> element.getCode()));
         Set<String> used = new HashSet<>();
         all.forEach(b -> used.add(b.getCode()));
         var active = new ArrayList<Bed>();
@@ -705,7 +705,7 @@ public class RoomServiceImpl implements RoomService {
                 active.add(beds.save(bed));
             }
         }
-        active.sort(Comparator.comparing(Bed::getCode));
+        active.sort(Comparator.comparing(element -> element.getCode()));
         for (int i = active.size() - 1; active.size() > target; i--) {
             var bed = active.get(i);
             Long bedId = bed.getId();
@@ -728,7 +728,7 @@ public class RoomServiceImpl implements RoomService {
                     (row, index) -> row.getLong(1),
                     id);
         }
-        var r = rooms.findById(id).orElseThrow(BusinessException::notFound);
+        var r = rooms.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
         if (writing) {
             entityManager.refresh(r);
             guard.requireUnit(references.getBuildingManagementUnitId(r.getBuildingId()));
@@ -751,7 +751,7 @@ public class RoomServiceImpl implements RoomService {
 
     private Bed lockAndFindBed(Long id) {
         jdbc.query("SELECT id FROM bed WHERE id=? FOR UPDATE", (r, i) -> r.getLong(1), id);
-        var bed = beds.findById(id).orElseThrow(BusinessException::notFound);
+        var bed = beds.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
         entityManager.refresh(bed);
         return bed;
     }
@@ -763,10 +763,10 @@ public class RoomServiceImpl implements RoomService {
 
     private void requireRoomWithoutOpenAssignments(Room r) {
         long count =
-                jdbc.queryForObject(
+                Objects.requireNonNull(jdbc.queryForObject(
                         "SELECT held_beds+occupied_beds FROM v_room_occupancy WHERE room_id=?",
                         Long.class,
-                        r.getId());
+                        r.getId()));
         if (count > 0) {
             throw new BusinessException(
                     ErrorCode.ROOM_OCCUPIED,
@@ -867,7 +867,7 @@ public class RoomServiceImpl implements RoomService {
         if (roomBeds.isEmpty()) {
             return List.of();
         }
-        var bedIds = roomBeds.stream().map(Bed::getId).toList();
+        var bedIds = roomBeds.stream().map(element -> element.getId()).toList();
         Map<Long, RoomAssignmentHistory> openByBed = new HashMap<>();
         assignments
                 .findAll(

@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -37,6 +38,8 @@ import vn.edu.tlu.dms.common.service.AuditService;
 import java.util.List;
 import java.util.Map;
 
+// Mockito dùng null tạm cho matcher; ngoại lệ chỉ áp dụng ở các hàm giả lập bên dưới.
+
 class CatalogServiceTest {
     private final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     private final ScopeGuard guard = mock(ScopeGuard.class);
@@ -45,6 +48,7 @@ class CatalogServiceTest {
     private final CatalogServiceImpl service = new CatalogServiceImpl(jdbc, guard, user, audit);
     private final Map<String, Object> row = Map.of("id", 1L, "code", "ONE", "name", "One", "active", true);
 
+    @SuppressWarnings("null")
     @BeforeEach
     void setUp() {
         when(user.get()).thenReturn(new Actor(7L, Role.ADMIN, null, false, false));
@@ -54,6 +58,7 @@ class CatalogServiceTest {
         });
     }
 
+    @SuppressWarnings("null")
     @Test
     void createChecksCreatePermissionAndAudits() {
         when(jdbc.queryForObject(startsWith("INSERT"), any(SqlParameterSource.class), eq(Long.class))).thenReturn(1L);
@@ -65,6 +70,7 @@ class CatalogServiceTest {
                 eq(null), any(), eq(null));
     }
 
+    @SuppressWarnings("null")
     @Test
     void updateOnlyPermissionCannotCreate() {
         doThrow(BusinessException.forbidden()).when(guard).requirePermission(Permission.CATALOG_CREATE);
@@ -73,6 +79,7 @@ class CatalogServiceTest {
         verify(jdbc, never()).queryForList(anyString(), anyMap());
     }
 
+    @SuppressWarnings("null")
     @Test
     void createOnlyPermissionCannotUpdate() {
         doThrow(BusinessException.forbidden()).when(guard).requirePermission(Permission.CATALOG_UPDATE);
@@ -81,6 +88,7 @@ class CatalogServiceTest {
         verify(jdbc, never()).queryForList(anyString(), anyMap());
     }
 
+    @SuppressWarnings("null")
     @Test
     void partialUpdatePreservesCodeNameAndFalse() {
         var inactive = Map.<String, Object>of("id", 1L, "code", "ONE", "name", "One", "active", false);
@@ -89,9 +97,10 @@ class CatalogServiceTest {
         verify(jdbc).update(eq("UPDATE student_cohort SET name=:name, active=:active WHERE id=:id"),
                 org.mockito.ArgumentMatchers.<SqlParameterSource>argThat(p -> Boolean.FALSE.equals(p.getValue("active"))
                         && "One".equals(p.getValue("name"))));
-        verify(jdbc).queryForList("SELECT * FROM student_cohort WHERE id=:id FOR UPDATE", Map.of("id", 1L));
+        verify(jdbc).queryForList("SELECT * FROM student_cohort WHERE id=:id FOR UPDATE", Objects.requireNonNull(Map.of("id", 1L)));
     }
 
+    @SuppressWarnings("null")
     @Test
     void missingUpdateNeverCreates() {
         when(jdbc.queryForList(startsWith("SELECT *"), anyMap())).thenReturn(List.of());
@@ -112,6 +121,7 @@ class CatalogServiceTest {
                 input(null, "2025-2027", "Year", null, null))).isInstanceOf(BusinessException.class);
     }
 
+    @SuppressWarnings("null")
     @Test
     void readInactiveAndDeclareActions() {
         when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(
@@ -123,19 +133,21 @@ class CatalogServiceTest {
         verify(guard).requirePermission(Permission.CATALOG_READ);
     }
 
+    @SuppressWarnings("null")
     @Test
     void selectionUsesShareLockAndRejectsInactive() {
         when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(
                 Map.of("id", 1L, "active", false)));
         assertThatThrownBy(() -> service.requireActive(Catalog.SCHOOLS, 1L)).isInstanceOf(BusinessException.class);
-        verify(jdbc).queryForList("SELECT * FROM school WHERE id=:id FOR SHARE", Map.of("id", 1L));
+        verify(jdbc).queryForList("SELECT * FROM school WHERE id=:id FOR SHARE", Objects.requireNonNull(Map.of("id", 1L)));
         assertThat(service.requireActive(Catalog.SCHOOLS, null)).isNull();
     }
 
+    @SuppressWarnings("null")
     @Test
     void importRequiresOneExactActiveMatchWithoutCreation() {
         assertThat(service.resolveImport(Catalog.SCHOOLS, "One")).isEqualTo(1L);
-        verify(jdbc).queryForList("SELECT * FROM school WHERE (code=:value OR name=:value) FOR SHARE", Map.of("value", "One"));
+        verify(jdbc).queryForList("SELECT * FROM school WHERE (code=:value OR name=:value) FOR SHARE", Objects.requireNonNull(Map.of("value", "One")));
         when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row, row));
         assertThatThrownBy(() -> service.resolveImport(Catalog.SCHOOLS, "ONE")).isInstanceOf(BusinessException.class);
         when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
@@ -143,6 +155,7 @@ class CatalogServiceTest {
         verify(jdbc, never()).update(anyString(), any(SqlParameterSource.class));
     }
 
+    @SuppressWarnings("null")
     @Test
     void pagingUsesSameBoundFiltersForCountAndRows() {
         when(jdbc.queryForObject(startsWith("SELECT count"), any(SqlParameterSource.class), eq(Long.class))).thenReturn(31L);
@@ -167,6 +180,7 @@ class CatalogServiceTest {
         assertThat(request.name()).isEqualTo("Thuy Loi");
     }
 
+    @SuppressWarnings("null")
     @Test
     void schoolCodeAndNameAreBoundSeparatelyForCountAndRows() {
         when(jdbc.queryForObject(startsWith("SELECT count"), any(SqlParameterSource.class), eq(Long.class))).thenReturn(1L);
@@ -183,6 +197,7 @@ class CatalogServiceTest {
                         "A%".equals(p.getValue("code")) && "O'Brien".equals(p.getValue("name"))));
     }
 
+    @SuppressWarnings("null")
     @Test
     void blankCatalogFiltersAreOmittedFromCountAndData() {
         when(jdbc.queryForObject(startsWith("SELECT count"), any(SqlParameterSource.class), eq(Long.class))).thenReturn(0L);
@@ -204,6 +219,7 @@ class CatalogServiceTest {
         assertThatThrownBy(() -> service.getById(Catalog.SCHOOLS, 0L)).isInstanceOf(BusinessException.class);
     }
 
+    @SuppressWarnings("null")
     @Test
     void hierarchyRejectsCycleAndInactiveParent() {
         when(jdbc.queryForList(startsWith("WITH RECURSIVE"), anyMap(), eq(Long.class))).thenReturn(List.of(2L, 1L));
@@ -216,6 +232,7 @@ class CatalogServiceTest {
                 .isInstanceOf(BusinessException.class);
     }
 
+    @SuppressWarnings("null")
     @Test
     void activeChildrenPreventDeactivation() {
         when(jdbc.queryForObject(startsWith("SELECT count(*) FROM faculty"), anyMap(), eq(Long.class))).thenReturn(1L);
@@ -223,6 +240,7 @@ class CatalogServiceTest {
                 .hasMessage("RESOURCE_IN_USE");
     }
 
+    @SuppressWarnings("null")
     @Test
     void foreignKeyDeleteFailureIsNotSwallowedOrAudited() {
         when(jdbc.update(eq("DELETE FROM school WHERE id=:id"), anyMap()))
@@ -242,15 +260,17 @@ class CatalogServiceTest {
                 Permission.CATALOG_UPDATE, Permission.CATALOG_DELETE);
     }
 
+    @SuppressWarnings("null")
     @Test
     void naturalCodeSelectionIsBoundAndInactiveIsRejected() {
         service.requireActiveCode(Catalog.MAINTENANCE_CATEGORIES, "ONE");
-        verify(jdbc).queryForList("SELECT * FROM maintenance_category WHERE code=:code FOR SHARE", Map.of("code", "ONE"));
+        verify(jdbc).queryForList("SELECT * FROM maintenance_category WHERE code=:code FOR SHARE", Objects.requireNonNull(Map.of("code", "ONE")));
         when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
         assertThatThrownBy(() -> service.requireActiveCode(Catalog.MAINTENANCE_CATEGORIES, "Unknown"))
                 .isInstanceOf(BusinessException.class);
     }
 
+    @SuppressWarnings("null")
     @Test
     void readAndDeleteDenialsHaveNoDatabaseSideEffects() {
         doThrow(BusinessException.forbidden()).when(guard).requirePermission(Permission.CATALOG_READ);

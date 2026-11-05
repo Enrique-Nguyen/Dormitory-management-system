@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -412,7 +413,7 @@ class BedOccupancyIntegrationTest {
                 fixtureRooms(roomService.findAvailableBeds(null, request, null, null));
 
         assertThat(rooms)
-                .flatExtracting(AvailableRoom::freeBeds)
+                .flatExtracting((AvailableRoom element) -> element.freeBeds())
                 .extracting(b -> b.id())
                 .containsExactly(beds.get(1), beds.get(2), beds.get(3));
 
@@ -687,7 +688,7 @@ class BedOccupancyIntegrationTest {
     }
 
     private void inTransaction(Runnable action) {
-        new TransactionTemplate(transactionManager).executeWithoutResult(status -> action.run());
+        new TransactionTemplate(Objects.requireNonNull(transactionManager)).executeWithoutResult(status -> action.run());
     }
 
     private void assertConflict(Runnable action, String code) {

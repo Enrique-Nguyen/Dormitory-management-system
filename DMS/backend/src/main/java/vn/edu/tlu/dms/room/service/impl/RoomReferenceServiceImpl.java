@@ -14,6 +14,7 @@ import vn.edu.tlu.dms.room.repository.RoomTypeRepository;
 import vn.edu.tlu.dms.room.repository.SemesterRepository;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
+import java.util.Objects;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -48,7 +49,7 @@ public class RoomReferenceServiceImpl implements RoomReferenceService {
 
     @Override()
     public Location getRoomLocation(Long id) {
-        var r = rooms.findById(id).orElseThrow(BusinessException::notFound);
+        var r = rooms.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
         return new Location(
                 id,
                 r.getBuildingId(),
@@ -60,14 +61,14 @@ public class RoomReferenceServiceImpl implements RoomReferenceService {
     @Override()
     public Long getBuildingManagementUnitId(Long id) {
         return buildings
-                .findById(id)
+                .findById(Objects.requireNonNull(id))
                 .orElseThrow(BusinessException::notFound)
                 .getManagementUnitId();
     }
 
     @Override
     public Long getBuildingDepositAmount(Long id) {
-        return buildings.findById(id).orElseThrow(BusinessException::notFound).getDepositAmount();
+        return buildings.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound).getDepositAmount();
     }
 
     @Override()
@@ -81,7 +82,7 @@ public class RoomReferenceServiceImpl implements RoomReferenceService {
 
     @Override()
     public SemesterRef getSemesterReference(Long id) {
-        var r = semesters.findById(id).orElseThrow(BusinessException::notFound);
+        var r = semesters.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
         return new SemesterRef(r.getId(), r.getType(), r.getStartDate(), r.getEndDate());
     }
 

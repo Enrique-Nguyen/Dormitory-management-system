@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -53,7 +54,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 /** Transaction commit thật trên container riêng, audit thật append-only, không gọi Keycloak. */
@@ -70,7 +70,6 @@ class SystemJobsIntegrationTest {
     @Autowired RoomApplicationService applications;
     @Autowired PlatformTransactionManager transactionManager;
 
-    private static final AtomicInteger YEARS = new AtomicInteger(2900);
     private static final String RELEASE_REASON = "Release hold for reassignment";
     private String suffix;
     private Long actor;
@@ -168,7 +167,7 @@ class SystemJobsIntegrationTest {
     }
 
     private Long id(String sql, Object... args) {
-        return jdbc.queryForObject(sql, Long.class, args);
+        return jdbc.queryForObject(Objects.requireNonNull(sql), Long.class, args);
     }
 
     private void activate() {
@@ -239,7 +238,7 @@ class SystemJobsIntegrationTest {
     }
 
     private boolean isLockBlocked(String sql, Long id) throws SQLException {
-        try (var connection = jdbc.getDataSource().getConnection()) {
+        try (var connection = Objects.requireNonNull(jdbc.getDataSource()).getConnection()) {
             connection.setReadOnly(false);
             connection.setAutoCommit(false);
             try (var statement = connection.prepareStatement(sql)) {
@@ -273,7 +272,7 @@ class SystemJobsIntegrationTest {
                                     asAdmin(
                                             jwt,
                                             () ->
-                                                    new TransactionTemplate(transactionManager)
+                                                    new TransactionTemplate(Objects.requireNonNull(transactionManager))
                                                             .execute(
                                                                     transaction -> {
                                                                         jdbc.queryForObject(
@@ -359,7 +358,7 @@ class SystemJobsIntegrationTest {
                                     asAdmin(
                                             jwt,
                                             () ->
-                                                    new TransactionTemplate(transactionManager)
+                                                    new TransactionTemplate(Objects.requireNonNull(transactionManager))
                                                             .execute(
                                                                     transaction -> {
                                                                         manualBackend.complete(backendPid());
@@ -396,7 +395,7 @@ class SystemJobsIntegrationTest {
             var holder =
                     pool.submit(
                             () ->
-                                    new TransactionTemplate(transactionManager)
+                                    new TransactionTemplate(Objects.requireNonNull(transactionManager))
                                             .executeWithoutResult(
                                                     transaction -> {
                                                         jdbc.queryForObject(
@@ -654,7 +653,7 @@ class SystemJobsIntegrationTest {
     }
 
     private int backendPid() {
-        return jdbc.queryForObject("SELECT pg_backend_pid()", Integer.class);
+        return Objects.requireNonNull(jdbc.queryForObject("SELECT pg_backend_pid()", Integer.class));
     }
 
     private void awaitBlockedBy(int waitingPid, int blockerPid) {
@@ -699,7 +698,7 @@ class SystemJobsIntegrationTest {
     }
 
     private long count(String sql, Object... args) {
-        return jdbc.queryForObject(sql, Long.class, args);
+        return Objects.requireNonNull(jdbc.queryForObject(Objects.requireNonNull(sql), Long.class, args));
     }
 
     private long historyCount(String type, Long id) {

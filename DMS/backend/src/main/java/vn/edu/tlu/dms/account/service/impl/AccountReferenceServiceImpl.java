@@ -43,8 +43,8 @@ public class AccountReferenceServiceImpl implements AccountReferenceService {
 
     @Override()
     public UserRef user(Long id) {
-        var u = users.findById(id).orElseThrow(BusinessException::notFound);
-        String gender = students.findById(id).map(p -> p.getGender()).orElse(null);
+        var u = users.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
+        String gender = students.findById(Objects.requireNonNull(id)).map(p -> p.getGender()).orElse(null);
         return new UserRef(
                 u.getId(),
                 u.getFullName(),

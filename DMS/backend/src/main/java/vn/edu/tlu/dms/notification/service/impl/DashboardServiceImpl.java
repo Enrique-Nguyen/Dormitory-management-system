@@ -115,12 +115,12 @@ public class DashboardServiceImpl implements DashboardService {
                 new DashboardDtos.InfrastructureStats(
                         infrastructure.buildings(),
                         infrastructure.roomsByStatus().values().stream()
-                                .mapToLong(Long::longValue)
+                                .mapToLong(element -> element.longValue())
                                 .sum(),
                         infrastructure.roomsByStatus()),
                 new DashboardDtos.RegistrationStats(
                         registration.applicationsByStatus().values().stream()
-                                .mapToLong(Long::longValue)
+                                .mapToLong(element -> element.longValue())
                                 .sum(),
                         registration
                                 .applicationsByStatus()

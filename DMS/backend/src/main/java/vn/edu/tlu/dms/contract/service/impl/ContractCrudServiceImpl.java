@@ -323,7 +323,7 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
     public ContractDtos.ExtensionDetail approveExtension(Long id) {
         guard.requirePermission(Permission.CONTRACT_EXTENSION_UPDATE);
         guard.requireRole(Role.STAFF);
-        ExtensionContext context = loadExtension(id, true);
+        loadExtension(id, true);
         ExtensionRow row = lockExtensionRequest(id);
         ContractLock contract = lockContract(row.contractId());
         if (!ContractStatus.ACTIVE.equals(contract.status())) {

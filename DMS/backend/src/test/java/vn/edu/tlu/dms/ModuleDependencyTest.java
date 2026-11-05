@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,7 +51,7 @@ class ModuleDependencyTest {
                     List.of("registration", "maintenance"),
                     List.of("notification"));
 
-    private static final List<String> MODULES = TIERS.stream().flatMap(List::stream).toList();
+    private static final List<String> MODULES = TIERS.stream().flatMap((List<String> element) -> element.stream()).toList();
 
     private static String pkg(String module) {
         return "vn.edu.tlu.dms." + module + "..";
@@ -120,7 +121,7 @@ class ModuleDependencyTest {
                     .as("%s không được final để Spring proxy kiểm tra quyền", controller.getName())
                     .isFalse();
             for (var method : controller.getMethods()) {
-                if (!AnnotatedElementUtils.hasAnnotation(method, RequestMapping.class)) {
+                if (!AnnotatedElementUtils.hasAnnotation(Objects.requireNonNull(method), RequestMapping.class)) {
                     continue;
                 }
                 assertThat(Modifier.isFinal(method.getModifiers()))
@@ -136,7 +137,7 @@ class ModuleDependencyTest {
                 assertThat(requirement)
                         .as("%s phải khai @RequirePrivilege ở hàm hoặc lớp", method)
                         .isNotNull();
-                assertThat(requirement.value())
+                assertThat(Objects.requireNonNull(requirement).value())
                         .as("%s phải khai ít nhất một mã quyền hợp lệ", method)
                         .isNotEmpty()
                         .allMatch(registeredPrivileges::contains);
@@ -231,7 +232,7 @@ class ModuleDependencyTest {
     void permissionScreenRegistryCoversEveryRegisteredPrivilege(JavaClasses classes) {
         var catalog = DmsConstants.PermissionCatalog.SCREENS;
         assertThat(catalog)
-                .extracting(DmsConstants.PermissionCatalog.ScreenDefinition::code)
+                .extracting((DmsConstants.PermissionCatalog.ScreenDefinition element) -> element.code())
                 .doesNotHaveDuplicates();
         assertThat(DmsConstants.PermissionCatalog.ROLE_LABELS.keySet())
                 .containsExactlyInAnyOrderElementsOf(DmsConstants.Role.ALL);

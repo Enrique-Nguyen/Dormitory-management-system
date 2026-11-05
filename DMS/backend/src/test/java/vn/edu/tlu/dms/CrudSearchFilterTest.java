@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -80,6 +81,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Kiem tra bo loc, tham so bind va predicate dung chung cho du lieu/dem, khong can CSDL. */
+// Mockito dùng null tạm cho matcher; ngoại lệ chỉ áp dụng ở các hàm giả lập bên dưới.
 class CrudSearchFilterTest {
 
     private final ScopeGuard guard = mock(ScopeGuard.class);
@@ -129,7 +131,7 @@ class CrudSearchFilterTest {
         when(repository.searchAccessibleInvoices(any(), any(), any(), anyBoolean(), anyBoolean(),
                 org.mockito.ArgumentMatchers.isNull(), anyBoolean(), any(), any(),
                 org.mockito.ArgumentMatchers.isNull(), any(), any(), any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of()));
+                .thenReturn(new PageImpl<>(Objects.requireNonNull(List.of())));
         SearchRequest input = new ObjectMapper().findAndRegisterModules().readValue(
                 "{\"totalAmountMin\":0,\"totalAmountMax\":50,\"dueDateFrom\":\"2026-01-01\","
                         + "\"dueDateTo\":\"2026-01-31\",\"q\":\"A_%\"}", SearchRequest.class);
@@ -156,7 +158,7 @@ class CrudSearchFilterTest {
                 org.mockito.ArgumentMatchers.isNull(), anyBoolean(), any(), any(),
                 org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull(),
                 org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull(),
-                org.mockito.ArgumentMatchers.isNull(), any())).thenReturn(new PageImpl<>(List.of()));
+                org.mockito.ArgumentMatchers.isNull(), any())).thenReturn(new PageImpl<>(Objects.requireNonNull(List.of())));
         service.searchByPage(new SearchRequest(), false);
         verify(repository).searchAccessibleInvoices(org.mockito.ArgumentMatchers.eq(Role.STAFF),
                 org.mockito.ArgumentMatchers.eq(10L), org.mockito.ArgumentMatchers.eq(7L),
@@ -189,7 +191,7 @@ class CrudSearchFilterTest {
         when(rooms.findCurrentStayingRoomId(10L)).thenReturn(java.util.Optional.of(99L));
         when(repository.searchVisibleRequests(any(), any(), any(), anyBoolean(), any(), anyBoolean(), any(),
                 org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull(), any(), any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of()));
+                .thenReturn(new PageImpl<>(Objects.requireNonNull(List.of())));
         service.searchByPage(uncheckedRequest("{\"code\":\"A_%\",\"description\":\"pipe\",\"q\":\"leak\"}"));
         verify(repository).searchVisibleRequests(org.mockito.ArgumentMatchers.eq(Role.STUDENT),
                 org.mockito.ArgumentMatchers.eq(10L), org.mockito.ArgumentMatchers.eq(7L),
@@ -209,7 +211,7 @@ class CrudSearchFilterTest {
         when(current.get()).thenReturn(new Actor(10L, role, 7L, false, false));
         when(repository.searchVisibleRequests(any(), any(), any(), anyBoolean(), any(), anyBoolean(), any(),
                 org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull(), any(), any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of()));
+                .thenReturn(new PageImpl<>(Objects.requireNonNull(List.of())));
         service.searchByPage(new SearchRequest());
         verify(repository).searchVisibleRequests(org.mockito.ArgumentMatchers.eq(role),
                 org.mockito.ArgumentMatchers.eq(10L), org.mockito.ArgumentMatchers.eq(7L),
@@ -244,7 +246,7 @@ class CrudSearchFilterTest {
         when(repository.searchAccessibleContracts(any(), any(), org.mockito.ArgumentMatchers.isNull(),
                 org.mockito.ArgumentMatchers.eq(false), org.mockito.ArgumentMatchers.eq(true),
                 org.mockito.ArgumentMatchers.eq(false), any(), any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of()));
+                .thenReturn(new PageImpl<>(Objects.requireNonNull(List.of())));
         service.searchByPage(request, true);
         verify(repository).searchAccessibleContracts(org.mockito.ArgumentMatchers.eq(Role.STUDENT),
                 org.mockito.ArgumentMatchers.eq(10L), org.mockito.ArgumentMatchers.isNull(),
@@ -475,6 +477,7 @@ class CrudSearchFilterTest {
         verify(guard).requirePermission(Permission.PRIORITY_CATEGORY_READ);
     }
 
+    @SuppressWarnings("null")
     @ParameterizedTest
     @ValueSource(strings = {Role.STUDENT, Role.TECHNICIAN})
     void priorityWeightFilterIsForbiddenForLimitedRolesEvenAtZero(String role) {
@@ -484,7 +487,7 @@ class CrudSearchFilterTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.searchByPage(
                 uncheckedRequest("{\"weight\":0}")))
                 .isInstanceOf(vn.edu.tlu.dms.common.exception.BusinessException.class);
-        org.mockito.Mockito.verify(repository, org.mockito.Mockito.never()).findAll(any(Specification.class), any(Pageable.class));
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.never()).findAll(org.mockito.ArgumentMatchers.<Specification<vn.edu.tlu.dms.registration.domain.PriorityCategory>>argThat(specification -> specification != null), any(Pageable.class));
     }
 
     @Test
@@ -499,6 +502,7 @@ class CrudSearchFilterTest {
                 .contains("active IS TRUE").doesNotContain("active="));
     }
 
+    @SuppressWarnings("null")
     @Test
     void registrationPeriodFiltersKeepOpenStudentScope() throws Exception {
         var repository = mock(vn.edu.tlu.dms.registration.repository.RegistrationPeriodRepository.class);
@@ -506,9 +510,9 @@ class CrudSearchFilterTest {
                 repository, null, null, null, null, current, guard, null, null, audit);
         when(current.get()).thenReturn(new Actor(10L, Role.STUDENT, null, false, false));
         var captured = new AtomicReference<Specification<vn.edu.tlu.dms.registration.domain.RegistrationPeriod>>();
-        when(repository.findAll(any(Specification.class), any(Pageable.class))).thenAnswer(invocation -> {
+        when(repository.findAll(org.mockito.ArgumentMatchers.<Specification<vn.edu.tlu.dms.registration.domain.RegistrationPeriod>>argThat(specification -> specification != null), any(Pageable.class))).thenAnswer(invocation -> {
             captured.set(invocation.getArgument(0));
-            return new PageImpl<>(List.of(), invocation.getArgument(1), 31);
+            return new PageImpl<>(Objects.requireNonNull(List.of()), Objects.requireNonNull(invocation.getArgument(1)), 31);
         });
         var input = new ObjectMapper().findAndRegisterModules().readValue(
                 "{\"name\":\" Fall \" ,\"semesterId\":3,\"open\":false,\"openAtFrom\":\"2026-01-01T00:00:00Z\","
@@ -616,7 +620,7 @@ class CrudSearchFilterTest {
     }
 
     /** Lay Specification that truyen vao repository, danh gia cho ca query du lieu va query dem. */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "null"})
     private static <E, R extends JpaRepository<E, Long> & JpaSpecificationExecutor<E>>
             List<String> pagePredicates(R repository, Supplier<PageResponse<?>> search) {
         var captured = new AtomicReference<Specification<E>>();
@@ -624,7 +628,7 @@ class CrudSearchFilterTest {
                 .thenAnswer(invocation -> {
                     captured.set(invocation.getArgument(0));
                     Pageable pageable = invocation.getArgument(1);
-                    return new PageImpl<E>(List.of(), pageable, 31);
+                    return new PageImpl<E>(Objects.requireNonNull(List.of()), Objects.requireNonNull(pageable), 31);
                 });
         PageResponse<?> page = search.get();
         assertThat(page.page()).isEqualTo(1);
@@ -698,7 +702,7 @@ class CrudSearchFilterTest {
         }
 
         private String describe(Specification<E> specification, CriteriaQuery<?> query) {
-            Predicate predicate = specification.toPredicate(root, query, builder);
+            Predicate predicate = specification.toPredicate(Objects.requireNonNull(root), query, Objects.requireNonNull(builder));
             assertThat(predicate).isNotNull();
             return labels.get(predicate);
         }

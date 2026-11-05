@@ -209,7 +209,7 @@ public class ContractServiceImpl implements ContractService {
                                 input.startDateTo(),
                                 input.endDateFrom(),
                                 input.endDateTo(),
-                                PageRequest.of(input.page(), input.size(), Sort.by(orders)))
+                                PageRequest.of(input.page(), input.size(), Sort.by(Objects.requireNonNull(orders))))
                         .map(contract -> toContractResponse(contract, false)));
     }
 
@@ -336,7 +336,7 @@ public class ContractServiceImpl implements ContractService {
                 note);
 
         DormitoryContract activated =
-                repository.findById(id).orElseThrow(BusinessException::notFound);
+                repository.findById(Objects.requireNonNull(id)).orElseThrow(BusinessException::notFound);
         ContractDtos.Response response = toContractResponse(activated, true);
         ContractDtos.DepositSummary deposit =
                 new ContractDtos.DepositSummary(
@@ -884,7 +884,7 @@ public class ContractServiceImpl implements ContractService {
     }
 
     private Long pendingId(String sql, Long contractId, String status) {
-        List<Long> ids = jdbc.queryForList(sql, Long.class, contractId, status);
+        List<Long> ids = jdbc.queryForList(Objects.requireNonNull(sql), Long.class, contractId, status);
         return ids.isEmpty() ? null : ids.get(0);
     }
 

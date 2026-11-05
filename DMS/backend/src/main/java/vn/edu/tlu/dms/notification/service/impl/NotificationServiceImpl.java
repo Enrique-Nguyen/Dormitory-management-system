@@ -109,10 +109,10 @@ public class NotificationServiceImpl implements NotificationService {
             args.add(to);
         }
         Long total =
-                jdbc.queryForObject(
+                Objects.requireNonNull(jdbc.queryForObject(
                         "SELECT count(*) FROM " + inboxSource() + filter,
                         Long.class,
-                        args.toArray());
+                        args.toArray()));
         args.add(size);
         args.add((long) page * size);
         List<NotificationDtos.Response> notifications =
@@ -147,10 +147,10 @@ public class NotificationServiceImpl implements NotificationService {
     public NotificationDtos.UnreadCount getUnreadNotificationCount() {
         scopeGuard.requirePermission(Permission.NOTIFICATION_READ);
         Long count =
-                jdbc.queryForObject(
+                Objects.requireNonNull(jdbc.queryForObject(
                         "SELECT count(*) FROM " + inboxSource() + " AND NOT is_read",
                         Long.class,
-                        currentUser.get().id());
+                        currentUser.get().id()));
         return new NotificationDtos.UnreadCount(count);
     }
 
@@ -164,7 +164,7 @@ public class NotificationServiceImpl implements NotificationService {
         Long userId = currentUser.get().id();
         Boolean visible =
                 currentUser.get().isAdmin()
-                        ? repository.existsById(notificationId)
+                        ? repository.existsById(Objects.requireNonNull(notificationId))
                         : jdbc.queryForObject(
                                 "SELECT EXISTS (SELECT 1 FROM v_user_notification WHERE user_id = ?"
                                         + " AND notification_id = ?)",

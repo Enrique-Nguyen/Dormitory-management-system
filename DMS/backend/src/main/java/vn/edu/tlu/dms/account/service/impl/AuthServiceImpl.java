@@ -25,6 +25,7 @@ import vn.edu.tlu.dms.common.service.ResidencyLookup;
 import vn.edu.tlu.dms.common.service.RolePermissionService;
 
 import java.security.SecureRandom;
+import java.util.Objects;
 import java.util.Base64;
 
 /** Hồ sơ DMS và thu hồi token; mật khẩu đăng nhập do Keycloak quản lý. */
@@ -75,7 +76,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     @Override()
     public Me getCurrentUser() {
-        AppUser u = users.findById(currentUser.get().id()).orElseThrow(BusinessException::notFound);
+        AppUser u = users.findById(Objects.requireNonNull(currentUser.get().id())).orElseThrow(BusinessException::notFound);
         if (u.getKeycloakUserId() != null && Boolean.TRUE.equals(u.getMustChangePassword())) {
             // Token được cấp sau khi người dùng hoàn tất đổi mật khẩu tại Keycloak.
             u.setMustChangePassword(false);
@@ -84,11 +85,11 @@ public class AuthServiceImpl implements AuthService {
         UnitRef unit =
                 u.getManagementUnitId() == null
                         ? null
-                        : units.findById(u.getManagementUnitId())
+                        : units.findById(Objects.requireNonNull(u.getManagementUnitId()))
                                 .map(r -> new UnitRef(r.getId(), r.getCode(), r.getName()))
                                 .orElse(null);
         Student student =
-                students.findById(u.getId())
+                students.findById(Objects.requireNonNull(u.getId()))
                         .map(
                                 p -> {
                                     var stay = residency.current(u.getId()).orElse(null);
@@ -153,6 +154,6 @@ public class AuthServiceImpl implements AuthService {
         var user = lockAccount(currentUser.get().id());
         currentUser.get();
         revokeSessions(user);
-        users.saveAndFlush(user);
+        users.saveAndFlush(Objects.requireNonNull(user));
     }
 }

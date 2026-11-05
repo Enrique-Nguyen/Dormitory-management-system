@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -57,6 +58,8 @@ import vn.edu.tlu.dms.support.FakeJdbc;
 
 import java.util.List;
 import java.util.Map;
+
+// Mockito dùng null tạm cho matcher; ngoại lệ chỉ áp dụng ở các hàm giả lập bên dưới.
 
 class CrudOperationalFilterTest {
 
@@ -397,21 +400,23 @@ class CrudOperationalFilterTest {
         private final ScopeGuard guard = mock(ScopeGuard.class);
         private final ConfigServiceImpl service = new ConfigServiceImpl(
                 repository, mock(CurrentUser.class), guard, mock(AuditService.class));
+        @SuppressWarnings("unchecked")
         private final Root<SystemConfig> root = mock(Root.class, RETURNS_DEEP_STUBS);
         private final CriteriaBuilder builder = mock(CriteriaBuilder.class, RETURNS_MOCKS);
         private final ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
 
+        @SuppressWarnings("null")
         private ConfigFixture() {
-            when(repository.findAll(any(Specification.class), any(Pageable.class)))
+            when(repository.findAll(org.mockito.ArgumentMatchers.<Specification<SystemConfig>>argThat(specification -> specification != null), any(Pageable.class)))
                     .thenReturn(Page.empty());
         }
 
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings({"unchecked", "null"})
         private void evaluateSpecification() {
             ArgumentCaptor<Specification<SystemConfig>> specification =
                     ArgumentCaptor.forClass(Specification.class);
             verify(repository).findAll(specification.capture(), pageable.capture());
-            specification.getValue().toPredicate(root, mock(CriteriaQuery.class), builder);
+            specification.getValue().toPredicate(Objects.requireNonNull(root), mock(CriteriaQuery.class), Objects.requireNonNull(builder));
         }
     }
 }

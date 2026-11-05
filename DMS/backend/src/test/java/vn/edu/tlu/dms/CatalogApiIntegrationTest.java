@@ -1,5 +1,7 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
+import org.springframework.lang.NonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -59,8 +61,8 @@ class CatalogApiIntegrationTest {
     void catalogCrudUsesOneSaveEndpointAndPreservesOmittedFields() throws Exception {
         Long id = create("schools", "school-" + suffix, "School " + suffix, Map.of());
         mvc.perform(post("/api/catalogs/schools/save-or-update").with(admin())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("id", id, "name", "Renamed " + suffix))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("id", id, "name", "Renamed " + suffix)))))
                 .andExpect(status().isOk()).andExpect(jsonPath("code").value("school-" + suffix))
                 .andExpect(jsonPath("active").value(true));
         mvc.perform(get("/api/catalogs/schools/{id}", id).with(admin()))
@@ -73,10 +75,10 @@ class CatalogApiIntegrationTest {
     void studentCanLookupButCannotWriteCatalogs() throws Exception {
         create("schools", "read-" + suffix, "Read " + suffix, Map.of());
         mvc.perform(post("/api/catalogs/schools/search-by-page").with(student())
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"page\":0,\"size\":10}"))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE).content("{\"page\":0,\"size\":10}"))
                 .andExpect(status().isOk());
         mvc.perform(post("/api/catalogs/schools/save-or-update").with(student())
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"code\":\"forbidden\",\"name\":\"Forbidden\"}"))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE).content("{\"code\":\"forbidden\",\"name\":\"Forbidden\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -85,13 +87,13 @@ class CatalogApiIntegrationTest {
         create("schools", "on-" + suffix, suffix + " active", Map.of());
         create("schools", "off-" + suffix, suffix + " inactive", Map.of("active", false));
         mvc.perform(post("/api/catalogs/schools/search-by-page").with(admin())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("q", suffix, "active", false, "page", 0, "size", 1))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("q", suffix, "active", false, "page", 0, "size", 1)))))
                 .andExpect(status().isOk()).andExpect(jsonPath("totalElements").value(1))
                 .andExpect(jsonPath("content.length()").value(1)).andExpect(jsonPath("content[0].active").value(false));
         mvc.perform(post("/api/catalogs/schools/search-by-page").with(admin())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("q", suffix, "page", 0, "size", 1))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("q", suffix, "page", 0, "size", 1)))))
                 .andExpect(status().isOk()).andExpect(jsonPath("totalElements").value(2));
     }
 
@@ -103,8 +105,8 @@ class CatalogApiIntegrationTest {
         create("faculties", "fa-" + suffix, name, Map.of("schoolId", schoolA));
         create("faculties", "fb-" + suffix, name, Map.of("schoolId", schoolB));
         mvc.perform(post("/api/catalogs/faculties/search-by-page").with(admin())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("q", suffix, "schoolId", schoolA))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("q", suffix, "schoolId", schoolA)))))
                 .andExpect(status().isOk()).andExpect(jsonPath("totalElements").value(1))
                 .andExpect(jsonPath("content[0].schoolName").value("A " + suffix));
         Long parentA = create("hometowns", "pa-" + suffix, "Province A " + suffix, Map.of());
@@ -120,8 +122,8 @@ class CatalogApiIntegrationTest {
         Long faculty = create("faculties", "f-" + suffix, "Faculty " + suffix, Map.of("schoolId", schoolA));
         jdbc.update("UPDATE student_profile SET school_id=?,faculty_id=? WHERE user_id=?", schoolA, faculty, studentId);
         mvc.perform(post("/api/catalogs/faculties/save-or-update").with(admin())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("id", faculty, "schoolId", schoolB))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("id", faculty, "schoolId", schoolB)))))
                 .andExpect(status().isConflict()).andExpect(jsonPath("errorCode").value(ErrorCode.RESOURCE_IN_USE));
         mvc.perform(delete("/api/catalogs/faculties/{id}", faculty).with(admin()))
                 .andExpect(status().isConflict()).andExpect(jsonPath("errorCode").value(ErrorCode.RESOURCE_IN_USE));
@@ -132,12 +134,12 @@ class CatalogApiIntegrationTest {
         Long parent = create("hometowns", "p-" + suffix, "Parent " + suffix, Map.of());
         Long child = create("hometowns", "c-" + suffix, "Child " + suffix, Map.of("parentId", parent));
         mvc.perform(post("/api/catalogs/hometowns/save-or-update").with(admin())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("id", parent, "parentId", child))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("id", parent, "parentId", child)))))
                 .andExpect(status().isBadRequest());
         mvc.perform(post("/api/catalogs/hometowns/save-or-update").with(admin())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("id", parent, "active", false))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("id", parent, "active", false)))))
                 .andExpect(status().isConflict());
     }
 
@@ -145,16 +147,28 @@ class CatalogApiIntegrationTest {
     void immutableCodesMissingIdsAndUnknownKindsAreRejected() throws Exception {
         Long id = create("schools", "keep-" + suffix, "Keep " + suffix, Map.of());
         mvc.perform(post("/api/catalogs/schools/save-or-update").with(admin())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("id", id, "code", "changed"))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("id", id, "code", "changed")))))
                 .andExpect(status().isBadRequest());
         mvc.perform(post("/api/catalogs/schools/save-or-update").with(admin())
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"id\":9223372036854775807,\"name\":\"Missing\"}"))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE).content("{\"id\":9223372036854775807,\"name\":\"Missing\"}"))
                 .andExpect(status().isNotFound());
         mvc.perform(post("/api/catalogs/not-a-catalog/search-by-page").with(admin())
-                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE).content("{}"))
                 .andExpect(status().isNotFound());
         assertThat(jdbc.queryForObject("SELECT code FROM school WHERE id=?", String.class, id)).isEqualTo("keep-" + suffix);
+    }
+
+    @Test
+    void creatingFloorWithoutBuildingOrFloorNumberReturnsValidationError() throws Exception {
+        for (String body : List.of(
+                "{\"floor\":0,\"name\":\"Ground floor\"}",
+                "{\"buildingId\":1,\"name\":\"Ground floor\"}")) {
+            mvc.perform(post("/api/floors/save-or-update").with(admin())
+                            .contentType(MediaType.APPLICATION_JSON_VALUE).content(Objects.requireNonNull(body)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("errorCode").value(ErrorCode.VALIDATION_FAILED));
+        }
     }
 
     @Test
@@ -162,17 +176,17 @@ class CatalogApiIntegrationTest {
         Long unit = jdbc.queryForObject("SELECT id FROM management_unit WHERE code='K1'", Long.class);
         Long building = jdbc.queryForObject("INSERT INTO building(management_unit_id,code,name,deposit_amount) VALUES (?,?,'Test building',1000) RETURNING id", Long.class, unit, suffix);
         String response = mvc.perform(post("/api/floors/save-or-update").with(admin())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("buildingId", building, "floor", 0, "name", "Ground floor"))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("buildingId", building, "floor", 0, "name", "Ground floor")))))
                 .andExpect(status().isOk()).andExpect(jsonPath("floor").value(0))
                 .andReturn().getResponse().getContentAsString();
         Long floor = mapper.readTree(response).get("id").longValue();
-        mvc.perform(post("/api/floors/search-by-page").with(admin()).contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("buildingId", building, "active", true))))
+        mvc.perform(post("/api/floors/search-by-page").with(admin()).contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("buildingId", building, "active", true)))))
                 .andExpect(status().isOk()).andExpect(jsonPath("totalElements").value(1));
         Long type = jdbc.queryForObject("INSERT INTO room_type(name,bed_count,price_main,price_summer) VALUES (?,1,0,0) RETURNING id", Long.class, suffix);
-        mvc.perform(post("/api/rooms/save-or-update").with(admin()).contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("buildingId", building, "floor", 0, "code", "G01", "roomTypeId", type, "gender", "M"))))
+        mvc.perform(post("/api/rooms/save-or-update").with(admin()).contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("buildingId", building, "floor", 0, "code", "G01", "roomTypeId", type, "gender", "M")))))
                 .andExpect(status().isOk());
         mvc.perform(delete("/api/floors/{id}", floor).with(admin())).andExpect(status().isConflict());
     }
@@ -184,8 +198,8 @@ class CatalogApiIntegrationTest {
         jdbc.update("INSERT INTO building_floor(building_id,floor,name,active) VALUES (?,1,'Closed floor',false)", building);
         Long type = jdbc.queryForObject("INSERT INTO room_type(name,bed_count,price_main,price_summer) VALUES (?,1,0,0) RETURNING id", Long.class, suffix);
         for (int floor : List.of(1, 2)) {
-            mvc.perform(post("/api/rooms/save-or-update").with(admin()).contentType(MediaType.APPLICATION_JSON)
-                            .content(mapper.writeValueAsBytes(Map.of("buildingId", building, "floor", floor, "code", "P" + floor, "roomTypeId", type, "gender", "F"))))
+            mvc.perform(post("/api/rooms/save-or-update").with(admin()).contentType(MediaType.APPLICATION_JSON_VALUE)
+                            .content(Objects.requireNonNull(mapper.writeValueAsBytes(Map.of("buildingId", building, "floor", floor, "code", "P" + floor, "roomTypeId", type, "gender", "F")))))
                     .andExpect(status().isBadRequest()).andExpect(jsonPath("details.fieldErrors[0].field").value("floor"));
         }
     }
@@ -195,7 +209,7 @@ class CatalogApiIntegrationTest {
         payload.put("code", code);
         payload.put("name", name);
         String response = mvc.perform(post("/api/catalogs/{kind}/save-or-update", kind).with(admin())
-                        .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsBytes(payload)))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE).content(Objects.requireNonNull(mapper.writeValueAsBytes(payload))))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         return mapper.readTree(response).get("id").longValue();
     }
@@ -205,10 +219,14 @@ class CatalogApiIntegrationTest {
                 Long.class, role + suffix, role, role, subject);
     }
 
+    @NonNull
+
     private RequestPostProcessor admin() { return identity(adminSubject, Role.ADMIN); }
+    @NonNull
     private RequestPostProcessor student() { return identity(studentSubject, Role.STUDENT); }
+    @NonNull
     private RequestPostProcessor identity(String subject, String role) {
-        return jwt().jwt(builder -> builder.subject(subject)
-                .claim("realm_access", Map.of("roles", List.of(role))).claim("dms_security_version", 0L));
+        return Objects.requireNonNull(jwt().jwt(builder -> builder.subject(subject)
+                .claim("realm_access", Map.of("roles", List.of(role))).claim("dms_security_version", 0L)));
     }
 }

@@ -47,6 +47,7 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -112,7 +113,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
         List<String> statuses = input.statuses();
         boolean filterStatuses = statuses != null && !statuses.isEmpty();
-        if (filterStatuses
+        if (statuses != null
                 && statuses.stream()
                         .anyMatch(
                                 status ->
@@ -144,17 +145,17 @@ public class InvoiceServiceImpl implements InvoiceService {
         // Native SQL dùng tên cột thật; mọi thuộc tính đã qua whitelist trước khi đổi tên.
         Sort sqlSort =
                 Sort.by(
-                        requested.getSort().stream()
+                        Objects.requireNonNull(requested.getSort().stream()
                                 .map(
                                         order ->
                                                 new Sort.Order(
                                                         order.getDirection(),
-                                                        order.getProperty()
+                                                        Objects.requireNonNull(order.getProperty()
                                                                 .replaceAll(
                                                                         "([a-z0-9])([A-Z])",
                                                                         "$1_$2")
-                                                                .toLowerCase(Locale.ROOT)))
-                                .toList());
+                                                                .toLowerCase(Locale.ROOT))))
+                                .toList()));
         var pageable = PageRequest.of(requested.getPageNumber(), requested.getPageSize(), sqlSort);
         var actor = currentUser.get();
         var page = invoices.searchAccessibleInvoices(
@@ -175,7 +176,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 pageable);
         Set<Long> semesterIds = page.getContent().stream()
                 .filter(invoice -> InvoiceType.ROOM_FEE.equals(invoice.getType()))
-                .map(Invoice::getSemesterId)
+                .map(element -> element.getSemesterId())
                 .filter(id -> id != null)
                 .collect(Collectors.toSet());
         // Chỉ bổ sung nhãn sau truy vấn đã lọc quyền/phân trang, không mở thêm quyền danh mục.
@@ -312,7 +313,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                         semesterId,
                         SummerChoice.STAY,
                         SummerStatus.APPROVED));
-        List<Map<String, Object>> candidates = jdbc.queryForList(sql, args.toArray());
+        List<Map<String, Object>> candidates = jdbc.queryForList(Objects.requireNonNull(sql), args.toArray());
         // Khóa sinh viên theo thứ tự tăng dần trước khi đọc lại phân phòng và kiểm tra hóa đơn.
         for (var candidate : candidates) {
             rooms.lockStudentProfile(((Number) candidate.get("student_id")).longValue());
@@ -322,7 +323,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                         .map(row -> ((Number) row.get("student_id")).longValue())
                         .collect(Collectors.toSet());
         List<Map<String, Object>> stays =
-                jdbc.queryForList(sql, args.toArray()).stream()
+                jdbc.queryForList(Objects.requireNonNull(sql), args.toArray()).stream()
                         .filter(
                                 row ->
                                         lockedStudents.contains(
@@ -502,7 +503,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         args.add(AssignmentKind.STAY);
         args.add(billingMonth);
         args.add(billingMonth);
-        List<Map<String, Object>> roomRows = jdbc.queryForList(sql, args.toArray());
+        List<Map<String, Object>> roomRows = jdbc.queryForList(Objects.requireNonNull(sql), args.toArray());
 
         int created = 0;
         int skipped = 0;
@@ -704,7 +705,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
         List<Long> ids = records.stream()
                 .filter(invoice -> InvoiceStatus.UNPAID.equals(invoice.getStatus()))
-                .map(Invoice::getId)
+                .map(element -> element.getId())
                 .toList();
         if (ids.isEmpty()) {
             return Map.of();

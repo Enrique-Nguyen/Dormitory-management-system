@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -66,7 +67,7 @@ class UserPreferenceConcurrencyIntegrationTest {
 
     @Test
     void concurrentFirstSavesCommitExactlyOneWinnerAndRejectTheOther() throws Exception {
-        TransactionTemplate transactions = new TransactionTemplate(transactionManager);
+        TransactionTemplate transactions = new TransactionTemplate(Objects.requireNonNull(transactionManager));
         transactions.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         transactions.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
         transactions.setTimeout(WAIT_SECONDS);

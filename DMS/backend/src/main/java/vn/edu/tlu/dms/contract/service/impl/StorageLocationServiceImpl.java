@@ -25,6 +25,7 @@ import vn.edu.tlu.dms.contract.api.StorageDtos;
 import vn.edu.tlu.dms.contract.api.StorageLocationDtos;
 import vn.edu.tlu.dms.contract.service.StorageLocationService;
 
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +86,7 @@ public class StorageLocationServiceImpl implements StorageLocationService {
             args.addValue("q", input.q().strip());
         }
         String order = sort(input.sort());
-        long total = jdbc.queryForObject("SELECT count(*) FROM storage_location" + where, args, Long.class);
+        long total = Objects.requireNonNull(jdbc.queryForObject("SELECT count(*) FROM storage_location" + where, args, Long.class));
         args.addValue("limit", size).addValue("offset", (long) page * size);
         var rows = jdbc.queryForList("SELECT * FROM storage_location" + where + " ORDER BY " + order
                 + " LIMIT :limit OFFSET :offset", args);
@@ -116,11 +117,11 @@ public class StorageLocationServiceImpl implements StorageLocationService {
         }
         String code = text(input.code(), before, ApiField.CODE, 30);
         String name = text(input.name(), before, ApiField.NAME, 100);
-        if (!creating && !code.equals(before.get(ApiField.CODE))) {
+        if (!creating && !code.equals(Objects.requireNonNull(before).get(ApiField.CODE))) {
             throw BusinessException.invalid(ApiField.CODE, Catalog.IMMUTABLE_CODE);
         }
         boolean active = input.active() != null ? input.active()
-                : creating || Boolean.TRUE.equals(before.get(ApiField.ACTIVE));
+                : creating || Boolean.TRUE.equals(Objects.requireNonNull(before).get(ApiField.ACTIVE));
         if (creating) units.getById(unitId);
         var args = new MapSqlParameterSource().addValue("unit", unitId).addValue("code", code)
                 .addValue("name", name).addValue("active", active).addValue("id", input.id());
@@ -150,10 +151,10 @@ public class StorageLocationServiceImpl implements StorageLocationService {
         var before = row(id, " FOR UPDATE");
         guard.requireUnit(unit(before));
         if (Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS(SELECT 1 FROM storage_record WHERE location_id=:id)", Map.of("id", id), Boolean.class))) {
+                "SELECT EXISTS(SELECT 1 FROM storage_record WHERE location_id=:id)", Objects.requireNonNull(Map.of("id", id)), Boolean.class))) {
             throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
-        jdbc.update("DELETE FROM storage_location WHERE id=:id", Map.of("id", id));
+        jdbc.update("DELETE FROM storage_location WHERE id=:id", Objects.requireNonNull(Map.of("id", id)));
         audit.record(current.get().id(), AuditAction.CATALOG_DELETE, EntityType.CATALOG, id, before, null, null);
     }
 
@@ -177,7 +178,7 @@ public class StorageLocationServiceImpl implements StorageLocationService {
 
     private Map<String, Object> row(Long id, String lock) {
         positive(id, ApiField.ID);
-        var rows = jdbc.queryForList("SELECT * FROM storage_location WHERE id=:id" + lock, Map.of("id", id));
+        var rows = jdbc.queryForList("SELECT * FROM storage_location WHERE id=:id" + lock, Objects.requireNonNull(Map.of("id", id)));
         if (rows.isEmpty()) throw BusinessException.notFound();
         return rows.get(0);
     }
@@ -202,7 +203,7 @@ public class StorageLocationServiceImpl implements StorageLocationService {
     }
 
     private static String text(String input, Map<String, Object> before, String field, int max) {
-        String value = input == null && before != null ? (String) before.get(field) : input;
+        String value = input == null && before != null ? (String) Objects.requireNonNull(before).get(field) : input;
         if (value == null || value.isBlank() || value.length() > max) {
             throw BusinessException.invalid(field, Catalog.INVALID_VALUE);
         }

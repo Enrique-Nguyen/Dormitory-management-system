@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -100,7 +101,7 @@ public class MaintenancePhotoServiceImpl implements MaintenancePhotoService {
 
     @Override()
     public Path getPhotoFile(Long requestId, Long photoId) {
-        var photo = repository.findById(photoId).orElseThrow(BusinessException::notFound);
+        var photo = repository.findById(Objects.requireNonNull(photoId)).orElseThrow(BusinessException::notFound);
         if (!requestId.equals(photo.getRequestId())) {
             throw BusinessException.notFound();
         }

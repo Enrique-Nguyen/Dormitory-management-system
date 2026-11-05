@@ -80,7 +80,7 @@ public class StudentImportServiceImpl implements StudentImportService {
         this.guard = guard;
         this.current = current;
         this.audit = audit;
-        this.transaction = new TransactionTemplate(manager);
+        this.transaction = new TransactionTemplate(Objects.requireNonNull(manager));
     }
 
     @Override
@@ -217,7 +217,7 @@ public class StudentImportServiceImpl implements StudentImportService {
                             errors.add(new CellError(field, StudentImport.INVALID));
                         }
                     }
-                    if (values.values().stream().allMatch(String::isBlank) && errors.isEmpty()) {
+                    if (values.values().stream().allMatch(element -> element.isBlank()) && errors.isEmpty()) {
                         continue;
                     }
                     Cell birthday =
@@ -280,7 +280,7 @@ public class StudentImportServiceImpl implements StudentImportService {
                     throw invalidFile(List.of());
                 }
                 Map<String, Long> counts = new HashMap<>();
-                result.forEach(row -> counts.merge(row.data().studentCode(), 1L, Long::sum));
+                result.forEach(row -> counts.merge(row.data().studentCode(), 1L, (left, right) -> Long.sum(left, right)));
                 result.stream()
                         .filter(
                                 row ->

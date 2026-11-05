@@ -36,6 +36,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -78,16 +79,16 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
             ObjectMapper mapper) {
         this.jdbc = jdbc;
         this.users = users;
-        this.transaction = new TransactionTemplate(manager);
+        this.transaction = new TransactionTemplate(Objects.requireNonNull(manager));
         this.mapper = mapper;
         this.properties = properties;
         var factory =
                 new JdkClientHttpRequestFactory(
-                        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build());
-        factory.setReadTimeout(Duration.ofSeconds(10));
+                        Objects.requireNonNull(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()));
+        factory.setReadTimeout(Objects.requireNonNull(Duration.ofSeconds(10)));
         this.client =
                 RestClient.builder()
-                        .baseUrl(properties.serverUrl())
+                        .baseUrl(Objects.requireNonNull(properties.serverUrl()))
                         .requestFactory(factory)
                         .build();
     }
@@ -110,7 +111,7 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
                             .uri(
                                     "/realms/{realm}/protocol/openid-connect/token",
                                     properties.realm())
-                            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                            .contentType(Objects.requireNonNull(MediaType.APPLICATION_FORM_URLENCODED))
                             .body(form)
                             .retrieve()
                             .body(Map.class);
@@ -140,7 +141,7 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
         Map<String, Object> account =
                 client.get()
                         .uri(usersPath() + "/{id}", id)
-                        .headers(headers -> headers.setBearerAuth(accessToken()))
+                        .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
                         .retrieve()
                         .body(Map.class);
         if (account == null) {
@@ -153,9 +154,9 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
     private void writeAccount(String id, Object account) {
         client.put()
                 .uri(usersPath() + "/{id}", id)
-                .headers(headers -> headers.setBearerAuth(accessToken()))
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(account)
+                .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
+                .body(Objects.requireNonNull(account))
                 .retrieve()
                 .toBodilessEntity();
     }
@@ -178,7 +179,7 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
         List<?> roles =
                 client.get()
                         .uri(usersPath() + "/{id}/role-mappings/realm", id)
-                        .headers(headers -> headers.setBearerAuth(accessToken()))
+                        .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
                         .retrieve()
                         .body(List.class);
         return roles == null ? List.of() : roles;
@@ -193,10 +194,10 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
                                                 && DMS_ROLES.contains(item.get("name")))
                         .toList();
         if (!previous.isEmpty()) {
-            client.method(HttpMethod.DELETE)
+            client.method(Objects.requireNonNull(HttpMethod.DELETE))
                     .uri(usersPath() + "/{id}/role-mappings/realm", id)
-                    .headers(headers -> headers.setBearerAuth(accessToken()))
-                    .contentType(MediaType.APPLICATION_JSON)
+                    .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
+                    .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
                     .body(previous)
                     .retrieve()
                     .toBodilessEntity();
@@ -204,14 +205,14 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
         Map<?, ?> representation =
                 client.get()
                         .uri("/admin/realms/{realm}/roles/{role}", properties.realm(), role)
-                        .headers(headers -> headers.setBearerAuth(accessToken()))
+                        .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
                         .retrieve()
                         .body(Map.class);
         client.post()
                 .uri(usersPath() + "/{id}/role-mappings/realm", id)
-                .headers(headers -> headers.setBearerAuth(accessToken()))
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(List.of(representation))
+                .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
+                .body(Objects.requireNonNull(List.of(representation)))
                 .retrieve()
                 .toBodilessEntity();
     }
@@ -238,9 +239,9 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
             account.put("requiredActions", List.of("UPDATE_PASSWORD"));
             var response =
                     client.post()
-                            .uri(usersPath())
-                            .headers(headers -> headers.setBearerAuth(accessToken()))
-                            .contentType(MediaType.APPLICATION_JSON)
+                            .uri(Objects.requireNonNull(usersPath()))
+                            .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
+                            .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
                             .body(account)
                             .retrieve()
                             .toBodilessEntity();
@@ -277,10 +278,10 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
                         writeAccount(identityId, previous);
                         List<?> currentRoles = readRoles(identityId);
                         if (!currentRoles.isEmpty()) {
-                            client.method(HttpMethod.DELETE)
+                            client.method(Objects.requireNonNull(HttpMethod.DELETE))
                                     .uri(usersPath() + "/{id}/role-mappings/realm", identityId)
-                                    .headers(headers -> headers.setBearerAuth(accessToken()))
-                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
+                                    .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
                                     .body(currentRoles)
                                     .retrieve()
                                     .toBodilessEntity();
@@ -288,8 +289,8 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
                         if (!previousRoles.isEmpty()) {
                             client.post()
                                     .uri(usersPath() + "/{id}/role-mappings/realm", identityId)
-                                    .headers(headers -> headers.setBearerAuth(accessToken()))
-                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
+                                    .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
                                     .body(previousRoles)
                                     .retrieve()
                                     .toBodilessEntity();
@@ -310,9 +311,9 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
         try {
             client.put()
                     .uri(usersPath() + "/{id}/reset-password", user.getKeycloakUserId())
-                    .headers(headers -> headers.setBearerAuth(accessToken()))
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("type", "password", "value", temporaryPassword, "temporary", true))
+                    .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
+                    .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
+                    .body(Objects.requireNonNull(Map.of("type", "password", "value", temporaryPassword, "temporary", true)))
                     .retrieve()
                     .toBodilessEntity();
         } catch (RuntimeException error) {
@@ -326,7 +327,7 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
         try {
             client.post()
                     .uri(usersPath() + "/{id}/logout", user.getKeycloakUserId())
-                    .headers(headers -> headers.setBearerAuth(accessToken()))
+                    .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
                     .retrieve()
                     .toBodilessEntity();
         } catch (RuntimeException error) {
@@ -343,7 +344,7 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
                             "/admin/realms/{realm}/attack-detection/brute-force/users/{id}",
                             properties.realm(),
                             user.getKeycloakUserId())
-                    .headers(headers -> headers.setBearerAuth(accessToken()))
+                    .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
                     .retrieve()
                     .toBodilessEntity();
         } catch (RuntimeException error) {
@@ -368,7 +369,7 @@ public class KeycloakIdentityAccountServiceImpl implements IdentityAccountServic
     private void deleteAccount(String id) {
         client.delete()
                 .uri(usersPath() + "/{id}", id)
-                .headers(headers -> headers.setBearerAuth(accessToken()))
+                .headers(headers -> headers.setBearerAuth(Objects.requireNonNull(accessToken())))
                 .retrieve()
                 .toBodilessEntity();
     }

@@ -60,9 +60,9 @@ public class PendingItemServiceImpl implements PendingItemService {
 
     private static final Comparator<Item> NEWEST_FIRST =
             Comparator.comparing(
-                            Item::submittedAt,
+                            (Item element) -> element.submittedAt(),
                             Comparator.nullsLast(Comparator.<OffsetDateTime>reverseOrder()))
-                    .thenComparing(Item::entityId, Comparator.reverseOrder());
+                    .thenComparing(element -> element.entityId(), Comparator.reverseOrder());
 
     private final RoomApplicationService applications;
 

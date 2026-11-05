@@ -1,5 +1,7 @@
 package vn.edu.tlu.dms;
 
+import java.util.Objects;
+import org.springframework.lang.NonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
@@ -235,7 +237,7 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/" + firstRoomId + "/status")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content("{\"status\":\"MAINTENANCE\",\"reason\":\"x    \"}"))
                 .andExpect(status().isBadRequest());
     }
@@ -246,12 +248,12 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/rooms/save-or-update")
                                         .with(asUser(staffId, "STAFF"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                """
+                                                Objects.requireNonNull("""
                                                 {"buildingId":%d,"roomTypeId":%d,"floor":2,"code":"A102","gender":"M"}
                                                 """
-                                                        .formatted(firstBuildingId, roomTypeId)))
+                                                        .formatted(firstBuildingId, roomTypeId))))
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.beds.length()").value(2))
                         .andExpect(jsonPath("$.freeBeds").value(2))
@@ -262,8 +264,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(id, "{\"code\":\"A103\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(id, "{\"code\":\"A103\"}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("A103"));
         mvc.perform(delete("/api/rooms/" + id).with(asUser(staffId, "STAFF")))
@@ -297,8 +299,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(otherRoomId, "{\"code\":\"INVALID\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(otherRoomId, "{\"code\":\"INVALID\"}"))))
                 .andExpect(status().isNotFound());
     }
 
@@ -309,12 +311,12 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        """
+                                        Objects.requireNonNull("""
                                         {"buildingId":%d,"roomTypeId":%d,"floor":1,"code":"BAD","gender":"M","status":"CLOSED"}
                                         """
-                                                .formatted(firstBuildingId, roomTypeId)))
+                                                .formatted(firstBuildingId, roomTypeId))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
     }
@@ -324,12 +326,12 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        """
+                                        Objects.requireNonNull("""
                                         {"buildingId":%d,"roomTypeId":%d,"floor":1,"code":"A101","gender":"M"}
                                         """
-                                                .formatted(firstBuildingId, roomTypeId)))
+                                                .formatted(firstBuildingId, roomTypeId))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("ROOM_CODE_EXISTS"));
     }
@@ -340,7 +342,7 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/admin/management-units/save-or-update")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
                                                 "{\"code\":\"U"
                                                         + suffix
@@ -353,8 +355,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/admin/management-units/save-or-update")
                                 .with(asUser(adminId, "ADMIN"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(id, "{\"name\":\"Đơn vị cập nhật\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(id, "{\"name\":\"Đơn vị cập nhật\"}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("U" + suffix));
         mvc.perform(delete("/api/admin/management-units/" + id).with(asUser(adminId, "ADMIN")))
@@ -371,7 +373,7 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/semesters/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
                                         """
                                         {"academicYear":"2040-2041","type":"HK2","name":"Trùng","startDate":"2041-01-01","endDate":"2041-06-01"}
@@ -406,26 +408,26 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/registration-periods/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        """
+                                        Objects.requireNonNull("""
                                         {"semesterId":%d,"kind":"REGULAR","name":"Đợt","openAt":"2040-08-01T08:00:00+07:00",
                                         "closeAt":"2040-08-31T08:00:00+07:00","unitIds":[%d],"quotas":[{"buildingId":%d,"quota":10}]}
                                         """
                                                 .formatted(
-                                                        semesterId, firstUnitId, firstBuildingId)))
+                                                        semesterId, firstUnitId, firstBuildingId))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.quotas[0].quota").value(10));
         mvc.perform(
                         post("/api/registration-periods/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        """
+                                        Objects.requireNonNull("""
                                         {"semesterId":%d,"kind":"REGULAR","name":"Sai đơn vị","openAt":"2040-08-01T08:00:00+07:00",
                                         "closeAt":"2040-08-31T08:00:00+07:00","unitIds":[%d],"quotas":[]}
                                         """
-                                                .formatted(semesterId, otherUnitId)))
+                                                .formatted(semesterId, otherUnitId))))
                 .andExpect(status().isForbidden());
     }
 
@@ -464,7 +466,7 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/maintenance-requests/" + id + "/assign")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content("{\"technicianId\":" + technicianId + "}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ASSIGNED"));
@@ -476,7 +478,7 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/maintenance-requests/" + id + "/resolve")
                                 .with(asUser(technicianId, "TECHNICIAN"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content("{\"note\":\"Đã thay bóng đèn\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RESOLVED"));
@@ -520,7 +522,7 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/notifications/save-or-update")
                                 .with(asUser(studentId, "STUDENT"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
                                         "{\"scope\":\"ALL\",\"title\":\"Hi\",\"body\":\"Nội"
                                                 + " dung\"}"))
@@ -611,7 +613,7 @@ class CrudApiIntegrationTest {
                     mvc.perform(
                             post("/api/invoices/" + invoiceId + "/confirm-payment")
                                     .with(asUser(staffId, "STAFF"))
-                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .contentType(MediaType.APPLICATION_JSON_VALUE)
                                     .content(
                                             "{\"payerUserId\":"
                                                     + studentId
@@ -635,16 +637,16 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/contracts/save-or-update")
                                         .with(asUser(staffId, "STAFF"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                mapper.writeValueAsString(
+                                                Objects.requireNonNull(mapper.writeValueAsString(
                                                         Map.of(
                                                                 "applicationId",
                                                                 applicationId,
                                                                 "startDate",
                                                                 "2040-09-01",
                                                                 "endDate",
-                                                                "2041-01-31"))))
+                                                                "2041-01-31")))))
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.status").value("PENDING"))
                         .andReturn()
@@ -675,17 +677,17 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/contracts/save-or-update")
                                 .with(asUser(otherStaffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(id, "{\"endDate\":\"2041-02-01\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(id, "{\"endDate\":\"2041-02-01\"}"))))
                 .andExpect(status().isNotFound());
         mvc.perform(
                         post("/api/contracts/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        withId(
+                                        Objects.requireNonNull(withId(
                                                 id,
-                                                "{\"endDate\":\"2041-02-01\",\"status\":\"ACTIVE\"}")))
+                                                "{\"endDate\":\"2041-02-01\",\"status\":\"ACTIVE\"}"))))
                 .andExpect(status().isBadRequest());
         mvc.perform(delete("/api/contracts/" + id).with(asUser(staffId, "STAFF")))
                 .andExpect(status().isNoContent());
@@ -715,8 +717,8 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/admin/students/save-or-update")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .contentType(MediaType.APPLICATION_JSON)
-                                        .content(json))
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                        .content(Objects.requireNonNull(json)))
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.temporaryPassword").isString())
                         .andReturn()
@@ -755,8 +757,8 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/utility-readings/save-or-update")
                                         .with(asUser(staffId, "STAFF"))
-                                        .contentType(MediaType.APPLICATION_JSON)
-                                        .content(reading))
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                        .content(Objects.requireNonNull(reading)))
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.consumption").value(20))
                         .andReturn()
@@ -786,8 +788,8 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/invoices/save-or-update")
                                         .with(asUser(staffId, "STAFF"))
-                                        .contentType(MediaType.APPLICATION_JSON)
-                                        .content(invoice))
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                        .content(Objects.requireNonNull(invoice)))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -796,8 +798,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/invoices/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(invoiceId, "{\"totalAmount\":30000}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(invoiceId, "{\"totalAmount\":30000}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalAmount").value(30000));
         // Dùng chính mã hóa đơn API sinh ra (thay vì tiền tố "DN-") để không đếm kèm hóa đơn điện
@@ -828,8 +830,8 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/notifications/save-or-update")
                                         .with(asUser(staffId, "STAFF"))
-                                        .contentType(MediaType.APPLICATION_JSON)
-                                        .content(body.formatted(firstBuildingId, "Cũ")))
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                        .content(Objects.requireNonNull(body.formatted(firstBuildingId, "Cũ"))))
                         .andReturn()
                         .getResponse()
                         .getContentAsString();
@@ -837,8 +839,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/notifications/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(id, body.formatted(firstBuildingId, "Mới"))))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(id, body.formatted(firstBuildingId, "Mới")))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Mới"));
     }
@@ -903,7 +905,7 @@ class CrudApiIntegrationTest {
                                 .with(asUser(otherStudentId, "STUDENT")))
                 .andExpect(status().isNotFound());
         mvc.perform(
-                        ticketEdit(ticketId + 100000, body)
+                        ticketEdit(Objects.requireNonNull(ticketId) + 100000, body)
                                 .with(asUser(studentId, "STUDENT")))
                 .andExpect(status().isNotFound());
         jdbc.update(
@@ -922,14 +924,14 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        """
+                                        Objects.requireNonNull("""
                                         {"buildingId":%d,"roomTypeId":%d,"floor":1,"code":"Z999","gender":"M"}
                                         """
-                                                .formatted(firstBuildingId, roomTypeId + 100000)))
+                                                .formatted(firstBuildingId, roomTypeId + 100000))))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.errorCode").value(org.hamcrest.Matchers.not("RESOURCE_IN_USE")));
+                .andExpect(jsonPath("$.errorCode").value(Objects.requireNonNull(org.hamcrest.Matchers.not("RESOURCE_IN_USE"))));
     }
 
     @Test
@@ -944,12 +946,12 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/rooms/save-or-update")
                                         .with(asUser(staffId, "STAFF"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                """
+                                                Objects.requireNonNull("""
                                                 {"buildingId":%d,"roomTypeId":%d,"floor":2,"code":"A104","gender":"M"}
                                                 """
-                                                        .formatted(firstBuildingId, fourBeds)))
+                                                        .formatted(firstBuildingId, fourBeds))))
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.beds.length()").value(4))
                         .andReturn()
@@ -982,8 +984,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(roomId, "{\"roomTypeId\":" + roomTypeId + "}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(roomId, "{\"roomTypeId\":" + roomTypeId + "}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.activeBeds").value(2));
         assertThat(jdbc.queryForObject("SELECT status FROM bed WHERE id=?", String.class, bed04))
@@ -995,8 +997,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(roomId, "{\"roomTypeId\":" + fourBeds + "}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(roomId, "{\"roomTypeId\":" + fourBeds + "}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.activeBeds").value(4));
         assertThat(jdbc.queryForObject("SELECT status FROM bed WHERE id=?", String.class, bed04))
@@ -1063,8 +1065,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/registration-periods/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(periodId, "{\"unitIds\":[" + firstUnitId + "]}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(periodId, "{\"unitIds\":[" + firstUnitId + "]}"))))
                 .andExpect(status().isNotFound());
         assertThat(
                         jdbc.queryForObject(
@@ -1080,15 +1082,15 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/admin/students/save-or-update")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                mapper.writeValueAsString(
+                                                Objects.requireNonNull(mapper.writeValueAsString(
                                                         Map.of(
                                                                 "studentCode", "PT" + suffix,
                                                                 "fullName", "Tên cũ",
                                                                 "gender", "M",
                                                                 "facultyId", studentFacultyId(),
-                                                                "phone", "0900000000"))))
+                                                                "phone", "0900000000")))))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -1097,8 +1099,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/admin/students/save-or-update")
                                 .with(asUser(adminId, "ADMIN"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(id, "{\"fullName\":\"Tên mới\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(id, "{\"fullName\":\"Tên mới\"}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fullName").value("Tên mới"))
                 .andExpect(jsonPath("$.faculty").value("CNTT"))
@@ -1112,9 +1114,9 @@ class CrudApiIntegrationTest {
             mvc.perform(
                             post("/api/utility-readings/save-or-update")
                                     .with(asUser(staffId, "STAFF"))
-                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .contentType(MediaType.APPLICATION_JSON_VALUE)
                                     .content(
-                                            mapper.writeValueAsString(
+                                            Objects.requireNonNull(mapper.writeValueAsString(
                                                     Map.of(
                                                             "roomId",
                                                             firstRoomId,
@@ -1125,7 +1127,7 @@ class CrudApiIntegrationTest {
                                                             "startReading",
                                                             100,
                                                             "endReading",
-                                                            120))))
+                                                            120)))))
                     .andExpect(
                             month.equals("2026-10-01") ? status().isOk() : status().isConflict());
         }
@@ -1147,10 +1149,10 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/beds/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        mapper.writeValueAsString(
-                                                Map.of("roomId", roomId, "code", "01"))))
+                                        Objects.requireNonNull(mapper.writeValueAsString(
+                                                Map.of("roomId", roomId, "code", "01")))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("BED_CODE_EXISTS"));
     }
@@ -1167,15 +1169,15 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(roomId, "{\"roomTypeId\":" + biggerType + "}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(roomId, "{\"roomTypeId\":" + biggerType + "}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.beds.length()").value(3));
         mvc.perform(
                         post("/api/room-types/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(biggerType, "{\"bedCount\":5}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(biggerType, "{\"bedCount\":5}"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("RESOURCE_IN_USE"));
     }
@@ -1192,13 +1194,13 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/rooms/save-or-update")
                                         .with(asUser(staffId, "STAFF"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                """
+                                                Objects.requireNonNull("""
                                                 {"buildingId":%d,"roomTypeId":%d,"floor":3,"code":"%s","gender":"M"}
                                                 """
                                                         .formatted(
-                                                                firstBuildingId, roomTypeId, code)))
+                                                                firstBuildingId, roomTypeId, code))))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -1215,12 +1217,12 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/rooms/save-or-update")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                """
+                                                Objects.requireNonNull("""
                                                 {"buildingId":%d,"roomTypeId":%d,"floor":2,"code":"B102","gender":"M"}
                                                 """
-                                                        .formatted(otherBuildingId, roomTypeId)))
+                                                        .formatted(otherBuildingId, roomTypeId))))
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.beds.length()").value(2))
                         .andReturn()
@@ -1235,15 +1237,15 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(adminId, "ADMIN"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(roomId, "{\"code\":\"B103\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(roomId, "{\"code\":\"B103\"}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("B103"));
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(roomId, "{\"code\":\"Không có quyền\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(roomId, "{\"code\":\"Không có quyền\"}"))))
                 .andExpect(status().isNotFound());
         mvc.perform(searchByPage("/api/rooms").with(asUser(studentId, "STUDENT")))
                 .andExpect(status().isForbidden());
@@ -1267,9 +1269,9 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/registration-periods/save-or-update")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                """
+                                                Objects.requireNonNull("""
                                                 {"semesterId":%d,"kind":"REGULAR","name":"Đợt đơn vị khác",
                                                 "openAt":"2040-08-01T08:00:00+07:00","closeAt":"2040-08-31T08:00:00+07:00",
                                                 "unitIds":[%d],"quotas":[{"buildingId":%d,"quota":10}]}
@@ -1277,7 +1279,7 @@ class CrudApiIntegrationTest {
                                                         .formatted(
                                                                 semesterId,
                                                                 otherUnitId,
-                                                                otherBuildingId)))
+                                                                otherBuildingId))))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -1290,14 +1292,14 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/registration-periods/save-or-update")
                                 .with(asUser(staffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(periodId, "{\"name\":\"Sửa ngoài phạm vi\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(periodId, "{\"name\":\"Sửa ngoài phạm vi\"}"))))
                 .andExpect(status().isNotFound());
         mvc.perform(
                         post("/api/registration-periods/save-or-update")
                                 .with(asUser(adminId, "ADMIN"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(periodId, "{\"name\":\"ADMIN cập nhật\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(periodId, "{\"name\":\"ADMIN cập nhật\"}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("ADMIN cập nhật"));
         mvc.perform(delete("/api/registration-periods/" + periodId).with(asUser(adminId, "ADMIN")))
@@ -1315,14 +1317,14 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/registration-periods/save-or-update")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                """
+                                                Objects.requireNonNull("""
                                                 {"semesterId":%d,"kind":"REGULAR","name":"Đợt KTV đọc",
                                                 "openAt":"2040-08-01T08:00:00+07:00","closeAt":"2040-08-31T08:00:00+07:00",
                                                 "unitIds":[%d]}
                                                 """
-                                                        .formatted(semesterId, firstUnitId)))
+                                                        .formatted(semesterId, firstUnitId))))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -1347,8 +1349,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/registration-periods/save-or-update")
                                 .with(asUser(adminId, "ADMIN"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(periodId, "{\"name\":\"Đợt KTV đọc 2\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(periodId, "{\"name\":\"Đợt KTV đọc 2\"}"))))
                 .andExpect(status().isOk());
         mvc.perform(delete("/api/registration-periods/" + periodId).with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isNoContent());
@@ -1381,13 +1383,13 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/applications/save-or-update")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                mapper.writeValueAsString(
+                                                Objects.requireNonNull(mapper.writeValueAsString(
                                                         Map.of(
                                                                 "periodId", periodId,
                                                                 "preferredUnitId", otherUnitId,
-                                                                "studentId", studentId))))
+                                                                "studentId", studentId)))))
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.student.id").value(studentId))
                         .andExpect(jsonPath("$.timeline[0].actorId").value(adminId))
@@ -1398,18 +1400,18 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/applications/save-or-update")
                                 .with(asUser(adminId, "ADMIN"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        withId(
+                                        Objects.requireNonNull(withId(
                                                 applicationId,
-                                                "{\"note\":\"ADMIN sửa đơn hộ sinh viên\"}")))
+                                                "{\"note\":\"ADMIN sửa đơn hộ sinh viên\"}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.note").value("ADMIN sửa đơn hộ sinh viên"));
         mvc.perform(
                         post("/api/applications/" + applicationId + "/submit")
                                 .with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.allowedActions").value(hasItem("approve")));
+                .andExpect(jsonPath("$.allowedActions").value(Objects.requireNonNull(hasItem("approve"))));
         mvc.perform(
                         post("/api/applications/" + applicationId + "/approve")
                                 .with(asUser(adminId, "ADMIN")))
@@ -1451,24 +1453,24 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/applications/save-or-update")
                                 .with(asUser(studentId, "STUDENT"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        mapper.writeValueAsString(
+                                        Objects.requireNonNull(mapper.writeValueAsString(
                                                 Map.of(
                                                         "periodId", periodId,
                                                         "preferredUnitId", firstUnitId,
-                                                        "studentId", adminId))))
+                                                        "studentId", adminId)))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
         mvc.perform(
                         post("/api/applications/save-or-update")
                                 .with(asUser(adminId, "ADMIN"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        mapper.writeValueAsString(
+                                        Objects.requireNonNull(mapper.writeValueAsString(
                                                 Map.of(
                                                         "periodId", periodId,
-                                                        "preferredUnitId", firstUnitId))))
+                                                        "preferredUnitId", firstUnitId)))))
                 .andExpect(status().isBadRequest());
         assertThat(
                         jdbc.queryForObject(
@@ -1505,7 +1507,7 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/maintenance-requests/" + ticketId + "/assign")
                                 .with(asUser(otherStaffId, "STAFF"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content("{\"technicianId\":" + otherTechnicianId + "}"))
                 .andExpect(status().isOk());
         mvc.perform(
@@ -1517,14 +1519,14 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/maintenance-requests/" + ticketId + "/resolve")
                                 .with(asUser(adminId, "ADMIN"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content("{\"note\":\"ADMIN xác nhận đã sửa xong\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RESOLVED"));
         mvc.perform(
                         post("/api/maintenance-requests/" + ticketId + "/accept")
                                 .with(asUser(adminId, "ADMIN"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content("{\"reason\":\"ADMIN nghiệm thu thay người yêu cầu\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CLOSED"));
@@ -1541,9 +1543,9 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/invoices/save-or-update")
                                         .with(asUser(adminId, "ADMIN"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                mapper.writeValueAsString(
+                                                Objects.requireNonNull(mapper.writeValueAsString(
                                                         Map.of(
                                                                 "type",
                                                                 "UTILITY",
@@ -1556,7 +1558,7 @@ class CrudApiIntegrationTest {
                                                                 "dueDate",
                                                                 LocalDate.now()
                                                                         .plusDays(7)
-                                                                        .toString()))))
+                                                                        .toString())))))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -1569,14 +1571,14 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/invoices/save-or-update")
                                 .with(asUser(studentId, "STUDENT"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(invoiceId, "{\"totalAmount\":1}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(invoiceId, "{\"totalAmount\":1}"))))
                 .andExpect(status().isForbidden());
         mvc.perform(
                         post("/api/invoices/save-or-update")
                                 .with(asUser(adminId, "ADMIN"))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(invoiceId, "{\"totalAmount\":30000}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(invoiceId, "{\"totalAmount\":30000}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalAmount").value(30000));
         mvc.perform(delete("/api/invoices/" + invoiceId).with(asUser(adminId, "ADMIN")))
@@ -1589,9 +1591,9 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/notifications/save-or-update")
                                         .with(asUser(otherStaffId, "STAFF"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                mapper.writeValueAsString(
+                                                Objects.requireNonNull(mapper.writeValueAsString(
                                                         Map.of(
                                                                 "scope",
                                                                 "UNIT",
@@ -1600,7 +1602,7 @@ class CrudApiIntegrationTest {
                                                                 "title",
                                                                 "Thông báo khác " + suffix,
                                                                 "body",
-                                                                "Nội dung ban đầu"))))
+                                                                "Nội dung ban đầu")))))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -1621,16 +1623,16 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/notifications/save-or-update")
                                 .with(asUser(adminId, "ADMIN"))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        withId(
+                                        Objects.requireNonNull(withId(
                                                 notificationId,
                                                 mapper.writeValueAsString(
                                                         Map.of(
                                                                 "scope", "UNIT",
                                                                 "unitId", otherUnitId,
                                                                 "title", "ADMIN cập nhật",
-                                                                "body", "Nội dung mới")))))
+                                                                "body", "Nội dung mới"))))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("ADMIN cập nhật"));
         mvc.perform(delete("/api/notifications/" + notificationId).with(asUser(adminId, "ADMIN")))
@@ -1641,30 +1643,30 @@ class CrudApiIntegrationTest {
     void meExposesRoleSpecificCrudPermissions() throws Exception {
         mvc.perform(get("/api/auth/me").with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_CREATE")))
-                .andExpect(jsonPath("$.permissions").value(hasItem("USER_CREATE")));
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("ROOM_CREATE"))))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("USER_CREATE"))));
         mvc.perform(get("/api/auth/me").with(asUser(staffId, "STAFF")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_CREATE")))
-                .andExpect(jsonPath("$.permissions").value(not(hasItem("USER_CREATE"))))
-                .andExpect(jsonPath("$.permissions").value(hasItem("CONTRACT_EXTENSION_UPDATE")))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("ROOM_CREATE"))))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(not(hasItem("USER_CREATE")))))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("CONTRACT_EXTENSION_UPDATE"))))
                 .andExpect(
-                        jsonPath("$.permissions").value(not(hasItem("CONTRACT_EXTENSION_CREATE"))))
-                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_TRANSFER_UPDATE")))
-                .andExpect(jsonPath("$.permissions").value(not(hasItem("ROOM_TRANSFER_DELETE"))))
-                .andExpect(jsonPath("$.permissions").value(hasItem("SUMMER_REGISTRATION_READ")))
+                        jsonPath("$.permissions").value(Objects.requireNonNull(not(hasItem("CONTRACT_EXTENSION_CREATE")))))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("ROOM_TRANSFER_UPDATE"))))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(not(hasItem("ROOM_TRANSFER_DELETE")))))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("SUMMER_REGISTRATION_READ"))))
                 .andExpect(
                         jsonPath("$.permissions")
-                                .value(not(hasItem("SUMMER_REGISTRATION_UPDATE"))));
+                                .value(Objects.requireNonNull(not(hasItem("SUMMER_REGISTRATION_UPDATE")))));
         mvc.perform(get("/api/auth/me").with(asUser(technicianId, "TECHNICIAN")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.permissions").value(hasItem("MAINTENANCE_UPDATE")))
-                .andExpect(jsonPath("$.permissions").value(not(hasItem("ROOM_CREATE"))));
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("MAINTENANCE_UPDATE"))))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(not(hasItem("ROOM_CREATE")))));
         mvc.perform(get("/api/auth/me").with(asUser(studentId, "STUDENT")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_APPLICATION_CREATE")))
-                .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_APPLICATION_DELETE")))
-                .andExpect(jsonPath("$.permissions").value(not(hasItem("INVOICE_UPDATE"))));
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("ROOM_APPLICATION_CREATE"))))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(hasItem("ROOM_APPLICATION_DELETE"))))
+                .andExpect(jsonPath("$.permissions").value(Objects.requireNonNull(not(hasItem("INVOICE_UPDATE")))));
     }
 
     /** Các điều kiện tìm tài khoản phải giao nhau; không để tìm theo tên bỏ qua đơn vị/khóa. */
@@ -1834,14 +1836,14 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, Role.STAFF))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(firstRoomId, "{\"code\":\"FORBIDDEN\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(firstRoomId, "{\"code\":\"FORBIDDEN\"}"))))
                 .andExpect(status().isForbidden());
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, Role.STAFF))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(newRoomPayload("CREATE-ONLY")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(newRoomPayload("CREATE-ONLY"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("CREATE-ONLY"));
         assertThat(
@@ -1859,14 +1861,14 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, Role.STAFF))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(newRoomPayload("NO-CREATE")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(newRoomPayload("NO-CREATE"))))
                 .andExpect(status().isForbidden());
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(staffId, Role.STAFF))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(firstRoomId, "{\"code\":\"UPDATED\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(firstRoomId, "{\"code\":\"UPDATED\"}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("UPDATED"));
         assertThat(jdbc.queryForObject("SELECT count(*) FROM room", Long.class)).isEqualTo(before);
@@ -1880,7 +1882,7 @@ class CrudApiIntegrationTest {
             mvc.perform(
                             post("/api/rooms/save-or-update")
                                     .with(asUser(adminId, Role.ADMIN))
-                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .contentType(MediaType.APPLICATION_JSON_VALUE)
                                     .content("{\"id\":" + badId + ",\"code\":\"INVALID\"}"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
@@ -1888,8 +1890,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(Long.MAX_VALUE, "{\"code\":\"MISSING\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(Long.MAX_VALUE, "{\"code\":\"MISSING\"}"))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("NOT_FOUND"));
         assertThat(jdbc.queryForObject("SELECT count(*) FROM room", Long.class)).isEqualTo(before);
@@ -1901,15 +1903,15 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content("{\"code\":\"INCOMPLETE\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
         mvc.perform(
                         post("/api/rooms/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(firstRoomId, "{\"code\":\"PARTIAL\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(firstRoomId, "{\"code\":\"PARTIAL\"}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.buildingId").value(firstBuildingId))
                 .andExpect(jsonPath("$.code").value("PARTIAL"));
@@ -1920,8 +1922,8 @@ class CrudApiIntegrationTest {
             mvc.perform(
                             post("/api/rooms/save-or-update")
                                     .with(asUser(adminId, Role.ADMIN))
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(mapper.writeValueAsString(payload)))
+                                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                    .content(Objects.requireNonNull(mapper.writeValueAsString(payload))))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
         }
@@ -1947,8 +1949,8 @@ class CrudApiIntegrationTest {
             mvc.perform(
                             post("/api/rooms/search-by-page")
                                     .with(asUser(adminId, Role.ADMIN))
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(payload))
+                                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                    .content(Objects.requireNonNull(payload)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
         }
@@ -1988,7 +1990,7 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/utility-rates/save-or-update")
                                         .with(asUser(adminId, Role.ADMIN))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
                                                 "{\"meterType\":\"ELECTRIC\",\"unitPrice\":3500,\"effectiveFrom\":\"2095-01-01\"}"))
                         .andExpect(status().isOk())
@@ -1999,15 +2001,15 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/utility-rates/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
                                         "{\"meterType\":\"WATER\",\"unitPrice\":18000,\"effectiveFrom\":\"2095-01-01\"}"))
                 .andExpect(status().isOk());
         mvc.perform(
                         post("/api/utility-rates/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(rateId, "{\"unitPrice\":3700}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(rateId, "{\"unitPrice\":3700}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.meterType").value("ELECTRIC"))
                 .andExpect(jsonPath("$.effectiveFrom").value("2095-01-01"))
@@ -2033,7 +2035,7 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/utility-rates/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
                                         "{\"meterType\":\"ELECTRIC\",\"unitPrice\":3500,\"effectiveFrom\":\""
                                                 + LocalDate.now().minusDays(1)
@@ -2043,7 +2045,7 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/utility-rates/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
                                         "{\"meterType\":\"WATER\",\"unitPrice\":17000,\"effectiveFrom\":\""
                                                 + LocalDate.now()
@@ -2060,7 +2062,7 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/me/profile/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content("{\"phone\":\"0901234567\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(adminId))
@@ -2068,13 +2070,13 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/me/profile/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content("{\"role\":\"STAFF\"}"))
                 .andExpect(status().isBadRequest());
         mvc.perform(
                         post("/api/admin/configs/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content("{\"key\":\"invoice.due_days\",\"value\":\"9\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.key").value("invoice.due_days"))
@@ -2082,7 +2084,7 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/admin/configs/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content("{\"key\":\"not-a-registered-key\",\"value\":\"9\"}"))
                 .andExpect(status().isNotFound());
     }
@@ -2094,7 +2096,7 @@ class CrudApiIntegrationTest {
             mvc.perform(
                             post(base + "/save-or-update")
                                     .with(asUser(staffId, Role.STAFF))
-                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .contentType(MediaType.APPLICATION_JSON_VALUE)
                                     .content(
                                             "{\"studentCode\":\"NO-CREATE\",\"fullName\":\"Không"
                                                     + " tạo\",\"gender\":\"M\"}"))
@@ -2109,14 +2111,14 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/beds/save-or-update")
                                         .with(asUser(staffId, Role.STAFF))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                mapper.writeValueAsString(
+                                                Objects.requireNonNull(mapper.writeValueAsString(
                                                         Map.of(
                                                                 "roomId",
                                                                 firstRoomId,
                                                                 "code",
-                                                                "G1"))))
+                                                                "G1")))))
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.code").value("G1"))
                         .andReturn()
@@ -2126,8 +2128,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/beds/save-or-update")
                                 .with(asUser(staffId, Role.STAFF))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(withId(bedId, "{\"code\":\"G2\"}")))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(withId(bedId, "{\"code\":\"G2\"}"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bedId))
                 .andExpect(jsonPath("$.code").value("G2"));
@@ -2207,13 +2209,13 @@ class CrudApiIntegrationTest {
         for (var change : Map.of("studentCode", "NEW" + suffix,
                 "fullName", "Tên không được phép đổi", "gender", "F").entrySet()) {
             mvc.perform(post("/api/students/save-or-update").with(asUser(staffId, Role.STAFF))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(mapper.writeValueAsString(Map.of("id", studentId, change.getKey(), change.getValue()))))
+                            .contentType(MediaType.APPLICATION_JSON_VALUE)
+                            .content(Objects.requireNonNull(mapper.writeValueAsString(Map.of("id", studentId, change.getKey(), change.getValue())))))
                     .andExpect(status().isForbidden()).andExpect(jsonPath("errorCode").value("FORBIDDEN"));
         }
         mvc.perform(post("/api/students/save-or-update").with(asUser(staffId, Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(Map.of("id", studentId, "phone", "0912345678"))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsString(Map.of("id", studentId, "phone", "0912345678")))))
                 .andExpect(status().isOk()).andExpect(jsonPath("phone").value("0912345678"));
         assertThat(jdbc.queryForObject("SELECT gender FROM student_profile WHERE user_id=?", String.class, studentId)).isEqualTo("M");
     }
@@ -2273,7 +2275,7 @@ class CrudApiIntegrationTest {
             String base = endpoint.getKey();
             var first =
                     mapper.readTree(
-                            mvc.perform(searchByPage(base, "size", 1).with(endpoint.getValue()))
+                            mvc.perform(searchByPage(base, "size", 1).with(Objects.requireNonNull(endpoint.getValue())))
                                     .andExpect(status().isOk())
                                     .andExpect(jsonPath("$.content").isArray())
                                     .andExpect(jsonPath("$.page").value(0))
@@ -2286,11 +2288,11 @@ class CrudApiIntegrationTest {
             long total = first.path("totalElements").asLong();
             assertThat(first.path("content").size()).as(base).isEqualTo(total == 0 ? 0 : 1);
             assertThat(first.path("totalPages").asLong()).as(base).isEqualTo(total);
-            mvc.perform(searchByPage(base, "size", 1, "page", total + 1).with(endpoint.getValue()))
+            mvc.perform(searchByPage(base, "size", 1, "page", total + 1).with(Objects.requireNonNull(endpoint.getValue())))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content.length()").value(0))
                     .andExpect(jsonPath("$.totalElements").value(total));
-            mvc.perform(searchByPage(base, "q", "NO-MATCH-" + suffix).with(endpoint.getValue()))
+            mvc.perform(searchByPage(base, "q", "NO-MATCH-" + suffix).with(Objects.requireNonNull(endpoint.getValue())))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content.length()").value(0))
                     .andExpect(jsonPath("$.totalElements").value(0))
@@ -2406,11 +2408,11 @@ class CrudApiIntegrationTest {
             mvc.perform(
                             post("/api/" + resource + "/save-or-update")
                                     .with(asUser(adminId, Role.ADMIN))
-                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .contentType(MediaType.APPLICATION_JSON_VALUE)
                                     .content(
-                                            withId(
+                                            Objects.requireNonNull(withId(
                                                     Long.MAX_VALUE,
-                                                    "{\"reason\":\"Không tạo ngầm\"}")))
+                                                    "{\"reason\":\"Không tạo ngầm\"}"))))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.errorCode").value("NOT_FOUND"));
             assertThat(jdbc.queryForObject("SELECT count(*) FROM " + table, Long.class))
@@ -2430,14 +2432,14 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/admin/users/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        withId(
+                                        Objects.requireNonNull(withId(
                                                 staffId,
                                                 "{\"username\":\"changed-"
                                                         + suffix
                                                         + "\",\"fullName\":\"Không ghi thay đổi"
-                                                        + " này\"}")))
+                                                        + " này\"}"))))
                 .andExpect(status().isBadRequest());
         Map<String, Object> studentFields =
                 Map.of(
@@ -2458,8 +2460,8 @@ class CrudApiIntegrationTest {
             mvc.perform(
                             post("/api/admin/users/save-or-update")
                                     .with(asUser(adminId, Role.ADMIN))
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(mapper.writeValueAsString(input)))
+                                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                    .content(Objects.requireNonNull(mapper.writeValueAsString(input))))
                     .andExpect(status().isBadRequest());
         }
         assertThat(jdbc.queryForObject("SELECT count(*) FROM app_user", Long.class))
@@ -2598,8 +2600,8 @@ class CrudApiIntegrationTest {
             mvc.perform(
                             post("/api/registration-periods/save-or-update")
                                     .with(asUser(adminId, Role.ADMIN))
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(mapper.writeValueAsString(input)))
+                                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                    .content(Objects.requireNonNull(mapper.writeValueAsString(input))))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
         }
@@ -2610,8 +2612,8 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/applications/save-or-update")
                                 .with(asUser(studentId, Role.STUDENT))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(mapper.writeValueAsString(application)))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(mapper.writeValueAsString(application))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
         assertThat(jdbc.queryForObject("SELECT count(*) FROM registration_period", Long.class))
@@ -2627,9 +2629,9 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/notifications/save-or-update")
                                         .with(asUser(staffId, Role.STAFF))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
-                                                mapper.writeValueAsString(
+                                                Objects.requireNonNull(mapper.writeValueAsString(
                                                         Map.of(
                                                                 "scope",
                                                                 "FLOOR",
@@ -2640,7 +2642,7 @@ class CrudApiIntegrationTest {
                                                                 "title",
                                                                 "Thông báo ban đầu",
                                                                 "body",
-                                                                "Nội dung cần giữ"))))
+                                                                "Nội dung cần giữ")))))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -2649,16 +2651,16 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/notifications/save-or-update")
                                 .with(asUser(staffId, Role.STAFF))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        mapper.writeValueAsString(
+                                        Objects.requireNonNull(mapper.writeValueAsString(
                                                 Map.of(
                                                         "id",
                                                         id,
                                                         "title",
                                                         "Thông báo đã sửa",
                                                         "floor",
-                                                        1))))
+                                                        1)))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Thông báo đã sửa"))
                 .andExpect(jsonPath("$.body").value("Nội dung cần giữ"))
@@ -2668,21 +2670,21 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/notifications/save-or-update")
                                 .with(asUser(staffId, Role.STAFF))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        mapper.writeValueAsString(
+                                        Objects.requireNonNull(mapper.writeValueAsString(
                                                 Map.of(
                                                         "id",
                                                         id,
                                                         "title",
                                                         "Đổi tầng không hợp lệ",
                                                         "floor",
-                                                        2))))
+                                                        2)))))
                 .andExpect(status().isBadRequest());
         mvc.perform(
                         post("/api/notifications/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
                                         "{\"id\":9223372036854775807,\"title\":\"Không tạo"
                                                 + " ngầm\"}"))
@@ -2711,16 +2713,16 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/utility-readings/save-or-update")
                                 .with(asUser(staffId, Role.STAFF))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(mapper.writeValueAsString(create)))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(Objects.requireNonNull(mapper.writeValueAsString(create))))
                 .andExpect(status().isBadRequest());
         create.put("endReading", 120);
         String response =
                 mvc.perform(
                                 post("/api/utility-readings/save-or-update")
                                         .with(asUser(staffId, Role.STAFF))
-                                        .contentType(MediaType.APPLICATION_JSON)
-                                        .content(mapper.writeValueAsString(create)))
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                        .content(Objects.requireNonNull(mapper.writeValueAsString(create))))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -2729,10 +2731,10 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/utility-readings/save-or-update")
                                 .with(asUser(staffId, Role.STAFF))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        mapper.writeValueAsString(
-                                                Map.of("id", id, "startReading", 105))))
+                                        Objects.requireNonNull(mapper.writeValueAsString(
+                                                Map.of("id", id, "startReading", 105)))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roomId").value(firstRoomId))
                 .andExpect(jsonPath("$.meterType").value("ELECTRIC"))
@@ -2742,10 +2744,10 @@ class CrudApiIntegrationTest {
         mvc.perform(
                         post("/api/utility-readings/save-or-update")
                                 .with(asUser(staffId, Role.STAFF))
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .content(
-                                        mapper.writeValueAsString(
-                                                Map.of("id", id, "roomId", otherRoomId))))
+                                        Objects.requireNonNull(mapper.writeValueAsString(
+                                                Map.of("id", id, "roomId", otherRoomId)))))
                 .andExpect(status().isBadRequest());
     }
 
@@ -2760,8 +2762,8 @@ class CrudApiIntegrationTest {
         reading.put("endReading", 120);
         mvc.perform(post("/api/utility-readings/save-or-update")
                         .with(asUser(staffId, Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(reading)))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsString(reading))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.startReading").value(100));
 
@@ -2772,8 +2774,8 @@ class CrudApiIntegrationTest {
         reading.put("endReading", 150);
         mvc.perform(post("/api/utility-readings/save-or-update")
                         .with(asUser(staffId, Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(reading)))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsString(reading))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.VALIDATION_FAILED))
                 .andExpect(jsonPath("$.details.fieldErrors[0].message")
@@ -2789,8 +2791,8 @@ class CrudApiIntegrationTest {
 
         mvc.perform(post("/api/utility-readings/save-or-update")
                         .with(asUser(otherStaffId, Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(reading)))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsString(reading))))
                 .andExpect(status().isNotFound());
         reading.put("billingMonth", "2026-02-01");
         reading.put("oldMeterFinal", 130);
@@ -2799,8 +2801,8 @@ class CrudApiIntegrationTest {
         reading.put("endReading", 20);
         mvc.perform(post("/api/utility-readings/save-or-update")
                         .with(asUser(staffId, Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(reading)))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsString(reading))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.startReading").value(120))
                 .andExpect(jsonPath("$.consumption").value(30));
@@ -2809,8 +2811,8 @@ class CrudApiIntegrationTest {
         reading.put("endReading", 30);
         mvc.perform(post("/api/utility-readings/save-or-update")
                         .with(asUser(staffId, Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(reading)))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsString(reading))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.startReading").value(20));
     }
@@ -2825,20 +2827,20 @@ class CrudApiIntegrationTest {
                 Long.class, firstRoomId, MeterType.ELECTRIC, staffId);
         mvc.perform(post("/api/utility-readings/save-or-update")
                         .with(asUser(staffId, Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(Map.of("id", id, "endReading", 25))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsString(Map.of("id", id, "endReading", 25)))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.oldMeterFinal").value(130))
                 .andExpect(jsonPath("$.replacementReason").value("Nhập nhầm"));
         mvc.perform(post("/api/utility-readings/save-or-update")
                         .with(asUser(staffId, Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(
-                                Map.of("id", id, "endReading", 140, "replacementReason", ""))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsString(
+                                Map.of("id", id, "endReading", 140, "replacementReason", "")))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.oldMeterFinal").value(nullValue()))
-                .andExpect(jsonPath("$.newMeterStart").value(nullValue()))
-                .andExpect(jsonPath("$.replacementReason").value(nullValue()))
+                .andExpect(jsonPath("$.oldMeterFinal").value(Objects.requireNonNull(nullValue())))
+                .andExpect(jsonPath("$.newMeterStart").value(Objects.requireNonNull(nullValue())))
+                .andExpect(jsonPath("$.replacementReason").value(Objects.requireNonNull(nullValue())))
                 .andExpect(jsonPath("$.consumption").value(40));
     }
 
@@ -2863,8 +2865,8 @@ class CrudApiIntegrationTest {
 
         mvc.perform(post("/api/utility-readings/save-or-update")
                         .with(asUser(staffId, Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(reading)))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsString(reading))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.READING_INVALID));
     }
@@ -2882,8 +2884,8 @@ class CrudApiIntegrationTest {
                 Long.class, firstRoomId, "ELECTRIC", staffId);
         mvc.perform(post("/api/utility-readings/save-or-update")
                         .with(asUser(staffId, Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(Map.of("id", id, "endReading", 160))))
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(Objects.requireNonNull(mapper.writeValueAsString(Map.of("id", id, "endReading", 160)))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.endReading").value(160));
         mvc.perform(delete("/api/utility-readings/" + id).with(asUser(staffId, Role.STAFF)))
@@ -2926,6 +2928,8 @@ class CrudApiIntegrationTest {
                 OffsetDateTime.parse(createdAt));
     }
 
+    @NonNull
+
     private RequestPostProcessor asUser(Long id, String role) {
         String identity =
                 jdbc.queryForObject(
@@ -2933,12 +2937,12 @@ class CrudApiIntegrationTest {
         Long version =
                 jdbc.queryForObject(
                         "SELECT security_version FROM app_user WHERE id=?", Long.class, id);
-        return jwt().jwt(
+        return Objects.requireNonNull(jwt().jwt(
                         builder ->
                                 builder.subject(identity)
                                         .claim("realm_access", Map.of("roles", List.of(role)))
                                         .claim("dms_security_version", version))
-                .authorities(new SimpleGrantedAuthority("ROLE_" + role));
+                .authorities(new SimpleGrantedAuthority("ROLE_" + role)));
     }
 
     private Long createUser(String role, Long unitId) {
@@ -3009,7 +3013,7 @@ class CrudApiIntegrationTest {
                 mvc.perform(
                                 post("/api/applications/save-or-update")
                                         .with(asUser(studentId, "STUDENT"))
-                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
                                         .content(
                                                 "{\"periodId\":"
                                                         + periodId
@@ -3056,8 +3060,8 @@ class CrudApiIntegrationTest {
             body.put(key, value);
         }
         return post(base + "/search-by-page")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(body));
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(Objects.requireNonNull(mapper.writeValueAsString(body)));
     }
 
     /** Giữ nguyên payload cập nhật từng phần; id chỉ chọn bản ghi, không cho phép tạo ngầm. */

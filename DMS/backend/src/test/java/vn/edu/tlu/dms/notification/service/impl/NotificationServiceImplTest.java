@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /** Kiểm tra lọc người nhận và chống trùng của hàm tạo thông báo hệ thống. */
+// Mockito dùng null tạm cho matcher; ngoại lệ chỉ áp dụng ở các hàm giả lập bên dưới.
 class NotificationServiceImplTest {
 
     private NotificationRepository repository;
@@ -59,6 +60,7 @@ class NotificationServiceImplTest {
                         mock(ScopeGuard.class));
     }
 
+    @SuppressWarnings("null")
     @Test
     void searchBindsInclusiveTimeBoundsForCountAndPage() throws Exception {
         CurrentUser currentUser = mock(CurrentUser.class);
@@ -90,6 +92,7 @@ class NotificationServiceImplTest {
         verifyNoInteractions(jdbc);
     }
 
+    @SuppressWarnings("null")
     @Test
     void notifyUsersSkipsNullAndDuplicateRecipients() {
         service.notifyUsers(
@@ -104,7 +107,7 @@ class NotificationServiceImplTest {
         verify(repository, times(2)).save(notifications.capture());
         verify(repository).flush();
         assertThat(notifications.getAllValues())
-                .extracting(Notification::getUserId)
+                .extracting((Notification element) -> element.getUserId())
                 .containsExactly(3L, 4L);
         assertThat(notifications.getAllValues())
                 .allSatisfy(
@@ -141,6 +144,7 @@ class NotificationServiceImplTest {
         verifyNoInteractions(jdbc, repository);
     }
 
+    @SuppressWarnings("null")
     @Test
     void notifyUsersSkipsExistingSourceAndTitle() {
         when(jdbc.queryForObject(
