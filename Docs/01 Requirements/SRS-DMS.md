@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Phiên bản | **0.16** |
-| Ngày | 04/11/2026 |
+| Phiên bản | **0.17** |
+| Ngày | 05/11/2026 |
 | Học phần | Chuyên đề CNTT, lớp 65CNTT, Nhóm 3 |
 | Giảng viên | Hoàng Quốc Dũng |
 | Thành viên | Nguyễn Văn Séc, Nguyễn Phú Nguyên, Lê Đức Nguyên, Nguyễn Văn Quyền, Nguyễn Tiến Lộc |
@@ -15,6 +15,7 @@
 
 | Phiên bản | Ngày | Người thực hiện | Nội dung |
 |---|---|---|---|
+| 0.17 | 05/11/2026 | TV5 | Theo yêu cầu vận hành: phân biệt nguồn hóa đơn MANUAL/ISSUED. Hóa đơn tạo tay UNPAID được sửa tổng tiền/hạn đóng hoặc xóa trong phạm vi quyền; lịch sử trạng thái không tự khóa bản tạo tay. Hóa đơn phát hành tự động và mọi hóa đơn PAID khóa CRUD. Giữ lịch sử/audit và các ràng buộc tham chiếu tài chính. |
 | 0.16 | 04/11/2026 | Nhóm 3 | Theo review chuyên sâu module đăng ký KTX: FR-REG-01 KTV được xem đợt của đơn vị mình, tạo/sửa/xóa đợt ghi audit; FR-REG-05 danh sách đơn của Staff mặc định sắp điểm giảm dần, sinh viên không thấy trọng số diện ưu tiên; FR-REG-08 giường giữ chỗ phải thuộc đơn vị nguyện vọng của đơn, kể cả với ADMIN; FR-REG-14 lựa chọn hè chỉ tạo/sửa khi đợt hè của đơn vị đang mở, lựa chọn bị từ chối được sửa và gửi lại, rút lựa chọn chờ duyệt chuyển CANCELLED thay vì xóa. |
 | 0.15 | 04/11/2026 | Nhóm 3 | Chuẩn hóa danh mục dùng chung cho form, bộ lọc và Excel; trường/khoa/khóa/địa giới, tầng theo tòa, năm học, tiện nghi, hạng mục sửa chữa và vị trí kho dùng dữ liệu quản trị có tham chiếu. |
 | 0.14 | 31/10/2026 | Nhóm 3 | Theo quyết định DEC-BIL-01: khi đã có lịch sử chỉ số, phải nhập đủ kỳ liên tiếp; không tạo kỳ mới nếu còn thiếu kỳ liền trước. Kỳ đầu vẫn nhập chỉ số đầu, thay đồng hồ theo quy tắc hiện hành. |
@@ -323,7 +324,7 @@ Có hai loại hóa đơn và một sổ cọc:
 | **BR-01 Sức chứa** | Mỗi giường có tối đa một phân phòng hiệu lực (giữ chỗ hoặc đang ở). Không phân vào phòng Bảo trì / Ngừng, giường Hỏng. Giới tính sinh viên phải khớp giới tính phòng | CSDL: `UNIQUE(bed_id) WHERE ended_at IS NULL`. Service: khóa giường (`SELECT … FOR UPDATE`), kiểm tra lại sau khi khóa |
 | **BR-02 Hợp đồng** | Mỗi sinh viên có tối đa một phân phòng hiệu lực và tối đa một hợp đồng PENDING / ACTIVE. Khoảng lưu trú của một sinh viên không chồng nhau. Hợp đồng ACTIVE luôn có một phân phòng đang ở, **trừ khi** đang tạm rời hè (có phiếu gửi đồ chưa nhận lại). Hợp đồng chỉ chuyển EXPIRED / TERMINATED qua thủ tục trả phòng | CSDL: `UNIQUE(student_id) WHERE ended_at IS NULL` trên phân phòng. Service: khóa bản ghi sinh viên khi thay đổi |
 | **BR-03 Điện nước** | Chỉ số cuối ≥ đầu; đầu kỳ nối tiếp cuối kỳ trước trừ khi có ghi nhận thay đồng hồ; sau kỳ đầu phải nhập đủ các kỳ liên tiếp, không tạo kỳ mới nếu thiếu kỳ liền trước; một chỉ số cho mỗi (phòng, loại đồng hồ, kỳ); hóa đơn điện nước thuộc về phòng, không chia cho sinh viên | CSDL: `UNIQUE(room_id, meter_type, period)`, `CHECK(end_reading >= start_reading)`; service kiểm tra kỳ liền trước trong transaction |
-| **BR-04 Hóa đơn** | Một hóa đơn phí phòng cho mỗi (sinh viên, học kỳ); một hóa đơn điện nước cho mỗi (phòng, kỳ điện nước). Hóa đơn đã thanh toán không sửa | CSDL: hai partial unique index theo loại hóa đơn. Service: chặn sửa khi đã thanh toán |
+| **BR-04 Hóa đơn** | Một hóa đơn phí phòng cho mỗi (sinh viên, học kỳ); một hóa đơn điện nước cho mỗi (phòng, kỳ điện nước). Hóa đơn MANUAL chưa thanh toán được sửa tổng tiền/hạn đóng hoặc xóa theo quyền/phạm vi; lịch sử trạng thái được giữ lại. Hóa đơn ISSUED và hóa đơn đã thanh toán không sửa/xóa. Không bỏ ràng buộc tham chiếu tài chính. | CSDL: hai partial unique index theo loại hóa đơn. Service: chặn sửa khi đã thanh toán |
 | **BR-05 Chuyển phòng** | Giường đích trống và **cùng đơn vị** với giường nguồn; đóng phân phòng cũ và mở mới trong một transaction; hợp đồng không thay đổi | Service: khóa hai giường theo thứ tự `bed_id` tăng dần |
 | **BR-06 Sửa chữa** | Sinh viên chỉ tạo ticket cho phòng đang ở; chỉ KTV được giao cập nhật xử lý; chỉ đóng sau RESOLVED; KTV không tự đóng | Service: kiểm tra chuyển trạng thái theo bảng ở mục 10 |
 | **BR-07 Phạm vi** | Staff chỉ thấy và thao tác dữ liệu thuộc đơn vị mình. Đơn đăng ký thuộc đơn vị nguyện vọng. Sinh viên thuộc phạm vi đơn vị khi có đơn trong đợt hiện hành hoặc phân phòng hiệu lực tại đơn vị đó. Hóa đơn phí phòng thuộc phạm vi đơn vị theo học kỳ (`semester_id`) của hóa đơn (sinh viên có lịch sử ở tại đơn vị trong học kỳ hoặc nộp đơn vào đơn vị cho đợt thuộc học kỳ, tránh lộ hóa đơn khi chuyển đơn vị giữa các kỳ); quyền ghi (xác nhận thanh toán) chỉ tính phân phòng/phòng thực tế của đúng đơn vị. Admin được làm mọi nghiệp vụ ở mọi đơn vị, vẫn kiểm tra trạng thái và ràng buộc dữ liệu | Service: mọi truy vấn của Staff lọc theo `management_unit_id`; kiểm tra trên từng đối tượng |

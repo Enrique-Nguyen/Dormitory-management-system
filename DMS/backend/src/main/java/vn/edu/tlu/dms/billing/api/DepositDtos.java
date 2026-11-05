@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
+
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -44,17 +46,17 @@ public final class DepositDtos {
     /** Yêu cầu trừ cọc khi ticket hư hỏng do sử dụng được nghiệm thu đóng (FR-MNT-10). */
     public record DeductRequest(
             @NotNull Long maintenanceRequestId,
-            @NotNull @Positive(message = "Số tiền trừ cọc phải lớn hơn 0") Long amount,
+            @NotNull @Positive(message = ValidationMessage.DEDUCTION_AMOUNT_POSITIVE) Long amount,
             @NotNull LocalDate dueDate,
             @Size(max = 500) String note) {}
 
     /** Yêu cầu nộp bù cọc khi sinh viên nộp khoản bù (FR-BIL-09). */
     public record TopupRequest(
-            @NotNull @Positive(message = "Số tiền bù cọc phải lớn hơn 0") Long amount,
+            @NotNull @Positive(message = ValidationMessage.TOPUP_AMOUNT_POSITIVE) Long amount,
             @Size(max = 500) String note) {}
 
     /** Yêu cầu hoàn cọc khi làm thủ tục trả phòng (FR-CON-09). */
     public record RefundRequest(
-            @NotNull @Positive(message = "Số tiền hoàn cọc phải lớn hơn 0") Long amount,
+            @NotNull @Positive(message = ValidationMessage.REFUND_AMOUNT_POSITIVE) Long amount,
             @Size(max = 500) String note) {}
 }

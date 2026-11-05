@@ -38,8 +38,8 @@ export default function ConfirmPaymentModal({
       })
       message.success(
         totalAmount != null
-          ? `Đã xác nhận thu ${formatMoney(totalAmount)} cho hóa đơn ${invoiceCode ?? ''}.`
-          : `Đã xác nhận thanh toán hóa đơn ${invoiceCode ?? ''}.`,
+          ? billingUiLabels.paymentConfirmed(formatMoney(totalAmount), invoiceCode ?? '')
+          : billingUiLabels.paymentConfirmedWithoutAmount(invoiceCode ?? ''),
       )
       form.resetFields()
       onClose()
@@ -86,7 +86,7 @@ export default function ConfirmPaymentModal({
         <Form.Item
           name="paymentMethod"
           label={billingUiLabels.paymentMethod}
-          rules={[{ required: true, message: 'Vui lòng chọn phương thức thanh toán' }]}
+          rules={[{ required: true, message: billingUiLabels.paymentMethodRequired }]}
         >
           <RadioGroup className="dms-choice-grid">
             <Radio value={PaymentMethod.TRANSFER} className="dms-choice">
@@ -111,8 +111,8 @@ export default function ConfirmPaymentModal({
           label={billingUiLabels.payerName}
           extra={billingUiLabels.payerHint}
           rules={[
-            { required: true, whitespace: true, message: 'Vui lòng nhập người nộp tiền' },
-            { max: 100, message: 'Tối đa 100 ký tự' },
+            { required: true, whitespace: true, message: billingUiLabels.payerRequired },
+            { max: 100, message: billingUiLabels.maxCharacters(100) },
           ]}
         >
           <Input placeholder={billingUiLabels.payerPlaceholder} />

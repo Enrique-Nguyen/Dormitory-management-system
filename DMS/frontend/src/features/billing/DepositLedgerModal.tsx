@@ -285,8 +285,8 @@ export default function DepositLedgerModal({ contractId, contractCode, studentNa
             label={billingUiLabels.depositAmount}
             extra={action === 'topup' ? billingUiLabels.depositTopupHelp : billingUiLabels.depositRefundHelp}
             rules={[
-              { required: true, message: 'Vui lòng nhập số tiền' },
-              { type: 'number', min: 1, message: 'Số tiền phải lớn hơn 0' },
+              { required: true, message: billingUiLabels.depositAmountRequired },
+              { type: 'number', min: 1, message: billingUiLabels.depositAmountPositive },
             ]}
           >
             <InputNumber
@@ -297,7 +297,7 @@ export default function DepositLedgerModal({ contractId, contractCode, studentNa
               style={{ width: '100%' }}
             />
           </Form.Item>
-          <Form.Item name="note" label={billingUiLabels.note} rules={[{ max: 500, message: 'Tối đa 500 ký tự' }]}>
+          <Form.Item name="note" label={billingUiLabels.note} rules={[{ max: 500, message: billingUiLabels.maxCharacters(500) }]}>
             <TextArea rows={3} />
           </Form.Item>
         </FormGrid>

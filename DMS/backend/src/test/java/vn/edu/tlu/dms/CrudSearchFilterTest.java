@@ -122,7 +122,9 @@ class CrudSearchFilterTest {
     @ValueSource(booleans = {true, false})
     void invoiceForwardsRangeFiltersAndActorScope(boolean mine) throws Exception {
         var repository = mock(InvoiceRepository.class);
-        var service = new InvoiceServiceImpl(repository, null, current, guard, null, null, null, null, audit, null);
+        var rooms = mock(RoomReferenceService.class);
+        var service = new InvoiceServiceImpl(repository, null, current, guard, null, null, null, null, audit, rooms);
+        when(rooms.getSemesterLabels(any())).thenReturn(Map.of());
         when(current.get()).thenReturn(new Actor(10L, mine ? Role.STUDENT : Role.STAFF, 7L, false, false));
         when(repository.searchAccessibleInvoices(any(), any(), any(), anyBoolean(), anyBoolean(),
                 org.mockito.ArgumentMatchers.isNull(), anyBoolean(), any(), any(),
@@ -146,7 +148,9 @@ class CrudSearchFilterTest {
     @Test
     void invoiceOmittedRangesStayNullForCrossUnitStaff() {
         var repository = mock(InvoiceRepository.class);
-        var service = new InvoiceServiceImpl(repository, null, current, guard, null, null, null, null, audit, null);
+        var rooms = mock(RoomReferenceService.class);
+        var service = new InvoiceServiceImpl(repository, null, current, guard, null, null, null, null, audit, rooms);
+        when(rooms.getSemesterLabels(any())).thenReturn(Map.of());
         when(current.get()).thenReturn(new Actor(10L, Role.STAFF, 7L, true, false));
         when(repository.searchAccessibleInvoices(any(), any(), any(), anyBoolean(), anyBoolean(),
                 org.mockito.ArgumentMatchers.isNull(), anyBoolean(), any(), any(),

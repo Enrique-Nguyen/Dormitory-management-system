@@ -26,9 +26,11 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentEndReason;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceSource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.PaymentMethod;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
@@ -36,6 +38,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SemesterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
+import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.Actor;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -43,6 +46,7 @@ import vn.edu.tlu.dms.common.service.RolePermissionService;
 import vn.edu.tlu.dms.support.FutureSemesterFixture;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -140,6 +144,153 @@ class InvoiceCrudScopeIntegrationTest {
     }
 
     @Test
+    void unusedManualInvoiceExposesCrudActionsOnListAndDetail() {
+        asStaff(targetUnit, false);
+        Object saved = crud.saveOrUpdate(createInput());
+        Long id = ((Number) ((Map<?, ?>) saved).get("id")).longValue();
+
+        assertInvoiceActions(
+                id,
+                List.of(BusinessAction.EDIT, BusinessAction.DELETE),
+                List.of(BusinessAction.EDIT, BusinessAction.DELETE, BusinessAction.CONFIRM_PAYMENT));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void issuedInvoiceHidesCrudActionsButKeepsPayment(boolean historyOnly) {
+        Long id = insertDraft();
+        jdbc.update("UPDATE invoice SET creation_source=? WHERE id=?", InvoiceSource.ISSUED, id);
+        asStaff(targetUnit, false);
+        if (historyOnly) {
+            jdbc.update(
+                    "INSERT INTO status_history(entity_type,entity_id,to_status,actor_id) VALUES(?,?,?,?)",
+                    EntityType.INVOICE, id, InvoiceStatus.UNPAID, staffId);
+        } else {
+            Long assignment = jdbc.queryForObject(
+                    "SELECT id FROM room_assignment_history WHERE contract_id=? ORDER BY id LIMIT 1",
+                    Long.class, contractId);
+            jdbc.update(
+                    "INSERT INTO invoice_item(invoice_id,item_type,quantity,unit_price,amount,assignment_id)"
+                            + " VALUES(?,?,1,100,100,?)",
+                    id, InvoiceType.ROOM_FEE, assignment);
+        }
+
+        assertInvoiceActions(id, List.of(), List.of(BusinessAction.CONFIRM_PAYMENT));
+        assertStatus(() -> crud.saveOrUpdate(updateInput(id)), HttpStatus.CONFLICT);
+        assertStatus(() -> crud.deleteUnusedInvoiceRecord(id), HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void issuedSourceStaysLockedEvenWithoutItemsOrHistory() {
+        Long id = insertDraft();
+        jdbc.update("UPDATE invoice SET creation_source=? WHERE id=?", InvoiceSource.ISSUED, id);
+        asStaff(targetUnit, false);
+
+        assertInvoiceActions(id, List.of(), List.of(BusinessAction.CONFIRM_PAYMENT));
+        assertStatus(() -> crud.saveOrUpdate(updateInput(id)), HttpStatus.CONFLICT);
+        assertStatus(() -> crud.deleteUnusedInvoiceRecord(id), HttpStatus.CONFLICT);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void unpaidManualInvoiceCanBeEditedAndDeletedWithoutRemovingHistory(boolean overdue) {
+        Long id = insertDraft();
+        asStaff(targetUnit, false);
+        LocalDate originalDue = overdue ? LocalDate.now().minusDays(1) : dueDate;
+        if (overdue) {
+            // Hóa đơn quá hạn đã được phát hành trước hạn nộp, đúng ràng buộc của CSDL.
+            jdbc.update(
+                    "UPDATE invoice SET issued_at=?::date, due_date=? WHERE id=?",
+                    originalDue.minusDays(1), originalDue, id);
+        }
+        jdbc.update(
+                "INSERT INTO status_history(entity_type,entity_id,to_status,actor_id) VALUES(?,?,?,?)",
+                EntityType.INVOICE, id, InvoiceStatus.UNPAID, staffId);
+
+        assertInvoiceActions(
+                id, List.of(BusinessAction.EDIT, BusinessAction.DELETE),
+                List.of(BusinessAction.EDIT, BusinessAction.DELETE, BusinessAction.CONFIRM_PAYMENT));
+        // Form sửa gửi lại ngày hiện có: quá hạn không được ngăn sửa tổng tiền của bản tạo tay.
+        crud.saveOrUpdate(new InvoiceDtos.Save(id, null, null, null, null, null, 200L, originalDue));
+        assertThat(stored(id).get("total_amount")).isEqualTo(200L);
+        assertThat(stored(id).get("due_date").toString()).isEqualTo(originalDue.toString());
+        crud.deleteUnusedInvoiceRecord(id);
+
+        assertThat(invoiceCount()).isZero();
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM status_history WHERE entity_type=? AND entity_id=?",
+                Long.class, EntityType.INVOICE, id)).isEqualTo(1L);
+        assertThat(jdbc.queryForList(
+                "SELECT action FROM audit_log WHERE entity_type=? AND entity_id=? ORDER BY id",
+                String.class, EntityType.INVOICE, id))
+                .contains(AuditAction.CRUD_UPDATE, AuditAction.CRUD_DELETE);
+    }
+
+    @Test
+    void studentCannotGetWriteActionsEvenWhenGrantedInvoiceWritePermissions() {
+        Long id = insertDraft();
+        when(currentUser.get()).thenReturn(new Actor(studentId, Role.STUDENT, null, false, false));
+
+        assertThat(invoices.getInvoiceById(id).allowedActions()).isEmpty();
+        assertThat(invoices.searchByPage(new SearchRequest(), true).content())
+                .filteredOn(invoice -> invoice.id().equals(id))
+                .singleElement().satisfies(invoice -> assertThat(invoice.allowedActions()).isEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {Role.STAFF, Role.ADMIN, Role.STUDENT})
+    void roomFeeListAndDetailIncludeLinkedSemesterWithoutCatalogPermission(String role) {
+        Long id = insertDraft();
+        Long actorId = Role.STUDENT.equals(role)
+                ? studentId
+                : Role.ADMIN.equals(role) ? insertUser("admin", Role.ADMIN, null) : staffId;
+        when(currentUser.get()).thenReturn(new Actor(
+                actorId, role, Role.STAFF.equals(role) ? targetUnit : null, false, false));
+        // Không cấp SEMESTER_READ: quyền đọc hóa đơn phải đủ để hiểu kỳ thu của chính hóa đơn.
+        when(rolePermissions.getGrantedPermissions(anyString()))
+                .thenReturn(List.of(Permission.INVOICE_READ));
+
+        var detail = invoices.getInvoiceById(id);
+        assertThat(detail.semesterName()).isEqualTo(targetSemester.name());
+        assertThat(detail.semesterType()).isEqualTo(targetSemester.type());
+        assertThat(detail.academicYear()).isEqualTo(targetSemester.academicYear());
+        assertThat(detail.billingMonth()).isNull();
+
+        var page = invoices.searchByPage(new SearchRequest(), Role.STUDENT.equals(role));
+        var listed = page.content().stream()
+                .filter(invoice -> invoice.id().equals(id)).findFirst().orElseThrow();
+        assertThat(listed.semesterName()).isEqualTo(detail.semesterName());
+        assertThat(listed.semesterType()).isEqualTo(detail.semesterType());
+        assertThat(listed.academicYear()).isEqualTo(detail.academicYear());
+    }
+
+    @Test
+    void utilityInvoiceKeepsBillingMonthWithoutSemesterMetadata() {
+        Long room = jdbc.queryForObject(
+                "SELECT b.room_id FROM room_assignment_history h JOIN bed b ON b.id=h.bed_id"
+                        + " WHERE h.contract_id=? ORDER BY h.id LIMIT 1",
+                Long.class, contractId);
+        LocalDate month = LocalDate.now().withDayOfMonth(1);
+        Long id = jdbc.queryForObject(
+                "INSERT INTO invoice(code,type,room_id,billing_month,total_amount,due_date,status,issued_by)"
+                        + " VALUES(?,?,?,?,?,?,?,?) RETURNING id",
+                Long.class, "DN-" + suffix, InvoiceType.UTILITY, room, month,
+                205000L, dueDate, InvoiceStatus.UNPAID, staffId);
+
+        var detail = invoices.getInvoiceById(id);
+        assertThat(detail.billingMonth()).isEqualTo(month);
+        assertThat(detail.semesterName()).isNull();
+        assertThat(detail.semesterType()).isNull();
+        assertThat(detail.academicYear()).isNull();
+        assertThat(invoices.searchByPage(new SearchRequest(), false).content())
+                .anySatisfy(invoice -> {
+                    assertThat(invoice.id()).isEqualTo(id);
+                    assertThat(invoice.billingMonth()).isEqualTo(month);
+                    assertThat(invoice.academicYear()).isNull();
+                });
+    }
+
+    @Test
     void targetUnitCanConfirmPaymentWithApprovedApplication() {
         Long id = insertDraft();
         asStaff(targetUnit, false);
@@ -186,7 +337,7 @@ class InvoiceCrudScopeIntegrationTest {
         Long id = insertDraft();
         asStaff(oldUnit, true);
 
-        assertThat(invoices.getInvoiceById(id).allowedActions()).isEmpty();
+        assertInvoiceActions(id, List.of(), List.of());
         assertStatus(
                 () -> invoices.confirmPayment(
                         id, new InvoiceDtos.Payment(null, "Payer", PaymentMethod.CASH)),
@@ -227,6 +378,8 @@ class InvoiceCrudScopeIntegrationTest {
         Map<String, Object> before = stored(id);
         long beforeAudit = auditCount();
 
+        assertInvoiceActions(id, List.of(), List.of());
+
         assertThatThrownBy(() -> crud.saveOrUpdate(updateInput(id)))
                 .isInstanceOfSatisfying(BusinessException.class, error -> {
                     assertThat(error.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
@@ -258,7 +411,18 @@ class InvoiceCrudScopeIntegrationTest {
                                 Permission.INVOICE_DELETE)
                         .stream().filter(permission -> !permission.equals(revoked)).toList());
 
-        assertThat(invoices.getInvoiceById(id).id()).isEqualTo(id);
+        List<String> listActions = new ArrayList<>();
+        List<String> detailActions = new ArrayList<>();
+        if (!Permission.INVOICE_UPDATE.equals(revoked)) {
+            listActions.add(BusinessAction.EDIT);
+            detailActions.add(BusinessAction.EDIT);
+            detailActions.add(BusinessAction.CONFIRM_PAYMENT);
+        }
+        if (!Permission.INVOICE_DELETE.equals(revoked)) {
+            listActions.add(BusinessAction.DELETE);
+            detailActions.add(BusinessAction.DELETE);
+        }
+        assertInvoiceActions(id, listActions, detailActions);
         switch (revoked) {
             case Permission.INVOICE_CREATE ->
                     assertStatus(() -> crud.saveOrUpdate(createInput()), HttpStatus.FORBIDDEN);
@@ -323,6 +487,17 @@ class InvoiceCrudScopeIntegrationTest {
                                         .doesNotContain(ValidationMessage.DUE_DATE_FROM_TODAY));
     }
 
+    @Test
+    void changingManualInvoiceToPastDueDateIsRejected() {
+        Long id = insertDraft();
+        asStaff(targetUnit, false);
+        assertStatus(
+                () -> crud.saveOrUpdate(new InvoiceDtos.Save(
+                        id, null, null, null, null, null, null, LocalDate.now().minusDays(1))),
+                HttpStatus.BAD_REQUEST);
+        assertThat(stored(id).get("due_date").toString()).isEqualTo(dueDate.toString());
+    }
+
     private InvoiceDtos.Save createInput() {
         return new InvoiceDtos.Save(
                 null, InvoiceType.ROOM_FEE, studentId, targetSemester.id(), null, null, 100L, dueDate);
@@ -330,6 +505,15 @@ class InvoiceCrudScopeIntegrationTest {
 
     private InvoiceDtos.Save updateInput(Long id) {
         return new InvoiceDtos.Save(id, null, null, null, null, null, 200L, null);
+    }
+
+    private void assertInvoiceActions(Long id, List<String> listActions, List<String> detailActions) {
+        assertThat(invoices.getInvoiceById(id).allowedActions())
+                .containsExactlyInAnyOrderElementsOf(detailActions);
+        assertThat(invoices.searchByPage(new SearchRequest(), false).content())
+                .filteredOn(invoice -> invoice.id().equals(id))
+                .singleElement().satisfies(invoice -> assertThat(invoice.allowedActions())
+                        .containsExactlyInAnyOrderElementsOf(listActions));
     }
 
     private void assertStatus(Runnable action, HttpStatus status) {
@@ -384,7 +568,7 @@ class InvoiceCrudScopeIntegrationTest {
     private Long insertDraft() {
         return jdbc.queryForObject(
                 "INSERT INTO invoice(code, type, student_id, semester_id, total_amount, due_date,"
-                        + " status, issued_by) VALUES(?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+                        + " status, issued_by, creation_source) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
                 Long.class,
                 "HP-" + suffix,
                 InvoiceType.ROOM_FEE,
@@ -393,7 +577,8 @@ class InvoiceCrudScopeIntegrationTest {
                 100L,
                 dueDate,
                 InvoiceStatus.UNPAID,
-                staffId);
+                staffId,
+                InvoiceSource.MANUAL);
     }
 
     private void insertAssignment(FutureSemesterFixture.Created semester) {

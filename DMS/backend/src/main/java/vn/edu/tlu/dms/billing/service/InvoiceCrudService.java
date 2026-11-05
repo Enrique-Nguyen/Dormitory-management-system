@@ -2,12 +2,12 @@ package vn.edu.tlu.dms.billing.service;
 
 import vn.edu.tlu.dms.billing.api.InvoiceDtos;
 
-/** Khai báo thao tác thêm, sửa và xóa hồ sơ hóa đơn chưa phát sinh dòng tiền. */
+/** Khai báo thao tác thêm, sửa và xóa hóa đơn tạo tay chưa thanh toán. */
 public interface InvoiceCrudService {
 
     /**
-     * Thêm mới hoặc cập nhật hồ sơ hóa đơn UNPAID chưa có dòng tiền. Khi input.id() == null: tạo
-     * mới hóa đơn; khi input.id() != null: cập nhật hóa đơn chưa thanh toán.
+     * Thêm hóa đơn có nguồn MANUAL hoặc sửa tổng tiền/hạn đóng của hóa đơn MANUAL đang UNPAID.
+     * Nguồn do server quyết định; không cho chuyển đối tượng, kỳ hoặc sửa hóa đơn đã phát hành.
      *
      * @param input thông tin hóa đơn cần lưu
      * @return hồ sơ hóa đơn sau khi lưu
@@ -15,7 +15,8 @@ public interface InvoiceCrudService {
     Object saveOrUpdate(InvoiceDtos.Save input);
 
     /**
-     * Xóa hóa đơn UNPAID chưa được sử dụng; từ chối xóa hóa đơn đã có dữ liệu liên quan.
+     * Xóa hóa đơn MANUAL đang UNPAID theo quyền/phạm vi; giữ audit và lịch sử trạng thái,
+     * không bỏ ràng buộc tham chiếu tài chính của CSDL.
      *
      * @param id mã định danh hóa đơn
      */

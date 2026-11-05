@@ -1,4 +1,5 @@
 import { ConfirmPaymentModal, DepositLedgerModal } from '../features/billing'
+import { formatInvoicePeriod } from '../features/billing/presentation'
 import { EmptyState, InvoiceStatus, StatusBadge } from '../components'
 import { CreateTicketModal } from '../features/maintenance'
 import {
@@ -86,7 +87,7 @@ import StudentImportPanel from '../features/account/StudentImportPanel'
 import CrudExcelPanel from '../features/crud/CrudExcelPanel'
 import ReferenceSelect, { ReferenceLabel } from '../features/crud/ReferenceSelect'
 import { downloadWorkbook, exportFilteredRecords } from '../features/crud/excel'
-import { BillingAction, crudValueLabels, getStatus } from '../constants/statusConfig'
+import { BillingAction, InvoiceType, crudValueLabels, getStatus } from '../constants/statusConfig'
 import type { CrudColumn, CrudField, CrudFormSection, CrudRecord } from '../features/crud/types'
 import { api } from '../services/api/client'
 import { hasPermission } from '../services/api/auth'
@@ -140,6 +141,8 @@ function renderColumnCell(
   column: CrudColumn,
   row: CrudRecord,
 ) {
+  if (['invoices', 'myInvoices'].includes(resource) && column.key === 'billingMonth')
+    return formatInvoicePeriod(row)
   if (['invoices', 'myInvoices'].includes(resource) && column.key === 'status')
     return (
       <InvoiceStatus
@@ -682,6 +685,7 @@ export default function CrudPage({ resource }: { resource: string }) {
         .filter((field) => !field.sensitive && !crudSecretFieldNames.has(field.name))
         .map((field) => [field.name, field])).values()]
   const fields = baseFields
+    .filter((field) => !field.formOnly || modalMode === 'create' || (modalMode === 'edit' && !field.createOnly))
     .filter(
       (field) =>
         !(
@@ -822,6 +826,8 @@ export default function CrudPage({ resource }: { resource: string }) {
     return (
       canUpdate &&
       canChangeRow(row) &&
+      (resource !== 'invoices' ||
+        (Array.isArray(row.allowedActions) && row.allowedActions.includes(BillingAction.EDIT))) &&
       !(resource === 'maintenance' && role === Role.TECHNICIAN)
     )
   }
@@ -829,6 +835,8 @@ export default function CrudPage({ resource }: { resource: string }) {
     return (
       canDelete &&
       canChangeRow(row) &&
+      (resource !== 'invoices' ||
+        (Array.isArray(row.allowedActions) && row.allowedActions.includes(BillingAction.DELETE))) &&
       (!config.deleteStates ||
         config.deleteStates.includes(String(row.status))) &&
       !config.singleton &&
@@ -848,7 +856,7 @@ export default function CrudPage({ resource }: { resource: string }) {
   const canImportExcel = !config.singleton && !config.readOnly && (canCreate || canUpdate)
   const excelFields = [...new Map([
     ...config.fields, ...(config.createFields ?? []), ...(config.editFields ?? []),
-  ].filter((field) => !field.sensitive && !crudSecretFieldNames.has(field.name))
+  ].filter((field) => !field.formOnly && !field.sensitive && !crudSecretFieldNames.has(field.name))
     .map((field) => [field.name, field])).values()]
   const excelConfig = { ...config, fields: excelFields }
 
@@ -912,7 +920,7 @@ export default function CrudPage({ resource }: { resource: string }) {
       payload[field.name] = value
     }
     if (existing && config.keepCreateOnlyOnEdit)
-      for (const field of config.fields.filter((candidate) => candidate.createOnly))
+      for (const field of config.fields.filter((candidate) => candidate.createOnly && !candidate.formOnly))
         if (existing[field.name] != null) payload[field.name] = existing[field.name]
     if (hasId && Object.keys(payload).length === 1) throw new Error(excelUiLabels.noChanges)
     if (config.createFormat === 'multipart') {
@@ -1016,6 +1024,11 @@ export default function CrudPage({ resource }: { resource: string }) {
           : ((await api.get(`${detailEndpoint}/${row[idKey]}`))
               .data as CrudRecord)
       if (request !== modalRequestRef.current || busyRef.current) return
+      if (resource === 'invoices' && !canEditRow(selected)) {
+        setActiveRecord(selected)
+        setModalMode('view')
+        return
+      }
       setActiveRecord(selected)
       setModalMode('edit')
     } catch (e) {
@@ -1030,7 +1043,7 @@ export default function CrudPage({ resource }: { resource: string }) {
     setBusy(true)
     try {
       const payload: Record<string, unknown> = {}
-      for (const field of writeFields.filter(visible).filter(isWritableField)) {
+      for (const field of writeFields.filter(visible).filter(isWritableField).filter((field) => !field.formOnly)) {
         const value = values[field.name]
         // Chuỗi rỗng xóa nội dung tùy chọn; trường bỏ qua giữ nguyên giá trị khi sửa.
         if (
@@ -1047,7 +1060,7 @@ export default function CrudPage({ resource }: { resource: string }) {
       }
       // Các DTO sửa chỉ số/thông báo cần giữ lại định danh/phạm vi đã chọn khi tạo.
       if (editing && config.keepCreateOnlyOnEdit && ['readings', 'notifications'].includes(resource))
-        for (const field of config.fields.filter((f) => f.createOnly))
+        for (const field of config.fields.filter((f) => f.createOnly && !f.formOnly))
           if (editing[field.name] != null)
             payload[field.name] = editing[field.name]
       if (
@@ -1367,6 +1380,10 @@ export default function CrudPage({ resource }: { resource: string }) {
             ? []
             : [
                 {
+                  // Validator mặc định coi là chuỗi; ô số và bật/tắt cần đúng kiểu giá trị.
+                  type: field.kind === 'number'
+                    ? 'number'
+                    : field.kind === 'boolean' ? 'boolean' : 'string',
                   required: field.required,
                   whitespace:
                     field.required &&
@@ -2030,14 +2047,12 @@ export default function CrudPage({ resource }: { resource: string }) {
                     dueDate={activeRecord.dueDate as string | null}
                   />
                   <span>{display(activeRecord.type)}</span>
-                  {activeRecord.billingMonth ? (
-                    <span>
-                      {billingUiLabels.invoiceMonth}:{' '}
-                      <strong>
-                        {formatMonth(activeRecord.billingMonth as string)}
-                      </strong>
-                    </span>
-                  ) : null}
+                  <span>
+                    {activeRecord.type === InvoiceType.ROOM_FEE
+                      ? billingUiLabels.invoiceSemester
+                      : billingUiLabels.invoiceMonth}:{' '}
+                    <strong>{formatInvoicePeriod(activeRecord, true)}</strong>
+                  </span>
                   <span>
                     {billingUiLabels.invoiceDue}:{' '}
                     <strong>{formatDate(activeRecord.dueDate as string)}</strong>

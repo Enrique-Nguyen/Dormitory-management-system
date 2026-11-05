@@ -122,4 +122,22 @@ public interface InvoiceRepository
                             + "))",
             nativeQuery = true)
     boolean isInStaffUnit(Long id, Long unitId);
+
+    /** Trạng thái ghi của các hóa đơn đã lọc quyền đọc; không mở rộng theo quyền tổng hợp. */
+    @Query(
+            value = """
+                    SELECT i.id AS id,
+                        (i.creation_source=:manualSource) AS manual
+                    FROM invoice i
+                    WHERE i.id IN (:ids) AND i.status=:unpaidStatus AND (:admin=true OR (
+                    """ + STAFF_UNIT_SCOPE + "))",
+            nativeQuery = true)
+    List<InvoiceWriteState> findUnpaidWriteStates(
+            List<Long> ids, Long unitId, boolean admin, String unpaidStatus, String manualSource);
+
+    interface InvoiceWriteState {
+        Long getId();
+
+        boolean getManual();
+    }
 }

@@ -73,6 +73,33 @@ Trong mỗi module: `api/` (controller + DTO), `service/`, `domain/`, `repositor
 
 **Thứ tự làm:** tuần đầu TV1 hoàn thiện `common` và `account` phía backend (đăng nhập, `CurrentUser`, mô hình lỗi, lịch sử trạng thái) và layout, guard, theme, `statusConfig`, `errorMessages` phía frontend. Các module khác dựa vào phần này.
 
+## Sau khi pull thay đổi hóa đơn và kỳ thu (05/11/2026)
+
+Thay đổi nằm trong source code và Flyway, không cần chép CSDL, file JAR hoặc cấu hình local từ máy người khác. Phải chạy backend/frontend từ cùng phiên bản source sau khi pull. Reload trình duyệt hoặc chạy lại JAR cũ không áp dụng được Java DTO/Service và migration mới.
+
+- Khi commit/PR, đưa cùng các file Java/React đã sửa và hai file mới: `DMS/frontend/src/features/billing/presentation.ts`, `DMS/backend/src/main/resources/db/migration/V15__invoice_creation_source.sql`. Không commit `target/`, `dist/`, `backend/data/`, `.env` hoặc secret.
+- Backend mới trả `semesterName`, `semesterType`, `academicYear` theo học kỳ đã liên kết. Cả quản lý và sinh viên hiển thị từ response hóa đơn qua CrudPage chung, không gọi thêm API Kỳ học và không yêu cầu SEMESTER_READ để hiểu kỳ thu. Phải build/chạy backend mới, không thêm nhánh giao diện để chạy với bản backend cũ.
+- Flyway tự áp dụng V15 khi backend mới khởi động: lưu nguồn MANUAL/ISSUED; bản tạo tay cũ chỉ được nhận diện khi có audit CRUD_CREATE đúng ID và chưa có dòng tài chính. Bản không xác định nguồn giữ khóa. Migration không xóa dữ liệu, không cần chạy lại seed hoặc sửa các migration cũ.
+- Hóa đơn MANUAL + UNPAID được sửa tổng tiền/hạn đóng hoặc xóa theo quyền/phạm vi. ISSUED hoặc PAID khóa CRUD. Lịch sử và audit được giữ lại, ràng buộc tham chiếu tài chính vẫn có hiệu lực.
+
+Lệnh dưới đây dành cho Windows, cần có `rtk` theo AGENTS.md. Từ `DMS/backend`, chạy kiểm thử hóa đơn trên PostgreSQL Testcontainers (Docker cần đang chạy), sau đó đóng gói bản mới:
+
+```powershell
+rtk proxy cmd /c mvnw.cmd "-Dtest=InvoiceCrudScopeIntegrationTest" test
+rtk proxy cmd /c mvnw.cmd -DskipTests package
+```
+
+Dừng riêng backend cũ rồi chạy bản mới theo cách đang dùng của máy: Run lại `DmsApplication` trong IDE sau khi reload Maven/build, hoặc dùng JAR vừa đóng gói. Giữ cấu hình kết nối và Keycloak của máy nhận trong biến môi trường/file local. Không chép đường dẫn ổ đĩa hay secret của máy người khác. Nếu dùng `start-local.ps1`, phải build JAR trước theo hướng dẫn phía dưới; script không tự build lại JAR đã có.
+
+Từ `DMS/frontend`, kiểm tra frontend rồi chạy lại dev server hoặc triển khai bundle mới theo cách đang dùng:
+
+```powershell
+rtk proxy cmd /c npm.cmd ci
+rtk proxy cmd /c npm.cmd run build
+```
+
+Kiểm tra sau khi chạy: phí phòng hiện học kỳ/năm học ở cả quản lý và sinh viên; điện nước hiện tháng/năm; hóa đơn tạo tay UNPAID có thao tác theo quyền; hóa đơn phát hành hoặc PAID không có Sửa/Xóa. Backend log phải ghi áp dụng/xác nhận V15 thành công. Trạng thái kiểm chứng hiện tại của bản sửa: TypeScript, bundle, kiểm tra hàm định dạng và điều kiện nút frontend đạt; kiểm thử Java, build Java và chạy V15 chưa được thực hiện trong phiên sửa vì môi trường agent không tìm thấy rtk. Cần chạy các bước trên hoặc CI trước khi coi PR đã được kiểm chứng đầy đủ.
+
 ## CSDL và migration
 
 - `DMS/backend/src/main/resources/db/migration/V1__init.sql` là bản chép của `Docs/02 External Design/Database Design/DB-DMS-schema.sql` tại thời điểm dựng khung. `V2__spring_session.sql` tạo bảng phiên đăng nhập.
@@ -154,7 +181,7 @@ Trước khi Run `DmsApplication`, mở terminal tại thư mục project và ch
 powershell -NoProfile -ExecutionPolicy Bypass -File .\DMS\scripts\start-local.ps1 -DependenciesOnly
 ```
 
-Tùy chọn này chỉ khởi động PostgreSQL ở 5432 và Keycloak ở 8180, để cổng 8080 cho backend trong IDE. Chọn module `dms-backend`, JDK 17 trở lên và Working directory là `D:\Dormitory-management-system\DMS\backend`. Với chức năng quản trị tài khoản, đặt biến `DMS_KEYCLOAK_ADMIN_CLIENT_SECRET` trong Run Configuration bằng giá trị cùng tên trong `DMS/backend/data/local-run/keycloak.env.local`; terminal/script không tự truyền biến sang IntelliJ đã mở.
+Tùy chọn này chỉ khởi động PostgreSQL ở 5432 và Keycloak ở 8180, để cổng 8080 cho backend trong IDE. Chọn module `dms-backend`, JDK 17 trở lên và Working directory là thư mục `DMS/backend` trong bản clone của máy đang chạy. Với chức năng quản trị tài khoản, đặt biến `DMS_KEYCLOAK_ADMIN_CLIENT_SECRET` trong Run Configuration bằng giá trị cùng tên trong `DMS/backend/data/local-run/keycloak.env.local`; terminal/script không tự truyền biến sang IntelliJ đã mở.
 
 Lỗi `Connection to localhost:5432 refused` nghĩa là PostgreSQL chưa chạy. Nếu báo thiếu package OAuth2, reload/sync Maven từ `DMS/backend/pom.xml`. Ứng dụng đặt múi giờ JVM thành `Asia/Ho_Chi_Minh` trước khi Spring mở kết nối để tránh tên cũ `Asia/Saigon` từ một số JDK Windows. Sau khi Run, kiểm tra `http://localhost:8080/actuator/health` trả `{"status":"UP"}`.
 

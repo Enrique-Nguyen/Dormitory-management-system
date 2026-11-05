@@ -8,6 +8,7 @@ import vn.edu.tlu.dms.billing.api.UtilityReadingController.Input;
 import vn.edu.tlu.dms.billing.service.UtilityReadingService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BusinessAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MeterType;
@@ -297,7 +298,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
         audit.record(
                 current.get().id(),
                 before == null ? AuditAction.READING_CREATE : AuditAction.READING_UPDATE,
-                "UTILITY_READING",
+                EntityType.UTILITY_READING,
                 id,
                 before,
                 after,
@@ -321,7 +322,7 @@ public class UtilityReadingServiceImpl implements UtilityReadingService {
         audit.record(
                 current.get().id(),
                 AuditAction.READING_DELETE,
-                "UTILITY_READING",
+                EntityType.UTILITY_READING,
                 id,
                 row,
                 null,

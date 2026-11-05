@@ -974,6 +974,10 @@ Một transaction: chiếm giường qua `BedOccupancyService` (mở phân phòn
 
 ### 4.14. Phát hành hóa đơn
 
+**Kỳ thu học kỳ (05/11/2026):** response danh sách và chi tiết hóa đơn của ROOM_FEE trả kèm tên/loại/năm học từ `semesterId` đã liên kết; ví dụ `{ "semesterId": 7, "semesterName": "Học kỳ 1", "semesterType": "HK1", "academicYear": "2026-2027", "billingMonth": null }`. Với UTILITY, ba field bổ sung là null, kỳ thu vẫn lấy từ `billingMonth`. Metadata chỉ được bổ sung sau khi đã lọc quyền và phân trang hóa đơn, không đòi thêm SEMESTER_READ của người xem; đọc nhãn các học kỳ trên cùng trang trong một lần. Không đổi payload lưu hóa đơn, điều kiện phát hành hoặc dữ liệu đã lưu.
+
+Giao diện dùng cột **Kỳ thu**: phí phòng hiện loại học kỳ và năm học (`HK1 · 2026-2027`, `Hè · 2026-2027`), điện nước hiện `Tháng 11/2026`. Chi tiết phí phòng hiện tên học kỳ đầy đủ và năm học; không có liên kết kỳ hiện `Thiếu thông tin kỳ thu`; có semesterId nhưng chưa nhận đủ metadata hiện `Học kỳ (ID: …)` theo đúng ID đã liên kết, cần build/chạy backend mới để hiện tên kỳ và năm học. Giao diện quản lý và sinh viên đều dùng metadata trong response hóa đơn, không gọi API danh mục để bù thông tin và không yêu cầu thêm SEMESTER_READ. Không đoán học kỳ từ ngày phát hành. Áp dụng cho cổng quản lý và sinh viên.
+
 Hai endpoint đã triển khai, đều yêu cầu quyền INVOICE_CREATE:
 
 - POST /api/invoices/issue-room-fee nhận { "semesterId": 7 }.
@@ -994,6 +998,8 @@ Response chung:
 Đối tượng đã có hóa đơn hoặc phòng thiếu chỉ số được bỏ qua. Một request là một transaction theo SRS UC-21; lỗi không dự kiến rollback cả request. Phí phòng khóa student_profile theo ID tăng dần rồi đọc lại phân phòng; điện nước khóa các phòng theo ID tăng dần, sau đó khóa chỉ số. Hai request phát hành đồng thời được tuần tự hóa trước kiểm tra tồn tại và không sinh trùng. Mỗi request ghi INVOICE_BATCH_ISSUE cùng transaction, kèm loại, học kỳ/kỳ điện nước, đơn vị và kết quả.
 
 Thông báo phát hành tự động theo thiết kế FR-BIL-07 chưa nằm trong thay đổi sửa review này; không coi là đã triển khai.
+
+**Thao tác hóa đơn (05/11/2026):** response danh sách hóa đơn trả `allowedActions` là mảng (không còn null): chỉ có `edit` khi đủ INVOICE_UPDATE, `delete` khi đủ INVOICE_DELETE, hóa đơn UNPAID và nguồn MANUAL được server lưu trong `invoice.creation_source`. Nguồn ISSUED luôn khóa CRUD; lịch sử trạng thái không tự khóa hóa đơn MANUAL. Các thao tác chỉ được cấp cho Staff đúng phạm vi ghi hoặc Admin; quyền đọc tổng hợp không mở rộng quyền ghi. Chi tiết trả cùng các thao tác CRUD này và thêm `confirm-payment` nếu UNPAID, có INVOICE_UPDATE và đúng phạm vi ghi, kể cả hóa đơn đã phát hành có chi tiết/lịch sử. Sinh viên, hóa đơn PAID hoặc bản ghi ngoài phạm vi ghi trả mảng rỗng. Trạng thái ghi được tra cứu gộp cho các ID trên trang đã lọc quyền/phân trang; không gọi từng ID và không nhận nguồn tạo do client tự khai. Giao diện dùng `allowedActions` để hiện Sửa/Xóa ở danh sách/chi tiết; máy chủ tiếp tục khóa và kiểm tra lại khi lưu/xóa.
 
 ### 4.15. Xác nhận thanh toán
 
@@ -1282,7 +1288,7 @@ Tên hành động = đoạn cuối URL. Policy ở backend (SAD 4.3) cài đún
 | | IN_PROGRESS | | | `add-note`, `resolve` |
 | | RESOLVED | `accept`, `reopen` (người tạo) | `accept`, `reopen` (ticket do Staff tạo, hoặc sinh viên tạo đã trả phòng) | |
 | | CLOSED | | `conclude` (ticket phòng, chưa kết luận) | |
-| Hóa đơn | UNPAID | | `confirm-payment`, `add-adjustment` (chưa phát hành, xem mục 3.6) | |
+| Hóa đơn | UNPAID | Staff đúng đơn vị / Admin, đủ quyền từng thao tác | `edit`, `delete` chỉ khi MANUAL + UNPAID; `confirm-payment` chỉ trong chi tiết. `add-adjustment` chưa phát hành (mục 3.6) | Nguồn ISSUED khóa CRUD, không khóa xác nhận thu tiền khi còn UNPAID |
 | Phiếu gửi đồ | chưa nhận lại | | `return-storage` | |
 
 *Ghi chú cho yêu cầu chuyển phòng:* Chỉ khi ở trạng thái `PENDING` mới có hành động. Sinh viên chủ yêu cầu có `cancel` (chỉ khi có quyền `ROOM_TRANSFER_DELETE`). Staff cùng đơn vị của giường hiện tại và ADMIN có `approve`, `reject` (chỉ khi có quyền `ROOM_TRANSFER_APPROVE`). Danh sách `allowedActions` trong chi tiết yêu cầu chuyển phòng luôn được lọc theo quyền thực tế của người xem (`guard.hasPermission(...)`), giúp giao diện chỉ hiển thị đúng các nút bấm người dùng được phép thực thi.

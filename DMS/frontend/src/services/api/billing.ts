@@ -26,6 +26,9 @@ export interface InvoiceDetail {
   type: (typeof InvoiceType)[keyof typeof InvoiceType]
   studentId: number | null
   semesterId: number | null
+  semesterName: string | null
+  semesterType: string | null
+  academicYear: string | null
   roomId: number | null
   billingMonth: string | null
   totalAmount: number
@@ -33,7 +36,7 @@ export interface InvoiceDetail {
   status: (typeof InvoiceStatus)[keyof typeof InvoiceStatus]
   paidAt: string | null
   items: InvoiceItem[] | null
-  allowedActions: string[] | null
+  allowedActions: string[]
 }
 
 export interface IssueRoomFeeRequest {
