@@ -26,6 +26,8 @@ interface Props<T extends object> {
   /** Bật/tắt cột STT trên desktop (mặc định bật). */
   showStt?: boolean
   scroll?: TableProps<T>['scroll']
+  /** Chọn nhiều dòng trên desktop (xóa hàng loạt); mobile dùng thao tác từng thẻ. */
+  rowSelection?: TableProps<T>['rowSelection']
 }
 
 function pick(record: unknown, dataIndex: unknown): unknown {
@@ -52,6 +54,7 @@ export default function ResponsiveTable<T extends object>({
   renderCard,
   showStt = true,
   scroll,
+  rowSelection,
 }: Props<T>) {
   const isMobile = useIsMobile()
 
@@ -64,6 +67,7 @@ export default function ResponsiveTable<T extends object>({
         loading={loading}
         pagination={pagination}
         showStt={showStt}
+        rowSelection={rowSelection}
         locale={{
           emptyText: (
             <EmptyState title={emptyTitle} description={emptyDescription} />

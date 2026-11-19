@@ -1,12 +1,16 @@
 package vn.edu.tlu.dms.room.service.impl;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Catalog;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Facility;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
@@ -29,7 +33,7 @@ import java.util.Set;
 @Service
 @Transactional(readOnly = true)
 public class FloorServiceImpl implements FloorService {
-    private static final String SELECT = "SELECT f.id,f.building_id,f.floor,f.name,f.active,b.name AS building_name,b.code AS building_code,b.management_unit_id FROM building_floor f JOIN building b ON b.id=f.building_id";
+    private static final String SELECT = "SELECT f.id,f.building_id,f.floor,f.name,f.active,f.gender,f.shared_bathroom,f.common_room,f.note,(SELECT COUNT(r.id) FROM room r WHERE r.building_id=f.building_id AND r.floor=f.floor) AS room_count,b.name AS building_name,b.code AS building_code,b.management_unit_id FROM building_floor f JOIN building b ON b.id=f.building_id";
     private final JdbcTemplate jdbc;
     private final SqlPage queries;
     private final CurrentUser current;
@@ -100,16 +104,44 @@ public class FloorServiceImpl implements FloorService {
                 || (input.floor() != null && !Objects.equals(input.floor(), floor)))) {
             throw BusinessException.invalid(ApiField.BUILDING_ID, ValidationMessage.ROOM_BUILDING_IMMUTABLE);
         }
-        var building = queries.one("SELECT management_unit_id FROM building WHERE id=? FOR SHARE", buildingId);
+        var building = queries.one(
+                "SELECT management_unit_id,floor_count,has_ground_floor,gender_policy FROM building"
+                        + " WHERE id=? FOR SHARE",
+                buildingId);
         guard.requireUnit(((Number) building.get("managementUnitId")).longValue());
+        int floorCount = ((Number) building.get("floorCount")).intValue();
+        if (creating && (floor > floorCount || floor == 0 && !Boolean.TRUE.equals(building.get("hasGroundFloor")))) {
+            // Tầng phải nằm trong quy mô tòa đã khai: 1..số tầng, tầng 0 chỉ khi tòa có tầng trệt.
+            throw new BusinessException(ErrorCode.FLOOR_OUT_OF_RANGE, HttpStatus.BAD_REQUEST);
+        }
         String name = input.name() != null ? input.name().trim() : creating ? null : (String) before.get(ApiField.NAME);
         if (name == null || name.isBlank()) throw BusinessException.invalid(ApiField.NAME, ValidationMessage.NOT_BLANK);
         boolean active = input.active() != null ? input.active() : creating || Boolean.TRUE.equals(before.get(ApiField.ACTIVE));
+        String gender = input.gender() != null ? emptyToNull(input.gender()) : creating ? null : (String) before.get(ApiField.GENDER);
+        String policy = (String) building.get("genderPolicy");
+        if (gender != null && !Facility.GENDER_MIXED.equals(policy) && !gender.equals(policy)) {
+            throw BusinessException.conflict(ErrorCode.GENDER_MISMATCH);
+        }
+        if (gender != null && !creating && Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM room WHERE building_id=? AND floor=? AND gender<>?)",
+                Boolean.class, buildingId, floor, gender))) {
+            throw BusinessException.conflict(ErrorCode.GENDER_MISMATCH);
+        }
+        boolean sharedBathroom = input.sharedBathroom() != null ? input.sharedBathroom()
+                : !creating && Boolean.TRUE.equals(before.get("sharedBathroom"));
+        boolean commonRoom = input.commonRoom() != null ? input.commonRoom()
+                : !creating && Boolean.TRUE.equals(before.get("commonRoom"));
+        String note = input.note() != null ? emptyToNull(input.note()) : creating ? null : (String) before.get(ApiField.NOTE);
         Long id = input.id();
         if (creating) {
-            id = jdbc.queryForObject("INSERT INTO building_floor(building_id,floor,name,active) VALUES (?,?,?,?) RETURNING id", Long.class, buildingId, floor, name, active);
+            id = jdbc.queryForObject(
+                    "INSERT INTO building_floor(building_id,floor,name,active,gender,shared_bathroom,common_room,note)"
+                            + " VALUES (?,?,?,?,?,?,?,?) RETURNING id",
+                    Long.class, buildingId, floor, name, active, gender, sharedBathroom, commonRoom, note);
         } else {
-            jdbc.update("UPDATE building_floor SET name=?,active=? WHERE id=?", name, active, id);
+            jdbc.update(
+                    "UPDATE building_floor SET name=?,active=?,gender=?,shared_bathroom=?,common_room=?,note=? WHERE id=?",
+                    name, active, gender, sharedBathroom, commonRoom, note, id);
         }
         var after = accessible(id, false);
         audit.record(current.get().id(), creating ? AuditAction.CATALOG_CREATE : AuditAction.CATALOG_UPDATE,
@@ -143,5 +175,11 @@ public class FloorServiceImpl implements FloorService {
         var row = queries.one(SELECT + " WHERE f.id=?" + (lock ? " FOR UPDATE OF f" : ""), id);
         guard.requireReadableUnit(((Number) row.get("managementUnitId")).longValue());
         return row;
+    }
+
+    /** Chuỗi rỗng xóa trường tùy chọn; chuỗi có nội dung được cắt khoảng trắng. */
+    private static String emptyToNull(String value) {
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

@@ -1,6 +1,6 @@
 # Thiết kế cơ sở dữ liệu — DMS
 
-> **Phiên bản 0.15**, 05/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.17**, 19/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.17 (mục 4, 5, 10), `he-thong-quan-ly-ky-tuc-xa-mini.md`, `DMS-UI-UX-Design.md`
 > DDL bảng nghiệp vụ hiện tại: [`DB-DMS-schema.sql`](DB-DMS-schema.sql), gồm `security_version`, danh tính Keycloak, ma trận quyền động V5, quyền V6, ghi chú xác minh diện ưu tiên V7 và sở thích giao diện V8; kết quả kiểm chứng các bản trước ở mục 9. Bảng Spring Session có migration riêng V2.
 > Trạng thái: **đã chốt Q-DB-01..10** theo thẩm định của nhóm (mục 8). Ghi chú cho tầng JPA ở mục 10.
@@ -9,6 +9,8 @@
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.17 | 19/11/2026 | Flyway V18 bổ sung trường nghiệp vụ cho danh mục (trường, khoa, khóa, quê quán, năm học, học kỳ, tiện nghi, hạng mục sửa chữa, diện ưu tiên, vị trí kho): trường chủ quản duy nhất, cấp hành chính hai cấp, khoảng thời gian năm học không chồng lấn, mã học kỳ sinh tự động; không đổi V1–V17. |
+| 0.16 | 19/11/2026 | Flyway V16–V17 bổ sung trường nghiệp vụ đầy đủ cho đơn vị, tòa, tầng, loại phòng, phòng, giường (liên hệ, quy mô, đối tượng giới tính, giờ mở cửa, quy cách loại phòng, số công tơ/đồng hồ, vị trí giường); backfill số tầng/đối tượng tòa và mã loại phòng, không đổi V1–V15. |
 | 0.15 | 05/11/2026 | Flyway V15 bổ sung `invoice.creation_source` MANUAL/ISSUED, server quyết định nguồn tạo; backfill MANUAL chỉ cho bản có audit CRUD_CREATE đúng ID và chưa có dòng tài chính, bản không xác định giữ ISSUED. CRUD theo nguồn và trạng thái, giữ audit/lịch sử và khóa ngoại. |
 | 0.14 | 04/11/2026 | Flyway V14 thêm trạng thái `CANCELLED` cho `summer_choice` (sinh viên rút lựa chọn đang chờ thay cho xóa cứng; bản CANCELLED/REJECTED được mở lại về PENDING, giữ `UNIQUE(contract_id, semester_id)`). |
 | 0.13 | 04/11/2026 | Flyway V10–V13 chuẩn hóa danh mục, quan hệ hồ sơ, tầng theo tòa, vị trí kho và tiện nghi nhiều lựa chọn; giữ dữ liệu cũ bằng backfill trước khi bỏ các cột nhãn dư thừa. |
@@ -201,10 +203,10 @@ Mật khẩu chỉ lưu hash BCrypt; mật khẩu tạm trả một lần, khôn
 
 | Bảng | Mục đích | Ràng buộc chính | Truy vết |
 |---|---|---|---|
-| `building` | Tòa, thuộc một đơn vị, có **mức cọc** | `deposit_amount > 0` | FR-ROOM-01 |
-| `room_type` | Số giường, **giá gốc HK chính và hè** | Nơi duy nhất lưu giá gốc. Ràng buộc nghiệp vụ: không cho phép cập nhật `bed_count` khi loại phòng đã được gán cho ít nhất một phòng đang tồn tại (trả 409 `RESOURCE_IN_USE`) nhằm bảo toàn số giường vật lý và công suất | FR-ROOM-02 |
-| `room` | Phòng; trạng thái vận hành; **trưởng phòng** | `UNIQUE(building_id, code)`; một sinh viên làm trưởng tối đa một phòng | FR-ROOM-03, 05, 09 |
-| `bed` | Giường; `ACTIVE` / `BROKEN` / `RETIRED` | `RETIRED` thay cho xóa khi bớt giường (FR-ROOM-04, 06) | FR-ROOM-04..06 |
+| `building` | Tòa, thuộc một đơn vị, có **mức cọc**, số tầng, đối tượng ở (M/F/MIXED), cán bộ quản lý, giờ mở/đóng cửa | `deposit_amount > 0`; `floor_count` 1–30; `gender_policy` M/F/MIXED; năm đưa vào sử dụng ≥ 1950 | FR-ROOM-01 |
+| `room_type` | Mã loại (duy nhất), số giường, kiểu giường (BUNK/SINGLE), khép kín/ban công/bếp, **giá gốc HK chính và hè** | Nơi duy nhất lưu giá gốc. Ràng buộc nghiệp vụ: không cho phép cập nhật `bed_count` khi loại phòng đã được gán cho ít nhất một phòng đang tồn tại (trả 409 `RESOURCE_IN_USE`) nhằm bảo toàn số giường vật lý và công suất | FR-ROOM-02 |
+| `room` | Phòng; tên hiển thị, diện tích, hướng, số công tơ điện/đồng hồ nước, lý do trạng thái; trạng thái vận hành; **trưởng phòng** | `UNIQUE(building_id, code)`; số công tơ/đồng hồ duy nhất khi có; một sinh viên làm trưởng tối đa một phòng | FR-ROOM-03, 05, 09 |
+| `bed` | Giường; vị trí UPPER/LOWER/SINGLE, mã tài sản; `ACTIVE` / `BROKEN` / `RETIRED` | `RETIRED` thay cho xóa khi bớt giường (FR-ROOM-04, 06) | FR-ROOM-04..06 |
 | `semester` | HK1, HK2, Hè | `UNIQUE(academic_year, type)`; **không chồng thời gian** (`EXCLUDE`) | FR-ROOM-11 |
 
 ### 3.3. Đăng ký
@@ -497,3 +499,37 @@ View v_deposit_balance giữ nguyên phạm vi ACTIVE/EXPIRED/TERMINATED. API da
 `invoice.creation_source` là VARCHAR(10), NOT NULL, mặc định ISSUED và có CHECK MANUAL/ISSUED. Luồng CRUD gán MANUAL, luồng phát hành gán ISSUED; client không được gửi hoặc đổi nguồn. Hóa đơn MANUAL + UNPAID được sửa tổng tiền/hạn đóng hoặc xóa theo quyền/phạm vi, lịch sử trạng thái tự nó không khóa thao tác. Ngày hạn đóng cũ được giữ nguyên khi sửa tổng tiền; chỉ kiểm tra không ở quá khứ khi tạo hoặc đổi ngày. Hóa đơn ISSUED hoặc PAID khóa CRUD. Không xóa audit/lịch sử và không bỏ các tham chiếu tài chính để cưỡng ép xóa.
 
 Backfill chỉ phân loại MANUAL khi có audit INVOICE/CRUD_CREATE đúng ID và không có invoice_item; nguồn thiếu bằng chứng giữ ISSUED để tránh mở quyền sửa hóa đơn đã phát hành. Migration không đổi số tiền, kỳ thu, trạng thái thanh toán hoặc xóa dữ liệu. Dữ liệu tạo tay bằng API hiện có có audit để nhận diện; dữ liệu SQL cũ không có bằng chứng không tự nhận là tạo tay.
+
+### Trường cơ sở vật chất đầy đủ — V16 (19/11/2026)
+
+`V16__facility_full_fields.sql` chỉ thêm cột, không đổi dữ liệu nghiệp vụ hiện có. Căn cứ đặc tả `Docs/05 Reviews/dac-ta-truong-nghiep-vu-day-du.md` Phần II.
+
+| Bảng | Cột mới | Ràng buộc / backfill |
+|---|---|---|
+| `management_unit` | `short_name`, `address`, `hotline`, `email`, `head_user_id` (FK `app_user`), `working_hours`, `active` (mặc định TRUE), `note` | Trưởng đơn vị phải là STAFF cùng đơn vị (Service, lỗi `USER_UNIT_MISMATCH`). |
+| `building` | `floor_count`, `has_ground_floor`, `gender_policy`, `address`, `commissioned_year`, `floor_area_m2`, `manager_user_id` (FK), `hotline`, `open_time`, `close_time`, `note` | Backfill `floor_count` = tầng lớn nhất đang dùng (tối thiểu 1), `gender_policy` = giới tính duy nhất của các phòng hoặc MIXED; sau đó mặc định 1/MIXED và NOT NULL. CHECK `ck_building_floor_count`, `ck_building_gender_policy`, `ck_building_commissioned_year`, `ck_building_floor_area`. |
+| `building_floor` | `gender` (M/F, null = không phân), `shared_bathroom`, `common_room`, `note` | Giới tính tầng khớp đối tượng tòa và phòng hiện có (Service, `GENDER_MISMATCH`). Tạo tầng ngoài 1..`floor_count` (tầng 0 chỉ khi `has_ground_floor`) trả `FLOOR_OUT_OF_RANGE`. |
+| `room_type` | `code`, `private_bathroom`, `has_balcony`, `bed_style` (BUNK/SINGLE), `has_kitchen`, `description` | Sequence `room_type_code_seq` sinh mã `LP001…` cho bản cũ và làm mặc định; `ux_room_type_code` → `DUPLICATE_VALUE`. Không đổi mã khi đã có phòng dùng loại (`RESOURCE_IN_USE`). |
+| `room` | `display_name`, `area_m2`, `orientation`, `electric_meter_no`, `water_meter_no`, `commissioned_on`, `status_reason`, `note` | Partial unique `ux_room_electric_meter`, `ux_room_water_meter` → `DUPLICATE_VALUE`. `status_reason` ghi lý do khi đổi trạng thái. |
+| `bed` | `position` (UPPER/LOWER/SINGLE), `asset_code`, `note` | — |
+
+`V17__building_ground_floor_backfill.sql` bật `has_ground_floor` cho tòa đã có tầng 0 trong `building_floor` hoặc `room` trước V16, để kiểm tra quy mô tầng không chặn dữ liệu đang dùng.
+
+Số phòng, sức chứa và số đang ở của tòa vẫn tính từ `v_room_occupancy`, không lưu. Giảm `floor_count` dưới tầng đang dùng trả `FLOOR_IN_USE`; đổi đơn vị của tòa khi còn giường đang giữ/ở trả `ROOM_OCCUPIED`.
+
+### Trường nghiệp vụ cho danh mục — V18 (19/11/2026)
+
+`V18__catalog_full_fields.sql` chỉ thêm cột, ràng buộc và backfill; căn cứ đặc tả `Docs/05 Reviews/dac-ta-truong-nghiep-vu-day-du.md` mục 8–19. Cột bắt buộc theo nghiệp vụ nhưng không suy ra được từ dữ liệu cũ (năm nhập học của khóa, ngày của năm học, mô tả diện ưu tiên) để nullable ở CSDL và được Service kiểm tra khi tạo.
+
+| Bảng | Cột mới | Ràng buộc / backfill |
+|---|---|---|
+| `school` | `short_name`, `moet_code`, `address`, `is_home_school` (mặc định FALSE), `note` | Partial unique `ux_school_home_school` — tối đa một trường chủ quản → `DUPLICATE_VALUE`. |
+| `faculty` | `short_name`, `phone`, `email`, `note` | Định dạng điện thoại/email kiểm tra ở DTO. |
+| `student_cohort` | `enrollment_year`, `expected_graduation_year`, `note` | CHECK `ck_cohort_enrollment_year` (2000–2100), `ck_cohort_graduation_year` (tốt nghiệp sau nhập học). |
+| `hometown` | `admin_level` (PROVINCE/COMMUNE, mặc định PROVINCE), `gso_code`, `priority_area` (KV1/KV2NT/KV2/KV3), `hardship_area`, `note` | Backfill COMMUNE cho bản có `parent_id`. CHECK `ck_hometown_admin_level`, `ck_hometown_commune_parent` (xã phải có cấp cha), `ck_hometown_priority_area`. Service bắt buộc tỉnh không có cấp cha và cấp cha của xã là tỉnh. |
+| `academic_year` | `start_date`, `end_date`, `note` | Backfill 01/09 năm đầu – 31/08 năm sau theo mã `YYYY-YYYY`. CHECK `ck_academic_year_dates`, `ck_academic_year_start_year`; `ex_academic_year_period` (EXCLUDE gist trên `daterange`, chỉ khi đủ hai ngày) → `ACADEMIC_YEAR_OVERLAP`. |
+| `semester` | `code` (cột sinh `HK1/HK2/HE` + `-` + năm đầu), `room_fee_due_date`, `note` | Mã sinh tự động, không ghi từ ứng dụng. Học kỳ tạo/sửa ngày phải nằm trong năm học đã có ngày; hạn nộp tiền phòng không trước ngày bắt đầu (Service). Năm học vẫn là khóa ngoại theo mã từ V10, không thêm `academic_year_id`. |
+| `amenity` | `applies_to` (ROOM/BUILDING/BOTH, mặc định ROOM), `icon`, `description`, `note` | CHECK `ck_amenity_applies_to`. |
+| `maintenance_category` | `default_severity`, `sla_hours`, `skill`, `description`, `note` | CHECK mức độ LOW/MEDIUM/HIGH, SLA 1–720 giờ, kỹ năng ELECTRIC/PLUMBING/CARPENTRY/HVAC/NETWORK/GENERAL. |
+| `priority_category` | `description`, `evidence_required`, `evidence_mandatory`, `legal_basis`, `sort_order`, `auto_rule`, `note` | Backfill `description` = `name`. CHECK `ck_priority_category_sort_order` (≥ 0), `ck_priority_category_auto_rule`. |
+| `storage_location` | `building_id` (FK `building`), `place`, `capacity`, `keeper_user_id` (FK `app_user`), `note` | CHECK `ck_storage_location_capacity` (> 0). Tòa và cán bộ phụ trách phải thuộc cùng đơn vị (Service). Số kiện đang giữ tính từ `storage_record` chưa trả, không lưu. |

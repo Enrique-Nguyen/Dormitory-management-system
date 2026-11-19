@@ -66,6 +66,16 @@ public class RoomReferenceServiceImpl implements RoomReferenceService {
     }
 
     @Override
+    public Map<Long, String> getBuildingNames(Set<Long> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, String> names = new LinkedHashMap<>();
+        buildings.findAllById(ids).forEach(building -> names.put(building.getId(), building.getName()));
+        return Map.copyOf(names);
+    }
+
+    @Override
     public Long getBuildingDepositAmount(Long id) {
         return buildings.findById(id).orElseThrow(BusinessException::notFound).getDepositAmount();
     }

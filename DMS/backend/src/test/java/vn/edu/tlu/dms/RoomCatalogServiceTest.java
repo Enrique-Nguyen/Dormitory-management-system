@@ -84,7 +84,7 @@ class RoomCatalogServiceTest {
     @Test
     void createValidatesAndDeduplicatesSelectedAmenitiesAndReturnsDisplayNames() {
         var response = roomTypeService.saveOrUpdate(new RoomTypeRequest(
-                "Room", (short) 4, 100L, 50L, null, List.of(2L, 1L, 2L), true));
+                "LP-ROOM", "Room", (short) 4, 100L, 50L, null, List.of(2L, 1L, 2L), true));
 
         verify(guard).requirePermission(Permission.ROOM_TYPE_CREATE);
         verify(catalogs).requireActive(Catalog.AMENITIES, 1L);

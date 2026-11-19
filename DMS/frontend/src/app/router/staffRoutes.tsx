@@ -1,22 +1,24 @@
 import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
-import CrudPage from '../../pages/CrudPage'
-import CrudTabsPage from '../../pages/CrudTabsPage'
-import NotificationInboxPage from '../../pages/NotificationInboxPage'
-import RoomDetailPage from '../../pages/staff/RoomDetailPage'
-import StaffApplicationDetailPage from '../../pages/staff/ApplicationDetailPage'
-import StaffContractDetailPage from '../../pages/staff/ContractDetailPage'
-import StaffExtensionDetailPage from '../../pages/staff/ExtensionDetailPage'
-import StaffHomePage from '../../pages/staff/StaffHomePage'
-import StaffMaintenanceDetailPage from '../../pages/staff/MaintenanceDetailPage'
-import MoveOutPage from '../../pages/staff/MoveOutPage'
-import PendingItemsPage from '../../pages/staff/PendingItemsPage'
-import StaffSummerChoiceDetailPage from '../../pages/staff/SummerChoiceDetailPage'
-import StoragePage from '../../pages/staff/StoragePage'
-import TransferReviewPage from '../../pages/staff/TransferReviewPage'
 import RequireRole from '../guards/RequireRole'
 import HomeRedirect from '../guards/HomeRedirect'
 import StaffLayout from '../layouts/StaffLayout'
+import { lazyPage } from './lazyPage'
+
+const CrudPage = lazyPage(() => import('../../pages/CrudPage'))
+const CrudTabsPage = lazyPage(() => import('../../pages/CrudTabsPage'))
+const NotificationInboxPage = lazyPage(() => import('../../pages/NotificationInboxPage'))
+const RoomDetailPage = lazyPage(() => import('../../pages/staff/RoomDetailPage'))
+const StaffApplicationDetailPage = lazyPage(() => import('../../pages/staff/ApplicationDetailPage'))
+const StaffContractDetailPage = lazyPage(() => import('../../pages/staff/ContractDetailPage'))
+const StaffExtensionDetailPage = lazyPage(() => import('../../pages/staff/ExtensionDetailPage'))
+const StaffHomePage = lazyPage(() => import('../../pages/staff/StaffHomePage'))
+const StaffMaintenanceDetailPage = lazyPage(() => import('../../pages/staff/MaintenanceDetailPage'))
+const MoveOutPage = lazyPage(() => import('../../pages/staff/MoveOutPage'))
+const PendingItemsPage = lazyPage(() => import('../../pages/staff/PendingItemsPage'))
+const StaffSummerChoiceDetailPage = lazyPage(() => import('../../pages/staff/SummerChoiceDetailPage'))
+const StoragePage = lazyPage(() => import('../../pages/staff/StoragePage'))
+const TransferReviewPage = lazyPage(() => import('../../pages/staff/TransferReviewPage'))
 
 // UI mục 26. Thay `element` bằng trang thật của bạn (pages/staff/...). Phụ trách theo UI 27.3.
 export const staffRoutes: RouteObject = {

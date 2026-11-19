@@ -1,5 +1,6 @@
 package vn.edu.tlu.dms.account.service.impl;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -7,6 +8,8 @@ import vn.edu.tlu.dms.account.repository.AppUserRepository;
 import vn.edu.tlu.dms.account.repository.ManagementUnitRepository;
 import vn.edu.tlu.dms.account.repository.StudentProfileRepository;
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 
 import java.util.Collection;
@@ -78,6 +81,32 @@ public class AccountReferenceServiceImpl implements AccountReferenceService {
                                                 u.getRole(),
                                                 u.getManagementUnitId(),
                                                 genders.get(u.getId()))));
+        return result;
+    }
+
+    @Override()
+    public void requireStaffOfUnit(Long userId, Long unitId) {
+        if (userId == null) {
+            return;
+        }
+        var user = users.findById(userId).orElseThrow(BusinessException::notFound);
+        if (!Role.STAFF.equals(user.getRole())
+                || unitId == null
+                || !unitId.equals(user.getManagementUnitId())) {
+            throw new BusinessException(ErrorCode.USER_UNIT_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override()
+    public Map<Long, String> unitNames(Collection<Long> ids) {
+        List<Long> wanted =
+                ids == null
+                        ? List.of()
+                        : ids.stream().filter(Objects::nonNull).distinct().toList();
+        var result = new HashMap<Long, String>();
+        if (!wanted.isEmpty()) {
+            units.findAllById(wanted).forEach(u -> result.put(u.getId(), u.getName()));
+        }
         return result;
     }
 }

@@ -83,12 +83,17 @@ class CatalogServiceTest {
 
     @Test
     void partialUpdatePreservesCodeNameAndFalse() {
-        var inactive = Map.<String, Object>of("id", 1L, "code", "ONE", "name", "One", "active", false);
+        var inactive = Map.<String, Object>of("id", 1L, "code", "ONE", "name", "One", "active", false,
+                "enrollment_year", (short) 2023, "note", "Ghi chú cũ");
         when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(inactive));
         service.saveOrUpdate(Catalog.COHORTS, input(1L, null, null, null, null));
-        verify(jdbc).update(eq("UPDATE student_cohort SET name=:name, active=:active WHERE id=:id"),
+        verify(jdbc).update(eq("UPDATE student_cohort SET name=:name, active=:active,"
+                        + " enrollment_year=:enrollment_year, expected_graduation_year=:expected_graduation_year,"
+                        + " note=:note WHERE id=:id"),
                 org.mockito.ArgumentMatchers.<SqlParameterSource>argThat(p -> Boolean.FALSE.equals(p.getValue("active"))
-                        && "One".equals(p.getValue("name"))));
+                        && "One".equals(p.getValue("name"))
+                        && Short.valueOf((short) 2023).equals(p.getValue("enrollment_year"))
+                        && "Ghi chú cũ".equals(p.getValue("note"))));
         verify(jdbc).queryForList("SELECT * FROM student_cohort WHERE id=:id FOR UPDATE", Map.of("id", 1L));
     }
 
@@ -268,6 +273,34 @@ class CatalogServiceTest {
                 .isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> service.searchByPage(Catalog.COHORTS,
                 new CatalogSearch(0, 10, null, null, null, null, 2L))).isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void rejectsFieldOfAnotherCatalogKind() {
+        var request = new CatalogRequest(null, "ONE", "One", null, null, null, null, null, null, null, null, null,
+                (short) 2024, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        assertThatThrownBy(() -> service.saveOrUpdate(Catalog.SCHOOLS, request))
+                .isInstanceOf(BusinessException.class);
+        verify(jdbc, never()).queryForObject(anyString(), any(SqlParameterSource.class), eq(Long.class));
+    }
+
+    @Test
+    void cohortRequiresGraduationAfterEnrollment() {
+        var request = new CatalogRequest(null, "K66", "Khóa 66", null, null, null, null, null, null, null, null, null,
+                (short) 2024, (short) 2024, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        assertThatThrownBy(() -> service.saveOrUpdate(Catalog.COHORTS, request))
+                .isInstanceOf(BusinessException.class);
+        verify(jdbc, never()).queryForObject(anyString(), any(SqlParameterSource.class), eq(Long.class));
+    }
+
+    @Test
+    void academicYearStartMustMatchCode() {
+        var request = new CatalogRequest(null, "2026-2027", "Năm học 2026-2027", null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, java.time.LocalDate.of(2025, 9, 1),
+                java.time.LocalDate.of(2026, 8, 31), null, null, null, null, null, null, null);
+        assertThatThrownBy(() -> service.saveOrUpdate(Catalog.ACADEMIC_YEARS, request))
+                .isInstanceOf(BusinessException.class);
+        verify(jdbc, never()).queryForObject(anyString(), any(SqlParameterSource.class), eq(Long.class));
     }
 
     private CatalogRequest input(Long id, String code, String name, Boolean active, Long parent) {

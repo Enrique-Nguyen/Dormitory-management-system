@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.account.service.ManagementUnitService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Action;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
@@ -24,6 +25,7 @@ import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.contract.api.StorageDtos;
 import vn.edu.tlu.dms.contract.api.StorageLocationDtos;
 import vn.edu.tlu.dms.contract.service.StorageLocationService;
+import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,14 +40,19 @@ public class StorageLocationServiceImpl implements StorageLocationService {
     private final CurrentUser current;
     private final AuditService audit;
     private final ManagementUnitService units;
+    private final AccountReferenceService accounts;
+    private final RoomReferenceService rooms;
 
     public StorageLocationServiceImpl(NamedParameterJdbcTemplate jdbc, ScopeGuard guard,
-            CurrentUser current, AuditService audit, ManagementUnitService units) {
+            CurrentUser current, AuditService audit, ManagementUnitService units,
+            AccountReferenceService accounts, RoomReferenceService rooms) {
         this.jdbc = jdbc;
         this.guard = guard;
         this.current = current;
         this.audit = audit;
         this.units = units;
+        this.accounts = accounts;
+        this.rooms = rooms;
     }
 
     @Override
@@ -122,15 +129,34 @@ public class StorageLocationServiceImpl implements StorageLocationService {
         boolean active = input.active() != null ? input.active()
                 : creating || Boolean.TRUE.equals(before.get(ApiField.ACTIVE));
         if (creating) units.getById(unitId);
+        Long buildingId = input.buildingId() != null ? input.buildingId()
+                : creating ? null : (Long) longValue(before.get("building_id"));
+        if (input.buildingId() != null && !unitId.equals(rooms.getBuildingManagementUnitId(buildingId))) {
+            // Kho chỉ đặt ở tòa thuộc cùng đơn vị quản lý.
+            throw BusinessException.invalid(ApiField.BUILDING_ID, Catalog.INVALID_VALUE);
+        }
+        Long keeperId = input.keeperUserId() != null ? input.keeperUserId()
+                : creating ? null : (Long) longValue(before.get("keeper_user_id"));
+        if (input.keeperUserId() != null) {
+            accounts.requireStaffOfUnit(keeperId, unitId);
+        }
+        Integer capacity = input.capacity() != null ? input.capacity()
+                : creating ? null : (Integer) before.get("capacity");
         var args = new MapSqlParameterSource().addValue("unit", unitId).addValue("code", code)
-                .addValue("name", name).addValue("active", active).addValue("id", input.id());
+                .addValue("name", name).addValue("active", active).addValue("id", input.id())
+                .addValue("building", buildingId).addValue("keeper", keeperId).addValue("capacity", capacity)
+                .addValue("place", optionalText(input.place(), before, "place"))
+                .addValue("note", optionalText(input.note(), before, ApiField.NOTE));
         Long id;
         try {
             if (creating) {
-                id = jdbc.queryForObject("INSERT INTO storage_location(management_unit_id,code,name,active)"
-                        + " VALUES(:unit,:code,:name,:active) RETURNING id", args, Long.class);
+                id = jdbc.queryForObject("INSERT INTO storage_location(management_unit_id,code,name,active,"
+                        + "building_id,place,capacity,keeper_user_id,note)"
+                        + " VALUES(:unit,:code,:name,:active,:building,:place,:capacity,:keeper,:note) RETURNING id",
+                        args, Long.class);
             } else {
-                jdbc.update("UPDATE storage_location SET name=:name,active=:active WHERE id=:id", args);
+                jdbc.update("UPDATE storage_location SET name=:name,active=:active,building_id=:building,"
+                        + "place=:place,capacity=:capacity,keeper_user_id=:keeper,note=:note WHERE id=:id", args);
                 id = input.id();
             }
         } catch (DuplicateKeyException ex) {
@@ -192,9 +218,37 @@ public class StorageLocationServiceImpl implements StorageLocationService {
         var actions = new ArrayList<String>();
         if (writable && guard.hasPermission(Permission.CATALOG_UPDATE)) actions.add(Action.UPDATE);
         if (writable && guard.hasPermission(Permission.CATALOG_DELETE)) actions.add(Action.DELETE);
-        return new StorageLocationDtos.Location(((Number) row.get(ApiField.ID)).longValue(), unit(row),
+        Long id = ((Number) row.get(ApiField.ID)).longValue();
+        Long buildingId = longValue(row.get("building_id"));
+        Long keeperId = longValue(row.get("keeper_user_id"));
+        // Số kiện đang giữ là giá trị suy diễn từ phiếu chưa trả, không lưu vào danh mục.
+        Long held = jdbc.queryForObject("SELECT COALESCE(SUM(package_count),0) FROM storage_record"
+                + " WHERE location_id=:id AND returned_at IS NULL", Map.of("id", id), Long.class);
+        return new StorageLocationDtos.Location(id, unit(row),
                 (String) row.get(ApiField.CODE), (String) row.get(ApiField.NAME),
-                Boolean.TRUE.equals(row.get(ApiField.ACTIVE)), List.copyOf(actions));
+                Boolean.TRUE.equals(row.get(ApiField.ACTIVE)), List.copyOf(actions),
+                accounts.unitNames(List.of(unit(row))).get(unit(row)),
+                buildingId,
+                buildingId == null ? null : rooms.getBuildingNames(Set.of(buildingId)).get(buildingId),
+                (String) row.get("place"),
+                row.get("capacity") == null ? null : ((Number) row.get("capacity")).intValue(),
+                keeperId,
+                keeperId == null ? null : accounts.user(keeperId).fullName(),
+                (String) row.get(ApiField.NOTE),
+                held == null ? 0 : held);
+    }
+
+    private static Long longValue(Object value) {
+        return value == null ? null : ((Number) value).longValue();
+    }
+
+    /** Null giữ giá trị cũ, chuỗi rỗng xóa trường văn bản tùy chọn. */
+    private static String optionalText(String input, Map<String, Object> before, String column) {
+        if (input == null) {
+            return before == null ? null : (String) before.get(column);
+        }
+        String trimmed = input.strip();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private static void positive(Long id, String field) {
@@ -216,7 +270,7 @@ public class StorageLocationServiceImpl implements StorageLocationService {
         for (String value : input) {
             if (value == null) throw BusinessException.invalid(ApiField.SORT, ValidationMessage.SORT_REQUIRED);
             String[] parts = value.split(",", -1);
-            if (parts.length > 2 || !Set.of("id", "code", "name", "active", "managementUnitId").contains(parts[0])) {
+            if (parts.length > 2 || !Set.of("id", "code", "name", "active", "managementUnitId", "capacity").contains(parts[0])) {
                 throw BusinessException.invalid(ApiField.SORT, ValidationMessage.SORT_FIELD_INVALID);
             }
             String direction = parts.length == 1 ? "asc" : parts[1];

@@ -161,6 +161,12 @@ class CatalogApiIntegrationTest {
     void floorZeroIsSelectableAndUsedFloorsCannotBeDeleted() throws Exception {
         Long unit = jdbc.queryForObject("SELECT id FROM management_unit WHERE code='K1'", Long.class);
         Long building = jdbc.queryForObject("INSERT INTO building(management_unit_id,code,name,deposit_amount) VALUES (?,?,'Test building',1000) RETURNING id", Long.class, unit, suffix);
+        // Tòa chưa khai tầng trệt thì tầng 0 nằm ngoài quy mô (V16).
+        mvc.perform(post("/api/floors/save-or-update").with(admin())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsBytes(Map.of("buildingId", building, "floor", 0, "name", "Ground floor"))))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("errorCode").value("FLOOR_OUT_OF_RANGE"));
+        jdbc.update("UPDATE building SET has_ground_floor=TRUE WHERE id=?", building);
         String response = mvc.perform(post("/api/floors/save-or-update").with(admin())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsBytes(Map.of("buildingId", building, "floor", 0, "name", "Ground floor"))))

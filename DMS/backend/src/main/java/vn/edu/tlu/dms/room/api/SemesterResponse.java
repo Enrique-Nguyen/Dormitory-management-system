@@ -8,4 +8,7 @@ public record SemesterResponse(
         String academicYear,
         String type,
         LocalDate startDate,
-        LocalDate endDate) {}
+        LocalDate endDate,
+        String code,
+        LocalDate roomFeeDueDate,
+        String note) {}

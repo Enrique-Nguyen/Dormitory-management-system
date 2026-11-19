@@ -1,11 +1,13 @@
 import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
-import CrudPage from '../../pages/CrudPage'
-import NotificationInboxPage from '../../pages/NotificationInboxPage'
-import TaskDetailPage from '../../pages/technician/TaskDetailPage'
 import RequireRole from '../guards/RequireRole'
 import HomeRedirect from '../guards/HomeRedirect'
 import TechnicianLayout from '../layouts/TechnicianLayout'
+import { lazyPage } from './lazyPage'
+
+const CrudPage = lazyPage(() => import('../../pages/CrudPage'))
+const NotificationInboxPage = lazyPage(() => import('../../pages/NotificationInboxPage'))
+const TaskDetailPage = lazyPage(() => import('../../pages/technician/TaskDetailPage'))
 
 // UI mục 22, 26. `notifications` không có trong danh sách route mục 26, nhưng UI 4.3 đặt chuông thông báo ở header KTV.
 export const technicianRoutes: RouteObject = {

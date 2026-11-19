@@ -70,6 +70,10 @@ const messages: Record<string, (d: Details) => string> = {
   FILE_TOO_LARGE: (d) =>
     `File vượt quá ${d.maxMb ?? ''} MB. Vui lòng chọn file nhỏ hơn.`,
   DUPLICATE_VALUE: () => 'Giá trị này đã tồn tại. Vui lòng nhập giá trị khác.',
+  FLOOR_IN_USE: () => 'Không thể giảm số tầng: vẫn còn tầng hoặc phòng ở các tầng cao hơn.',
+  FLOOR_OUT_OF_RANGE: () => 'Số tầng nằm ngoài quy mô của tòa. Kiểm tra số tầng và tùy chọn tầng trệt của tòa.',
+  ACADEMIC_YEAR_OVERLAP: () => 'Khoảng thời gian của năm học bị trùng với một năm học khác.',
+  USER_UNIT_MISMATCH: () => 'Người phụ trách phải là nhân viên thuộc đúng đơn vị quản lý.',
   METHOD_NOT_ALLOWED: () =>
     'Thao tác không được hỗ trợ. Hãy tải lại trang rồi thử lại.',
   UNSUPPORTED_MEDIA_TYPE: () =>
@@ -116,7 +120,9 @@ const messages: Record<string, (d: Details) => string> = {
   BED_NOT_AVAILABLE: (d) =>
     `Giường ${d.bedCode ?? ''} hoặc phòng đang không hoạt động. Vui lòng chọn giường khác.`,
   GENDER_MISMATCH: (d) =>
-    `Phòng${d.roomCode ? ` ${String(d.roomCode)}` : ''} dành cho giới tính khác, không phù hợp với sinh viên. Chọn phòng khác.`,
+    d.roomCode
+      ? `Phòng ${String(d.roomCode)} dành cho giới tính khác, không phù hợp với sinh viên. Chọn phòng khác.`
+      : 'Giới tính không khớp với đối tượng của tòa, giới tính tầng hoặc các phòng hiện có.',
   STUDENT_ALREADY_ASSIGNED: () =>
     'Sinh viên đã có chỗ ở hoặc đang giữ chỗ. Tải lại trang để xem phân phòng hiện tại.',
   BED_UNIT_MISMATCH: () =>

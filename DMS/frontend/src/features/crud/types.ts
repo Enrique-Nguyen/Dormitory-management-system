@@ -5,7 +5,7 @@ export interface CrudField {
   name: string
   label: string
   kind?:
-    'text' | 'number' | 'date' | 'datetime' | 'textarea' | 'select' | 'boolean'
+    'text' | 'number' | 'date' | 'datetime' | 'time' | 'textarea' | 'select' | 'boolean'
   required?: boolean
   maxLength?: number
   min?: number

@@ -1,12 +1,14 @@
 import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
 import { Navigate } from 'react-router'
-import CrudPage from '../../pages/CrudPage'
-import RolePermissionsPage from '../../pages/admin/RolePermissionsPage'
-import StudentImportPage from '../../pages/admin/StudentImportPage'
 import RequireRole from '../guards/RequireRole'
 import AdminLayout from '../layouts/AdminLayout'
 import { staffRoutes } from './staffRoutes'
+import { lazyPage } from './lazyPage'
+
+const CrudPage = lazyPage(() => import('../../pages/CrudPage'))
+const RolePermissionsPage = lazyPage(() => import('../../pages/admin/RolePermissionsPage'))
+const StudentImportPage = lazyPage(() => import('../../pages/admin/StudentImportPage'))
 
 // UI mục 23, 26. Toàn bộ cổng Admin do TV1 phụ trách (UI 27.3).
 export const adminRoutes: RouteObject = {

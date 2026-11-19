@@ -184,6 +184,8 @@ export function getRecordFormValues(
         initial[field.name] = toLocalDateTime(val)
       } else if (field.kind === 'date') {
         initial[field.name] = toLocalDateString(val)
+      } else if (field.kind === 'time') {
+        initial[field.name] = String(val).slice(0, 5)
       }
     }
   }

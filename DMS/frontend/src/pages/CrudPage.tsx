@@ -23,6 +23,7 @@ import {
   Modal,
 } from '../components/ui/Surface'
 import Table from '../components/ui/DataTable'
+import ResponsiveTable from '../components/ui/ResponsiveTable'
 import {
   Action,
   Permission,
@@ -153,6 +154,11 @@ function renderColumnCell(
   if (column.key === 'status' && crudStatusEntities[resource])
     return <StatusBadge entity={crudStatusEntities[resource]} status={String(row.status)} />
   const raw = readValue(row, column.key)
+  // Cột khóa ngoại hiển thị tên tham chiếu đã khai trong registry, không hiện ID thô.
+  for (const key of crudReferenceLabels[column.key] ?? []) {
+    const label = readValue(row, key)
+    if (label != null && label !== '') return <span>{display(label)}</span>
+  }
 
   // Cột Mã: font-mono text-xs
   const isCode =
@@ -439,6 +445,8 @@ function renderCrudInput(field: CrudField, disabled?: boolean) {
       return <Input type="date" disabled={disabled} />
     case 'datetime':
       return <Input type="datetime-local" disabled={disabled} />
+    case 'time':
+      return <Input type="time" disabled={disabled} />
     case 'textarea':
       return (
         <TextArea
@@ -1387,7 +1395,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                   required: field.required,
                   whitespace:
                     field.required &&
-                    !['number', 'boolean', 'date', 'datetime'].includes(
+                    !['number', 'boolean', 'date', 'datetime', 'time'].includes(
                       field.kind ?? '',
                     ),
                   message: `Nhập ${field.label.toLowerCase()}`,
@@ -1625,10 +1633,10 @@ export default function CrudPage({ resource }: { resource: string }) {
             }
           />
         ) : (
-          <Table<CrudRecord>
+          <ResponsiveTable<CrudRecord>
             loading={isLoading}
             rowKey={(row) => String(row[idKey] ?? JSON.stringify(row))}
-            dataSource={rows}
+            data={rows}
             rowSelection={
               config.singleton || !canDelete
                 ? undefined
@@ -1637,18 +1645,8 @@ export default function CrudPage({ resource }: { resource: string }) {
                     onChange: (keys) => setSelectedRowKeys(keys),
                   }
             }
-            locale={
-              config.emptyTitle
-                ? {
-                    emptyText: (
-                      <EmptyState
-                        title={config.emptyTitle}
-                        description={config.emptyHint}
-                      />
-                    ),
-                  }
-                : undefined
-            }
+            emptyTitle={config.emptyTitle ?? 'Chưa có dữ liệu'}
+            emptyDescription={config.emptyHint}
             pagination={
               config.singleton
                 ? false

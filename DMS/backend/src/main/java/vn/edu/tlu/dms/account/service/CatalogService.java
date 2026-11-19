@@ -4,6 +4,7 @@ import vn.edu.tlu.dms.account.api.CatalogRequest;
 import vn.edu.tlu.dms.account.api.CatalogSearch;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 public interface CatalogService {
@@ -30,4 +31,10 @@ public interface CatalogService {
 
     /** Kiểm tra mã danh mục đang hoạt động cho các quan hệ khóa tự nhiên. */
     void requireActiveCode(String kind, String code);
+
+    /**
+     * Kiểm tra khoảng ngày học kỳ nằm trong khoảng ngày của năm học theo mã; năm học chưa khai ngày thì
+     * bỏ qua (dữ liệu trước V18).
+     */
+    void requireWithinAcademicYear(String academicYearCode, LocalDate startDate, LocalDate endDate);
 }

@@ -339,7 +339,7 @@ class CrudSearchFilterTest {
     @Test
     void managementUnitCodeIsExactAndCombinedWithKeyword() throws Exception {
         var repository = mock(ManagementUnitRepository.class);
-        var service = new ManagementUnitServiceImpl(repository, guard, current, audit);
+        var service = new ManagementUnitServiceImpl(repository, guard, current, audit, mock(vn.edu.tlu.dms.account.service.AccountReferenceService.class));
         List<String> predicates = pagePredicates(repository,
                 () -> service.searchByPage(uncheckedRequest("{\"code\":\" K1 \",\"q\":\"needle\",\"page\":1,\"size\":10}")));
 
@@ -352,7 +352,7 @@ class CrudSearchFilterTest {
     @Test
     void namesAndBuildingFiltersCombineWithScopeAndPaging() {
         var units = mock(ManagementUnitRepository.class);
-        var unitService = new ManagementUnitServiceImpl(units, guard, current, audit);
+        var unitService = new ManagementUnitServiceImpl(units, guard, current, audit, mock(vn.edu.tlu.dms.account.service.AccountReferenceService.class));
         assertThat(pagePredicates(units, () -> unitService.searchByPage(uncheckedRequest(
                 "{\"code\":\"K1\",\"name\":\" Unit \" ,\"page\":1,\"size\":10}"))))
                 .allSatisfy(p -> assertThat(p).contains("code=K1", "locate(lower(name),unit)>0"));
@@ -365,7 +365,8 @@ class CrudSearchFilterTest {
 
         var buildings = mock(vn.edu.tlu.dms.room.repository.BuildingRepository.class);
         var buildingService = new vn.edu.tlu.dms.room.service.impl.BuildingServiceImpl(
-                buildings, guard, current, audit, mock(vn.edu.tlu.dms.account.service.AccountReferenceService.class));
+                buildings, guard, current, audit, mock(vn.edu.tlu.dms.account.service.AccountReferenceService.class),
+                mock(org.springframework.jdbc.core.JdbcTemplate.class));
         when(current.get()).thenReturn(new Actor(10L, Role.STAFF, 7L, false, false));
         assertThat(pagePredicates(buildings, () -> buildingService.searchByPage(uncheckedRequest(
                 "{\"managementUnitId\":9,\"code\":\" Ab \" ,\"name\":\" Hall \" ,\"depositAmount\":0,\"page\":1,\"size\":10}"))))
@@ -572,7 +573,7 @@ class CrudSearchFilterTest {
         var priorities = mock(PriorityCategoryRepository.class);
         when(current.get()).thenReturn(new Actor(10L, Role.ADMIN, null, false, false));
         assertThat(pagePredicates(units,
-                () -> new ManagementUnitServiceImpl(units, guard, current, audit).searchByPage(input)))
+                () -> new ManagementUnitServiceImpl(units, guard, current, audit, mock(vn.edu.tlu.dms.account.service.AccountReferenceService.class)).searchByPage(input)))
                 .containsOnly("(TRUE AND TRUE)");
         assertThat(pagePredicates(roomTypes,
                 () -> new RoomTypeServiceImpl(roomTypes, mock(RoomRepository.class), guard, current, audit, mock(CatalogService.class)).searchByPage(input)))

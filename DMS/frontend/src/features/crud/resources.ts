@@ -39,7 +39,19 @@ import {
   ApplicationStatus,
 } from '../../services/api/registration'
 import { SummerChoice } from '../../services/api/summer'
-import type { CrudColumn, CrudField, CrudResource } from './types'
+import {
+  adminLevelLabels,
+  amenityScopeLabels,
+  bedStyleLabels,
+  buildingGenderLabels,
+  orientationLabels,
+  priorityAreaLabels,
+  priorityAutoRuleLabels,
+  repairSkillLabels,
+  semesterTypeLabels,
+  severityLabels,
+} from '../../constants/statusConfig'
+import type { CrudColumn, CrudField, CrudFormSection, CrudResource } from './types'
 
 const text = (
   name: string,
@@ -74,6 +86,26 @@ const ref = (
   required,
   lookup,
   lookupLabel,
+})
+/** Chọn giá trị có nhãn tiếng Việt khai tại registry trạng thái. */
+const labeled = (name: string, label: string, labels: Record<string, string>, required = true): CrudField => ({
+  name,
+  label,
+  kind: 'select',
+  required,
+  options: Object.entries(labels).map(([value, text]) => ({ value, label: text })),
+})
+const note = (name = 'note', label = 'Ghi chú', maxLength = 1000): CrudField => ({
+  name, label, kind: 'textarea', required: false, maxLength,
+})
+const flag = (name: string, label: string): CrudField => ({ name, label, kind: 'boolean' })
+const optionalNumber = (name: string, label: string, min = 0, max?: number): CrudField => ({
+  ...number(name, label, min), required: false, max,
+})
+/** Nhân viên phụ trách: chỉ tài khoản STAFF; backend kiểm tra cùng đơn vị. */
+const staffRef = (name: string, label: string): CrudField => ({
+  ...ref(name, label, '/admin/users', 'fullName', false),
+  lookupFilters: { role: Role.STAFF },
 })
 const date = (name: string, label: string): CrudField => ({
   name,
@@ -270,6 +302,9 @@ export const crudReferenceLabels: Record<string, string[]> = {
   roomId: ['roomCode'],
   buildingId: ['buildingName', 'buildingCode'],
   managementUnitId: ['managementUnitName', 'unitName'],
+  roomTypeId: ['roomTypeName'],
+  headUserId: ['headUserName'],
+  managerUserId: ['managerUserName'],
 }
 
 export const excelUiLabels = {
@@ -439,33 +474,176 @@ const catalogResource = (title: string, endpoint: string, nameLength = 200, code
   ],
   columns: columns(['code', 'Mã'], ['name', 'Tên'], ['active', 'Sử dụng']),
 })
-const facultyCatalog = catalogResource('Khoa', '/catalogs/faculties', 100)
-const hometownCatalog = catalogResource('Quê quán', '/catalogs/hometowns')
+
+/** Trường nghiệp vụ riêng của từng loại danh mục; mã/tên/trạng thái giữ từ khung chung. */
+interface CatalogExtra {
+  filters?: CrudField[]
+  fields: CrudField[]
+  sections: CrudFormSection[]
+  columns: CrudColumn[]
+  createDefaults?: Record<string, unknown>
+  codeHint?: string
+}
+const catalogWith = (base: CrudResource, extra: CatalogExtra): CrudResource => ({
+  ...base,
+  createDefaults: { ...base.createDefaults, ...extra.createDefaults },
+  filters: [...(base.filters ?? []), ...(extra.filters ?? [])],
+  fields: [
+    ...base.fields.map((field) =>
+      field.name === 'code' && extra.codeHint ? { ...field, hint: extra.codeHint } : field),
+    ...extra.fields,
+  ],
+  formSections: extra.sections,
+  columns: extra.columns,
+  useListRecordForEdit: true,
+})
+const activeColumn = columns(['active', 'Sử dụng'])
+const yearNumber = (name: string, label: string, required: boolean): CrudField => ({
+  ...number(name, label, 2000), required, max: 2110,
+})
 
 export const resources: Record<string, CrudResource> = {
-  schools: catalogResource('Trường', '/catalogs/schools'),
-  faculties: {
-    ...facultyCatalog,
-    filters: [...(facultyCatalog.filters ?? []), ref('schoolId', 'Trường', '/catalogs/schools', 'name', false)],
+  schools: catalogWith(catalogResource('Trường', '/catalogs/schools'), {
     fields: [
-      ...facultyCatalog.fields,
+      text('shortName', 'Tên viết tắt', false, 30),
+      { ...text('moetCode', 'Mã trường (Bộ GD&ĐT)', false, 10), hint: 'Mã tuyển sinh do Bộ Giáo dục và Đào tạo cấp, nếu có.' },
+      { ...text('address', 'Địa chỉ', false, 300), kind: 'textarea' },
+      { ...flag('homeSchool', 'Là trường chủ quản'), hint: 'Chỉ một trường được đánh dấu là trường chủ quản của ký túc xá.' },
+      note(),
+    ],
+    sections: [
+      { title: 'Thông tin chung', fields: ['code', 'name', 'shortName', 'moetCode', 'active', 'homeSchool'] },
+      { title: 'Liên hệ', fields: ['address'] },
+      { title: 'Ghi chú', fields: ['note'] },
+    ],
+    columns: [
+      ...columns(['code', 'Mã'], ['name', 'Tên trường'], ['shortName', 'Viết tắt'], ['moetCode', 'Mã Bộ'],
+        ['homeSchool', 'Chủ quản']),
+      ...activeColumn,
+    ],
+  }),
+  faculties: catalogWith(catalogResource('Khoa', '/catalogs/faculties', 100), {
+    filters: [ref('schoolId', 'Trường', '/catalogs/schools', 'name', false)],
+    fields: [
       { ...ref('schoolId', 'Trường', '/catalogs/schools', 'name', false), lookupFilters: { active: true } },
+      text('shortName', 'Tên viết tắt', false, 30),
+      { ...text('phone', 'Điện thoại văn phòng khoa', false, 15), hint: 'Số Việt Nam bắt đầu bằng 0 hoặc +84.' },
+      text('email', 'Email văn phòng khoa', false, 200),
+      note(),
     ],
-    columns: [...facultyCatalog.columns, ...columns(['schoolId', 'Trường'])],
-  },
-  cohorts: catalogResource('Khóa', '/catalogs/cohorts', 10),
-  hometowns: {
-    ...hometownCatalog,
-    filters: [...(hometownCatalog.filters ?? []), ref('parentId', 'Địa phương cấp trên', '/catalogs/hometowns', 'name', false)],
+    sections: [
+      { title: 'Thông tin chung', fields: ['code', 'name', 'shortName', 'schoolId', 'active'] },
+      { title: 'Liên hệ', fields: ['phone', 'email'] },
+      { title: 'Ghi chú', fields: ['note'] },
+    ],
+    columns: [
+      ...columns(['code', 'Mã'], ['name', 'Tên khoa'], ['shortName', 'Viết tắt'], ['schoolId', 'Trường'],
+        ['phone', 'Điện thoại']),
+      ...activeColumn,
+    ],
+  }),
+  cohorts: catalogWith(catalogResource('Khóa', '/catalogs/cohorts', 10), {
+    codeHint: 'Ví dụ: K66.',
     fields: [
-      ...hometownCatalog.fields,
-      { ...ref('parentId', 'Địa phương cấp trên', '/catalogs/hometowns', 'name', false), lookupFilters: { active: true } },
+      { ...yearNumber('enrollmentYear', 'Năm nhập học', true), max: 2100 },
+      { ...yearNumber('expectedGraduationYear', 'Năm tốt nghiệp dự kiến', false), hint: 'Phải sau năm nhập học.' },
+      note(),
     ],
-    columns: [...hometownCatalog.columns, ...columns(['parentId', 'Địa phương cấp trên'])],
-  },
-  academicYears: catalogResource('Năm học', '/catalogs/academic-years', 200, 9),
-  amenities: catalogResource('Tiện nghi', '/catalogs/amenities', 500),
-  maintenanceCategories: catalogResource('Hạng mục sửa chữa', '/catalogs/maintenance-categories'),
+    sections: [
+      { title: 'Thông tin chung', fields: ['code', 'name', 'active'] },
+      { title: 'Thời gian đào tạo', fields: ['enrollmentYear', 'expectedGraduationYear'] },
+      { title: 'Ghi chú', fields: ['note'] },
+    ],
+    columns: [
+      ...columns(['code', 'Mã'], ['name', 'Tên khóa']),
+      count('enrollmentYear', 'Năm nhập học'),
+      count('expectedGraduationYear', 'Tốt nghiệp dự kiến'),
+      ...activeColumn,
+    ],
+  }),
+  hometowns: catalogWith(catalogResource('Quê quán', '/catalogs/hometowns'), {
+    createDefaults: { adminLevel: 'PROVINCE', hardshipArea: false },
+    filters: [ref('parentId', 'Tỉnh/Thành phố', '/catalogs/hometowns', 'name', false)],
+    fields: [
+      { ...labeled('adminLevel', 'Cấp hành chính', adminLevelLabels), hint: 'Mô hình hai cấp: tỉnh/thành phố và xã/phường/đặc khu.' },
+      {
+        ...ref('parentId', 'Thuộc tỉnh/thành phố', '/catalogs/hometowns', 'name', false),
+        lookupFilters: { active: true },
+        visibleWhen: { field: 'adminLevel', value: 'COMMUNE' },
+        hint: 'Bắt buộc với cấp xã; chỉ chọn đơn vị cấp tỉnh.',
+      },
+      { ...text('gsoCode', 'Mã đơn vị hành chính', false, 10), hint: 'Mã theo danh mục đơn vị hành chính của Tổng cục Thống kê.' },
+      labeled('priorityArea', 'Khu vực ưu tiên', priorityAreaLabels, false),
+      flag('hardshipArea', 'Vùng đặc biệt khó khăn'),
+      note(),
+    ],
+    sections: [
+      { title: 'Thông tin chung', fields: ['code', 'name', 'adminLevel', 'parentId', 'gsoCode', 'active'] },
+      { title: 'Ưu tiên', note: 'Dùng để gợi ý diện ưu tiên khi xét đơn đăng ký.', fields: ['priorityArea', 'hardshipArea'] },
+      { title: 'Ghi chú', fields: ['note'] },
+    ],
+    columns: [
+      ...columns(['code', 'Mã'], ['name', 'Tên'], ['adminLevel', 'Cấp'], ['parentId', 'Thuộc tỉnh'],
+        ['priorityArea', 'Khu vực'], ['hardshipArea', 'Đặc biệt khó khăn']),
+      ...activeColumn,
+    ],
+  }),
+  academicYears: catalogWith(catalogResource('Năm học', '/catalogs/academic-years', 200, 9), {
+    codeHint: 'Dạng YYYY-YYYY, ví dụ 2026-2027.',
+    fields: [
+      { ...date('startDate', 'Ngày bắt đầu'), hint: 'Năm của ngày bắt đầu phải bằng năm đầu trong mã.' },
+      date('endDate', 'Ngày kết thúc'),
+      note(),
+    ],
+    sections: [
+      { title: 'Thông tin chung', fields: ['code', 'name', 'active'] },
+      {
+        title: 'Thời gian',
+        note: 'Các học kỳ phải nằm trong khoảng thời gian của năm học; các năm học không được chồng lấn.',
+        fields: ['startDate', 'endDate'],
+      },
+      { title: 'Ghi chú', fields: ['note'] },
+    ],
+    columns: [
+      ...columns(['code', 'Mã'], ['name', 'Tên năm học']),
+      dateColumn('startDate', 'Bắt đầu'),
+      dateColumn('endDate', 'Kết thúc'),
+      ...activeColumn,
+    ],
+  }),
+  amenities: catalogWith(catalogResource('Tiện nghi', '/catalogs/amenities', 500), {
+    createDefaults: { appliesTo: 'ROOM' },
+    fields: [
+      labeled('appliesTo', 'Áp dụng cho', amenityScopeLabels),
+      { ...text('icon', 'Biểu tượng', false, 50), hint: 'Tên biểu tượng hiển thị, ví dụ wifi, air-conditioner.' },
+      { ...text('description', 'Mô tả', false, 500), kind: 'textarea' },
+      note(),
+    ],
+    sections: [
+      { title: 'Thông tin chung', fields: ['code', 'name', 'appliesTo', 'icon', 'active'] },
+      { title: 'Mô tả', fields: ['description', 'note'] },
+    ],
+    columns: [...columns(['code', 'Mã'], ['name', 'Tên tiện nghi'], ['appliesTo', 'Áp dụng cho']), ...activeColumn],
+  }),
+  maintenanceCategories: catalogWith(catalogResource('Hạng mục sửa chữa', '/catalogs/maintenance-categories'), {
+    fields: [
+      labeled('defaultSeverity', 'Mức độ mặc định', severityLabels, false),
+      { ...optionalNumber('slaHours', 'Thời hạn xử lý (giờ)', 1, 720), hint: 'Số giờ cam kết xử lý kể từ khi tiếp nhận.' },
+      labeled('skill', 'Kỹ năng xử lý', repairSkillLabels, false),
+      { ...text('description', 'Mô tả', false, 500), kind: 'textarea' },
+      note(),
+    ],
+    sections: [
+      { title: 'Thông tin chung', fields: ['code', 'name', 'active'] },
+      { title: 'Xử lý', fields: ['defaultSeverity', 'slaHours', 'skill'] },
+      { title: 'Mô tả', fields: ['description', 'note'] },
+    ],
+    columns: [
+      ...columns(['code', 'Mã'], ['name', 'Hạng mục'], ['defaultSeverity', 'Mức độ'], ['skill', 'Kỹ năng']),
+      count('slaHours', 'Thời hạn (giờ)'),
+      ...activeColumn,
+    ],
+  }),
   floors: {
     permission: Resource.CATALOG,
     title: 'Tầng',
@@ -479,11 +657,32 @@ export const resources: Record<string, CrudResource> = {
     ],
     fields: [
       { ...ref('buildingId', 'Tòa nhà', '/buildings'), createOnly: true },
-      { ...number('floor', 'Số tầng'), createOnly: true },
+      {
+        ...number('floor', 'Số tầng'),
+        createOnly: true,
+        max: 30,
+        hint: 'Từ 1 đến số tầng của tòa; tầng 0 chỉ dùng khi tòa có tầng trệt.',
+      },
       text('name', 'Tên tầng'),
-      { name: 'active', label: 'Đang sử dụng', kind: 'boolean' },
+      {
+        ...labeled('gender', 'Giới tính tầng', { M: buildingGenderLabels.M, F: buildingGenderLabels.F }, false),
+        hint: 'Bỏ trống nếu tầng không phân nam/nữ; phải khớp đối tượng của tòa.',
+      },
+      flag('sharedBathroom', 'Có khu vệ sinh chung'),
+      flag('commonRoom', 'Có phòng sinh hoạt chung'),
+      flag('active', 'Đang sử dụng'),
+      note(),
     ],
-    columns: columns(['buildingId', 'Tòa nhà'], ['floor', 'Số tầng'], ['name', 'Tên tầng'], ['active', 'Sử dụng']),
+    formSections: [
+      { title: 'Vị trí', fields: ['buildingId', 'floor', 'name'] },
+      { title: 'Đặc điểm', fields: ['gender', 'sharedBathroom', 'commonRoom', 'active'] },
+      { title: 'Ghi chú', fields: ['note'] },
+    ],
+    columns: [
+      ...columns(['buildingId', 'Tòa nhà'], ['floor', 'Số tầng'], ['name', 'Tên tầng'], ['gender', 'Giới tính']),
+      count('roomCount', 'Số phòng'),
+      ...columns(['active', 'Sử dụng']),
+    ],
   },
   storageLocations: {
     permission: Resource.CATALOG,
@@ -501,8 +700,28 @@ export const resources: Record<string, CrudResource> = {
       { ...text('code', 'Mã vị trí', true, 30), createOnly: true },
       text('name', 'Tên vị trí', true, 100),
       { name: 'active', label: 'Đang sử dụng', kind: 'boolean' },
+      {
+        ...ref('buildingId', 'Tòa nhà', '/buildings', 'name', false),
+        lookupDependsOn: { field: 'managementUnitId' },
+        hint: 'Chỉ chọn tòa thuộc cùng đơn vị quản lý.',
+      },
+      { ...text('place', 'Vị trí cụ thể', false, 100), hint: 'Ví dụ: Tầng 1, phòng kho 101.' },
+      { ...optionalNumber('capacity', 'Sức chứa (kiện)', 1), hint: 'Số kiện tối đa có thể gửi tại vị trí này.' },
+      { ...staffRef('keeperUserId', 'Cán bộ phụ trách'), lookupDependsOn: { field: 'managementUnitId' } },
+      note(),
     ],
-    columns: columns(['code', 'Mã vị trí'], ['name', 'Vị trí'], ['managementUnitName', 'Đơn vị'], ['active', 'Sử dụng']),
+    formSections: [
+      { title: 'Thông tin chung', fields: ['managementUnitId', 'code', 'name', 'active'] },
+      { title: 'Vị trí', fields: ['buildingId', 'place', 'capacity'] },
+      { title: 'Phụ trách', fields: ['keeperUserId', 'note'] },
+    ],
+    columns: [
+      ...columns(['code', 'Mã vị trí'], ['name', 'Vị trí'], ['managementUnitName', 'Đơn vị'], ['buildingName', 'Tòa'],
+        ['place', 'Vị trí cụ thể']),
+      count('capacity', 'Sức chứa'),
+      count('heldPackages', 'Đang giữ'),
+      ...columns(['keeperUserName', 'Phụ trách'], ['active', 'Sử dụng']),
+    ],
   },
   units: {
     permission: Resource.MANAGEMENT_UNIT,
@@ -512,9 +731,38 @@ export const resources: Record<string, CrudResource> = {
     filters: [
       { ...ref('code', 'Đơn vị', '/management-units', 'name', false), lookupValue: 'code' },
       text('name', 'Tên đơn vị', false),
+      booleanFilter('active', 'Hoạt động', 'Đang hoạt động', 'Ngừng hoạt động'),
     ],
-    fields: [text('code', 'Mã đơn vị', true, 20), text('name', 'Tên đơn vị')],
-    columns: columns(['code', 'Mã'], ['name', 'Tên đơn vị']),
+    createDefaults: { active: true },
+    fields: [
+      text('code', 'Mã đơn vị', true, 20),
+      text('name', 'Tên đơn vị'),
+      text('shortName', 'Tên viết tắt', false, 30),
+      flag('active', 'Đang hoạt động'),
+      { ...text('address', 'Địa chỉ', false, 300), kind: 'textarea' },
+      { ...text('hotline', 'Đường dây nóng', false, 15), hint: 'Số Việt Nam bắt đầu bằng 0 hoặc +84.' },
+      text('email', 'Email liên hệ', false, 200),
+      { ...text('workingHours', 'Giờ làm việc', false, 100), hint: 'Ví dụ: Thứ 2–Thứ 6, 7:30–17:00' },
+      {
+        ...staffRef('headUserId', 'Trưởng đơn vị'),
+        editOnly: true,
+        hint: 'Chỉ chọn nhân viên thuộc chính đơn vị này; chọn sau khi đã tạo đơn vị.',
+      },
+      note(),
+    ],
+    formSections: [
+      { title: 'Thông tin chung', fields: ['code', 'name', 'shortName', 'active'] },
+      { title: 'Liên hệ', fields: ['hotline', 'email', 'workingHours', 'address'] },
+      { title: 'Phụ trách', fields: ['headUserId', 'note'] },
+    ],
+    columns: columns(
+      ['code', 'Mã'],
+      ['name', 'Tên đơn vị'],
+      ['shortName', 'Viết tắt'],
+      ['hotline', 'Đường dây nóng'],
+      ['headUserName', 'Trưởng đơn vị'],
+      ['active', 'Hoạt động'],
+    ),
     useListRecordForEdit: true,
   },
   buildings: {
@@ -527,49 +775,92 @@ export const resources: Record<string, CrudResource> = {
       text('code', 'Mã tòa', false, 10),
       text('name', 'Tên tòa', false),
       { ...number('depositAmount', 'Mức cọc (đ)', 0), required: false },
+      labeled('gender', 'Đối tượng', buildingGenderLabels, false),
     ],
+    createDefaults: { floorCount: 1, hasGroundFloor: false, genderPolicy: 'MIXED' },
     fields: [
       text('code', 'Mã tòa', true, 10),
       text('name', 'Tên tòa'),
-      ref('managementUnitId', 'Đơn vị', '/management-units'),
-      number('depositAmount', 'Mức cọc (đ)', 1),
+      ref('managementUnitId', 'Đơn vị quản lý', '/management-units'),
+      {
+        ...labeled('genderPolicy', 'Đối tượng ở', buildingGenderLabels),
+        hint: 'Tòa dành riêng nam/nữ chỉ nhận phòng cùng giới tính.',
+      },
+      { ...text('address', 'Địa chỉ', false, 300), kind: 'textarea' },
+      { ...number('floorCount', 'Số tầng', 1), max: 30 },
+      flag('hasGroundFloor', 'Có tầng trệt (tầng 0)'),
+      optionalNumber('commissionedYear', 'Năm đưa vào sử dụng', 1950, 2100),
+      optionalNumber('floorAreaM2', 'Tổng diện tích sàn (m²)', 0),
+      { ...number('depositAmount', 'Mức cọc (đ)', 1), hint: 'Tiền cọc sinh viên nộp khi nhận phòng ở tòa này.' },
+      {
+        ...staffRef('managerUserId', 'Cán bộ quản lý tòa'),
+        lookupDependsOn: { field: 'managementUnitId', required: true },
+      },
+      { ...text('hotline', 'Đường dây nóng', false, 15), hint: 'Số Việt Nam bắt đầu bằng 0 hoặc +84.' },
+      { name: 'openTime', label: 'Giờ mở cửa', kind: 'time' },
+      { name: 'closeTime', label: 'Giờ đóng cửa', kind: 'time' },
+      note(),
     ],
-    columns: columns(
-      ['code', 'Mã'],
-      ['name', 'Tòa nhà'],
-      ['managementUnitId', 'Đơn vị'],
-      ['depositAmount', 'Mức cọc'],
-    ),
+    formSections: [
+      { title: 'Thông tin chung', fields: ['code', 'name', 'managementUnitId', 'genderPolicy', 'address'] },
+      { title: 'Quy mô', fields: ['floorCount', 'hasGroundFloor', 'commissionedYear', 'floorAreaM2'] },
+      { title: 'Tài chính', fields: ['depositAmount'] },
+      { title: 'Vận hành', fields: ['managerUserId', 'hotline', 'openTime', 'closeTime'] },
+      { title: 'Ghi chú', fields: ['note'] },
+    ],
+    columns: [
+      ...columns(['code', 'Mã'], ['name', 'Tòa nhà'], ['managementUnitId', 'Đơn vị'], ['genderPolicy', 'Đối tượng']),
+      count('floorCount', 'Số tầng'),
+      count('roomCount', 'Phòng'),
+      count('occupied', 'Đang ở'),
+      count('capacity', 'Sức chứa'),
+      money('depositAmount', 'Mức cọc'),
+    ],
     useListRecordForEdit: true,
   },
   roomTypes: {
-    createDefaults: { active: true },
     permission: Resource.ROOM_TYPE,
     title: 'Loại phòng',
     endpoint: '/room-types',
     filters: [
+      text('code', 'Mã loại', false, 30),
       text('name', 'Tên loại', false, 50),
       booleanFilter('active', 'Sử dụng', 'Đang sử dụng', 'Ngừng sử dụng'),
       { ...number('bedCount', 'Số giường', 1), required: false },
       { ...number('priceMain', 'Giá học kỳ (đ)', 0), required: false },
       { ...number('priceSummer', 'Giá hè (đ)', 0), required: false },
     ],
+    createDefaults: { active: true, bedStyle: 'BUNK', privateBathroom: false, hasBalcony: false, hasKitchen: false },
     fields: [
+      { ...text('code', 'Mã loại', true, 30), hint: 'Chữ in hoa, số, gạch ngang; không đổi khi đã có phòng dùng loại này.' },
       text('name', 'Tên loại', true, 50),
       { ...number('bedCount', 'Số giường', 1), max: 12 },
+      labeled('bedStyle', 'Kiểu giường', bedStyleLabels),
+      optionalNumber('areaM2', 'Diện tích (m²)'),
       number('priceMain', 'Giá học kỳ (đ)'),
       number('priceSummer', 'Giá hè (đ)'),
-      { ...number('areaM2', 'Diện tích (m²)'), required: false },
+      flag('privateBathroom', 'Vệ sinh khép kín'),
+      flag('hasBalcony', 'Có ban công'),
+      flag('hasKitchen', 'Có bếp/khu nấu ăn'),
       { ...ref('amenityIds', 'Tiện nghi', '/catalogs/amenities', 'name', false), multiple: true, lookupFilters: { active: true } },
-      { name: 'active', label: 'Đang sử dụng', kind: 'boolean' },
+      flag('active', 'Đang sử dụng'),
+      note('description', 'Mô tả'),
     ],
-    columns: columns(
-      ['name', 'Tên'],
-      ['bedCount', 'Số giường'],
-      ['priceMain', 'Giá học kỳ'],
-      ['priceSummer', 'Giá hè'],
-      ['active', 'Sử dụng'],
-    ),
+    formSections: [
+      { title: 'Thông tin chung', fields: ['code', 'name', 'active'] },
+      { title: 'Quy cách', fields: ['bedCount', 'bedStyle', 'areaM2', 'privateBathroom', 'hasBalcony', 'hasKitchen', 'amenityIds'] },
+      { title: 'Giá phòng', note: 'Giá được chốt vào lịch sử phân phòng tại thời điểm xếp phòng.', fields: ['priceMain', 'priceSummer'] },
+      { title: 'Mô tả', fields: ['description'] },
+    ],
+    columns: [
+      ...columns(['code', 'Mã'], ['name', 'Tên']),
+      count('bedCount', 'Số giường'),
+      ...columns(['bedStyle', 'Kiểu giường'], ['privateBathroom', 'Khép kín']),
+      money('priceMain', 'Giá học kỳ'),
+      money('priceSummer', 'Giá hè'),
+      count('roomCount', 'Số phòng'),
+      ...columns(['active', 'Sử dụng']),
+    ],
     useListRecordForEdit: true,
   },
   semesters: {
@@ -582,29 +873,40 @@ export const resources: Record<string, CrudResource> = {
       { ...date('startDateTo', 'Ngày bắt đầu đến'), required: false },
       { ...date('endDateFrom', 'Ngày kết thúc từ'), required: false },
       { ...date('endDateTo', 'Ngày kết thúc đến'), required: false },
-      { ...select('type', 'Loại học kỳ', ['HK1', 'HK2', 'SUMMER']), required: false },
+      labeled('type', 'Loại học kỳ', semesterTypeLabels, false),
       { ...ref('academicYear', 'Năm học', '/catalogs/academic-years', 'name', false), lookupValue: 'code' },
     ],
     fields: [
       text('name', 'Tên học kỳ', true, 50),
-      { ...ref('academicYear', 'Năm học', '/catalogs/academic-years'), lookupValue: 'code', lookupFilters: { active: true } },
-      select('type', 'Loại', ['HK1', 'HK2', 'SUMMER']),
-      date('startDate', 'Bắt đầu'),
+      {
+        ...ref('academicYear', 'Năm học', '/catalogs/academic-years'),
+        lookupValue: 'code',
+        lookupFilters: { active: true },
+        hint: 'Mã học kỳ được sinh tự động từ loại và năm học, ví dụ HK1-2026.',
+      },
+      labeled('type', 'Loại', semesterTypeLabels),
+      { ...date('startDate', 'Bắt đầu'), hint: 'Phải nằm trong khoảng thời gian của năm học.' },
       date('endDate', 'Kết thúc'),
+      { ...date('roomFeeDueDate', 'Hạn nộp tiền phòng'), required: false, hint: 'Không sớm hơn ngày bắt đầu học kỳ.' },
+      note(),
     ],
-    columns: columns(
-      ['name', 'Học kỳ'],
-      ['academicYear', 'Năm học'],
-      ['type', 'Loại'],
-      ['startDate', 'Bắt đầu'],
-      ['endDate', 'Kết thúc'],
-    ),
+    formSections: [
+      { title: 'Thông tin chung', fields: ['name', 'academicYear', 'type'] },
+      { title: 'Thời gian', fields: ['startDate', 'endDate', 'roomFeeDueDate'] },
+      { title: 'Ghi chú', fields: ['note'] },
+    ],
+    columns: [
+      ...columns(['code', 'Mã'], ['name', 'Học kỳ'], ['academicYear', 'Năm học'], ['type', 'Loại']),
+      dateColumn('startDate', 'Bắt đầu'),
+      dateColumn('endDate', 'Kết thúc'),
+      dateColumn('roomFeeDueDate', 'Hạn nộp tiền phòng'),
+    ],
     useListRecordForEdit: true,
   },
   priorities: {
     permission: Resource.PRIORITY_CATEGORY,
     title: 'Diện ưu tiên',
-    createDefaults: { active: true },
+    createDefaults: { active: true, evidenceMandatory: false },
     endpoint: '/priority-categories',
     writeEndpoint: '/admin/priority-categories',
     filters: [
@@ -616,15 +918,31 @@ export const resources: Record<string, CrudResource> = {
     fields: [
       text('code', 'Mã', true, 30),
       text('name', 'Tên diện'),
-      number('weight', 'Trọng số'),
+      { ...number('weight', 'Trọng số'), hint: 'Điểm cộng khi xét đơn; diện cao hơn được xếp trước.' },
+      { ...optionalNumber('sortOrder', 'Thứ tự hiển thị'), hint: 'Số nhỏ hiển thị trước.' },
       { name: 'active', label: 'Đang sử dụng', kind: 'boolean' },
+      { ...text('description', 'Mô tả đối tượng', true, 1000), kind: 'textarea' },
+      { ...text('legalBasis', 'Căn cứ pháp lý', false, 300), hint: 'Ví dụ: số hiệu văn bản, điều khoản áp dụng.' },
+      { ...text('evidenceRequired', 'Minh chứng cần nộp', false, 500), kind: 'textarea' },
+      flag('evidenceMandatory', 'Bắt buộc nộp minh chứng'),
+      {
+        ...labeled('autoRule', 'Tự nhận diện', priorityAutoRuleLabels, false),
+        hint: 'Gợi ý diện ưu tiên từ hồ sơ sinh viên; cán bộ vẫn xác nhận khi xét.',
+      },
+      note(),
     ],
-    columns: columns(
-      ['code', 'Mã'],
-      ['name', 'Tên'],
-      ['weight', 'Trọng số'],
-      ['active', 'Sử dụng'],
-    ),
+    formSections: [
+      { title: 'Thông tin chung', fields: ['code', 'name', 'weight', 'sortOrder', 'active'] },
+      { title: 'Đối tượng áp dụng', fields: ['description', 'legalBasis', 'autoRule'] },
+      { title: 'Minh chứng', fields: ['evidenceRequired', 'evidenceMandatory'] },
+      { title: 'Ghi chú', fields: ['note'] },
+    ],
+    columns: [
+      count('sortOrder', 'Thứ tự'),
+      ...columns(['code', 'Mã'], ['name', 'Tên diện']),
+      count('weight', 'Trọng số'),
+      ...columns(['evidenceMandatory', 'Bắt buộc minh chứng'], ['autoRule', 'Tự nhận diện'], ['active', 'Sử dụng']),
+    ],
     useListRecordForEdit: true,
   },
   users: {
@@ -746,16 +1064,38 @@ export const resources: Record<string, CrudResource> = {
       { ...ref('buildingId', 'Tòa nhà', '/buildings'), createOnly: true },
       { ...floorRef(), lookupFilters: { active: true } },
       text('code', 'Mã phòng', true, 20),
-      ref('roomTypeId', 'Loại phòng', '/room-types'),
-      select('gender', 'Giới tính', Object.values(RoomGender)),
+      text('displayName', 'Tên hiển thị', false, 50),
+      { ...ref('roomTypeId', 'Loại phòng', '/room-types'), lookupFilters: { active: true } },
+      {
+        ...select('gender', 'Giới tính', Object.values(RoomGender)),
+        hint: 'Phải khớp đối tượng của tòa và giới tính tầng (nếu tầng đã khai).',
+      },
+      optionalNumber('areaM2', 'Diện tích thực tế (m²)'),
+      labeled('orientation', 'Hướng phòng', orientationLabels, false),
+      { ...date('commissionedOn', 'Ngày đưa vào sử dụng'), required: false },
+      { ...text('electricMeterNo', 'Số công tơ điện', false, 30), hint: 'Không trùng với phòng khác.' },
+      { ...text('waterMeterNo', 'Số đồng hồ nước', false, 30), hint: 'Không trùng với phòng khác.' },
+      note(),
     ],
-    columns: columns(
-      ['code', 'Phòng'],
-      ['floor', 'Tầng'],
-      ['gender', 'Giới tính'],
-      ['status', 'Trạng thái'],
-      ['freeBeds', 'Giường trống'],
-    ),
+    formSections: [
+      { title: 'Vị trí', fields: ['buildingId', 'floor', 'code', 'displayName'] },
+      { title: 'Đặc điểm', fields: ['roomTypeId', 'gender', 'areaM2', 'orientation', 'commissionedOn'] },
+      { title: 'Đồng hồ điện nước', fields: ['electricMeterNo', 'waterMeterNo'] },
+      { title: 'Ghi chú', fields: ['note'] },
+    ],
+    columns: [
+      ...columns(
+        ['code', 'Phòng'],
+        ['buildingCode', 'Tòa'],
+        ['floor', 'Tầng'],
+        ['roomTypeName', 'Loại phòng'],
+        ['gender', 'Giới tính'],
+        ['status', 'Trạng thái'],
+      ),
+      count('occupiedBeds', 'Đang ở'),
+      count('activeBeds', 'Số giường'),
+      count('freeBeds', 'Giường trống'),
+    ],
     note: 'Phòng từng có phân phòng không được xóa. Xem chi tiết để quản lý giường và trưởng phòng.',
     detailRoutes: {
       [Role.STAFF]: STAFF_ROOMS_PATH,

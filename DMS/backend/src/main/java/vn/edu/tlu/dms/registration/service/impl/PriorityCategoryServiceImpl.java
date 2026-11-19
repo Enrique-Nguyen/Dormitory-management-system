@@ -75,9 +75,9 @@ public class PriorityCategoryServiceImpl
         Actor actor = currentUser.get();
         if (actor.is(Role.STUDENT) || actor.is(Role.TECHNICIAN)) {
             // Trọng số đã được ẩn trong response; không cho suy ra thứ tự ưu tiên qua sort.
-            return Set.of("id", "code", "name", "active");
+            return Set.of("id", "code", "name", "active", "sortOrder");
         }
-        return Set.of("id", "code", "name", "weight", "active");
+        return Set.of("id", "code", "name", "weight", "active", "sortOrder");
     }
 
     @Override
@@ -145,6 +145,18 @@ public class PriorityCategoryServiceImpl
         if (input.active() != null) {
             entity.setActive(input.active());
         }
+        if (creating) {
+            requireValue(input.description(), "description");
+        }
+        if (input.description() != null) {
+            entity.setDescription(trimRequiredText(input.description(), "description"));
+        }
+        entity.setEvidenceRequired(mergeText(input.evidenceRequired(), entity.getEvidenceRequired()));
+        entity.setEvidenceMandatory(mergeValue(input.evidenceMandatory(), entity.getEvidenceMandatory()));
+        entity.setLegalBasis(mergeText(input.legalBasis(), entity.getLegalBasis()));
+        entity.setSortOrder(mergeValue(input.sortOrder(), entity.getSortOrder()));
+        entity.setAutoRule(mergeText(input.autoRule(), entity.getAutoRule()));
+        entity.setNote(mergeText(input.note(), entity.getNote()));
     }
 
     @Override
@@ -171,7 +183,14 @@ public class PriorityCategoryServiceImpl
                 (currentUser.get().is(Role.STUDENT) || currentUser.get().is(Role.TECHNICIAN)
                         ? null
                         : entity.getWeight()),
-                entity.getActive());
+                entity.getActive(),
+                entity.getDescription(),
+                entity.getEvidenceRequired(),
+                entity.getEvidenceMandatory(),
+                entity.getLegalBasis(),
+                entity.getSortOrder(),
+                entity.getAutoRule(),
+                entity.getNote());
     }
 
     @Override

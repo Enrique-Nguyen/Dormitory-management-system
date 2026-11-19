@@ -1,6 +1,6 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.26**, 04/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.28**, 19/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.15 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.13, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
@@ -8,6 +8,8 @@
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.28 | 19/11/2026 | Flyway V18: mở rộng body/response danh mục (trường, khoa, khóa, quê quán, năm học, tiện nghi, hạng mục sửa chữa), học kỳ, diện ưu tiên và vị trí kho; thêm mã lỗi `ACADEMIC_YEAR_OVERLAP`. |
+| 0.27 | 19/11/2026 | Flyway V16: mở rộng body/response đơn vị, tòa, tầng, loại phòng, phòng, giường theo trường nghiệp vụ đầy đủ; thêm mã lỗi `FLOOR_IN_USE`, `FLOOR_OUT_OF_RANGE`, `USER_UNIT_MISMATCH`. |
 | 0.26 | 04/11/2026 | Hợp nhất bộ lọc danh mục, hợp đồng, hộp thư, kho và các màn nghiệp vụ với các thay đổi đăng ký và tài chính từ develop. |
 | 0.25 | 04/11/2026 | Bổ sung lọc theo cột cho đơn vị, tòa, tầng, vị trí kho, loại phòng, học kỳ và đợt đăng ký. |
 | 0.24 | 04/11/2026 | Bổ sung lọc sinh viên và khoảng ngày bắt đầu/kết thúc hợp đồng. |
@@ -46,9 +48,9 @@ Các thay đổi dưới đây thay thế trường chuỗi tương ứng trong 
 
 | Nguồn | Endpoint/kiểu dữ liệu |
 |---|---|
-| Danh mục | `/api/catalogs/{kind}` với kind `schools`, `faculties`, `cohorts`, `hometowns`, `academic-years`, `amenities`, `maintenance-categories`. POST `/search-by-page` nhận `{page,size,q,sort,active,schoolId,parentId,code,name}`, POST `/save-or-update` nhận `{id,code,name,active,schoolId,parentId}`, GET/DELETE `/{id}`. Chỉ khoa nhận `schoolId`, chỉ địa giới nhận `parentId`. |
+| Danh mục | `/api/catalogs/{kind}` với kind `schools`, `faculties`, `cohorts`, `hometowns`, `academic-years`, `amenities`, `maintenance-categories`. POST `/search-by-page` nhận `{page,size,q,sort,active,schoolId,parentId,code,name}`, POST `/save-or-update` nhận `{id,code,name,active,schoolId,parentId}` cùng nhóm trường riêng theo kind, GET/DELETE `/{id}`. Chỉ khoa nhận `schoolId`, chỉ địa giới nhận `parentId`. Trường riêng (V18): `schools` `{shortName, moetCode, address, homeSchool}` (tối đa một trường chủ quản → 409 `DUPLICATE_VALUE`); `faculties` `{shortName, phone, email}`; `cohorts` `{enrollmentYear (bắt buộc khi tạo, 2000–2100), expectedGraduationYear (> năm nhập học)}`; `hometowns` `{adminLevel (PROVINCE\|COMMUNE, mặc định suy từ cấp cha), gsoCode, priorityArea (KV1\|KV2NT\|KV2\|KV3), hardshipArea}` — tỉnh không có cấp cha, xã phải có cấp cha là tỉnh; `academic-years` `{startDate, endDate}` (bắt buộc khi tạo, năm bắt đầu bằng năm đầu của mã, chồng lấn năm khác → 409 `ACADEMIC_YEAR_OVERLAP`); `amenities` `{appliesTo (ROOM\|BUILDING\|BOTH, mặc định ROOM), icon, description}`; `maintenance-categories` `{defaultSeverity (LOW\|MEDIUM\|HIGH), slaHours (1–720), skill (ELECTRIC\|PLUMBING\|CARPENTRY\|HVAC\|NETWORK\|GENERAL), description}`. Mọi kind nhận `note`. Gửi trường của kind khác → 400 `VALIDATION_FAILED`. Null giữ giá trị cũ, chuỗi rỗng xóa trường văn bản tùy chọn; response trả cùng tên trường. |
 | Tầng | `/api/floors` có cùng bốn thao tác; tìm kiếm nhận `buildingId/floor/name/active`, lưu `{id,buildingId,floor,name,active}`. `floor` là số nguyên từ 0; không đổi tòa hoặc số tầng khi sửa. |
-| Vị trí kho | `/api/storage-locations` có cùng bốn thao tác; tìm kiếm nhận `managementUnitId/code/name/active`, lưu `{id,managementUnitId,code,name,active}`. Không đổi đơn vị/mã khi sửa. Đọc tổng hợp không mở quyền ghi ngoài đơn vị. |
+| Vị trí kho | `/api/storage-locations` có cùng bốn thao tác; tìm kiếm nhận `managementUnitId/code/name/active`, lưu `{id,managementUnitId,code,name,active,buildingId,place,capacity,keeperUserId,note}`. Tòa và cán bộ phụ trách phải thuộc cùng đơn vị (400 `VALIDATION_FAILED` / `USER_UNIT_MISMATCH`), `capacity` > 0. Response thêm `managementUnitName`, `buildingName`, `keeperUserName` và `heldPackages` (tổng số kiện chưa trả, tính khi đọc). Không đổi đơn vị/mã khi sửa. Đọc tổng hợp không mở quyền ghi ngoài đơn vị. |
 | Quyền | Đọc danh mục cần `CATALOG_READ`; lưu kiểm riêng `CATALOG_CREATE` hoặc `CATALOG_UPDATE`, xóa cần `CATALOG_DELETE`. ADMIN có toàn quyền; STAFF mặc định chỉ đọc, quyền ghi cần cấp qua ma trận và vẫn giữ phạm vi tòa/kho. |
 | Hồ sơ | Lưu và lọc sinh viên dùng `schoolId/facultyId/cohortId/hometownId` kiểu Long, không ghi `faculty/cohort/hometown` dạng chuỗi. Response vẫn có các nhãn suy từ danh mục và `schoolName`. Hồ sơ cá nhân chỉ nhận `phone/hometownId/emergencyContact`; backend ép chủ sở hữu. |
 | Nghiệp vụ | `room.floor` giữ số theo tòa; `semester.academicYear` giữ mã năm học; ticket `category` giữ mã hạng mục; `roomType.amenityIds` là mảng Long, `amenities` response là nhãn tổng hợp; tạo phiếu gửi đồ dùng `locationId` thay `location`, response trả cả ID và tên vị trí. |
@@ -332,18 +334,18 @@ Các alias sinh viên và endpoint chỉ sửa vẫn kiểm tra quyền tại Se
 | Method | Path | Vai trò | Mô tả | FR |
 |---|---|---|---|---|
 | POST | `/api/management-units/search-by-page` | \* | Danh sách đơn vị (PageResponse) | FR-ROOM-01 |
-| POST | `/api/admin/management-units/save-or-update` | A | Tạo/sửa bằng ID trong body. `{ id, code, name }` | FR-ROOM-01 |
+| POST | `/api/admin/management-units/save-or-update` | A | Tạo/sửa bằng ID trong body. `{ id, code, name, shortName, address, hotline, email, headUserId, workingHours, active, note }`. `headUserId` chỉ khi sửa, phải là STAFF cùng đơn vị (400 `USER_UNIT_MISMATCH`); response thêm `headUserName`. Lọc thêm `active` | FR-ROOM-01 |
 | POST | `/api/buildings/search-by-page` | \* | Tòa (PageResponse); Staff chỉ thấy tòa đơn vị mình, trừ khi có quyền tổng hợp | FR-ROOM-01 |
-| POST | `/api/admin/buildings/save-or-update` | A | Tạo/sửa bằng ID trong body. `{ id, code, name, managementUnitId, depositAmount }`. Đổi mức cọc chỉ áp dụng cho hợp đồng kích hoạt sau đó | FR-ROOM-01 |
+| POST | `/api/admin/buildings/save-or-update` | A | Tạo/sửa bằng ID trong body. `{ id, code, name, managementUnitId, depositAmount, floorCount (1–30), hasGroundFloor, genderPolicy (M\|F\|MIXED), address, commissionedYear, floorAreaM2, managerUserId, hotline, openTime, closeTime (HH:mm), note }`. Đổi mức cọc chỉ áp dụng cho hợp đồng kích hoạt sau đó. Giảm số tầng dưới tầng đang dùng → 409 `FLOOR_IN_USE`; đối tượng không khớp phòng hiện có → 409 `GENDER_MISMATCH`; đổi đơn vị khi còn giường giữ/ở → 409 `ROOM_OCCUPIED`; cán bộ quản lý khác đơn vị → 400 `USER_UNIT_MISMATCH`. Response thêm `managementUnitName`, `managerUserName` và số tính khi đọc `roomCount`, `capacity`, `occupied`; lọc thêm `gender` | FR-ROOM-01 |
 | POST | `/api/room-types/search-by-page` | St | Loại phòng (PageResponse); bộ lọc tùy chọn `active` (boolean), `bedCount` (số nguyên 16 bit không âm), `priceMain`, `priceSummer` (số nguyên 64 bit không âm). So khớp chính xác, kết hợp AND với nhau và `q` trước phân trang và đếm; bỏ qua trường thiếu hoặc null, giá trị 0 vẫn được lọc. | FR-ROOM-02 |
-| POST | `/api/room-types/save-or-update` | St | Tạo/sửa bằng ID trong body. `{ id, name, bedCount, priceMain, priceSummer, areaM2, amenities, active }`. Đổi giá không ảnh hưởng phân phòng đang hiệu lực; đổi `bedCount` của loại phòng đang được gán cho phòng tồn tại bị từ chối 409 `RESOURCE_IN_USE` để bảo toàn số giường vật lý | FR-ROOM-02 |
+| POST | `/api/room-types/save-or-update` | St | Tạo/sửa bằng ID trong body. `{ id, code, name, bedCount, bedStyle (BUNK\|SINGLE), privateBathroom, hasBalcony, hasKitchen, priceMain, priceSummer, areaM2, amenityIds, active, description }`; `code` bắt buộc khi tạo, duy nhất (409 `DUPLICATE_VALUE`), không đổi khi đã có phòng dùng (409 `RESOURCE_IN_USE`); response thêm `roomCount`. Đổi giá không ảnh hưởng phân phòng đang hiệu lực; đổi `bedCount` của loại phòng đang được gán cho phòng tồn tại bị từ chối 409 `RESOURCE_IN_USE` để bảo toàn số giường vật lý | FR-ROOM-02 |
 | POST | `/api/semesters/search-by-page` | \* | Học kỳ (PageResponse), hỗ trợ `q`, `type` và sort theo trường được phép như startDate | FR-ROOM-11 |
-| POST | `/api/semesters/save-or-update` | St | Tạo/sửa bằng ID trong body. `{ id, name, academicYear, type, startDate, endDate }`; chồng thời gian → `409 SEMESTER_OVERLAP` | FR-ROOM-11 |
+| POST | `/api/semesters/save-or-update` | St | Tạo/sửa bằng ID trong body. `{ id, name, academicYear, type, startDate, endDate, roomFeeDueDate, note }`; chồng thời gian → `409 SEMESTER_OVERLAP`; ngày nằm ngoài năm học (khi năm học có ngày) hoặc hạn nộp tiền phòng trước ngày bắt đầu → 400 `VALIDATION_FAILED`. Response thêm `code` chỉ đọc, sinh từ loại và năm đầu (ví dụ `HK1-2026`, `HE-2026`) | FR-ROOM-11 |
 | POST | `/api/rooms/search-by-page` | St | Lọc `buildingId`, `floor`, `roomTypeId`, `gender`, `status`, `hasFreeBed`, `noLeader`; mỗi phòng kèm số giường trống / đang giữ / đang ở (từ `v_room_occupancy`), `missingLeader` (cảnh báo phòng chưa có trưởng phòng dù có người đang ở) | FR-ROOM-07, 10 |
-| POST | `/api/rooms/save-or-update` | St | Tạo/sửa phòng bằng `{id, buildingId, floor, code, roomTypeId, gender}`; tạo tự sinh giường theo bedCount. Sửa chỉ các trường được phép; đổi giới tính/loại phòng khi còn phân phòng hiệu lực trả 409 ROOM_OCCUPIED | FR-ROOM-03, 04 |
+| POST | `/api/rooms/save-or-update` | St | Tạo/sửa phòng bằng `{id, buildingId, floor, code, roomTypeId, gender, displayName, areaM2, orientation (N\|S\|E\|W\|NE\|NW\|SE\|SW), electricMeterNo, waterMeterNo, commissionedOn, note}`; giới tính phải khớp đối tượng tòa và giới tính tầng (409 `GENDER_MISMATCH`); số công tơ/đồng hồ trùng → 409 `DUPLICATE_VALUE`. Response thêm `buildingCode`, `buildingName`, `roomTypeName`, `statusReason`; tạo tự sinh giường theo bedCount. Sửa chỉ các trường được phép; đổi giới tính/loại phòng khi còn phân phòng hiệu lực trả 409 ROOM_OCCUPIED | FR-ROOM-03, 04 |
 | GET | `/api/rooms/{id}` | St | Chi tiết: giường, người đang ở / đang giữ từng giường, `missingLeader`, `leader {id, fullName, studentCode}` và `leaderHistory[]` (`from`, `to`, `actorId`, `actorName`, `reason`, `at`; `actorId = null` là hệ thống tự gỡ) | FR-ROOM-07, 09 |
 | POST | `/api/rooms/{id}/status` | St | `{ status: ACTIVE \| MAINTENANCE \| CLOSED, reason }`; còn phân phòng hiệu lực → `409 ROOM_OCCUPIED` | FR-ROOM-05, 06 |
-| POST | `/api/beds/save-or-update` | St | Tạo/sửa mã giường `{id, roomId, code}`; khi tạo cần roomId, khi sửa không đổi phòng nguồn | FR-ROOM-04 |
+| POST | `/api/beds/save-or-update` | St | Tạo/sửa giường `{id, roomId, code, position (UPPER\|LOWER\|SINGLE), assetCode, note}`; khi tạo cần roomId, khi sửa không đổi phòng nguồn | FR-ROOM-04 |
 | POST | `/api/beds/{id}/status` | St | `{ status: ACTIVE \| BROKEN \| RETIRED, reason }`; còn phân phòng hiệu lực → `409 BED_OCCUPIED` | FR-ROOM-04, 05, 06 |
 | GET | `/api/beds/available` | St | Giường trống cho split view (mục 4.4). Tham số `applicationId` **hoặc** `transferRequestId` **hoặc** `storageRecordId` | FR-REG-08, FR-CON-07, 12 |
 | PUT | `/api/rooms/{id}/leader` | St | `{ studentId }`; phải đang ở trong phòng (BR-11); chỉ định lại đúng người đang là trưởng phòng thì không làm gì (idempotent, không ghi audit) | FR-ROOM-09 |
@@ -370,7 +372,7 @@ Khung có DELETE phòng/giường chưa từng sử dụng; khi đã có lịch 
 | Method | Path | Vai trò | Mô tả | FR |
 |---|---|---|---|---|
 | POST | `/api/priority-categories/search-by-page` | \* | Lọc `q`, `code`, `name`, `active`; Staff và Admin có thể lọc `weight` và xem trọng số | FR-REG-05 |
-| POST | `/api/admin/priority-categories/save-or-update` | A | Tạo/sửa bằng ID trong body. `{ id, code, name, weight, active }` | FR-REG-05 |
+| POST | `/api/admin/priority-categories/save-or-update` | A | Tạo/sửa bằng ID trong body. `{ id, code, name, weight, active, description (bắt buộc khi tạo), evidenceRequired, evidenceMandatory, legalBasis, sortOrder (≥ 0), autoRule (ETHNIC_MINORITY\|HARDSHIP_AREA\|NONE), note }`; response trả cùng các trường, sort thêm `sortOrder` | FR-REG-05 |
 | POST | `/api/registration-periods/search-by-page` | St, T | Đợt áp dụng cho đơn vị mình (KTV chỉ đọc); lọc `semesterId`, `kind`, `open` | FR-REG-01 |
 | POST | `/api/registration-periods/save-or-update` | St | Tạo/sửa đợt bằng ID trong body (mục 4.2); đã mở chỉ được lùi closeAt. Đợt SUMMER mới tạo thông báo sau commit. Staff chỉ ghi đợt mà đơn vị mình là đơn vị duy nhất; đợt dùng chung trả 404 | FR-REG-01, 13 |
 | GET | `/api/registration-periods/{id}` | St, T | Chi tiết + chỉ tiêu + thống kê số đơn theo trạng thái | FR-REG-01 |
@@ -1123,6 +1125,10 @@ Câu tiếng Việt là gợi ý cho `errorMessages.ts`; `{x}` lấy từ `detai
 | `CONCURRENT_UPDATE` | 409 | Dữ liệu vừa được người khác thay đổi. Vui lòng thử lại |
 | `RESOURCE_IN_USE` | 409 | Dữ liệu đã có lịch sử hoặc đang được sử dụng, không thể sửa/xóa trực tiếp |
 | `DUPLICATE_VALUE` | 409 | Giá trị đã tồn tại, vui lòng nhập giá trị khác |
+| `FLOOR_IN_USE` | 409 | Không thể giảm số tầng: vẫn còn tầng hoặc phòng ở các tầng cao hơn |
+| `FLOOR_OUT_OF_RANGE` | 400 | Số tầng nằm ngoài quy mô của tòa |
+| `ACADEMIC_YEAR_OVERLAP` | 409 | Khoảng thời gian của năm học bị trùng với một năm học khác |
+| `USER_UNIT_MISMATCH` | 400 | Người phụ trách phải là nhân viên thuộc đúng đơn vị quản lý |
 | `METHOD_NOT_ALLOWED` | 405 | Phương thức HTTP không được hỗ trợ cho đường dẫn này |
 | `UNSUPPORTED_MEDIA_TYPE` | 415 | Kiểu nội dung gửi lên không được hỗ trợ |
 | `FILE_TOO_LARGE` | 413 | File vượt quá {maxMb} MB |

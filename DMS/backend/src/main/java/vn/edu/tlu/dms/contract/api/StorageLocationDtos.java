@@ -29,7 +29,18 @@ public final class StorageLocationDtos {
             @Positive(message = ValidationMessage.ID_POSITIVE) Long managementUnitId,
             @Size(max = 30) String code,
             @Size(max = 100) String name,
-            Boolean active) {}
+            Boolean active,
+            @Positive(message = ValidationMessage.ID_POSITIVE) Long buildingId,
+            @Size(max = 100) String place,
+            @Positive Integer capacity,
+            @Positive(message = ValidationMessage.ID_POSITIVE) Long keeperUserId,
+            @Size(max = 1000) String note) {
+
+        /** Tương thích lời gọi chỉ có đơn vị, mã, tên và trạng thái. */
+        public SaveRequest(Long id, Long managementUnitId, String code, String name, Boolean active) {
+            this(id, managementUnitId, code, name, active, null, null, null, null, null);
+        }
+    }
 
     public record Location(
             Long id,
@@ -37,5 +48,14 @@ public final class StorageLocationDtos {
             String code,
             String name,
             boolean active,
-            List<String> allowedActions) {}
+            List<String> allowedActions,
+            String managementUnitName,
+            Long buildingId,
+            String buildingName,
+            String place,
+            Integer capacity,
+            Long keeperUserId,
+            String keeperUserName,
+            String note,
+            long heldPackages) {}
 }

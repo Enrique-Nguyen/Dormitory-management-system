@@ -178,6 +178,11 @@ export const roomOperation: Record<
 export const roomGender: Record<string, string> = {
   M: 'Nam',
   F: 'Nữ',
+  MIXED: 'Nam và nữ',
+  SINGLE: 'Giường đơn',
+  BUNK: 'Giường tầng',
+  UPPER: 'Tầng trên',
+  LOWER: 'Tầng dưới',
 }
 
 export const bedOperation: Record<string, { label: string }> = {
@@ -257,6 +262,48 @@ export const crudValueLabels: Record<string, string> = {
   STAY: 'Ở hè',
   TEMP_LEAVE: 'Tạm rời hè',
   LEAVE: 'Rời KTX',
+}
+
+/** Đối tượng giới tính của tòa (khớp CHECK `building.gender_policy`). */
+export const buildingGenderLabels: Record<string, string> = { M: 'Nam', F: 'Nữ', MIXED: 'Nam và nữ' }
+
+/** Kiểu giường của loại phòng (khớp CHECK `room_type.bed_style`). */
+export const bedStyleLabels: Record<string, string> = { BUNK: 'Giường tầng', SINGLE: 'Giường đơn' }
+
+/** Vị trí giường (khớp CHECK `bed.position`). */
+export const bedPositionLabels: Record<string, string> = { LOWER: 'Tầng dưới', UPPER: 'Tầng trên', SINGLE: 'Giường đơn' }
+
+/** Hướng phòng (khớp CHECK `room.orientation`). */
+export const orientationLabels: Record<string, string> = {
+  N: 'Bắc', S: 'Nam', E: 'Đông', W: 'Tây', NE: 'Đông Bắc', NW: 'Tây Bắc', SE: 'Đông Nam', SW: 'Tây Nam',
+}
+
+/** Loại học kỳ hiển thị trên form/danh sách (khớp CHECK `semester.type`). */
+export const semesterTypeLabels: Record<string, string> = { HK1: 'Học kỳ 1', HK2: 'Học kỳ 2', SUMMER: 'Học kỳ hè' }
+
+/** Cấp hành chính của quê quán theo mô hình hai cấp (khớp CHECK `hometown.admin_level`). */
+export const adminLevelLabels: Record<string, string> = { PROVINCE: 'Tỉnh/Thành phố', COMMUNE: 'Xã/Phường/Đặc khu' }
+
+/** Khu vực ưu tiên tuyển sinh (khớp CHECK `hometown.priority_area`). */
+export const priorityAreaLabels: Record<string, string> = {
+  KV1: 'Khu vực 1', KV2NT: 'Khu vực 2 nông thôn', KV2: 'Khu vực 2', KV3: 'Khu vực 3',
+}
+
+/** Phạm vi áp dụng tiện nghi (khớp CHECK `amenity.applies_to`). */
+export const amenityScopeLabels: Record<string, string> = { ROOM: 'Phòng', BUILDING: 'Tòa nhà', BOTH: 'Phòng và tòa nhà' }
+
+/** Mức độ mặc định của hạng mục sửa chữa (khớp CHECK `maintenance_category.default_severity`). */
+export const severityLabels: Record<string, string> = { LOW: 'Thấp', MEDIUM: 'Trung bình', HIGH: 'Cao' }
+
+/** Kỹ năng xử lý của hạng mục sửa chữa (khớp CHECK `maintenance_category.skill`). */
+export const repairSkillLabels: Record<string, string> = {
+  ELECTRIC: 'Điện', PLUMBING: 'Cấp thoát nước', CARPENTRY: 'Mộc/nội thất',
+  HVAC: 'Điều hòa/thông gió', NETWORK: 'Mạng', GENERAL: 'Tổng hợp',
+}
+
+/** Quy tắc tự nhận diện diện ưu tiên (khớp CHECK `priority_category.auto_rule`). */
+export const priorityAutoRuleLabels: Record<string, string> = {
+  NONE: 'Không tự động', ETHNIC_MINORITY: 'Dân tộc thiểu số', HARDSHIP_AREA: 'Vùng đặc biệt khó khăn',
 }
 
 /** Mã hành động ticket sửa chữa, khớp DmsConstants.BusinessAction và allowedActions (API Spec 4.11). */

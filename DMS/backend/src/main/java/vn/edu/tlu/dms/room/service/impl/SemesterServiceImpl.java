@@ -73,7 +73,7 @@ public class SemesterServiceImpl
 
     @Override
     protected Set<String> sortableFields() {
-        return Set.of("id", "name", "academicYear", "type", "startDate", "endDate");
+        return Set.of("id", "name", "academicYear", "type", "startDate", "endDate", "code");
     }
 
     @Override
@@ -156,6 +156,16 @@ public class SemesterServiceImpl
         if (!entity.getEndDate().isAfter(entity.getStartDate())) {
             throw BusinessException.invalid(ApiField.END_DATE, ValidationMessage.END_DATE_AFTER_START);
         }
+        if (creating || academicYearChanged || input.startDate() != null || input.endDate() != null) {
+            catalogs.requireWithinAcademicYear(entity.getAcademicYear(), entity.getStartDate(), entity.getEndDate());
+        }
+        if (input.roomFeeDueDate() != null) {
+            entity.setRoomFeeDueDate(input.roomFeeDueDate());
+        }
+        if (entity.getRoomFeeDueDate() != null && entity.getRoomFeeDueDate().isBefore(entity.getStartDate())) {
+            throw BusinessException.invalid("roomFeeDueDate", ValidationMessage.ROOM_FEE_DUE_AFTER_START);
+        }
+        entity.setNote(mergeText(input.note(), entity.getNote()));
         String[] years = entity.getAcademicYear().split("-");
         if ((creating || academicYearChanged) && Integer.parseInt(years[1]) != Integer.parseInt(years[0]) + 1) {
             throw BusinessException.invalid(ApiField.ACADEMIC_YEAR, ValidationMessage.ACADEMIC_YEAR_CONSECUTIVE);
@@ -170,7 +180,10 @@ public class SemesterServiceImpl
                 entity.getAcademicYear(),
                 entity.getType(),
                 entity.getStartDate(),
-                entity.getEndDate());
+                entity.getEndDate(),
+                entity.getCode(),
+                entity.getRoomFeeDueDate(),
+                entity.getNote());
     }
 
     @Override

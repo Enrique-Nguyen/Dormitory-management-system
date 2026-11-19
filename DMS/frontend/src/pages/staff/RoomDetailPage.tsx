@@ -1,5 +1,5 @@
 import { CrownOutlined, UserSwitchOutlined } from '@ant-design/icons'
-import { Flex, Result, Typography } from 'antd'
+import { Descriptions, Flex, Result, Typography } from 'antd'
 import { useState } from 'react'
 import { useParams } from 'react-router'
 import {
@@ -23,6 +23,8 @@ import {
   assignmentOccupancy,
   BED_STATUS,
   bedOperation,
+  bedPositionLabels,
+  orientationLabels,
   roomGender,
   roomOperation,
 } from '../../constants/statusConfig'
@@ -37,7 +39,7 @@ import {
 import { hasPermission } from '../../services/api/auth'
 import type { LeaderChange, RoomBedItem, StudentRef } from '../../services/api/room'
 import { errorMessage } from '../../utils/errorMessages'
-import { formatDateTime } from '../../utils/format'
+import { formatDate, formatDateTime, formatNumber } from '../../utils/format'
 
 const SYSTEM_ACTOR = 'Hệ thống'
 
@@ -176,6 +178,34 @@ export default function RoomDetailPage({
             </Typography.Text>
           )}
         </Card>
+        <Card title="Thông tin phòng">
+          <Descriptions
+            size="small"
+            column={{ xs: 1, sm: 2, lg: 3 }}
+            items={[
+              { key: 'building', label: 'Tòa nhà', children: detail.buildingName ?? detail.buildingCode ?? '—' },
+              { key: 'displayName', label: 'Tên hiển thị', children: detail.displayName || '—' },
+              { key: 'roomType', label: 'Loại phòng', children: detail.roomTypeName ?? (roomType ? String(roomType.name) : '—') },
+              {
+                key: 'area',
+                label: 'Diện tích',
+                children: detail.areaM2 != null ? `${formatNumber(detail.areaM2)} m²` : '—',
+              },
+              {
+                key: 'orientation',
+                label: 'Hướng',
+                children: detail.orientation ? orientationLabels[detail.orientation] ?? detail.orientation : '—',
+              },
+              { key: 'commissionedOn', label: 'Đưa vào sử dụng', children: formatDate(detail.commissionedOn ?? null) },
+              { key: 'electric', label: 'Công tơ điện', children: detail.electricMeterNo || '—' },
+              { key: 'water', label: 'Đồng hồ nước', children: detail.waterMeterNo || '—' },
+              ...(detail.statusReason
+                ? [{ key: 'statusReason', label: 'Lý do trạng thái', children: detail.statusReason }]
+                : []),
+              ...(detail.note ? [{ key: 'note', label: 'Ghi chú', children: detail.note, span: 3 }] : []),
+            ]}
+          />
+        </Card>
         <Tabs
           items={[
             {
@@ -205,6 +235,11 @@ export default function RoomDetailPage({
                       pagination={false}
                       columns={[
                         { title: 'Mã giường', dataIndex: 'code' },
+                        {
+                          title: 'Vị trí',
+                          dataIndex: 'position',
+                          render: (value: string | null) => (value ? bedPositionLabels[value] ?? value : '—'),
+                        },
                         {
                           title: 'Vận hành',
                           dataIndex: 'status',

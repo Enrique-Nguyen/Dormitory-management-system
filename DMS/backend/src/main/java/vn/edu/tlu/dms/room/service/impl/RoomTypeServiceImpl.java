@@ -4,13 +4,13 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import vn.edu.tlu.dms.account.service.CatalogService;
-import vn.edu.tlu.dms.common.constants.DmsConstants;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Catalog;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
@@ -75,13 +75,14 @@ public class RoomTypeServiceImpl
 
     @Override
     protected Set<String> searchableFields() {
-        return Set.of("name");
+        return Set.of("name", "code");
     }
 
     @Override
     protected Set<String> sortableFields() {
         return Set.of(
                 "id",
+                "code",
                 "name",
                 "bedCount",
                 "priceMain",
@@ -100,6 +101,10 @@ public class RoomTypeServiceImpl
             }
             if (search.active() != null) {
                 predicate = builder.and(predicate, builder.equal(root.get("active"), search.active()));
+            }
+            if (search.code() != null && !search.code().isBlank()) {
+                predicate = builder.and(predicate, builder.greaterThan(builder.locate(
+                        builder.lower(root.get("code")), search.code().trim().toLowerCase(Locale.ROOT)), 0));
             }
             if (search.bedCount() != null) {
                 predicate = builder.and(predicate, builder.equal(root.get("bedCount"), search.bedCount()));
@@ -122,8 +127,21 @@ public class RoomTypeServiceImpl
     @Override
     protected void apply(RoomType entity, RoomTypeRequest input, boolean creating) {
         if (creating) {
+            requireValue(input.code(), "code");
             requireValue(input.name(), "name");
         }
+        if (input.code() != null && !input.code().equals(entity.getCode())) {
+            // Mã là khóa tham chiếu trong Excel; không đổi khi đã có phòng dùng loại này.
+            if (!creating && countRooms(entity.getId()) > 0) {
+                throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
+            }
+            entity.setCode(trimRequiredText(input.code(), "code"));
+        }
+        entity.setPrivateBathroom(mergeValue(input.privateBathroom(), entity.getPrivateBathroom()));
+        entity.setHasBalcony(mergeValue(input.hasBalcony(), entity.getHasBalcony()));
+        entity.setBedStyle(mergeValue(input.bedStyle(), entity.getBedStyle()));
+        entity.setHasKitchen(mergeValue(input.hasKitchen(), entity.getHasKitchen()));
+        entity.setDescription(mergeText(input.description(), entity.getDescription()));
         if (input.name() != null) {
             entity.setName(trimRequiredText(input.name(), "name"));
         }
@@ -191,7 +209,19 @@ public class RoomTypeServiceImpl
                 entity.getAreaM2(),
                 amenityIds,
                 amenities,
-                entity.getActive());
+                entity.getActive(),
+                entity.getCode(),
+                entity.getPrivateBathroom(),
+                entity.getHasBalcony(),
+                entity.getBedStyle(),
+                entity.getHasKitchen(),
+                entity.getDescription(),
+                entity.getId() == null ? 0 : countRooms(entity.getId()));
+    }
+
+    /** Số phòng đang dùng loại phòng; dùng cho hiển thị và chặn đổi mã/số giường. */
+    private long countRooms(Long roomTypeId) {
+        return rooms.count((r, q, b) -> b.equal(r.get("roomTypeId"), roomTypeId));
     }
 
     @Override

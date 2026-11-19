@@ -15,6 +15,9 @@ public interface RoomReferenceService {
     /** Lấy ID đơn vị sở hữu tòa để nơi gọi kiểm tra phạm vi quyền. */
     Long getBuildingManagementUnitId(Long id);
 
+    /** Đọc tên tòa theo ID để hiển thị ở module khác; ID không tồn tại bị bỏ qua. */
+    Map<Long, String> getBuildingNames(Set<Long> ids);
+
     /** Đọc mức cọc của tòa để kích hoạt hợp đồng, không trả entity ra ngoài module. */
     Long getBuildingDepositAmount(Long id);
 

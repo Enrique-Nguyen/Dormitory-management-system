@@ -21,6 +21,10 @@ export interface RoomBedItem {
   code: string
   status: string
   occupant: RoomOccupant | null
+  /** UPPER/LOWER/SINGLE; null khi chưa khai. */
+  position?: string | null
+  assetCode?: string | null
+  note?: string | null
 }
 
 export interface LeaderChange {
@@ -50,6 +54,17 @@ export interface RoomDetail {
   leader: StudentRef | null
   beds: RoomBedItem[]
   leaderHistory: LeaderChange[]
+  buildingCode?: string | null
+  buildingName?: string | null
+  roomTypeName?: string | null
+  displayName?: string | null
+  areaM2?: number | null
+  orientation?: string | null
+  electricMeterNo?: string | null
+  waterMeterNo?: string | null
+  commissionedOn?: string | null
+  statusReason?: string | null
+  note?: string | null
 }
 
 export interface AvailableRoom {

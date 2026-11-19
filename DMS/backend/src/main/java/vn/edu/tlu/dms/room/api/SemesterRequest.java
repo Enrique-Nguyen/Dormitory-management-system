@@ -15,11 +15,19 @@ public record SemesterRequest(
         @Pattern(regexp = "[0-9]{4}-[0-9]{4}") String academicYear,
         @Pattern(regexp = SemesterType.PATTERN) String type,
         LocalDate startDate,
-        LocalDate endDate) {
+        LocalDate endDate,
+        LocalDate roomFeeDueDate,
+        @Size(max = 1000) String note) {
+
+    /** Tương thích lời gọi chưa có hạn đóng phí phòng và ghi chú. */
+    public SemesterRequest(
+            Long id, String name, String academicYear, String type, LocalDate startDate, LocalDate endDate) {
+        this(id, name, academicYear, type, startDate, endDate, null, null);
+    }
 
     /** Tương thích lời gọi tạo mới trong mã Java; API dùng body có trường ID tùy chọn. */
     public SemesterRequest(
             String name, String academicYear, String type, LocalDate startDate, LocalDate endDate) {
-        this(null, name, academicYear, type, startDate, endDate);
+        this(null, name, academicYear, type, startDate, endDate, null, null);
     }
 }

@@ -12,6 +12,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.Action;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Catalog;
+import vn.edu.tlu.dms.common.constants.DmsConstants.CatalogValue;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
@@ -22,6 +23,8 @@ import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
 import vn.edu.tlu.dms.common.service.AuditService;
 
+import java.time.LocalDate;
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,6 +36,52 @@ import java.util.Set;
 @Transactional
 public class CatalogServiceImpl implements CatalogService {
     private record Definition(String table, int codeLength, int nameLength, String relation) {}
+
+    private enum FieldType { TEXT, BOOLEAN, NUMBER, DATE }
+
+    /** Trường bổ sung của một loại danh mục: tên JSON, cột CSDL, kiểu và bắt buộc khi tạo. */
+    private record Extra(String field, String column, FieldType type, boolean requiredOnCreate) {}
+
+    private static final Extra NOTE = new Extra(ApiField.NOTE, "note", FieldType.TEXT, false);
+
+    /** Danh sách trường bổ sung theo loại (đặc tả trường nghiệp vụ đầy đủ mục 8–17, migration V18). */
+    private static final Map<String, List<Extra>> EXTRAS = Map.of(
+            Catalog.SCHOOLS, List.of(
+                    new Extra("shortName", "short_name", FieldType.TEXT, false),
+                    new Extra("moetCode", "moet_code", FieldType.TEXT, false),
+                    new Extra("address", "address", FieldType.TEXT, false),
+                    new Extra("homeSchool", "is_home_school", FieldType.BOOLEAN, false),
+                    NOTE),
+            Catalog.FACULTIES, List.of(
+                    new Extra("shortName", "short_name", FieldType.TEXT, false),
+                    new Extra("phone", "phone", FieldType.TEXT, false),
+                    new Extra("email", "email", FieldType.TEXT, false),
+                    NOTE),
+            Catalog.COHORTS, List.of(
+                    new Extra("enrollmentYear", "enrollment_year", FieldType.NUMBER, true),
+                    new Extra("expectedGraduationYear", "expected_graduation_year", FieldType.NUMBER, false),
+                    NOTE),
+            Catalog.HOMETOWNS, List.of(
+                    new Extra("adminLevel", "admin_level", FieldType.TEXT, false),
+                    new Extra("gsoCode", "gso_code", FieldType.TEXT, false),
+                    new Extra("priorityArea", "priority_area", FieldType.TEXT, false),
+                    new Extra("hardshipArea", "hardship_area", FieldType.BOOLEAN, false),
+                    NOTE),
+            Catalog.ACADEMIC_YEARS, List.of(
+                    new Extra(ApiField.START_DATE, "start_date", FieldType.DATE, true),
+                    new Extra(ApiField.END_DATE, "end_date", FieldType.DATE, true),
+                    NOTE),
+            Catalog.AMENITIES, List.of(
+                    new Extra("appliesTo", "applies_to", FieldType.TEXT, false),
+                    new Extra("icon", "icon", FieldType.TEXT, false),
+                    new Extra("description", "description", FieldType.TEXT, false),
+                    NOTE),
+            Catalog.MAINTENANCE_CATEGORIES, List.of(
+                    new Extra("defaultSeverity", "default_severity", FieldType.TEXT, false),
+                    new Extra("slaHours", "sla_hours", FieldType.NUMBER, false),
+                    new Extra("skill", "skill", FieldType.TEXT, false),
+                    new Extra("description", "description", FieldType.TEXT, false),
+                    NOTE));
 
     private static final Map<String, Definition> DEFINITIONS = Map.of(
             Catalog.SCHOOLS, new Definition("school", 30, 200, null),
@@ -94,19 +143,19 @@ public class CatalogServiceImpl implements CatalogService {
         parameters.addValue("limit", size).addValue("offset", (long) page * size);
         var rows = jdbc.queryForList("SELECT * FROM " + d.table() + where + " ORDER BY " + order
                 + " LIMIT :limit OFFSET :offset", parameters);
-        return new PageResponse<>(rows.stream().map(this::response).toList(), page, size,
+        return new PageResponse<>(rows.stream().map(item -> response(kind, item)).toList(), page, size,
                 total, (int) ((total + size - 1) / size));
     }
 
     @Override
     public Map<String, Object> getById(String kind, Long id) {
         guard.requirePermission(Permission.CATALOG_READ);
-        return response(row(definition(kind), id, ""));
+        return response(kind, row(definition(kind), id, ""));
     }
 
     @Override
     public Map<String, Object> getReferenceById(String kind, Long id) {
-        return response(row(definition(kind), id, ""));
+        return response(kind, row(definition(kind), id, ""));
     }
 
     @Override
@@ -149,22 +198,34 @@ public class CatalogServiceImpl implements CatalogService {
             }
         }
         if (!active) checkActiveChildren(kind, input.id());
+        Map<String, Object> extras = mergeExtras(kind, input, before);
+        validateExtras(kind, input, before, relation, extras);
         var parameters = new MapSqlParameterSource().addValue("code", code).addValue("name", name)
                 .addValue("active", active).addValue("relation", relation).addValue("id", input.id());
+        extras.forEach(parameters::addValue);
+        StringBuilder insertColumns = new StringBuilder();
+        StringBuilder insertValues = new StringBuilder();
+        StringBuilder updates = new StringBuilder();
+        for (String column : extras.keySet()) {
+            insertColumns.append(",").append(column);
+            insertValues.append(",:").append(column);
+            updates.append(", ").append(column).append("=:").append(column);
+        }
         Long id;
         if (creating) {
             id = jdbc.queryForObject("INSERT INTO " + d.table() + " (code,name,active"
-                    + (d.relation() == null ? "" : "," + d.relation()) + ") VALUES (:code,:name,:active"
-                    + (d.relation() == null ? "" : ",:relation") + ") RETURNING id", parameters, Long.class);
+                    + (d.relation() == null ? "" : "," + d.relation()) + insertColumns + ") VALUES (:code,:name,:active"
+                    + (d.relation() == null ? "" : ",:relation") + insertValues + ") RETURNING id", parameters, Long.class);
         } else {
             jdbc.update("UPDATE " + d.table() + " SET name=:name, active=:active"
-                    + (d.relation() == null ? "" : "," + d.relation() + "=:relation") + " WHERE id=:id", parameters);
+                    + (d.relation() == null ? "" : "," + d.relation() + "=:relation") + updates + " WHERE id=:id",
+                    parameters);
             id = input.id();
         }
         Map<String, Object> after = row(d, id, "");
         audit.record(currentUser.get().id(), creating ? AuditAction.CATALOG_CREATE : AuditAction.CATALOG_UPDATE,
                 EntityType.CATALOG, id, auditValue(kind, before), auditValue(kind, after), null);
-        return response(after);
+        return response(kind, after);
     }
 
     @Override
@@ -187,7 +248,7 @@ public class CatalogServiceImpl implements CatalogService {
         if (rows.isEmpty() || !Boolean.TRUE.equals(rows.get(0).get(ApiField.ACTIVE))) {
             throw BusinessException.invalid(ApiField.ID, Catalog.INVALID_VALUE);
         }
-        return response(rows.get(0));
+        return response(kind, rows.get(0));
     }
 
     @Override
@@ -283,8 +344,15 @@ public class CatalogServiceImpl implements CatalogService {
         return parts[0] + " " + direction;
     }
 
-    private Map<String, Object> response(Map<String, Object> row) {
+    private Map<String, Object> response(String kind, Map<String, Object> row) {
         var result = new LinkedHashMap<>(row);
+        // Cột bổ sung trả theo tên JSON; ngày SQL đổi sang LocalDate để serialize dạng yyyy-MM-dd.
+        for (Extra extra : EXTRAS.getOrDefault(kind, List.of())) {
+            if (result.containsKey(extra.column())) {
+                Object value = result.remove(extra.column());
+                result.put(extra.field(), value instanceof java.sql.Date date ? date.toLocalDate() : value);
+            }
+        }
         if (result.containsKey("parent_id")) {
             Object parentId = result.remove("parent_id");
             result.put(ApiField.PARENT_ID, parentId);
@@ -309,5 +377,134 @@ public class CatalogServiceImpl implements CatalogService {
         var value = new LinkedHashMap<String, Object>(row);
         value.put(ApiField.KIND, kind);
         return value;
+    }
+
+    @Override
+    public void requireWithinAcademicYear(String code, LocalDate startDate, LocalDate endDate) {
+        var rows = jdbc.queryForList("SELECT start_date, end_date FROM academic_year WHERE code=:code",
+                Map.of("code", code));
+        if (rows.isEmpty() || rows.get(0).get("start_date") == null || rows.get(0).get("end_date") == null) {
+            return;
+        }
+        LocalDate yearStart = toDate(rows.get(0).get("start_date"));
+        LocalDate yearEnd = toDate(rows.get(0).get("end_date"));
+        if (startDate.isBefore(yearStart) || endDate.isAfter(yearEnd)) {
+            throw BusinessException.invalid(ApiField.START_DATE, Catalog.SEMESTER_OUTSIDE_YEAR);
+        }
+    }
+
+    /**
+     * Gộp trường bổ sung theo quy tắc sửa từng phần: null giữ giá trị cũ, chuỗi rỗng xóa trường văn bản
+     * tùy chọn. Trường không thuộc loại danh mục bị từ chối để không ghi ngầm sang bảng khác.
+     */
+    private Map<String, Object> mergeExtras(String kind, CatalogRequest input, Map<String, Object> before) {
+        List<Extra> extras = EXTRAS.getOrDefault(kind, List.of());
+        Map<String, Object> requested = requestedExtras(input);
+        for (var entry : requested.entrySet()) {
+            if (entry.getValue() != null && extras.stream().noneMatch(extra -> extra.field().equals(entry.getKey()))) {
+                throw BusinessException.invalid(entry.getKey(), Catalog.FIELD_NOT_APPLICABLE);
+            }
+        }
+        var result = new LinkedHashMap<String, Object>();
+        for (Extra extra : extras) {
+            Object value = requested.get(extra.field());
+            Object current = before == null ? null : before.get(extra.column());
+            Object merged;
+            if (value == null) {
+                merged = current instanceof java.sql.Date date ? date.toLocalDate() : current;
+            } else if (value instanceof String text) {
+                String trimmed = text.trim();
+                merged = trimmed.isEmpty() ? null : trimmed;
+            } else {
+                merged = value;
+            }
+            if (merged == null && extra.requiredOnCreate() && (before == null || value != null)) {
+                throw BusinessException.invalid(extra.field(), ValidationMessage.REQUIRED);
+            }
+            if (merged == null && extra.type() == FieldType.BOOLEAN) {
+                merged = Boolean.FALSE;
+            }
+            result.put(extra.column(), merged);
+        }
+        return result;
+    }
+
+    /** Kiểm tra ràng buộc chéo giữa các trường bổ sung trước khi ghi. */
+    private void validateExtras(String kind, CatalogRequest input, Map<String, Object> before, Long relation,
+            Map<String, Object> extras) {
+        if (Catalog.COHORTS.equals(kind)) {
+            Number enrollment = (Number) extras.get("enrollment_year");
+            Number graduation = (Number) extras.get("expected_graduation_year");
+            if (enrollment != null && input.enrollmentYear() != null
+                    && enrollment.intValue() > Year.now().getValue() + 1) {
+                throw BusinessException.invalid("enrollmentYear", Catalog.YEAR_RANGE);
+            }
+            if (enrollment != null && graduation != null && graduation.intValue() <= enrollment.intValue()) {
+                throw BusinessException.invalid("expectedGraduationYear", Catalog.GRADUATION_AFTER_ENROLLMENT);
+            }
+        }
+        if (Catalog.HOMETOWNS.equals(kind)) {
+            String level = (String) extras.get("admin_level");
+            boolean relationChanged = before == null || !Objects.equals(relation, before.get("parent_id"));
+            if (level == null) {
+                // Không khai cấp thì suy theo quan hệ: có cấp cha là xã, không có là tỉnh.
+                level = relation == null ? CatalogValue.ADMIN_LEVEL_PROVINCE : CatalogValue.ADMIN_LEVEL_COMMUNE;
+                extras.put("admin_level", level);
+            }
+            if (input.adminLevel() != null || relationChanged) {
+                boolean province = CatalogValue.ADMIN_LEVEL_PROVINCE.equals(level);
+                if (province != (relation == null) || (!province && !CatalogValue.ADMIN_LEVEL_PROVINCE.equals(
+                        jdbc.queryForObject("SELECT admin_level FROM hometown WHERE id=:id",
+                                Map.of("id", relation), String.class)))) {
+                    throw BusinessException.invalid("adminLevel", Catalog.ADMIN_LEVEL_PARENT);
+                }
+            }
+        }
+        if (Catalog.AMENITIES.equals(kind) && extras.get("applies_to") == null) {
+            extras.put("applies_to", CatalogValue.APPLIES_TO_ROOM);
+        }
+        if (Catalog.ACADEMIC_YEARS.equals(kind)) {
+            LocalDate start = (LocalDate) extras.get("start_date");
+            LocalDate end = (LocalDate) extras.get("end_date");
+            String code = before == null ? input.code().trim() : (String) before.get(ApiField.CODE);
+            if (start != null && end != null && !end.isAfter(start)) {
+                throw BusinessException.invalid(ApiField.END_DATE, ValidationMessage.END_DATE_AFTER_START);
+            }
+            if (start != null && code.matches("[0-9]{4}-[0-9]{4}")
+                    && start.getYear() != Integer.parseInt(code.substring(0, 4))) {
+                throw BusinessException.invalid(ApiField.START_DATE, Catalog.START_YEAR_MISMATCH);
+            }
+        }
+    }
+
+    /** Ánh xạ tên JSON → giá trị gửi lên của mọi trường bổ sung trong body. */
+    private static Map<String, Object> requestedExtras(CatalogRequest input) {
+        var values = new LinkedHashMap<String, Object>();
+        values.put("shortName", input.shortName());
+        values.put("moetCode", input.moetCode());
+        values.put("address", input.address());
+        values.put("homeSchool", input.homeSchool());
+        values.put("phone", input.phone());
+        values.put("email", input.email());
+        values.put("enrollmentYear", input.enrollmentYear());
+        values.put("expectedGraduationYear", input.expectedGraduationYear());
+        values.put("adminLevel", input.adminLevel());
+        values.put("gsoCode", input.gsoCode());
+        values.put("priorityArea", input.priorityArea());
+        values.put("hardshipArea", input.hardshipArea());
+        values.put(ApiField.START_DATE, input.startDate());
+        values.put(ApiField.END_DATE, input.endDate());
+        values.put("appliesTo", input.appliesTo());
+        values.put("icon", input.icon());
+        values.put("description", input.description());
+        values.put("defaultSeverity", input.defaultSeverity());
+        values.put("slaHours", input.slaHours());
+        values.put("skill", input.skill());
+        values.put(ApiField.NOTE, input.note());
+        return values;
+    }
+
+    private static LocalDate toDate(Object value) {
+        return value instanceof java.sql.Date date ? date.toLocalDate() : (LocalDate) value;
     }
 }

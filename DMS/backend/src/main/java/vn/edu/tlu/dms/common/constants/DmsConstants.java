@@ -47,9 +47,12 @@ public final class DmsConstants {
         public static final String DUPLICATE_DEPOSIT = "DUPLICATE_DEPOSIT";
         public static final String DUPLICATE_INVOICE = "DUPLICATE_INVOICE";
         public static final String DUPLICATE_REFUND = "DUPLICATE_REFUND";
+        public static final String ACADEMIC_YEAR_OVERLAP = "ACADEMIC_YEAR_OVERLAP";
         public static final String DUPLICATE_USERNAME = "DUPLICATE_USERNAME";
         public static final String DUPLICATE_VALUE = "DUPLICATE_VALUE";
         public static final String FILE_TOO_LARGE = "FILE_TOO_LARGE";
+        public static final String FLOOR_IN_USE = "FLOOR_IN_USE";
+        public static final String FLOOR_OUT_OF_RANGE = "FLOOR_OUT_OF_RANGE";
         public static final String FORBIDDEN = "FORBIDDEN";
         public static final String GENDER_MISMATCH = "GENDER_MISMATCH";
         public static final String IDENTITY_ALREADY_LINKED = "IDENTITY_ALREADY_LINKED";
@@ -105,6 +108,7 @@ public final class DmsConstants {
         public static final String UNIT_NOT_IN_PERIOD = "UNIT_NOT_IN_PERIOD";
         public static final String UNSUPPORTED_MEDIA_TYPE = "UNSUPPORTED_MEDIA_TYPE";
         public static final String USERNAME_EXISTS = "USERNAME_EXISTS";
+        public static final String USER_UNIT_MISMATCH = "USER_UNIT_MISMATCH";
         public static final String VALIDATION_FAILED = "VALIDATION_FAILED";
 
         private ErrorCode() {}
@@ -302,6 +306,13 @@ public final class DmsConstants {
         public static final String IMMUTABLE_CODE = "Không được thay đổi mã danh mục đã tạo";
         public static final String INVALID_HIERARCHY = "Quan hệ danh mục không hợp lệ hoặc tạo chu trình";
         public static final String INVALID_YEAR = "Năm học phải có dạng YYYY-YYYY và hai năm liên tiếp";
+        public static final String FIELD_NOT_APPLICABLE = "Trường này không thuộc loại danh mục đang lưu";
+        public static final String START_YEAR_MISMATCH = "Năm của ngày bắt đầu phải bằng năm đầu của mã năm học";
+        public static final String YEAR_RANGE = "Năm nhập học phải từ 2000 đến năm sau năm hiện tại";
+        public static final String GRADUATION_AFTER_ENROLLMENT = "Năm tốt nghiệp dự kiến phải sau năm nhập học";
+        public static final String ADMIN_LEVEL_PARENT = "Cấp tỉnh không có cấp cha; cấp xã phải thuộc một tỉnh";
+        public static final String SEMESTER_OUTSIDE_YEAR = "Học kỳ phải nằm trong khoảng ngày của năm học";
+        public static final String INVALID_FORMAT = "Giá trị không đúng định dạng";
         private Catalog() {}
     }
 
@@ -481,6 +492,7 @@ public final class DmsConstants {
         public static final String PLACEMENT_SOURCE_EXACTLY_ONE =
                 "Truyền đúng một trong applicationId, transferRequestId hoặc storageRecordId";
         public static final String ACADEMIC_YEAR_CONSECUTIVE = "Hai năm phải liền nhau";
+        public static final String ROOM_FEE_DUE_AFTER_START = "Hạn đóng phí phòng không được trước ngày bắt đầu học kỳ";
         private ValidationMessage() {}
     }
 
@@ -1175,6 +1187,48 @@ public final class DmsConstants {
         public static final String PATTERN = M + "|" + F;
 
         private Gender() {}
+    }
+
+    /**
+     * Mã định dạng và tập giá trị của trường hồ sơ cơ sở vật chất (đặc tả trường nghiệp vụ đầy đủ,
+     * Phần I). Giá trị khớp CHECK trong migration V16; không đổi khi đã lưu.
+     */
+    public static final class Facility {
+        /** SĐT Việt Nam: 0 hoặc +84 và 9–10 chữ số; chuỗi rỗng dùng để xóa trường tùy chọn. */
+        public static final String PHONE_PATTERN = "^$|^(\\+84|0)[0-9]{9,10}$";
+        public static final String EMAIL_PATTERN = "^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$";
+        public static final String GENDER_MIXED = "MIXED";
+        public static final String GENDER_POLICY_PATTERN = Gender.M + "|" + Gender.F + "|" + GENDER_MIXED;
+        public static final String BED_STYLE_SINGLE = "SINGLE";
+        public static final String BED_STYLE_BUNK = "BUNK";
+        public static final String BED_STYLE_PATTERN = BED_STYLE_SINGLE + "|" + BED_STYLE_BUNK;
+        public static final String BED_POSITION_PATTERN = "^$|^(UPPER|LOWER|SINGLE)$";
+        public static final String ORIENTATION_PATTERN = "^$|^(N|S|E|W|NE|NW|SE|SW)$";
+        public static final String ROOM_TYPE_CODE_PATTERN = "^[A-Z0-9_-]{1,30}$";
+        public static final int MAX_FLOOR_COUNT = 30;
+        public static final int MIN_COMMISSIONED_YEAR = 1950;
+
+        private Facility() {}
+    }
+
+    /**
+     * Tập giá trị của trường danh mục (đặc tả trường nghiệp vụ đầy đủ, Phần II mục 8–19). Giá trị khớp
+     * CHECK trong migration V18; mã đã lưu không đổi.
+     */
+    public static final class CatalogValue {
+        public static final String ADMIN_LEVEL_PROVINCE = "PROVINCE";
+        public static final String ADMIN_LEVEL_COMMUNE = "COMMUNE";
+        public static final String ADMIN_LEVEL_PATTERN = ADMIN_LEVEL_PROVINCE + "|" + ADMIN_LEVEL_COMMUNE;
+        public static final String PRIORITY_AREA_PATTERN = "^$|^(KV1|KV2NT|KV2|KV3)$";
+        public static final String APPLIES_TO_ROOM = "ROOM";
+        public static final String APPLIES_TO_PATTERN = "ROOM|BUILDING|BOTH";
+        public static final String SEVERITY_PATTERN = "^$|^(LOW|MEDIUM|HIGH)$";
+        public static final String SKILL_PATTERN = "^$|^(ELECTRIC|PLUMBING|CARPENTRY|HVAC|NETWORK|GENERAL)$";
+        public static final String AUTO_RULE_PATTERN = "^$|^(ETHNIC_MINORITY|HARDSHIP_AREA|NONE)$";
+        public static final int MIN_ENROLLMENT_YEAR = 2000;
+        public static final int MAX_SLA_HOURS = 720;
+
+        private CatalogValue() {}
     }
 
     /**
