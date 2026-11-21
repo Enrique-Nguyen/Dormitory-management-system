@@ -21,7 +21,7 @@ export default function CrudTabsPage({
       items={allowedTabs.map((tab) => ({
         key: tab.key,
         label: tab.label,
-        children: <CrudPage key={tab.resource} resource={tab.resource} />,
+        children: <CrudPage key={tab.resource} resource={tab.resource} embedded />,
       }))}
     />
   )

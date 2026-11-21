@@ -76,14 +76,14 @@ export default function AssignTechnicianModal({
       <Alert
         type="info"
         showIcon
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 12 }}
         title="Chỉ kỹ thuật viên đang hoạt động trong đơn vị của ticket nhận được việc."
       />
       {technicians.isError ? (
         <Alert
           type="error"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           title="Không tải được danh sách kỹ thuật viên"
           description={errorMessage(technicians.error)}
         />
@@ -92,7 +92,7 @@ export default function AssignTechnicianModal({
         <Alert
           type="warning"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           title="Chưa có kỹ thuật viên đang hoạt động trong đơn vị."
           description="Liên hệ quản trị viên để bổ sung tài khoản kỹ thuật viên trước khi giao việc."
         />

@@ -3,6 +3,7 @@ import {
   ACCENT_PRESETS,
   getAntdThemeConfig,
   initializeTheme,
+  DEFAULT_THEME_STYLE,
   THEME_STYLES,
   type AccentKey,
   type CustomAccent,
@@ -51,7 +52,7 @@ let activeUserId: number | null = null
 let version = 0
 let userChangeEpoch = 0
 let currentPreferences: ThemePreferences = { ...DEFAULT_THEME_PREFERENCES }
-let currentStyle: ThemeStyle = 'modern'
+let currentStyle: ThemeStyle = DEFAULT_THEME_STYLE
 
 interface ThemeAppearance {
   tableBorders: boolean
@@ -207,7 +208,7 @@ export function setActiveUser(userId: number | null) {
   activeUserId = userId
   version = 0
   currentAppearance = DEFAULT_APPEARANCE
-  let style: ThemeStyle = 'modern'
+  let style: ThemeStyle = DEFAULT_THEME_STYLE
   if (userId !== null && typeof window !== 'undefined') {
     try {
       const saved = window.localStorage.getItem(`${STORAGE_KEY_PREFIX}:style:${userId}`)
@@ -333,13 +334,15 @@ export function useAppTheme() {
     getServerSnapshot,
   )
 
-  const style = useSyncExternalStore(subscribe, () => currentStyle, () => 'modern' as ThemeStyle)
+  const style = useSyncExternalStore(subscribe, () => currentStyle, () => DEFAULT_THEME_STYLE)
   const appearance = useSyncExternalStore(subscribe, () => currentAppearance, () => DEFAULT_APPEARANCE)
 
   return {
     ...prefs,
     ...appearance,
     style,
+    /** Kiểu "classic" sáng: topbar và sidebar nền màu chủ đạo như HR-V5. */
+    solidAccentChrome: style === 'classic' && prefs.mode === 'light',
     setCustomAccent,
     setTableBorders,
     setMode: setThemeMode,

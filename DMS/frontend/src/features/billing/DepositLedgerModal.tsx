@@ -178,7 +178,7 @@ export default function DepositLedgerModal({ contractId, contractCode, studentNa
 
           {balance.topupOverdue && (
             <Alert
-              style={{ marginTop: 16 }}
+              style={{ marginTop: 12 }}
               type="warning"
               showIcon
               title={billingUiLabels.depositTopupOverdue}

@@ -1,6 +1,7 @@
 import { ConfirmPaymentModal, DepositLedgerModal } from '../features/billing'
 import { formatInvoicePeriod } from '../features/billing/presentation'
 import { EmptyState, InvoiceStatus, StatusBadge } from '../components'
+import PageHeader from '../components/layout/PageHeader'
 import { CreateTicketModal } from '../features/maintenance'
 import {
   Input,
@@ -463,7 +464,14 @@ function renderCrudInput(field: CrudField, disabled?: boolean) {
   }
 }
 
-export default function CrudPage({ resource }: { resource: string }) {
+export default function CrudPage({
+  resource,
+  embedded = false,
+}: {
+  resource: string
+  /** Nhúng trong trang nhiều tab: tiêu đề do tab đảm nhiệm nên không lặp lại. */
+  embedded?: boolean
+}) {
   const config = resources[resource]
   const { data: me } = useMe()
   const { message, modal } = App.useApp()
@@ -860,6 +868,8 @@ export default function CrudPage({ resource }: { resource: string }) {
       queryClient.invalidateQueries({ queryKey: ['me'] }),
     ])
   }
+  const roomList = resource === 'rooms'
+  const studentList = resource === 'students' || resource === 'adminStudents'
   const studentAccountImport = resource === 'adminStudents' && hasPermission(me, Permission.STUDENT_CREATE)
   const canImportExcel = !config.singleton && !config.readOnly && (canCreate || canUpdate)
   const excelFields = [...new Map([
@@ -1117,6 +1127,8 @@ export default function CrudPage({ resource }: { resource: string }) {
     if (!canDeleteRow(row)) return
     let reason = ''
     modal.confirm({
+      transitionName: roomList ? '' : undefined,
+      maskTransitionName: roomList ? '' : undefined,
       title: `${config.deleteLabel ?? 'Xóa'} bản ghi này?`,
       content:
         config.deleteAction === 'lock' ? (
@@ -1452,9 +1464,10 @@ export default function CrudPage({ resource }: { resource: string }) {
 
   return (
     <div className={`dms-crud-page${config.finance ? ' dms-finance-page' : ''}`}>
+      {!embedded && <PageHeader title={config.title} />}
 
       {studentAccountImport && excelOpen && (
-        <Card title={studentImportLabels.panelTitle} style={{ marginBottom: 16 }}>
+        <Card title={studentImportLabels.panelTitle} style={{ marginBottom: 12 }}>
           <StudentImportPanel onBlockedChange={setStudentImportBlocked} />
         </Card>
       )}
@@ -1514,6 +1527,15 @@ export default function CrudPage({ resource }: { resource: string }) {
                   canCreate={canCreate && !['students', 'adminStudents'].includes(resource)} canUpdate={canUpdate}
                   onSave={saveExcelRow} onComplete={refresh} onBlockedChange={setExcelBlocked} />
               )}
+              {studentList ? (
+                <Button
+                  icon={<DownloadOutlined />}
+                  loading={exporting}
+                  onClick={() => void exportExcel()}
+                >
+                  {excelUiLabels.export}
+                </Button>
+              ) : (
               <span style={{ display: 'inline-flex', position: 'relative' }}>
               <Dropdown
                 getPopupContainer={(trigger) => trigger.parentElement!}
@@ -1549,6 +1571,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                 </Tooltip>
               </Dropdown>
               </span>
+              )}
             </Space>
           }
           filters={!config.singleton && !!config.filters?.length && (
@@ -1704,7 +1727,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                           {
                             key: 'reset-pwd',
                             icon: <KeyOutlined />,
-                            label: 'Đặt lại mật khẩu',
+                            label: crudDetailUiLabels.resetPassword,
                             onClick: () => resetPassword(row),
                           },
                         ]
@@ -1750,32 +1773,61 @@ export default function CrudPage({ resource }: { resource: string }) {
                           className="dms-action-btn dms-action-view"
                         />
                       </Tooltip>
-                      {canEditRow(row) && (
-                        <Tooltip title="Sửa">
+                      {canUpdate && !config.singleton && (
+                        <Tooltip
+                          title={
+                            canEditRow(row)
+                              ? 'Sửa'
+                              : (crudDetailUiLabels.lockedReasons[resource] ?? crudDetailUiLabels.editBlocked)
+                          }
+                        >
+                          <span className="dms-action-slot">
+                            <Button
+                              size="small"
+                              icon={<EditOutlined />}
+                              disabled={!canEditRow(row)}
+                              onClick={() => {
+                                void openEditor(row)
+                              }}
+                              aria-label="Sửa"
+                              className="dms-action-btn dms-action-edit"
+                            />
+                          </span>
+                        </Tooltip>
+                      )}
+                      {canDelete && !config.singleton && !config.noDelete && (
+                        <Tooltip
+                          title={
+                            canDeleteRow(row)
+                              ? (config.deleteLabel ?? 'Xóa')
+                              : (crudDetailUiLabels.lockedReasons[resource] ?? crudDetailUiLabels.deleteBlocked)
+                          }
+                        >
+                          <span className="dms-action-slot">
+                            <Button
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                              disabled={!canDeleteRow(row)}
+                              onClick={() => deleteRecord(row)}
+                              aria-label={config.deleteLabel ?? 'Xóa'}
+                              className="dms-action-btn dms-action-delete"
+                            />
+                          </span>
+                        </Tooltip>
+                      )}
+                      {studentList && canResetPassword(row) && (
+                        <Tooltip title={crudDetailUiLabels.resetPassword}>
                           <Button
                             size="small"
-                            icon={<EditOutlined />}
-                            onClick={() => {
-                              void openEditor(row)
-                            }}
-                            aria-label="Sửa"
-                            className="dms-action-btn dms-action-edit"
+                            icon={<KeyOutlined />}
+                            onClick={() => resetPassword(row)}
+                            aria-label={crudDetailUiLabels.resetPassword}
+                            className="dms-action-btn"
                           />
                         </Tooltip>
                       )}
-                      {canDeleteRow(row) && (
-                        <Tooltip title={config.deleteLabel ?? 'Xóa'}>
-                          <Button
-                            size="small"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => deleteRecord(row)}
-                            aria-label={config.deleteLabel ?? 'Xóa'}
-                            className="dms-action-btn dms-action-delete"
-                          />
-                        </Tooltip>
-                      )}
-                      {hasSpecialActions && (
+                      {!studentList && hasSpecialActions && (
                         <Dropdown menu={{ items: moreItems }} trigger={['click']}>
                           <Tooltip title="Thao tác khác">
                             <Button
@@ -1799,6 +1851,8 @@ export default function CrudPage({ resource }: { resource: string }) {
         headerIcon={<ModalHeaderIcon />}
         title={modalTitleText}
         subtitle={modalSubtitle}
+        transitionName={roomList ? '' : undefined}
+        maskTransitionName={roomList ? '' : undefined}
         open={modalMode !== null}
         forceRender
         onCancel={closeModal}

@@ -263,6 +263,8 @@ export default function CreateTicketModal({
                 <ReferenceSelect
                   {...fieldControl}
                   endpoint="/catalogs/maintenance-categories"
+                  getPopupContainer={(trigger) => trigger}
+                  popupClassName="dms-crud-select-popup"
                   valueField="code"
                   filters={{ active: true }}
                   value={field.value || undefined}
@@ -286,6 +288,8 @@ export default function CreateTicketModal({
                   {...field}
                   {...fieldControl}
                   options={[...maintenanceSeverityOptions]}
+                  getPopupContainer={(trigger) => trigger}
+                  popupClassName="dms-crud-select-popup"
                   placeholder="Chọn mức độ"
                 />
               )}
@@ -376,6 +380,8 @@ export default function CreateTicketModal({
                           {...field}
                           {...fieldControl}
                           options={roomOptions}
+                          getPopupContainer={(trigger) => trigger}
+                          popupClassName="dms-crud-select-popup"
                           loading={rooms.isLoading}
                           disabled={rooms.isError}
                           showSearch
@@ -418,6 +424,8 @@ export default function CreateTicketModal({
                           {...field}
                           {...fieldControl}
                           options={buildingOptions}
+                          getPopupContainer={(trigger) => trigger}
+                          popupClassName="dms-crud-select-popup"
                           onChange={(value) => {
                             field.onChange(value)
                             setValue('floor', undefined)
@@ -443,6 +451,8 @@ export default function CreateTicketModal({
                         <ReferenceSelect
                           {...fieldControl}
                           endpoint="/floors"
+                          getPopupContainer={(trigger) => trigger}
+                          popupClassName="dms-crud-select-popup"
                           valueField="floor"
                           filters={{ active: true, ...(buildingId != null ? { buildingId } : {}) }}
                           value={field.value}

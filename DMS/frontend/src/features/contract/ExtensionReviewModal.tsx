@@ -162,7 +162,6 @@ export default function ExtensionReviewModal({
       }}
     >
       <Descriptions
-        bordered
         size="small"
         column={{ xs: 1, sm: 2 }}
         items={[
@@ -209,7 +208,7 @@ export default function ExtensionReviewModal({
         <Alert
           type="error"
           showIcon
-          style={{ marginTop: 16 }}
+          style={{ marginTop: 12 }}
           title="Khoảng gia hạn chồng hợp đồng khác"
           description={
             <>
@@ -230,14 +229,14 @@ export default function ExtensionReviewModal({
         <Alert
           type="info"
           showIcon
-          style={{ marginTop: 16 }}
+          style={{ marginTop: 12 }}
           title="Duyệt sẽ cập nhật ngày kết thúc hợp đồng"
           description="Hệ thống kiểm tra chồng khoảng lưu trú với hợp đồng khác của sinh viên và ghi lịch sử trong cùng giao dịch."
         />
       )}
 
       {mode === 'reject' && (
-        <div style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 12 }}>
           <FormField
             label="Lý do từ chối"
             required
@@ -266,7 +265,7 @@ export default function ExtensionReviewModal({
         <Alert
           type="warning"
           showIcon
-          style={{ marginTop: 16 }}
+          style={{ marginTop: 12 }}
           title="Yêu cầu không còn chờ duyệt"
           description="Trạng thái đã thay đổi; đóng hộp thoại và tải lại chi tiết để xem kết quả mới nhất."
         />

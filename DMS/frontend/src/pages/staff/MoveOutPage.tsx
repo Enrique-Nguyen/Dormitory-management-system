@@ -25,7 +25,7 @@ export interface MoveOutPageProps {
 
 function ResultCard({ result }: { result: MoveOutResult }) {
   return (
-    <Card title="Kết quả trả phòng" style={{ marginTop: 16 }}>
+    <Card title="Kết quả trả phòng" style={{ marginTop: 12 }}>
       <Alert
         type="success"
         showIcon
@@ -33,10 +33,9 @@ function ResultCard({ result }: { result: MoveOutResult }) {
         description="Hợp đồng, phân phòng, trưởng phòng và hoàn cọc đã được cập nhật theo kết quả máy chủ."
       />
       <Descriptions
-        bordered
         size="small"
         column={{ xs: 1, sm: 2 }}
-        style={{ marginTop: 16 }}
+        style={{ marginTop: 12 }}
         items={[
           {
             key: 'contract',
@@ -146,7 +145,7 @@ export default function MoveOutPage({
           <Alert
             type="info"
             showIcon
-            style={{ marginBottom: 16 }}
+            style={{ marginBottom: 12 }}
             title="Chức năng chỉ áp dụng cho hợp đồng đang ACTIVE"
             description="Thông thường mở từ danh sách hoặc chi tiết hợp đồng; nếu mở từ menu, nhập mã hợp đồng bên dưới."
           />
@@ -165,7 +164,7 @@ export default function MoveOutPage({
               />
             )}
           </FormField>
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 12 }}>
             <Button type="primary" onClick={openWithManualId}>
               Xem trước trả phòng
             </Button>

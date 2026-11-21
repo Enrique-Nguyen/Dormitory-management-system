@@ -6,13 +6,18 @@ import UserMenu from '../../components/layout/UserMenu'
 import { useMe } from '../../features/account/useMe'
 import { hasPermission } from '../../services/api/auth'
 import ThemeSwitcher from '../../components/layout/ThemeSwitcher'
+import { useAppTheme } from '../themeStore'
 
 /** Cổng KTV: tối giản, không sidebar, hành động chính lớn full-width (.dms-action-lg) (UI 4.3, 22). */
 export default function TechnicianLayout() {
   const { data: me } = useMe()
+  const { solidAccentChrome } = useAppTheme()
   return (
     <Layout className="dms-touch" style={{ minHeight: '100vh' }}>
-      <Layout.Header className="dms-topbar">
+      <Layout.Header
+        className="dms-topbar"
+        data-topbar={solidAccentChrome ? 'accent' : undefined}
+      >
         <Link to="/technician/tasks" className="dms-brand-logo">
           <span className="dms-brand-icon">TLU</span>
           <span>DMS</span>

@@ -123,30 +123,6 @@ function SunIcon({ className, style }: { className?: string; style?: CSSProperti
   )
 }
 
-function Grid3x3Icon({ className, style }: { className?: string; style?: CSSProperties }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      style={style}
-    >
-      <rect width="18" height="18" x="3" y="3" rx="2" />
-      <path d="M3 9h18" />
-      <path d="M3 15h18" />
-      <path d="M9 3v18" />
-      <path d="M15 3v18" />
-    </svg>
-  )
-}
-
 function SwatchSquare({ color, bg }: { color: string; bg: string }) {
   return (
     <span className="dms-swatch-square" aria-hidden>
@@ -295,23 +271,6 @@ export default function ThemeSwitcher() {
       onClick: () => {
         theme.toggleMode()
         setOpen(false)
-      },
-    },
-    {
-      key: 'table-borders',
-      label: (
-        <span className="dms-theme-option">
-          <Grid3x3Icon className="dms-theme-item-icon" />
-          <span style={{ flex: 1 }}>{THEME_UI_LABELS.tableBorders}</span>
-          <span className="dms-theme-status-text">
-            {theme.tableBorders ? THEME_UI_LABELS.yes : THEME_UI_LABELS.no}
-          </span>
-        </span>
-      ),
-      onClick: (info) => {
-        info?.domEvent?.stopPropagation?.()
-        keepOpenRef.current = true
-        theme.setTableBorders(!theme.tableBorders)
       },
     },
   ]
