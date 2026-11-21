@@ -16,6 +16,9 @@ export type V5AccentKey =
   | 'custom'
 export type ThemeStyle = 'clear' | 'modern' | 'classic'
 
+/** Kiểu giao diện mặc định, theo HR-V5: header màu, đường viền rõ, sọc bảng. */
+export const DEFAULT_THEME_STYLE: ThemeStyle = 'classic'
+
 export interface CustomAccent {
   key: 'default' | 'yellow' | 'custom'
   primary: string
@@ -137,37 +140,37 @@ export function getThemeColors(mode: ThemeMode = 'light', accentKey: AccentKey =
       primary: darkAccent,
       primaryHover: lightenAccent(accent.primary, 0.62),
       primaryActive: lightenAccent(accent.primary, 0.34),
-      primaryLight: '#1e293b', // slate-800
-      primaryBorder: '#334155', // slate-700
-      background: '#0b1120', // deep slate
-      backgroundAlt: '#111827', // gray-900
-      surface: '#1e293b', // slate-800
-      surfaceHover: '#334155', // slate-700
-      text: '#f8fafc', // slate-50
-      textSecondary: '#cbd5e1', // slate-300
-      textMuted: '#94a3b8', // slate-400
+      primaryLight: '#2a2825',
+      primaryBorder: '#464543',
+      background: '#1c1b19',
+      backgroundAlt: '#272727',
+      surface: '#1c1b19',
+      surfaceHover: '#272625',
+      text: '#ebe9e5',
+      textSecondary: '#bcbab5',
+      textMuted: '#8f8d88',
       heading: '#ffffff',
-      border: '#334155', // slate-700
-      borderLight: '#1e293b', // slate-800
-      borderStrong: '#475569', // slate-600
-      controlBorder: '#475569',
+      border: '#464543',
+      borderLight: '#3a3a38',
+      borderStrong: '#5a5855',
+      controlBorder: '#5a5855',
       controlBorderHover: darkAccent,
       accent: darkAccent,
       accentHover: lightenAccent(accent.primary, 0.62),
-      accentLight: '#1e293b',
+      accentLight: '#2a2825',
       accentBorder: accent.border,
-      success: '#10b981',
-      successBg: '#064e3b',
-      successBorder: '#047857',
-      warning: '#f59e0b',
-      warningBg: '#78350f',
-      warningBorder: '#b45309',
-      danger: '#ef4444',
-      dangerBg: '#7f1d1d',
-      dangerBorder: '#b91c1c',
-      info: '#0ea5e9',
-      infoBg: '#0c4a6e',
-      infoBorder: '#0284c7',
+      success: '#6fb38c',
+      successBg: '#1f3027',
+      successBorder: '#2f5a43',
+      warning: '#d9a84c',
+      warningBg: '#3a2f17',
+      warningBorder: '#6b5521',
+      danger: '#e5736e',
+      dangerBg: '#3b2221',
+      dangerBorder: '#7a3532',
+      info: '#86aecb',
+      infoBg: '#1f2d38',
+      infoBorder: '#3a5a72',
       shadowSmall: '0 1px 2px 0 rgb(0 0 0 / 0.3)',
       shadowMedium: '0 4px 12px 0 rgb(0 0 0 / 0.4)',
       shadowLarge: '0 12px 28px 0 rgb(0 0 0 / 0.5)',
@@ -182,7 +185,7 @@ export function getThemeColors(mode: ThemeMode = 'light', accentKey: AccentKey =
     primaryActive: accent.active,
     primaryLight: accent.light,
     primaryBorder: accent.border,
-    background: '#f7f6f3',
+    background: '#ffffff',
     backgroundAlt: '#f1f1ef',
     surface: '#ffffff',
     surfaceHover: '#f7f6f3',
@@ -199,18 +202,18 @@ export function getThemeColors(mode: ThemeMode = 'light', accentKey: AccentKey =
     accentHover: accent.hover,
     accentLight: accent.light,
     accentBorder: accent.border,
-    success: '#059669',
-    successBg: '#ecfdf5',
-    successBorder: '#a7f3d0',
-    warning: '#d97706',
-    warningBg: '#fffbeb',
-    warningBorder: '#fde68a',
-    danger: '#dc2626',
-    dangerBg: '#fef2f2',
-    dangerBorder: '#fecaca',
-    info: '#0284c7',
-    infoBg: '#f0f9ff',
-    infoBorder: '#bae6fd',
+    success: '#448361',
+    successBg: '#edf3ec',
+    successBorder: '#b7d1bc',
+    warning: '#cb912f',
+    warningBg: '#fbf3db',
+    warningBorder: '#ecd9a0',
+    danger: '#d44c47',
+    dangerBg: '#fbe4e4',
+    dangerBorder: '#eebcba',
+    info: '#5b8ab0',
+    infoBg: '#eaf3f8',
+    infoBorder: '#bcd5e6',
     shadowSmall: '0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06)',
     shadowMedium: '0 4px 6px -1px rgb(0 0 0 / 0.09), 0 2px 4px -2px rgb(0 0 0 / 0.07)',
     shadowLarge: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.08)',
@@ -243,6 +246,12 @@ export function initializeTheme(mode: ThemeMode = 'light', accentKey: AccentKey 
   const isDark = mode === 'dark'
   const colors = getThemeColors(mode, accentKey, custom)
 
+  // Trước khi biết tài khoản (trang đăng nhập) vẫn dùng kiểu giao diện mặc định.
+  if (!root.hasAttribute('data-theme')) {
+    root.setAttribute('data-theme', DEFAULT_THEME_STYLE)
+    root.setAttribute('data-theme-style', DEFAULT_THEME_STYLE)
+  }
+
   // Bật/tắt class dark cho CSS rules
   if (mode === 'dark') {
     root.classList.add('dark')
@@ -270,7 +279,7 @@ export function initializeTheme(mode: ThemeMode = 'light', accentKey: AccentKey 
     '--color-primary-border': colors.primaryBorder,
     '--color-bg': colors.background,
     '--color-bg-alt': colors.backgroundAlt,
-    '--color-bg-sidebar': isDark ? '#0f172a' : `color-mix(in srgb, ${colors.primaryLight} 28%, #fbfaf8)`,
+    '--color-bg-sidebar': isDark ? '#161616' : `color-mix(in srgb, ${colors.primaryLight} 28%, #fbfaf8)`,
     '--color-table-header': `color-mix(in srgb, ${colors.primaryLight} 35%, ${colors.surfaceHover})`,
     '--color-surface': colors.surface,
     '--color-surface-hover': colors.surfaceHover,
@@ -364,7 +373,7 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
       colorTextPlaceholder: colors.textMuted,
       colorBgLayout: colors.background,
       colorBgContainer: colors.surface,
-      colorBgElevated: isDark ? '#1e293b' : '#ffffff',
+      colorBgElevated: isDark ? '#242321' : '#ffffff',
       colorBgMask: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(15, 23, 42, 0.45)',
       colorBorder: colors.border,
       colorBorderSecondary: colors.borderLight,
@@ -375,9 +384,9 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
       boxShadow: colors.shadowSmall,
       boxShadowSecondary: colors.shadowMedium,
       boxShadowTertiary: colors.shadowLarge,
-      controlHeight: 38,
-      controlHeightLG: 44,
-      controlHeightSM: 30,
+      controlHeight: 36,
+      controlHeightLG: 40,
+      controlHeightSM: 32,
       paddingXS: 8,
       paddingSM: 12,
       padding: 16,
@@ -389,19 +398,19 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
     },
     components: {
       Layout: {
-        headerBg: isDark ? '#1e293b' : '#ffffff',
-        headerHeight: 58,
-        headerPadding: '0 20px',
-        siderBg: isDark ? '#0f172a' : '#f8fafc',
+        headerBg: isDark ? '#1c1b19' : '#ffffff',
+        headerHeight: 48,
+        headerPadding: '0 12px',
+        siderBg: isDark ? '#161616' : '#fbfaf8',
         bodyBg: colors.background,
       },
       Menu: {
         itemBorderRadius: radius,
         itemHeight: 38,
         itemMarginInline: 8,
-        itemHoverBg: isDark ? '#1e293b' : 'rgba(0, 0, 0, 0.04)',
+        itemHoverBg: isDark ? 'rgba(255, 255, 255, 0.055)' : 'rgba(55, 53, 47, 0.06)',
         itemHoverColor: colors.primary,
-        itemSelectedBg: isDark ? '#1e293b' : colors.primaryLight,
+        itemSelectedBg: isDark ? 'rgba(255, 255, 255, 0.055)' : colors.primaryLight,
         itemSelectedColor: colors.primary,
         groupTitleColor: colors.textMuted,
         groupTitleFontSize: 11,
@@ -413,10 +422,10 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
         fontWeight: 500,
         boxShadow: 'none',
         primaryShadow: 'none',
-        defaultBg: isDark ? '#1e293b' : '#ffffff',
+        defaultBg: isDark ? '#272625' : '#ffffff',
         defaultColor: colors.text,
         defaultBorderColor: colors.border,
-        defaultHoverBg: isDark ? '#334155' : colors.surfaceHover,
+        defaultHoverBg: isDark ? '#33322f' : colors.surfaceHover,
         defaultHoverColor: colors.primary,
         defaultHoverBorderColor: colors.primary,
       },
@@ -428,14 +437,14 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
         colorBorderSecondary: colors.borderLight,
       },
       Table: {
-        headerBg: isDark ? '#0f172a' : '#f1f5f9',
-        headerColor: isDark ? '#cbd5e1' : '#1e293b',
+        headerBg: isDark ? '#242321' : `color-mix(in srgb, ${colors.primaryLight} 35%, ${colors.surfaceHover})`,
+        headerColor: colors.textSecondary,
         headerSplitColor: colors.borderLight,
-        rowHoverBg: isDark ? '#1e293b' : '#f8fafc',
+        rowHoverBg: isDark ? '#272625' : '#f7f6f3',
         borderColor: colors.borderLight,
         borderRadius: radius,
-        cellPaddingBlock: 10,
-        cellPaddingInline: 12,
+        cellPaddingBlock: 6,
+        cellPaddingInline: 8,
       },
       Modal: {
         borderRadiusLG: radius,
@@ -446,13 +455,13 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
         colorBgElevated: colors.surface,
       },
       Input: {
-        controlHeight: 38,
+        controlHeight: 36,
         borderRadius: radius,
-        colorBgContainer: isDark ? '#0f172a' : '#ffffff',
+        colorBgContainer: isDark ? '#1c1b19' : '#ffffff',
         colorBorder: colors.controlBorder,
       },
       Select: {
-        controlHeight: 38,
+        controlHeight: 36,
         borderRadius: radius,
       },
       Tabs: {
@@ -468,4 +477,4 @@ export function getAntdThemeConfig(mode: ThemeMode = 'light', accentKey: AccentK
 }
 
 /** Cấu hình mặc định Light Blue khi ứng dụng khởi chạy lần đầu. */
-export const theme = getAntdThemeConfig('light', 'blue')
+export const theme = getAntdThemeConfig('light', 'blue', 'classic')

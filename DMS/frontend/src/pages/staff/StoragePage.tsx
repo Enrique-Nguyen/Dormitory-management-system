@@ -135,7 +135,7 @@ export default function StoragePage() {
           )
         }
       />
-      <Card title="Danh sách phiếu gửi đồ">
+      <Card className="dms-crud-frame">
         <FilterBar>
           <SearchInput
             value={searchText}
@@ -188,7 +188,7 @@ export default function StoragePage() {
         <Alert
           type="info"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           title={excelUiLabels.readonlyHint}
           description={config.note}
         />
@@ -196,7 +196,7 @@ export default function StoragePage() {
           <Alert
             type="error"
             showIcon
-            style={{ marginBottom: 16 }}
+            style={{ marginBottom: 12 }}
             title="Không thể tải danh sách phiếu gửi đồ"
             description={errorMessage(records.error)}
           />

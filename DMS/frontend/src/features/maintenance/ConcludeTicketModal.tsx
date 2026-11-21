@@ -226,7 +226,7 @@ export default function ConcludeTicketModal({
       <Alert
         type="info"
         showIcon
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 12 }}
         title={
           cause === MaintenanceCause.WEAR
             ? 'Hao mòn tự nhiên: không trừ cọc, bắt buộc ghi chú tình trạng.'

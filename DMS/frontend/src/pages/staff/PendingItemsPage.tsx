@@ -222,14 +222,7 @@ export default function PendingItemsPage() {
         }
       />
 
-      <Card
-        title="Danh sách việc chờ"
-        extra={
-          <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
-            Tổng số: <strong>{total}</strong> yêu cầu
-          </span>
-        }
-      >
+      <Card className="dms-crud-frame">
         <ListToolbar
           filterLabel={crudDetailUiLabels.filters}
           closeFiltersLabel={crudDetailUiLabels.closeFilters}
@@ -259,7 +252,7 @@ export default function PendingItemsPage() {
             }))}
           />}
         />
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 12 }}>
           <Radio.Group
             className="dms-pending-type-filter"
             aria-label="Loại yêu cầu chờ xử lý"
@@ -285,7 +278,7 @@ export default function PendingItemsPage() {
           <Alert
             type="error"
             showIcon
-            style={{ marginBottom: 16 }}
+            style={{ marginBottom: 12 }}
             title="Không thể tải danh sách yêu cầu chờ"
             description={errorMessage(pendingItems.error)}
           />

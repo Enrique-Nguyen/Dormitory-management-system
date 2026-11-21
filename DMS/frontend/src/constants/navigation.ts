@@ -67,6 +67,7 @@ export const pendingItemDetailSegments: Record<string, string> = {
 export const commonUiLabels = {
   search: 'Tìm kiếm',
   emptyData: 'Chưa có dữ liệu',
+  home: 'Trang chủ',
 } as const
 
 const item = (label: string, path: string, icon?: ComponentType): NavItem => ({

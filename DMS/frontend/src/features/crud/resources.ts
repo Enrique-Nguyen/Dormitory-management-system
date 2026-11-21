@@ -274,6 +274,8 @@ export const dashboardUiLabels = {
 
 /** Nhãn thao tác hóa đơn, xác nhận thanh toán và sổ cọc dùng lại trên các màn hiện có. */
 export const crudDetailUiLabels = {
+  editBlocked: 'Không sửa được: bản ghi đang ở trạng thái khóa hoặc ngoài phạm vi cho phép.',
+  deleteBlocked: 'Không xóa được: bản ghi đã phát sinh dữ liệu hoặc đang ở trạng thái khóa.',
   information: 'Thông tin chung',
   additionalInformation: 'Thông tin bổ sung',
   filters: 'Bộ lọc',
@@ -282,6 +284,7 @@ export const crudDetailUiLabels = {
   all: 'Tất cả',
   results: 'Kết quả',
   moreActions: 'Thao tác khác',
+  resetPassword: 'Đặt lại mật khẩu',
   countError: 'Không tải được số lượng',
   statusFilterNames: ['status', 'locked', 'active'],
   collections: { items: 'Dòng hóa đơn', transactions: 'Giao dịch cọc', timeline: 'Lịch sử' },

@@ -16,10 +16,10 @@
   /* Màu và shadow được initializeTheme() lấy từ app/theme.ts. */
 
   /* Border Radii */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
   --radius-full: 9999px;
 
   /* Transitions */
@@ -28,7 +28,7 @@
 
   /* Layout dimensions */
   --bottom-nav-height: 60px;
-  --header-height: 64px;
+  --header-height: 48px;
 }
 
 html[data-theme='clear'],
@@ -255,13 +255,12 @@ html[data-theme-style='classic'] {
 
 html[data-theme='classic'] .dms-data-table .ant-table-thead > tr > th,
 html[data-theme-style='classic'] .dms-data-table .ant-table-thead > tr > th {
-  background: var(--color-primary-light);
-  border-color: var(--color-primary-border);
+  border-color: var(--color-border) !important;
 }
 
 html[data-theme='classic'] .dms-data-table .ant-table-tbody > tr:nth-child(even) > td,
 html[data-theme-style='classic'] .dms-data-table .ant-table-tbody > tr:nth-child(even) > td {
-  background: var(--color-bg);
+  background: color-mix(in srgb, var(--color-surface-hover) 40%, var(--color-bg)) !important;
 }
 
 /* ==========================================================================
@@ -463,10 +462,11 @@ h6 {
   align-items: center;
   gap: var(--space-3);
   height: var(--header-height);
-  padding: 0 var(--space-4);
+  line-height: normal;
+  padding: 0 var(--space-3);
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: var(--shadow-header);
+  border-bottom: 1px solid var(--color-border-light);
+  box-shadow: none;
   transition:
     background var(--transition-fast),
     border-color var(--transition-fast);
@@ -474,8 +474,122 @@ h6 {
 
 @media (min-width: 640px) {
   .dms-topbar {
-    padding: 0 var(--space-6);
+    padding: 0 var(--space-3);
   }
+}
+
+.dms-topbar-toggle.ant-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  color: var(--color-text);
+}
+
+.dms-topbar-breadcrumb {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.dms-topbar-breadcrumb ol {
+  flex-wrap: nowrap;
+}
+
+.dms-topbar-breadcrumb .ant-breadcrumb-link,
+.dms-topbar-breadcrumb .ant-breadcrumb-separator {
+  color: var(--color-text-muted);
+}
+
+.dms-topbar-breadcrumb li:last-child .ant-breadcrumb-link {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.dms-topbar-breadcrumb a {
+  color: inherit;
+}
+
+.dms-topbar-breadcrumb a:hover {
+  color: var(--color-primary);
+  background: transparent;
+}
+
+/* Topbar nền màu chủ đạo (kiểu classic sáng của HR-V5) */
+.dms-topbar[data-topbar='accent'] {
+  background: var(--color-primary);
+  border-bottom-color: transparent;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dms-topbar[data-topbar='accent'] .ant-btn,
+.dms-topbar[data-topbar='accent'] .dms-brand-logo,
+.dms-topbar[data-topbar='accent'] .ant-badge,
+.dms-topbar[data-topbar='accent'] a {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dms-topbar[data-topbar='accent'] .ant-btn:hover,
+.dms-topbar[data-topbar='accent'] .ant-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+.dms-topbar[data-topbar='accent'] .dms-topbar-breadcrumb * {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.dms-topbar[data-topbar='accent'] .dms-topbar-breadcrumb a,
+.dms-topbar[data-topbar='accent'] .ant-breadcrumb-separator {
+  opacity: 0.75;
+}
+
+.dms-topbar[data-topbar='accent'] .dms-topbar-search .ant-input-affix-wrapper {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: transparent;
+}
+
+.dms-topbar[data-topbar='accent'] .dms-topbar-search .ant-input-affix-wrapper:focus-within {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: none;
+}
+
+.dms-topbar[data-topbar='accent'] .dms-topbar-search input,
+.dms-topbar[data-topbar='accent'] .dms-topbar-search .anticon {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dms-topbar[data-topbar='accent'] .dms-topbar-search input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.dms-topbar[data-topbar='accent'] .dms-brand-icon {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.dms-topbar[data-topbar='accent'] .dms-portal-tag {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+  border-color: transparent;
+}
+
+.dms-topbar[data-topbar='accent'] .ant-menu-horizontal > .ant-menu-item,
+.dms-topbar[data-topbar='accent'] .ant-menu-horizontal > .ant-menu-item a {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.dms-topbar[data-topbar='accent'] .ant-menu-horizontal > .ant-menu-item-selected,
+.dms-topbar[data-topbar='accent'] .ant-menu-horizontal > .ant-menu-item-selected a,
+.dms-topbar[data-topbar='accent'] .ant-menu-horizontal > .ant-menu-item:hover {
+  color: #ffffff;
+}
+
+.dms-topbar[data-topbar='accent'] .ant-menu-horizontal > .ant-menu-item-selected::after {
+  border-bottom-color: #ffffff !important;
 }
 
 .dms-brand-logo {
@@ -490,7 +604,7 @@ h6 {
     sans-serif
   );
   font-weight: 700;
-  font-size: 18px;
+  font-size: 16px;
   color: var(--color-primary);
   text-decoration: none;
   letter-spacing: -0.02em;
@@ -504,8 +618,8 @@ h6 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   background: var(--color-primary);
   color: var(--color-on-primary);
   border-radius: var(--radius-md);
@@ -561,49 +675,176 @@ h6 {
   border-bottom-width: 2px !important;
 }
 
-/* Sidebar desktop */
-.ant-layout-sider .ant-menu {
+/* Sidebar desktop — kiểu HR-V5: nền nhuộm nhẹ màu chủ đạo, dòng đang chọn có vạch 3px bên trái */
+.dms-sider.ant-layout-sider {
+  background: color-mix(in srgb, var(--color-accent-bg) 28%, #fbfaf8) !important;
+  border-inline-end: 1px solid var(--color-border);
+  transition: all 0.2s ease-out;
+}
+
+html.dark .dms-sider.ant-layout-sider {
+  background: var(--color-bg-sidebar) !important;
+}
+
+.dms-sider .ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.dms-sider-brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: var(--header-height);
+  padding: 0 10px;
+  border-bottom: 1px solid var(--color-border-light);
+  overflow: hidden;
+}
+
+.dms-sider.ant-layout-sider-collapsed .dms-sider-brand {
+  justify-content: center;
+  padding: 0;
+}
+
+.dms-brand-sidebar {
+  min-width: 0;
+}
+
+.dms-brand-name {
+  color: var(--color-heading);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dms-sider-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.dms-sider-nav:hover {
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.dms-sider .ant-menu,
+.dms-drawer .ant-menu {
   background: transparent;
-  font-size: 13.5px;
+  font-size: 14px;
 }
 
-.ant-layout-sider .ant-menu-item {
-  color: var(--color-text-secondary);
+.dms-sider .ant-menu-item,
+.dms-drawer .ant-menu-item {
+  height: 36px;
+  line-height: 36px;
+  margin-block: 1px;
+  margin-inline: 0;
+  width: 100%;
+  color: var(--color-text);
+  border-radius: var(--radius-sm);
 }
 
-.ant-layout-sider .ant-menu-item .anticon {
+.dms-sider .ant-menu-item a,
+.dms-drawer .ant-menu-item a {
+  color: inherit;
+}
+
+.dms-sider .ant-menu-item .anticon,
+.dms-drawer .ant-menu-item .anticon {
   color: var(--color-text-muted);
 }
 
-.ant-layout-sider .ant-menu-item-selected,
+.dms-sider .ant-menu-item:hover,
+.dms-drawer .ant-menu-item:hover {
+  background: rgba(55, 53, 47, 0.06) !important;
+}
+
+html.dark .dms-sider .ant-menu-item:hover,
+html.dark .dms-drawer .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.055) !important;
+}
+
+.dms-sider .ant-menu-item-selected,
 .dms-drawer .ant-menu-item-selected {
   color: var(--color-primary) !important;
   background: var(--color-primary-light) !important;
   font-weight: 600;
-  border-radius: var(--radius-md) !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
-.ant-layout-sider .ant-menu-item-selected .anticon,
+.dms-sider .ant-menu-item-selected a,
+.dms-drawer .ant-menu-item-selected a,
+.dms-sider .ant-menu-item-selected .anticon,
 .dms-drawer .ant-menu-item-selected .anticon {
   color: var(--color-primary);
 }
 
-.ant-layout-sider .ant-menu-item-group-title,
+.dms-sider .ant-menu-item-group-title,
 .dms-drawer .ant-menu-item-group-title {
-  padding-top: var(--space-4);
-  padding-bottom: var(--space-1);
+  padding: 10px 12px 4px;
+  color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 650;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
 }
 
-.dms-drawer .ant-menu {
-  background: transparent;
-  font-size: 13.5px;
+/* Classic sáng: sidebar nền đặc màu chủ đạo, chữ trắng */
+html[data-theme='classic']:not(.dark) .dms-sider.ant-layout-sider {
+  background: var(--color-primary) !important;
+  border-inline-end-color: color-mix(in srgb, var(--color-primary) 70%, black);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
 }
 
-.dms-drawer .ant-menu-item {
-  color: var(--color-text-secondary);
+html[data-theme='classic']:not(.dark) .dms-sider .dms-sider-brand {
+  border-bottom-color: rgba(255, 255, 255, 0.14);
+}
+
+html[data-theme='classic']:not(.dark) .dms-sider .dms-brand-icon {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+html[data-theme='classic']:not(.dark) .dms-sider .dms-brand-name {
+  color: #ffffff;
+}
+
+html[data-theme='classic']:not(.dark) .dms-sider .ant-menu-item,
+html[data-theme='classic']:not(.dark) .dms-sider .ant-menu-item a,
+html[data-theme='classic']:not(.dark) .dms-sider .ant-menu-item .anticon {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+html[data-theme='classic']:not(.dark) .dms-sider .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+html[data-theme='classic']:not(.dark) .dms-sider .ant-menu-item-selected {
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.9);
+}
+
+html[data-theme='classic']:not(.dark) .dms-sider .ant-menu-item-selected,
+html[data-theme='classic']:not(.dark) .dms-sider .ant-menu-item-selected a,
+html[data-theme='classic']:not(.dark) .dms-sider .ant-menu-item-selected .anticon {
+  color: #ffffff !important;
+}
+
+html[data-theme='classic']:not(.dark) .dms-sider .ant-menu-item-group-title {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+html[data-theme='classic']:not(.dark) .dms-sider-nav:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
 }
 
 /* Topbar Search Input */
@@ -636,7 +877,7 @@ h6 {
    ========================================================================== */
 
 .dms-page {
-  padding: var(--space-4);
+  padding: var(--space-3);
   width: 100%;
   min-width: 0;
   max-width: 1600px;
@@ -649,14 +890,14 @@ h6 {
 
 @media (min-width: 640px) {
   .dms-page {
-    padding: var(--space-6);
+    padding: var(--space-3);
   }
 }
 
 .dms-page-header {
-  margin-bottom: var(--space-5);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--color-border-light);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 0;
 }
 
 .dms-page-header .ant-breadcrumb {
@@ -665,8 +906,8 @@ h6 {
 
 .dms-page-title {
   margin: 0;
-  padding-left: 12px;
-  border-left: 3.5px solid var(--color-primary);
+  padding-left: 0;
+  border-left: 0;
   font-family: var(
     --font-sans,
     'Be Vietnam Pro',
@@ -674,31 +915,31 @@ h6 {
     system-ui,
     sans-serif
   );
-  font-size: clamp(20px, 3vw, 24px);
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
   line-height: 1.3;
   color: var(--color-heading);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   overflow-wrap: anywhere;
 }
 
 @media (min-width: 640px) {
   .dms-page-title {
-    padding-left: 14px;
-    font-size: 26px;
+    padding-left: 0;
+    font-size: 18px;
   }
 }
 
 .dms-page-subtitle {
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  margin-top: var(--space-1);
-  padding-left: 15px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  margin: 2px 0 0;
+  padding-left: 0;
 }
 
 @media (min-width: 640px) {
   .dms-page-subtitle {
-    padding-left: 17px;
+    padding-left: 0;
   }
 }
 
@@ -1116,7 +1357,7 @@ h6 {
 /* Component chung: bố cục và khoảng cách; màu/size của Ant Design nằm trong theme.ts. */
 .dms-panel {
   border-color: var(--color-border);
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
 }
 
 .dms-panel + .dms-panel {
@@ -1124,7 +1365,21 @@ h6 {
 }
 
 .dms-panel > .ant-card-head {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 600;
   border-bottom-color: var(--color-border-light);
+  background: color-mix(in srgb, var(--color-surface-hover) 60%, var(--color-surface));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.dms-panel > .ant-card-head .ant-card-head-title {
+  padding: 8px 0;
+}
+
+.dms-panel > .ant-card-body {
+  padding: 12px;
 }
 
 .dms-filter-bar {
@@ -1306,7 +1561,7 @@ h6 {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--shadow-card);
+  box-shadow: none;
 }
 
 .dms-data-table {
@@ -1318,14 +1573,14 @@ h6 {
 }
 
 .dms-data-table .ant-table-thead > tr > th {
-  font-size: 12px !important;
-  font-weight: 700 !important;
-  color: var(--color-heading) !important;
-  background: var(--color-bg-alt) !important;
-  border-bottom: 2px solid var(--color-border) !important;
-  padding: 11px 14px !important;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--color-text-secondary) !important;
+  background: color-mix(in srgb, var(--color-primary-light) 35%, var(--color-surface-hover)) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  padding: 8px 12px !important;
+  letter-spacing: normal;
+  text-transform: none;
   white-space: nowrap;
 }
 
@@ -1336,9 +1591,9 @@ h6 {
 
 .dms-data-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
   vertical-align: middle;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text);
-  padding: 10px 14px !important;
+  padding: 8px 12px !important;
   border-bottom: 1px solid var(--color-border-light) !important;
   line-height: 1.6;
   overflow-wrap: anywhere;
@@ -1366,7 +1621,7 @@ h6 {
 }
 
 .dms-data-table .ant-table-tbody > tr:hover > td {
-  background: var(--color-surface-hover) !important;
+  background: color-mix(in srgb, var(--color-surface-hover) 60%, transparent) !important;
 }
 
 /* Cột STT: Luôn ở cột đầu, căn giữa, rộng 64px, dễ nhìn */
@@ -1379,7 +1634,7 @@ h6 {
   text-align: center !important;
   font-weight: 500 !important;
   color: var(--color-text-muted) !important;
-  background: var(--color-surface-hover) !important;
+  background: transparent !important;
 }
 
 /* Cột Thao tác: Ngay sau STT, nút bấm gọn gàng, không tràn dòng */
@@ -1408,7 +1663,7 @@ h6 {
 }
 
 .dms-data-table .ant-pagination {
-  padding: 12px 16px !important;
+  padding: 8px 12px !important;
   margin: 0 !important;
   border-top: 1px solid var(--color-border-light);
   flex-wrap: wrap;
@@ -1475,6 +1730,39 @@ h6 {
   flex-shrink: 0;
 }
 
+/* Nút theo HR-V5: phẳng, nhấn thì thu nhẹ và tối đi một chút */
+.ant-btn {
+  box-shadow: none !important;
+  transition: filter var(--transition-fast), transform var(--transition-fast),
+    background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.ant-btn:not(:disabled):active {
+  transform: scale(0.97);
+  filter: brightness(0.92);
+}
+
+.ant-btn-default:not(:disabled):not(.ant-btn-dangerous) {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.ant-btn-default:not(:disabled):not(.ant-btn-dangerous):hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.ant-btn-primary:not(:disabled):hover {
+  filter: brightness(0.92);
+}
+
+/* Thẻ và khung: viền rõ, phẳng, không đổ bóng */
+.ant-card {
+  box-shadow: none;
+}
+
 .dms-modal .ant-modal-container {
   display: flex;
   flex-direction: column;
@@ -1482,24 +1770,24 @@ h6 {
   overflow: hidden;
   padding: 0;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }
 
 .dms-modal .ant-modal-header {
   flex-shrink: 0;
-  padding: 14px 20px;
-  padding-inline-end: 48px;
+  padding: 10px 12px;
+  padding-inline-end: 40px;
   border-bottom: 1px solid var(--color-border-light);
   margin: 0;
   background: var(--color-surface);
 }
 
 .dms-modal .ant-modal-close {
-  top: 14px;
-  inset-inline-end: 16px;
-  width: 32px;
-  height: 32px;
+  top: 8px;
+  inset-inline-end: 10px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-sm, 6px);
   color: var(--color-text-muted);
   transition: all var(--transition-fast);
@@ -1510,42 +1798,23 @@ h6 {
   color: var(--color-text);
 }
 
-/* ─── Modal Header chuẩn Parkway HRM V5 ─── */
+/* ─── Modal Header chuẩn V5: chỉ tiêu đề, mã bản ghi nhạt bên cạnh ─── */
 .dms-modal-header-v5 {
   display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.dms-modal-header-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  border-radius: var(--radius-sm, 6px);
-  background-color: color-mix(in srgb, var(--color-primary-light, #deeef8) 80%, transparent);
-  color: var(--color-primary, #0a78be);
-  font-size: 18px;
-}
-
-.dms-modal-header-text {
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
   min-width: 0;
-  flex: 1;
 }
 
 .dms-modal-header-title {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   line-height: 1.4;
-  letter-spacing: -0.01em;
   color: var(--color-heading);
 }
 
 .dms-modal-header-subtitle {
-  margin-top: 2px;
   font-size: 12px;
   font-weight: 500;
   color: var(--color-text-muted);
@@ -1577,7 +1846,7 @@ h6 {
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 6px 12px;
   text-align: left;
   font-size: 14px;
   font-weight: 600;
@@ -1590,14 +1859,14 @@ h6 {
 
 /* Khi mở: Nền bg-accent-bg/60 text-accent (xanh nhạt chữ màu nhấn) */
 .dms-form-section-header.dms-header-open {
-  background-color: color-mix(in srgb, var(--color-primary-light, #deeef8) 60%, var(--color-surface, #ffffff));
-  color: var(--color-primary, #0a78be);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-primary-border, #b7d7ec) 45%, transparent);
+  background-color: color-mix(in srgb, var(--color-surface-hover) 60%, var(--color-surface));
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 /* Khi đóng: Nền bg-bg-warm/40 text-text */
 .dms-form-section-header.dms-header-closed {
-  background-color: color-mix(in srgb, var(--color-surface-hover, #f7f6f3) 70%, var(--color-surface, #ffffff));
+  background-color: color-mix(in srgb, var(--color-surface-hover) 60%, var(--color-surface));
   color: var(--color-text, #211f1b);
 }
 
@@ -1677,9 +1946,9 @@ h6 {
 }
 
 html.dark .dms-subcollection-item {
-  background: rgba(30, 41, 59, 0.5);
-  border-color: #334155;
-  color: #f8fafc;
+  background: var(--color-surface-hover);
+  border-color: var(--color-border);
+  color: var(--color-text);
 }
 
 /* ─── Modal Footer chuẩn Parkway HRM V5 ─── */
@@ -1708,8 +1977,8 @@ html.dark .dms-subcollection-item {
     system-ui,
     sans-serif
   );
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--color-heading);
 }
@@ -1743,8 +2012,16 @@ html.dark .dms-subcollection-item {
   flex-shrink: 0;
   padding: var(--space-2) var(--space-3);
   margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
   border-top: 1px solid var(--color-border-light);
-  background: var(--color-surface-hover);
+  background: color-mix(in srgb, var(--color-surface-hover) 70%, var(--color-surface));
+}
+
+.dms-modal .ant-modal-footer .ant-btn + .ant-btn {
+  margin-inline-start: 0;
 }
 
 .dms-modal .ant-modal-footer .ant-space,
@@ -4066,15 +4343,9 @@ html.dark .dms-status-info {
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-  padding: 8px 12px;
-  background: var(--color-surface-hover);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-sm, 6px);
-  transition: border-color var(--transition-fast), background var(--transition-fast);
-}
-
-.dms-view-field:hover {
-  border-color: var(--color-border-strong);
+  padding: 0;
+  background: transparent;
+  border: 0;
 }
 
 .dms-view-field-full {
@@ -4082,7 +4353,7 @@ html.dark .dms-status-info {
 }
 
 .dms-view-label {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--color-text-muted);
   line-height: 1.4;
@@ -4093,10 +4364,23 @@ html.dark .dms-status-info {
   gap: 6px;
 }
 
+.dms-view-field > .dms-view-value,
+.dms-view-field > .dms-view-long-text {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--color-surface-hover) 60%, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
 .dms-view-value {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--color-heading);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text);
   line-height: 1.5;
   overflow-wrap: break-word;
 }
@@ -4104,19 +4388,20 @@ html.dark .dms-status-info {
 .dms-view-value-mono {
   font-family: var(--font-mono, monospace);
   font-size: 13.5px;
-  font-weight: 600;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
 
 .dms-view-long-text {
-  padding: 10px 14px;
-  background: var(--color-surface-hover);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-sm, 6px);
   white-space: pre-wrap;
   line-height: 1.6;
-  font-size: 13.5px;
-  color: var(--color-heading);
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.dms-view-field > .dms-view-long-text {
+  display: block;
+  min-height: 72px;
 }
 
 .dms-view-empty {
@@ -4164,79 +4449,121 @@ html.dark .dms-status-info {
 
 /* Dark Mode Specific Overrides */
 html.dark .dms-topbar {
-  background: rgba(30, 41, 59, 0.85);
-  backdrop-filter: blur(12px);
+  background: var(--color-bg);
 }
 
 html.dark .dms-table-container,
 html.dark .dms-panel,
 html.dark .dms-auth-card,
 html.dark .dms-modal .ant-modal-content {
-  background: #1e293b;
-  border-color: #334155;
+  background: var(--color-surface);
+  border-color: var(--color-border);
 }
 
 html.dark .dms-data-table .ant-table-thead > tr > th {
-  background: #0f172a !important;
-  color: #cbd5e1 !important;
-  border-bottom-color: #334155 !important;
-  border-inline-end-color: #334155 !important;
+  background: var(--color-bg-alt) !important;
+  color: var(--color-text-secondary) !important;
+  border-bottom-color: var(--color-border) !important;
+  border-inline-end-color: var(--color-border) !important;
 }
 
 html.dark .dms-data-table .ant-table-tbody > tr > td {
-  border-bottom-color: #334155 !important;
-  border-inline-end-color: #334155 !important;
+  border-bottom-color: var(--color-border) !important;
+  border-inline-end-color: var(--color-border) !important;
 }
 
 html.dark .dms-modal-header-icon {
-  background-color: rgba(14, 165, 233, 0.2);
-  color: #38bdf8;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 html.dark .dms-modal .ant-modal-close:hover {
-  background-color: #334155;
-  color: #f8fafc;
+  background-color: var(--color-border);
+  color: var(--color-text);
 }
 
 html.dark .dms-form-section {
-  border-color: #334155;
-  background: #1e293b;
+  border-color: var(--color-border);
+  background: var(--color-surface);
 }
 
 html.dark .dms-form-section-header.dms-header-open {
-  background-color: rgba(14, 165, 233, 0.15);
-  color: #38bdf8;
-  border-bottom-color: rgba(56, 189, 248, 0.2);
+  background-color: color-mix(in srgb, var(--color-surface-hover) 60%, var(--color-surface));
+  color: var(--color-primary);
+  border-bottom-color: var(--color-border-light);
 }
 
 html.dark .dms-form-section-header.dms-header-closed {
-  background-color: rgba(30, 41, 59, 0.6);
-  color: #cbd5e1;
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-secondary);
 }
 
 html.dark .dms-form-section-header.dms-header-closed:hover {
-  background-color: rgba(51, 65, 85, 0.8);
+  background-color: var(--color-surface-hover);
 }
 
 html.dark .dms-form-section-body {
-  background: #1e293b;
+  background: var(--color-surface);
 }
 
-html.dark .dms-view-field {
-  background: #0f172a;
-  border-color: #334155;
+
+/* ==========================================================================
+   Chi tiết bản ghi thống nhất (V5): mọi Descriptions hiện như ô chỉ đọc,
+   thẻ đầu chi tiết cùng kiểu với thẻ ngữ cảnh của danh sách.
+   ========================================================================== */
+
+.dms-descriptions:not(.ant-descriptions-bordered) .ant-descriptions-item-label {
+  padding-bottom: 4px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
-html.dark .dms-view-field:hover {
-  border-color: #475569;
+.dms-descriptions:not(.ant-descriptions-bordered) .ant-descriptions-item-content {
+  flex: 1;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 10px;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 400;
+  background: color-mix(in srgb, var(--color-surface-hover) 60%, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 
-html.dark .dms-view-value {
-  color: #f8fafc;
+.dms-descriptions:not(.ant-descriptions-bordered) .ant-descriptions-row > td {
+  padding-bottom: var(--space-3);
+  padding-inline-end: var(--space-3);
 }
 
-html.dark .dms-view-long-text {
-  background: #0f172a;
-  border-color: #334155;
-  color: #f8fafc;
+.dms-descriptions:not(.ant-descriptions-bordered) .ant-descriptions-row > th {
+  padding-inline-end: var(--space-3);
+}
+
+.dms-descriptions:not(.ant-descriptions-bordered) .ant-descriptions-row:last-child > td {
+  padding-bottom: 0;
+}
+
+.dms-record-detail > .dms-page-header {
+  margin-bottom: var(--space-3);
+  padding: 10px 12px;
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.dms-record-detail .dms-page-title {
+  font-size: 16px;
+}
+
+.dms-view-section,
+.dms-form-section-desc {
+  border-top-style: solid;
+  border-bottom-style: solid;
+}
+
+.dms-action-slot {
+  display: inline-flex;
 }

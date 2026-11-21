@@ -178,42 +178,48 @@ export function DetailSection({
 }
 
 export interface ModalProps extends ComponentPropsWithRef<typeof AntModal> {
+  /** Giữ để tương thích với nơi gọi cũ; hộp thoại V5 chỉ có tiêu đề, không có ô biểu tượng. */
   headerIcon?: ReactNode
+  /** Mã/nhãn phụ hiện nhạt cạnh tiêu đề (ví dụ mã bản ghi đang xem). */
   subtitle?: ReactNode
+}
+
+/** Ba cỡ hộp thoại chuẩn: nhỏ (xác nhận, ghi chú), vừa (biểu mẫu), lớn (chi tiết, nhiều cột). */
+export const MODAL_WIDTHS = { small: 560, medium: 720, large: 960 } as const
+
+function normalizeModalWidth(width: ModalProps['width']): ModalProps['width'] {
+  if (typeof width !== 'number') return width ?? MODAL_WIDTHS.large
+  if (width <= 600) return MODAL_WIDTHS.small
+  if (width <= 800) return MODAL_WIDTHS.medium
+  return MODAL_WIDTHS.large
 }
 
 /** Modal dùng chung chuẩn V5; hỗ trợ icon vuông bo góc nền bg-accent-bg text-accent và subtitle bên cạnh title. */
 export function Modal({
   className = '',
   title,
-  headerIcon,
+  headerIcon: _headerIcon,
   subtitle,
-  width = 960,
+  width,
   ...props
 }: ModalProps) {
-  const renderedTitle =
-    headerIcon || subtitle ? (
-      <div className="dms-modal-header-v5">
-        {headerIcon && (
-          <span className="dms-modal-header-icon">{headerIcon}</span>
-        )}
-        <div className="dms-modal-header-text">
-          <div className="dms-modal-header-title">{title}</div>
-          {subtitle && (
-            <div className="dms-modal-header-subtitle">{subtitle}</div>
-          )}
-        </div>
-      </div>
-    ) : (
-      title
-    )
+  const renderedTitle = subtitle ? (
+    <div className="dms-modal-header-v5">
+      <span className="dms-modal-header-title">{title}</span>
+      <span className="dms-modal-header-subtitle">{subtitle}</span>
+    </div>
+  ) : (
+    title
+  )
 
   return (
     <AntModal
-      width={width}
+      okText="Lưu"
+      cancelText="Hủy"
+      {...props}
+      width={normalizeModalWidth(width)}
       style={{ top: 24 }}
       title={renderedTitle}
-      {...props}
       className={`dms-modal ${className}`}
     />
   )
