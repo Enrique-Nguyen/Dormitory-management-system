@@ -56,11 +56,6 @@ html[data-theme-style='modern'] .dms-crud-frame {
   backdrop-filter: blur(12px);
 }
 
-html[data-table-borders='false'] .dms-table-container .dms-data-table .ant-table-thead > tr > th:not(:last-child),
-html[data-table-borders='false'] .dms-table-container .dms-data-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td:not(:last-child) {
-  border-inline-end: 0 !important;
-}
-
 /* ==========================================================================
    ThemeSwitcher (Chuẩn V5)
    ========================================================================== */
@@ -679,7 +674,7 @@ h6 {
 .dms-sider.ant-layout-sider {
   background: color-mix(in srgb, var(--color-accent-bg) 28%, #fbfaf8) !important;
   border-inline-end: 1px solid var(--color-border);
-  transition: all 0.2s ease-out;
+  transition: width 0.2s ease-out, flex-basis 0.2s ease-out;
 }
 
 html.dark .dms-sider.ant-layout-sider {
@@ -4566,4 +4561,43 @@ html.dark .dms-form-section-body {
 
 .dms-action-slot {
   display: inline-flex;
+}
+
+/* Nút thao tác bị khóa: mờ rõ và con trỏ cấm để không bị nhầm là bấm được */
+.dms-action-btn.ant-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dms-action-slot:has(.ant-btn:disabled) {
+  cursor: not-allowed;
+}
+
+/* Chừa sẵn chỗ thanh cuộn của trang để bố cục không nhảy ngang khi bảng tải xong và trang dài ra */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Kẻ bảng đầy đủ như V5: đủ đường ngang và dọc giữa mọi ô, cùng một màu viền. */
+.dms-data-table .ant-table-thead > tr > th,
+.dms-data-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.dms-data-table .ant-table-thead > tr > th:not(:last-child),
+.dms-data-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td:not(:last-child) {
+  border-inline-end: 1px solid var(--color-border) !important;
+}
+
+/* Giữ đường kẻ cuối bảng để lưới khép kín, ngăn với thanh phân trang. */
+.dms-data-table .ant-table-tbody > tr:last-child > td {
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.dms-data-table .ant-table-tbody > tr.ant-table-placeholder > td {
+  border-inline-end: 0 !important;
+}
+
+.dms-data-table .ant-table-thead > tr > th::before {
+  display: none !important;
 }

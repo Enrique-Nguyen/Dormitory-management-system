@@ -868,6 +868,7 @@ export default function CrudPage({
       queryClient.invalidateQueries({ queryKey: ['me'] }),
     ])
   }
+  const roomList = resource === 'rooms'
   const studentList = resource === 'students' || resource === 'adminStudents'
   const studentAccountImport = resource === 'adminStudents' && hasPermission(me, Permission.STUDENT_CREATE)
   const canImportExcel = !config.singleton && !config.readOnly && (canCreate || canUpdate)
@@ -1126,6 +1127,8 @@ export default function CrudPage({
     if (!canDeleteRow(row)) return
     let reason = ''
     modal.confirm({
+      transitionName: roomList ? '' : undefined,
+      maskTransitionName: roomList ? '' : undefined,
       title: `${config.deleteLabel ?? 'Xóa'} bản ghi này?`,
       content:
         config.deleteAction === 'lock' ? (
@@ -1772,7 +1775,11 @@ export default function CrudPage({
                       </Tooltip>
                       {canUpdate && !config.singleton && (
                         <Tooltip
-                          title={canEditRow(row) ? 'Sửa' : crudDetailUiLabels.editBlocked}
+                          title={
+                            canEditRow(row)
+                              ? 'Sửa'
+                              : (crudDetailUiLabels.lockedReasons[resource] ?? crudDetailUiLabels.editBlocked)
+                          }
                         >
                           <span className="dms-action-slot">
                             <Button
@@ -1793,7 +1800,7 @@ export default function CrudPage({
                           title={
                             canDeleteRow(row)
                               ? (config.deleteLabel ?? 'Xóa')
-                              : crudDetailUiLabels.deleteBlocked
+                              : (crudDetailUiLabels.lockedReasons[resource] ?? crudDetailUiLabels.deleteBlocked)
                           }
                         >
                           <span className="dms-action-slot">
@@ -1844,6 +1851,8 @@ export default function CrudPage({
         headerIcon={<ModalHeaderIcon />}
         title={modalTitleText}
         subtitle={modalSubtitle}
+        transitionName={roomList ? '' : undefined}
+        maskTransitionName={roomList ? '' : undefined}
         open={modalMode !== null}
         forceRender
         onCancel={closeModal}
