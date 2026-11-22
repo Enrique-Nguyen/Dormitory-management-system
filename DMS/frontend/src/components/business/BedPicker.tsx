@@ -47,6 +47,8 @@ export default function BedPicker({
       <FilterBar>
         <Select<number>
           allowClear
+          getPopupContainer={(trigger) => trigger.parentElement ?? document.body}
+          popupClassName="dms-crud-select-popup"
           placeholder="Tòa"
           aria-label="Lọc theo tòa"
           options={buildings}
@@ -57,6 +59,8 @@ export default function BedPicker({
         />
         <Select<number>
           allowClear
+          getPopupContainer={(trigger) => trigger.parentElement ?? document.body}
+          popupClassName="dms-crud-select-popup"
           placeholder="Loại phòng"
           aria-label="Lọc theo loại phòng"
           options={roomTypes}

@@ -36,6 +36,7 @@ import vn.edu.tlu.dms.common.service.StatusHistoryService;
 import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.contract.service.ContractService;
+import vn.edu.tlu.dms.registration.api.ApplicationDtos.AssignContractRequest;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.BedRef;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Hold;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Input;
@@ -58,6 +59,7 @@ import vn.edu.tlu.dms.room.service.BedOccupancyService;
 import vn.edu.tlu.dms.room.service.OccupancyQuery;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -409,6 +411,61 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
     @Override
     @Transactional
     public Response assignBed(Long id, Long bedId) {
+        return assign(id, bedId, null, null, null, null);
+    }
+
+    /**
+     * Phân giường kèm ngày hợp đồng và đơn giá riêng, rồi kích hoạt nếu được yêu cầu. Kích hoạt chạy
+     * sau khi đã giữ giường trong cùng transaction nên lỗi cọc/giấy tờ hoàn tác cả việc giữ giường.
+     */
+    @Override
+    @Transactional
+    public Response assignAndActivate(Long id, AssignContractRequest input) {
+        guard.requirePermission(Permission.ROOM_APPLICATION_UPDATE);
+        guard.requireRole(Role.STAFF);
+        if ((input.startDate() == null) != (input.endDate() == null)) {
+            throw BusinessException.invalid(
+                    input.startDate() == null ? ApiField.START_DATE : ApiField.END_DATE,
+                    ValidationMessage.REQUIRED);
+        }
+        boolean activate = Boolean.TRUE.equals(input.activate());
+        if (activate) {
+            guard.requirePermission(Permission.CONTRACT_UPDATE);
+            if (input.depositAmount() == null) {
+                throw BusinessException.invalid(
+                        ApiField.DEPOSIT_AMOUNT, ValidationMessage.DEPOSIT_AMOUNT_POSITIVE);
+            }
+        }
+        Response assigned =
+                assign(
+                        id,
+                        input.bedId(),
+                        input.startDate(),
+                        input.endDate(),
+                        input.priceMain(),
+                        input.priceSummer());
+        if (!activate) {
+            return assigned;
+        }
+        contracts.activateWithCustomDeposit(
+                assigned.contractId(),
+                input.paperContractSigned(),
+                input.depositAmount(),
+                input.paymentMethod(),
+                input.note());
+        return toApplicationResponse(
+                applications.findById(id).orElseThrow(BusinessException::notFound),
+                true,
+                estimatedActivationDeadline());
+    }
+
+    private Response assign(
+            Long id,
+            Long bedId,
+            LocalDate startDate,
+            LocalDate endDate,
+            Long priceMain,
+            Long priceSummer) {
         guard.requirePermission(Permission.ROOM_APPLICATION_UPDATE);
         guard.requireRole(Role.STAFF);
         if (bedId == null || bedId <= 0) {
@@ -436,8 +493,13 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         var semester = rooms.getSemesterReference(period.getSemesterId());
         Long contractId =
                 contracts.createPendingForApplication(
-                        id, a.getStudentId(), semester.startDate(), semester.endDate());
-        var assignment = occupancy.occupyHold(bedId, a.getStudentId(), contractId, null);
+                        id,
+                        a.getStudentId(),
+                        startDate == null ? semester.startDate() : startDate,
+                        endDate == null ? semester.endDate() : endDate);
+        var assignment =
+                occupancy.occupyHold(
+                        bedId, a.getStudentId(), contractId, null, priceMain, priceSummer);
         var actor = current.get();
         String before = a.getStatus();
         a.setStatus(ApplicationStatus.ASSIGNED);

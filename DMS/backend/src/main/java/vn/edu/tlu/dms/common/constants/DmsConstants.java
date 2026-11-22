@@ -181,6 +181,8 @@ public final class DmsConstants {
         public static final String RETURNED_AT = "returnedAt";
         public static final String PAPER_CONTRACT_SIGNED = "paperContractSigned";
         public static final String DEPOSIT_AMOUNT = "depositAmount";
+        public static final String PRICE_MAIN = "priceMain";
+        public static final String PRICE_SUMMER = "priceSummer";
         public static final String PAYMENT_METHOD = "paymentMethod";
         public static final String VERIFIED = "verified";
         public static final String NEW_END_DATE = "newEndDate";

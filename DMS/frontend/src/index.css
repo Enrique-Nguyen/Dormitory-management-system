@@ -4601,3 +4601,138 @@ html {
 .dms-data-table .ant-table-thead > tr > th::before {
   display: none !important;
 }
+
+/* Nút Đăng xuất ở góc dưới trái thanh bên (và cuối Drawer trên màn nhỏ) */
+.dms-sider-footer {
+  flex-shrink: 0;
+  padding: 8px;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.dms-drawer .dms-sider-footer {
+  margin-top: 8px;
+}
+
+.dms-logout-btn.ant-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dms-sider-footer .dms-logout-btn.ant-btn {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 0 12px;
+  color: var(--color-text);
+}
+
+.dms-sider.ant-layout-sider-collapsed .dms-sider-footer .dms-logout-btn.ant-btn {
+  justify-content: center;
+  padding: 0;
+}
+
+.dms-sider-footer .dms-logout-btn.ant-btn:hover {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+}
+
+html[data-theme='classic']:not(.dark) .dms-sider .dms-sider-footer {
+  border-top-color: rgba(255, 255, 255, 0.22);
+}
+
+html[data-theme='classic']:not(.dark) .dms-sider .dms-logout-btn.ant-btn {
+  color: #ffffff;
+}
+
+html[data-theme='classic']:not(.dark) .dms-sider .dms-logout-btn.ant-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Menu thao tác dùng chung (ba chấm, avatar): vẽ ở body nên không bị bảng cắt */
+.dms-action-menu {
+  position: fixed;
+  z-index: 1100;
+  min-width: 200px;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 4px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.dms-action-menu-group {
+  padding: 6px 12px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.dms-action-menu-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--color-border-light);
+}
+
+.dms-action-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dms-action-menu-item:hover:not(:disabled),
+.dms-action-menu-item:focus-visible {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  outline: none;
+}
+
+.dms-action-menu-item.is-danger {
+  color: var(--color-danger);
+}
+
+.dms-action-menu-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.dms-action-menu-icon {
+  display: inline-flex;
+  color: var(--color-text-secondary);
+}
+
+.dms-action-menu-item.is-danger .dms-action-menu-icon {
+  color: inherit;
+}
+
+/* Ô chọn gốc của trình duyệt cho các form cần danh sách chắc chắn mở được, cùng kích thước với Input. */
+.dms-native-select {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--space-3, 12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text, inherit);
+  font: inherit;
+}
+.dms-native-select:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+.dms-native-select:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}

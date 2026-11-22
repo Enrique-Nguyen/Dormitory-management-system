@@ -93,6 +93,34 @@ public class ContractServiceImpl implements ContractService {
             WHERE c.id = ?
             """;
 
+    /**
+     * Tóm tắt cho danh sách: chỗ ở lấy từ phân phòng đang mở, nếu không còn thì phân phòng gần nhất,
+     * kèm loại phòng, đơn giá đã chốt, mức cọc và số dư cọc. Một truy vấn cho cả trang để tránh N+1.
+     */
+    private static final String SELECT_SUMMARY =
+            """
+            SELECT c.id AS contract_id, u.full_name, sp.student_code,
+                   b.code AS bed_code, r.code AS room_code, r.floor, rt.name AS room_type_name,
+                   h.price_main, h.price_summer, bd.name AS building_name, mu.name AS unit_name,
+                   COALESCE(c.deposit_required, bd.deposit_amount) AS deposit_due, vb.balance
+            FROM dormitory_contract c
+            JOIN app_user u ON u.id = c.student_id
+            LEFT JOIN student_profile sp ON sp.user_id = c.student_id
+            LEFT JOIN LATERAL (
+                SELECT x.bed_id, x.price_main, x.price_summer
+                FROM room_assignment_history x
+                WHERE x.contract_id = c.id
+                ORDER BY (x.ended_at IS NULL) DESC, x.started_at DESC, x.id DESC
+                LIMIT 1) h ON TRUE
+            LEFT JOIN bed b ON b.id = h.bed_id
+            LEFT JOIN room r ON r.id = b.room_id
+            LEFT JOIN room_type rt ON rt.id = r.room_type_id
+            LEFT JOIN building bd ON bd.id = r.building_id
+            LEFT JOIN management_unit mu ON mu.id = bd.management_unit_id
+            LEFT JOIN v_deposit_balance vb ON vb.contract_id = c.id
+            WHERE c.id = ANY (?)
+            """;
+
     /** Người dùng được đọc theo ID để hiển thị người kích hoạt trong chi tiết hợp đồng. */
     private static final String SELECT_ACTOR =
             "SELECT id, full_name, username FROM app_user WHERE id=?";
@@ -193,7 +221,7 @@ public class ContractServiceImpl implements ContractService {
                                                 }))
                         .toList();
         List<String> statuses = input.statuses();
-        return PageResponse.from(
+        var page =
                 repository
                         .searchAccessibleContracts(
                                 actor.role(),
@@ -210,7 +238,11 @@ public class ContractServiceImpl implements ContractService {
                                 input.endDateFrom(),
                                 input.endDateTo(),
                                 PageRequest.of(input.page(), input.size(), Sort.by(orders)))
-                        .map(contract -> toContractResponse(contract, false)));
+                        ;
+        Map<Long, ListRow> rows =
+                summaryRows(page.getContent().stream().map(DormitoryContract::getId).toList());
+        return PageResponse.from(
+                page.map(contract -> toListResponse(contract, rows.get(contract.getId()))));
     }
 
     @Override
@@ -261,6 +293,26 @@ public class ContractServiceImpl implements ContractService {
     @Override
     @Transactional
     public ContractDtos.ActivationResult activate(Long id, ContractDtos.ActivateRequest input) {
+        return activate(id, input, false);
+    }
+
+    @Override
+    @Transactional
+    public void activateWithCustomDeposit(
+            Long id,
+            Boolean paperContractSigned,
+            Long depositAmount,
+            String paymentMethod,
+            String note) {
+        activate(
+                id,
+                new ContractDtos.ActivateRequest(
+                        paperContractSigned, depositAmount, paymentMethod, note),
+                true);
+    }
+
+    private ContractDtos.ActivationResult activate(
+            Long id, ContractDtos.ActivateRequest input, boolean customDeposit) {
         scopeGuard.requirePermission(Permission.CONTRACT_UPDATE);
         scopeGuard.requireRole(Role.STAFF);
         validateActivation(input);
@@ -290,7 +342,10 @@ public class ContractServiceImpl implements ContractService {
                         .filter(bed -> AssignmentKind.HOLD.equals(bed.kind()))
                         .orElseThrow(() -> BusinessException.conflict(ErrorCode.NO_HOLD_ASSIGNMENT));
 
-        Long required = roomReferences.getBuildingDepositAmount(hold.buildingId());
+        Long required =
+                customDeposit
+                        ? input.depositAmount()
+                        : roomReferences.getBuildingDepositAmount(hold.buildingId());
         if (required == null || !required.equals(input.depositAmount())) {
             throw new BusinessException(
                     ErrorCode.DEPOSIT_AMOUNT_MISMATCH,
@@ -718,7 +773,104 @@ public class ContractServiceImpl implements ContractService {
                 new ContractDtos.PendingRequestsInfo(
                         pendingExtension, pendingTransfer, pendingSummer),
                 storage.findOpenRecordIdByContract(contract.getId()),
-                moveOutInfo(contract.getId()));
+                moveOutInfo(contract.getId()),
+                summaryRows(List.of(contract.getId()))
+                        .getOrDefault(contract.getId(), ListRow.EMPTY)
+                        .summary());
+    }
+
+    /** Một dòng tóm tắt của danh sách hợp đồng: tên, mã sinh viên, số dư cọc và khối giá/chỗ ở. */
+    private record ListRow(
+            String studentName, String studentCode, Long balance, ContractDtos.Summary summary) {
+
+        static final ListRow EMPTY = new ListRow(null, null, null, null);
+    }
+
+    /** Nạp tóm tắt cho nhiều hợp đồng bằng một truy vấn; hợp đồng không có dòng thì không có khóa. */
+    private Map<Long, ListRow> summaryRows(List<Long> ids) {
+        Map<Long, ListRow> result = new LinkedHashMap<>();
+        if (ids.isEmpty()) {
+            return result;
+        }
+        jdbc.query(
+                connection -> {
+                    var statement = connection.prepareStatement(SELECT_SUMMARY);
+                    statement.setArray(1, connection.createArrayOf("bigint", ids.toArray()));
+                    return statement;
+                },
+                resultSet -> {
+                    result.put(resultSet.getLong("contract_id"), mapListRow(resultSet));
+                });
+        return result;
+    }
+
+    private static ListRow mapListRow(ResultSet resultSet) throws SQLException {
+        String room = resultSet.getString("room_code");
+        String bed = resultSet.getString("bed_code");
+        String placement = room == null ? null : room + (bed == null ? "" : " · " + bed);
+        long balance = resultSet.getLong("balance");
+        Long balanceValue = resultSet.wasNull() ? null : balance;
+        long priceMain = resultSet.getLong("price_main");
+        Long priceMainValue = resultSet.wasNull() ? null : priceMain;
+        long priceSummer = resultSet.getLong("price_summer");
+        Long priceSummerValue = resultSet.wasNull() ? null : priceSummer;
+        long depositDue = resultSet.getLong("deposit_due");
+        Long depositDueValue = resultSet.wasNull() ? null : depositDue;
+        int floor = resultSet.getInt("floor");
+        Integer floorValue = resultSet.wasNull() ? null : floor;
+        return new ListRow(
+                resultSet.getString("full_name"),
+                resultSet.getString("student_code"),
+                balanceValue,
+                new ContractDtos.Summary(
+                        placement,
+                        resultSet.getString("room_type_name"),
+                        priceMainValue,
+                        priceSummerValue,
+                        depositDueValue,
+                        resultSet.getString("unit_name"),
+                        resultSet.getString("building_name"),
+                        floorValue));
+    }
+
+    /** Bản ghi danh sách: các trường phẳng kèm tên sinh viên, nhãn, số ngày còn lại và tóm tắt giá. */
+    private ContractDtos.Response toListResponse(DormitoryContract contract, ListRow row) {
+        ListRow info = row == null ? ListRow.EMPTY : row;
+        Long daysRemaining =
+                ContractStatus.ACTIVE.equals(contract.getStatus())
+                        ? ChronoUnit.DAYS.between(today(), contract.getEndDate())
+                        : null;
+        return new ContractDtos.Response(
+                contract.getId(),
+                contract.getCode(),
+                contract.getStudentId(),
+                contract.getApplicationId(),
+                contract.getStartDate(),
+                contract.getEndDate(),
+                contract.getStatus(),
+                contract.getActivationDeadline(),
+                contract.getDepositRequired(),
+                contract.getActivatedAt(),
+                contract.getStatusReason(),
+                null,
+                null,
+                info.studentCode(),
+                info.studentName(),
+                labels(contract),
+                daysRemaining,
+                info.balance(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                info.summary());
     }
 
     /**

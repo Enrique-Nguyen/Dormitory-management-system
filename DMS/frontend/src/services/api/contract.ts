@@ -195,6 +195,19 @@ export interface ContractMoveOut {
   createdAt?: string | null
 }
 
+/** Tóm tắt chỗ ở và giá của hợp đồng; đơn giá là ảnh chụp lúc phân phòng. */
+export interface ContractSummary {
+  placement?: string | null
+  roomTypeName?: string | null
+  priceMain?: number | null
+  priceSummer?: number | null
+  /** Cọc đã chốt khi kích hoạt, hoặc mức cọc của tòa khi chưa kích hoạt. */
+  depositDue?: number | null
+  unitName?: string | null
+  buildingName?: string | null
+  floor?: number | null
+}
+
 export interface ContractDetail {
   id: number
   code?: string | null
@@ -233,6 +246,7 @@ export interface ContractDetail {
   statusReason?: string | null
   allowedActions?: string[] | null
   timeline?: TimelineEntry[] | null
+  summary?: ContractSummary | null
 }
 
 export interface ActivateContractRequest {

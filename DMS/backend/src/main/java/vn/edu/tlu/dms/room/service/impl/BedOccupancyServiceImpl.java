@@ -95,13 +95,30 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
     @Override
     @Transactional
     public Assignment occupyHold(Long bedId, Long studentId, Long contractId, String note) {
-        return occupy(bedId, studentId, contractId, AssignmentKind.HOLD, note);
+        return occupy(bedId, studentId, contractId, AssignmentKind.HOLD, note, null, null);
+    }
+
+    @Override
+    @Transactional
+    public Assignment occupyHold(
+            Long bedId,
+            Long studentId,
+            Long contractId,
+            String note,
+            Long priceMain,
+            Long priceSummer) {
+        if ((priceMain != null && priceMain < 0) || (priceSummer != null && priceSummer < 0)) {
+            throw BusinessException.invalid(
+                    ApiField.PRICE_MAIN, ValidationMessage.ASSIGNMENT_PRICE_REQUIRED);
+        }
+        return occupy(
+                bedId, studentId, contractId, AssignmentKind.HOLD, note, priceMain, priceSummer);
     }
 
     @Override
     @Transactional
     public Assignment occupyStay(Long bedId, Long studentId, Long contractId, String note) {
-        return occupy(bedId, studentId, contractId, AssignmentKind.STAY, note);
+        return occupy(bedId, studentId, contractId, AssignmentKind.STAY, note, null, null);
     }
 
     @Override
@@ -253,7 +270,13 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
     }
 
     private Assignment occupy(
-            Long bedId, Long studentId, Long contractId, String kind, String note) {
+            Long bedId,
+            Long studentId,
+            Long contractId,
+            String kind,
+            String note,
+            Long priceMain,
+            Long priceSummer) {
         if (bedId == null) {
             throw BusinessException.invalid(ApiField.BED_ID, ValidationMessage.REQUIRED);
         }
@@ -277,6 +300,12 @@ public class BedOccupancyServiceImpl implements BedOccupancyService {
         requireGender(bed, studentId);
 
         var row = newAssignment(bed, studentId, contractId, kind, note);
+        if (priceMain != null) {
+            row.setPriceMain(priceMain);
+        }
+        if (priceSummer != null) {
+            row.setPriceSummer(priceSummer);
+        }
         var now = OffsetDateTime.now();
         row.setStartedAt(now);
         if (AssignmentKind.STAY.equals(kind)) {

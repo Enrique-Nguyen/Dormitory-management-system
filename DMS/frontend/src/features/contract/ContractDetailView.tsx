@@ -609,6 +609,23 @@ export default function ContractDetailView({
                   children: contractBedLabel(currentAssignment),
                 },
                 {
+                  key: 'roomType',
+                  label: 'Loại phòng',
+                  children: detail.summary?.roomTypeName ?? '—',
+                },
+                {
+                  key: 'unit',
+                  label: 'Khu · Tòa · Tầng',
+                  children:
+                    [
+                      detail.summary?.unitName,
+                      detail.summary?.buildingName,
+                      detail.summary?.floor != null ? 'Tầng ' + detail.summary.floor : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || '—',
+                },
+                {
                   key: 'kind',
                   label: 'Trạng thái chỗ',
                   children: kindLabel(currentAssignment.kind),
@@ -625,16 +642,20 @@ export default function ContractDetailView({
                   key: 'priceMain',
                   label: 'Giá học kỳ',
                   children:
-                    currentAssignment.priceMain != null
-                      ? formatMoney(currentAssignment.priceMain)
+                    (currentAssignment.priceMain ?? detail.summary?.priceMain) != null
+                      ? formatMoney(
+                          (currentAssignment.priceMain ?? detail.summary?.priceMain) as number,
+                        )
                       : '—',
                 },
                 {
                   key: 'priceSummer',
                   label: 'Giá hè',
                   children:
-                    currentAssignment.priceSummer != null
-                      ? formatMoney(currentAssignment.priceSummer)
+                    (currentAssignment.priceSummer ?? detail.summary?.priceSummer) != null
+                      ? formatMoney(
+                          (currentAssignment.priceSummer ?? detail.summary?.priceSummer) as number,
+                        )
                       : '—',
                 },
               ]}

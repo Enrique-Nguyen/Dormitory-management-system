@@ -41,6 +41,19 @@ public interface BedOccupancyService {
     Assignment occupyHold(Long bedId, Long studentId, Long contractId, String note);
 
     /**
+     * Như {@link #occupyHold(Long, Long, Long, String)} nhưng cho chốt đơn giá riêng của hợp đồng
+     * này thay cho đơn giá loại phòng. Tham số null nghĩa là dùng đơn giá loại phòng; bảng giá của
+     * loại phòng không bị thay đổi, đơn giá riêng chỉ lưu trong dòng phân phòng.
+     */
+    Assignment occupyHold(
+            Long bedId,
+            Long studentId,
+            Long contractId,
+            String note,
+            Long priceMain,
+            Long priceSummer);
+
+    /**
      * Mở phân phòng đang ở (STAY) trực tiếp, dùng cho phân lại giường đầu học kỳ 1 cho sinh viên
      * tạm rời hè. Quy tắc khóa và kiểm tra giống {@link #occupyHold}.
      */

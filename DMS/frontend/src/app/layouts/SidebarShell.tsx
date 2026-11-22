@@ -6,7 +6,7 @@ import { Breadcrumb, Flex, Layout, Menu, type MenuProps } from 'antd'
 import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import NotificationBell from '../../components/layout/NotificationBell'
-import UserMenu from '../../components/layout/UserMenu'
+import UserMenu, { LogoutButton } from '../../components/layout/UserMenu'
 import {
   commonUiLabels,
   findActivePath,
@@ -179,6 +179,9 @@ export default function SidebarShell({
           <nav aria-label="Menu chính" className="dms-sider-nav">
             {menu}
           </nav>
+          <div className="dms-sider-footer">
+            <LogoutButton compact={collapsed} />
+          </div>
         </Layout.Sider>
       )}
       <Layout style={{ minWidth: 0 }}>
@@ -219,7 +222,7 @@ export default function SidebarShell({
               hasPermission(me, Permission.NOTIFICATION_READ) && (
                 <NotificationBell to={notificationsPath} />
               )}
-            <UserMenu />
+            <UserMenu showLogout={false} />
           </Flex>
         </Layout.Header>
         <Layout.Content>
@@ -239,6 +242,9 @@ export default function SidebarShell({
         >
           {isMobile && search && <div style={{ padding: 16 }}>{search}</div>}
           <nav aria-label="Menu chính">{menu}</nav>
+          <div className="dms-sider-footer">
+            <LogoutButton />
+          </div>
         </Drawer>
       )}
     </Layout>
