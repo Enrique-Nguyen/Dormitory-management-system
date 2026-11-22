@@ -415,6 +415,10 @@ public class SummerCrudServiceImpl extends AbstractSqlCrudServiceImpl implements
     private Object updateChoice(Long id, Map<String, Object> input) {
         guard.requirePermission(Permission.SUMMER_REGISTRATION_UPDATE);
         var row = loadEditable(id, Set.of(SummerStatus.PENDING, SummerStatus.REJECTED));
+        // Hợp đồng nguồn phải còn hiệu lực, giống nhánh tạo; kiểm sau khi đã khóa lựa chọn.
+        if (!ContractStatus.ACTIVE.equals(row.get(ApiField.CONTRACT_STATUS))) {
+            throw BusinessException.conflict(ErrorCode.CONTRACT_NOT_ACTIVE);
+        }
         if (input.size() != 1 || !input.containsKey(ApiField.CHOICE)) {
             throw BusinessException.invalid(
                     ApiField.CHOICE, ValidationMessage.SUMMER_CHOICE_EDIT);

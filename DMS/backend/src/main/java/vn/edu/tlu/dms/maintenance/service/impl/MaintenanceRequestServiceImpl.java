@@ -707,10 +707,10 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         var actor = current.get();
         return actor.is(Role.STAFF)
                 && Objects.equals(actor.unitId(), requestUnitId(r))
+                // Nghiệm thu thay chỉ khi người yêu cầu là Staff hoặc đã trả phòng (FR-MNT-07); chuyển
+                // phòng vẫn là đang ở nên không đủ điều kiện (MNT-01).
                 && (accounts.user(r.getRequesterId()).role().equals(Role.STAFF)
-                        || !Objects.equals(
-                                r.getRoomId(),
-                                rooms.findCurrentStayingRoomId(r.getRequesterId()).orElse(-1L)));
+                        || rooms.findCurrentStayingRoomId(r.getRequesterId()).isEmpty());
     }
 
     private void changeStatusAndRecordHistory(MaintenanceRequest r, String next, String reason) {

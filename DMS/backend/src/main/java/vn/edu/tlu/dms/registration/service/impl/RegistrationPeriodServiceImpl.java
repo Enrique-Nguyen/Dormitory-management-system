@@ -270,10 +270,15 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     public void deleteUnusedPeriod(Long id) {
         guard.requirePermission(Permission.REGISTRATION_PERIOD_DELETE);
         var period = periods.findById(id).orElseThrow(BusinessException::notFound);
-        jdbc.queryForObject(
-                "SELECT id FROM registration_period WHERE id=? FOR UPDATE", Long.class, id);
+        // Đọc lại thời điểm mở sau khi có khóa: phiên khác có thể vừa đổi openAt (REG-05).
+        OffsetDateTime lockedOpenAt =
+                jdbc.queryForObject(
+                        "SELECT open_at FROM registration_period WHERE id=? FOR UPDATE",
+                        OffsetDateTime.class,
+                        id);
         checkPeriodWriteScope(id);
-        if (!period.getOpenAt().isAfter(OffsetDateTime.now())
+        if (lockedOpenAt == null
+                || !lockedOpenAt.isAfter(OffsetDateTime.now())
                 || Boolean.TRUE.equals(
                         jdbc.queryForObject(
                                 "SELECT EXISTS(SELECT 1 FROM room_application WHERE period_id=?)",

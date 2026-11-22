@@ -712,6 +712,8 @@ public class ContractCrudServiceImpl extends AbstractSqlCrudServiceImpl
     private Object updateStayRequest(boolean extension, Long id, Map<String, Object> input) {
         guard.requirePermission(
                 extension ? Permission.CONTRACT_EXTENSION_UPDATE : Permission.ROOM_TRANSFER_UPDATE);
+        // Nội dung yêu cầu thuộc sinh viên; Staff xử lý bằng action duyệt/từ chối riêng (CON-01).
+        guard.requireRole(Role.STUDENT);
         var row = loadPendingRequest(extension, id);
         if (input.containsKey("contractId")) {
             throw BusinessException.invalid(ApiField.CONTRACT_ID, ValidationMessage.CONTRACT_IMMUTABLE);

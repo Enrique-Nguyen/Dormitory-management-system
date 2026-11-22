@@ -130,7 +130,7 @@ class SummerChoiceIntegrationTest {
         choiceId = createChoice(contractId, summerSemesterId, SummerChoice.STAY);
 
         // Quyền đang cấp được giả lập đầy đủ để kiểm tra nghiệp vụ; ma trận thật do module account
-        // quản lý. Cấu hình mặc định hiện chưa cấp SUMMER_REGISTRATION_UPDATE cho STAFF.
+        // quản lý; V19 đã cấp SUMMER_REGISTRATION_UPDATE cho STAFF để duyệt/từ chối.
         when(rolePermissions.getGrantedPermissions(anyString()))
                 .thenReturn(List.copyOf(Permission.ALL));
         asStaff(unitId);
