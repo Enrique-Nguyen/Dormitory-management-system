@@ -183,6 +183,33 @@ export async function assignApplicationBed(
   ).data
 }
 
+/** Dữ liệu gộp từ màn hợp đồng: giường, ngày, đơn giá riêng và (tùy chọn) kích hoạt với cọc. */
+export interface AssignContractRequest {
+  bedId: number
+  startDate?: string
+  endDate?: string
+  priceMain?: number
+  priceSummer?: number
+  activate?: boolean
+  depositAmount?: number
+  paymentMethod?: string
+  paperContractSigned?: boolean
+  note?: string
+}
+
+/**
+ * Một lần lưu ở màn hợp đồng: phân giường, tạo hợp đồng, chốt giá/cọc riêng và kích hoạt nếu
+ * `activate` true. Backend chạy trong một giao dịch; lỗi ở bước nào cũng hoàn tác tất cả.
+ */
+export async function assignApplicationContract(
+  id: number,
+  input: AssignContractRequest,
+): Promise<ApplicationDetail> {
+  return (
+    await api.post<ApplicationDetail>(`${base}/${id}/assign-contract`, input)
+  ).data
+}
+
 /** Hủy giữ chỗ ASSIGNED → APPROVED kèm lý do bắt buộc. */
 export async function releaseApplicationHold(
   id: number,

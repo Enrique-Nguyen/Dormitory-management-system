@@ -1,6 +1,6 @@
 # Đặc tả API — DMS
 
-> **Phiên bản 0.28**, 19/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
+> **Phiên bản 0.29**, 22/11/2026, Nhóm 3 — Chuyên đề CNTT, 65CNTT
 > Căn cứ: `SRS-DMS.md` v0.15 (mục 3, 6.2, 10), `SAD-DMS.md` v1.5, `DB-Design-DMS.md` v0.13, `DMS-UI-UX-Design.md` (mục 27.2)
 > Trạng thái: **đã chốt Q-API-01..07** (mục 9) theo thẩm định của nhóm
 
@@ -8,6 +8,7 @@
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.29 | 22/11/2026 | Màn hợp đồng nhập một lần: thêm `POST /api/applications/{id}/assign-contract` gộp phân giường, chốt ngày hợp đồng, đơn giá phòng riêng, mức cọc riêng và kích hoạt trong một transaction (mục 4.4). Danh sách và chi tiết hợp đồng trả thêm khối `summary` (chỗ ở, loại phòng, đơn giá, cọc). |
 | 0.28 | 19/11/2026 | Flyway V18: mở rộng body/response danh mục (trường, khoa, khóa, quê quán, năm học, tiện nghi, hạng mục sửa chữa), học kỳ, diện ưu tiên và vị trí kho; thêm mã lỗi `ACADEMIC_YEAR_OVERLAP`. |
 | 0.27 | 19/11/2026 | Flyway V16: mở rộng body/response đơn vị, tòa, tầng, loại phòng, phòng, giường theo trường nghiệp vụ đầy đủ; thêm mã lỗi `FLOOR_IN_USE`, `FLOOR_OUT_OF_RANGE`, `USER_UNIT_MISMATCH`. |
 | 0.26 | 04/11/2026 | Hợp nhất bộ lọc danh mục, hợp đồng, hộp thư, kho và các màn nghiệp vụ với các thay đổi đăng ký và tài chính từ develop. |
@@ -387,6 +388,7 @@ Khung có DELETE phòng/giường chưa từng sử dụng; khi đã có lịch 
 | POST | `/api/applications/{id}/approve` | St | SUBMITTED → APPROVED | FR-REG-07 |
 | POST | `/api/applications/{id}/reject` | St | SUBMITTED → REJECTED, `{ reason }` | FR-REG-07 |
 | POST | `/api/applications/{id}/assign` | St | APPROVED → ASSIGNED: phân giường (mục 4.4) | FR-REG-08, 09, 10 |
+| POST | `/api/applications/{id}/assign-contract` | St | APPROVED → ASSIGNED (và ACTIVE nếu `activate`): phân giường, chốt giá/cọc riêng, kích hoạt trong một lần (mục 4.4) | FR-REG-08, FR-CON-02 |
 | POST | `/api/applications/{id}/release-hold` | St | ASSIGNED → APPROVED, `{ reason }`: hủy giữ chỗ để phân lại | FR-REG-11 |
 | POST | `/api/summer-choices/save-or-update` | S | Tạo/sửa hồ sơ hè: `{id, contractId, semesterId, choice}`. Cần hợp đồng ACTIVE và đợt hè đang mở, nếu không `409 PERIOD_NOT_OPEN`. Tạo trùng bản PENDING/APPROVED → `409 SUMMER_CHOICE_EXISTS`; bản CANCELLED/REJECTED cùng học kỳ được mở lại về PENDING. Sửa PENDING hoặc REJECTED (gửi lại), không đổi hợp đồng/học kỳ nguồn. Chưa tự gia hạn, trả phòng hay phân giường | FR-REG-14, FR-CON-11 |
 | GET | `/api/me/summer-choice` | S | Lựa chọn hè hiện tại của tôi (`null` nếu chưa chọn) | FR-REG-14 |
@@ -711,6 +713,20 @@ Một transaction (SAD 6.2): khóa giường, khóa sinh viên, kiểm tra lại
 | `409 INVALID_STATE_TRANSITION` | Đơn không còn `APPROVED` |
 
 Frontend gặp `BED_TAKEN` thì refetch danh sách giường và giữ nguyên split view (UI 14.2).
+
+`POST /api/applications/{id}/assign-contract`
+
+Dùng cho màn Hợp đồng (Admin/Staff): nhập một lần rồi các màn Phòng, Tiền cọc, Hóa đơn tự cập nhật theo dữ liệu phân phòng và sổ cọc.
+
+```json
+{ "bedId": 1532, "startDate": "2027-01-25", "endDate": "2027-06-13", "priceMain": 1500000, "priceSummer": 750000,
+  "activate": true, "depositAmount": 2000000, "paymentMethod": "CASH", "paperContractSigned": true, "note": "Miễn giảm theo quyết định ..." }
+```
+
+- Một transaction: giữ giường `HOLD` (như `/assign`), tạo hợp đồng `PENDING`, rồi nếu `activate = true` thì thu cọc và chuyển `HOLD` sang `STAY`, hợp đồng `ACTIVE`. Lỗi ở bước nào cũng hoàn tác toàn bộ.
+- `startDate`, `endDate` để trống thì lấy theo học kỳ của đợt (phải gửi cả hai hoặc không gửi). `priceMain`, `priceSummer` để trống thì lấy đơn giá loại phòng; số gửi lên chỉ lưu vào dòng phân phòng của hợp đồng này, bảng giá của loại phòng không đổi.
+- Khi `activate = true`: bắt buộc `depositAmount > 0`, `paymentMethod`, `paperContractSigned = true`. `depositAmount` được chốt làm mức cọc riêng (`deposit_required`) của hợp đồng, không bắt buộc bằng mức cọc của tòa; mức của tòa không đổi. Quyền cần cả `ROOM_APPLICATION_UPDATE` và `CONTRACT_UPDATE`.
+- Lỗi giống `/assign` và `/contracts/{id}/activate` (trừ `DEPOSIT_AMOUNT_MISMATCH` không áp dụng). Trả chi tiết đơn như `/assign`.
 
 ### 4.5. Chi tiết hợp đồng
 

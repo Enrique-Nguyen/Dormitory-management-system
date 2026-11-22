@@ -1,7 +1,9 @@
 import { ConfirmPaymentModal, DepositLedgerModal } from '../features/billing'
 import { formatInvoicePeriod } from '../features/billing/presentation'
 import { EmptyState, InvoiceStatus, StatusBadge } from '../components'
+import PageHeader from '../components/layout/PageHeader'
 import { CreateTicketModal } from '../features/maintenance'
+import ContractCreateModal from '../features/contract/ContractCreateModal'
 import {
   Input,
   InputNumber,
@@ -22,6 +24,7 @@ import {
   StatusFilter,
   Modal,
 } from '../components/ui/Surface'
+import ActionMenu, { type ActionMenuItem } from '../components/ui/ActionMenu'
 import Table from '../components/ui/DataTable'
 import ResponsiveTable from '../components/ui/ResponsiveTable'
 import {
@@ -47,14 +50,12 @@ import {
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   App,
-  Dropdown,
   Form,
   Result,
   Space,
   Tag,
   Tooltip,
   Typography,
-  type MenuProps,
 } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import RecordDetailContent, { hasRecordDetailContent } from '../features/crud/RecordDetailContent'
@@ -219,6 +220,15 @@ function renderColumnCell(
  * Trình bày rõ ràng với badge, tag, định dạng tiền, số, ngày tháng, text wrap
  * thay vì các ô input xám disabled khó đọc.
  */
+/** Nhãn lookup: đường dẫn đơn (name) hoặc mẫu có chỗ trống như {student.fullName} để ghép nhiều trường. */
+function lookupText(row: CrudRecord, template: string): string {
+  if (!template.includes('{')) return String(display(readValue(row, template)))
+  return template.replace(/\{([^}]+)\}/g, (_, path: string) => {
+    const value = readValue(row, path.trim())
+    return value == null || value === '' ? '—' : String(value)
+  })
+}
+
 function referenceLabel(field: CrudField, record: CrudRecord, value?: unknown): unknown {
   if (field.name === 'amenityIds') return undefined
   if (field.name === "priorityCategoryIds" && Array.isArray(record.priorities)) {
@@ -363,7 +373,7 @@ function LookupInput({
   let options = field.lookup
     ? data?.map((row) => ({
         value: row.id,
-        label: `${display(readValue(row, field.lookupLabel ?? 'name'))} (#${row.id})`,
+        label: `${lookupText(row, field.lookupLabel ?? 'name')} (#${row.id})`,
       }))
     : field.options?.map((option) => ({
         ...option,
@@ -463,7 +473,14 @@ function renderCrudInput(field: CrudField, disabled?: boolean) {
   }
 }
 
-export default function CrudPage({ resource }: { resource: string }) {
+export default function CrudPage({
+  resource,
+  embedded = false,
+}: {
+  resource: string
+  /** Nhúng trong trang nhiều tab: tiêu đề do tab đảm nhiệm nên không lặp lại. */
+  embedded?: boolean
+}) {
   const config = resources[resource]
   const { data: me } = useMe()
   const { message, modal } = App.useApp()
@@ -480,6 +497,7 @@ export default function CrudPage({ resource }: { resource: string }) {
   )
   const [activeRecord, setActiveRecord] = useState<CrudRecord | null>(null)
   const [maintenanceCreateOpen, setMaintenanceCreateOpen] = useState(false)
+  const [contractCreateOpen, setContractCreateOpen] = useState(false)
   const [excelOpen, setExcelOpen] = useState(false)
   const [excelBlocked, setExcelBlocked] = useState(false)
   const [studentImportBlocked, setStudentImportBlocked] = useState(false)
@@ -860,6 +878,8 @@ export default function CrudPage({ resource }: { resource: string }) {
       queryClient.invalidateQueries({ queryKey: ['me'] }),
     ])
   }
+  const roomList = resource === 'rooms'
+  const studentList = resource === 'students' || resource === 'adminStudents'
   const studentAccountImport = resource === 'adminStudents' && hasPermission(me, Permission.STUDENT_CREATE)
   const canImportExcel = !config.singleton && !config.readOnly && (canCreate || canUpdate)
   const excelFields = [...new Map([
@@ -1117,6 +1137,8 @@ export default function CrudPage({ resource }: { resource: string }) {
     if (!canDeleteRow(row)) return
     let reason = ''
     modal.confirm({
+      transitionName: roomList ? '' : undefined,
+      maskTransitionName: roomList ? '' : undefined,
       title: `${config.deleteLabel ?? 'Xóa'} bản ghi này?`,
       content:
         config.deleteAction === 'lock' ? (
@@ -1452,9 +1474,10 @@ export default function CrudPage({ resource }: { resource: string }) {
 
   return (
     <div className={`dms-crud-page${config.finance ? ' dms-finance-page' : ''}`}>
+      {!embedded && <PageHeader title={config.title} />}
 
       {studentAccountImport && excelOpen && (
-        <Card title={studentImportLabels.panelTitle} style={{ marginBottom: 16 }}>
+        <Card title={studentImportLabels.panelTitle} style={{ marginBottom: 12 }}>
           <StudentImportPanel onBlockedChange={setStudentImportBlocked} />
         </Card>
       )}
@@ -1493,6 +1516,7 @@ export default function CrudPage({ resource }: { resource: string }) {
                 icon={<PlusOutlined />}
                 onClick={() => {
                   if (resource === 'maintenance') setMaintenanceCreateOpen(true)
+                  else if (resource === 'contracts') setContractCreateOpen(true)
                   else void openEditor()
                 }}
                 className="dms-btn-primary"
@@ -1514,41 +1538,55 @@ export default function CrudPage({ resource }: { resource: string }) {
                   canCreate={canCreate && !['students', 'adminStudents'].includes(resource)} canUpdate={canUpdate}
                   onSave={saveExcelRow} onComplete={refresh} onBlockedChange={setExcelBlocked} />
               )}
-              <span style={{ display: 'inline-flex', position: 'relative' }}>
-              <Dropdown
-                getPopupContainer={(trigger) => trigger.parentElement!}
-                styles={{ root: { top: '100%', right: 0, bottom: 'auto', left: 'auto' } }}
-                menu={{
-                  items: [
-                    {
-                      key: 'export',
-                      icon: <DownloadOutlined />,
-                      label: excelUiLabels.export,
-                      disabled: exporting,
-                      onClick: () => void exportExcel(),
-                    },
-                    ...(studentAccountImport ? [{
-                      key: 'student-import',
-                      icon: <UploadOutlined />,
-                      label: studentImportLabels.tab,
-                      onClick: () => setExcelOpen(true),
-                    }] : []),
-                    ...(canDelete && selectedRowKeys.length > 0 ? [{
-                      key: 'bulk-delete',
-                      icon: <DeleteOutlined />,
-                      danger: true,
-                      label: `Xóa ${selectedRowKeys.length} bản ghi đã chọn`,
-                      onClick: handleBulkDelete,
-                    }] : []),
-                  ],
-                }}
-                trigger={['click']}
-              >
-                <Tooltip title="Thao tác khác">
-                  <Button icon={<MoreOutlined />} aria-label="Thao tác khác" className="dms-toolbar-more-btn" />
-                </Tooltip>
-              </Dropdown>
-              </span>
+              {studentList ? (
+                <Button
+                  icon={<DownloadOutlined />}
+                  loading={exporting}
+                  onClick={() => void exportExcel()}
+                >
+                  {excelUiLabels.export}
+                </Button>
+              ) : (
+              <Tooltip title="Thao tác khác">
+                <span style={{ display: 'inline-flex' }}>
+                  <ActionMenu
+                    aria-label="Thao tác khác"
+                    className="dms-toolbar-more-btn"
+                    icon={<MoreOutlined />}
+                    items={[
+                      {
+                        key: 'export',
+                        icon: <DownloadOutlined />,
+                        label: excelUiLabels.export,
+                        disabled: exporting,
+                        onClick: () => void exportExcel(),
+                      },
+                      ...(studentAccountImport
+                        ? [
+                            {
+                              key: 'student-import',
+                              icon: <UploadOutlined />,
+                              label: studentImportLabels.tab,
+                              onClick: () => setExcelOpen(true),
+                            },
+                          ]
+                        : []),
+                      ...(canDelete && selectedRowKeys.length > 0
+                        ? [
+                            {
+                              key: 'bulk-delete',
+                              icon: <DeleteOutlined />,
+                              danger: true,
+                              label: `Xóa ${selectedRowKeys.length} bản ghi đã chọn`,
+                              onClick: handleBulkDelete,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </span>
+              </Tooltip>
+              )}
             </Space>
           }
           filters={!config.singleton && !!config.filters?.length && (
@@ -1698,13 +1736,13 @@ export default function CrudPage({ resource }: { resource: string }) {
                       row.role === Role.STAFF &&
                       hasPermission(me, Permission.USER_CROSS_UNIT_ACCESS))
 
-                  const moreItems: MenuProps['items'] = [
+                  const moreItems: ActionMenuItem[] = [
                     ...(canResetPassword(row)
                       ? [
                           {
                             key: 'reset-pwd',
                             icon: <KeyOutlined />,
-                            label: 'Đặt lại mật khẩu',
+                            label: crudDetailUiLabels.resetPassword,
                             onClick: () => resetPassword(row),
                           },
                         ]
@@ -1750,42 +1788,72 @@ export default function CrudPage({ resource }: { resource: string }) {
                           className="dms-action-btn dms-action-view"
                         />
                       </Tooltip>
-                      {canEditRow(row) && (
-                        <Tooltip title="Sửa">
-                          <Button
-                            size="small"
-                            icon={<EditOutlined />}
-                            onClick={() => {
-                              void openEditor(row)
-                            }}
-                            aria-label="Sửa"
-                            className="dms-action-btn dms-action-edit"
-                          />
-                        </Tooltip>
-                      )}
-                      {canDeleteRow(row) && (
-                        <Tooltip title={config.deleteLabel ?? 'Xóa'}>
-                          <Button
-                            size="small"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => deleteRecord(row)}
-                            aria-label={config.deleteLabel ?? 'Xóa'}
-                            className="dms-action-btn dms-action-delete"
-                          />
-                        </Tooltip>
-                      )}
-                      {hasSpecialActions && (
-                        <Dropdown menu={{ items: moreItems }} trigger={['click']}>
-                          <Tooltip title="Thao tác khác">
+                      {canUpdate && !config.singleton && (
+                        <Tooltip
+                          title={
+                            canEditRow(row)
+                              ? 'Sửa'
+                              : (crudDetailUiLabels.lockedReasons[resource] ?? crudDetailUiLabels.editBlocked)
+                          }
+                        >
+                          <span className="dms-action-slot">
                             <Button
+                              size="small"
+                              icon={<EditOutlined />}
+                              disabled={!canEditRow(row)}
+                              onClick={() => {
+                                void openEditor(row)
+                              }}
+                              aria-label="Sửa"
+                              className="dms-action-btn dms-action-edit"
+                            />
+                          </span>
+                        </Tooltip>
+                      )}
+                      {canDelete && !config.singleton && !config.noDelete && (
+                        <Tooltip
+                          title={
+                            canDeleteRow(row)
+                              ? (config.deleteLabel ?? 'Xóa')
+                              : (crudDetailUiLabels.lockedReasons[resource] ?? crudDetailUiLabels.deleteBlocked)
+                          }
+                        >
+                          <span className="dms-action-slot">
+                            <Button
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                              disabled={!canDeleteRow(row)}
+                              onClick={() => deleteRecord(row)}
+                              aria-label={config.deleteLabel ?? 'Xóa'}
+                              className="dms-action-btn dms-action-delete"
+                            />
+                          </span>
+                        </Tooltip>
+                      )}
+                      {studentList && canResetPassword(row) && (
+                        <Tooltip title={crudDetailUiLabels.resetPassword}>
+                          <Button
+                            size="small"
+                            icon={<KeyOutlined />}
+                            onClick={() => resetPassword(row)}
+                            aria-label={crudDetailUiLabels.resetPassword}
+                            className="dms-action-btn"
+                          />
+                        </Tooltip>
+                      )}
+                      {!studentList && hasSpecialActions && (
+                        <Tooltip title="Thao tác khác">
+                          <span className="dms-action-slot">
+                            <ActionMenu
                               size="small"
                               icon={<MoreOutlined />}
                               aria-label="Thao tác khác"
                               className="dms-action-btn dms-action-more"
+                              items={moreItems}
                             />
-                          </Tooltip>
-                        </Dropdown>
+                          </span>
+                        </Tooltip>
                       )}
                     </Space>
                   )
@@ -1799,6 +1867,8 @@ export default function CrudPage({ resource }: { resource: string }) {
         headerIcon={<ModalHeaderIcon />}
         title={modalTitleText}
         subtitle={modalSubtitle}
+        transitionName={roomList ? '' : undefined}
+        maskTransitionName={roomList ? '' : undefined}
         open={modalMode !== null}
         forceRender
         onCancel={closeModal}
@@ -2190,6 +2260,16 @@ export default function CrudPage({ resource }: { resource: string }) {
           open
           onClose={() => setLedgerRecord(null)}
           readOnly={resource === 'myDeposits'}
+        />
+      )}
+      {resource === 'contracts' && (
+        <ContractCreateModal
+          open={contractCreateOpen}
+          onClose={() => setContractCreateOpen(false)}
+          onCreated={() => {
+            setContractCreateOpen(false)
+            void refetch()
+          }}
         />
       )}
       {resource === 'maintenance' && (

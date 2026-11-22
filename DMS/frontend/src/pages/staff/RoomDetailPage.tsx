@@ -120,7 +120,7 @@ export default function RoomDetailPage({
         <Alert
           type="warning"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           message="Phòng còn sinh viên đang ở nhưng chưa có trưởng phòng."
           description="Chỉ định trưởng phòng để nhận hóa đơn điện nước của phòng."
         />

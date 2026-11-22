@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 
 interface Props {
   title: ReactNode
+  /** Giữ để tương thích: mọi màn đều hiện tiêu đề như V5. */
   showHeading?: boolean
   /** Rule 01: trạng thái hiện trước hành động, nên badge nằm cạnh tiêu đề. */
   status?: ReactNode
@@ -15,17 +16,13 @@ interface Props {
 
 export default function PageHeader({
   title,
-  showHeading = false,
   status,
   subtitle,
   breadcrumb,
   extra,
 }: Props) {
-  if (!showHeading && !extra && !breadcrumb?.length) {
-    return <h1 className="dms-visually-hidden">{title}</h1>
-  }
   return (
-    <header className={showHeading ? 'dms-page-header' : 'dms-page-toolbar'}>
+    <header className="dms-page-header">
       {breadcrumb && breadcrumb.length > 0 && (
         <Breadcrumb
           style={{ marginBottom: 10, fontSize: 13 }}
@@ -38,8 +35,8 @@ export default function PageHeader({
           }))}
         />
       )}
-      <Flex justify="space-between" align="center" wrap gap={12}>
-        <div className={showHeading ? 'dms-wrap' : 'dms-visually-hidden'}>
+      <Flex justify="space-between" align="flex-start" wrap gap={8}>
+        <div className="dms-wrap">
           <Flex align="center" wrap gap={10}>
             <h1 className="dms-page-title">{title}</h1>
             {status}

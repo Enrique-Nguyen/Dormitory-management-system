@@ -363,7 +363,7 @@ export default function SummerChoiceDetailView({
         <Alert
           type="warning"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           title="Lựa chọn đang chờ duyệt"
           description="Kiểm tra phương án và tác động trước khi duyệt; sinh viên chỉ đổi được lựa chọn khi còn chờ."
         />
@@ -441,12 +441,12 @@ export default function SummerChoiceDetailView({
         <Alert
           type={explanation.type}
           showIcon
-          style={{ marginTop: 16 }}
+          style={{ marginTop: 12 }}
           title={explanation.title}
           description={explanation.description}
         />
 
-        <Flex gap={8} wrap style={{ marginTop: 16 }}>
+        <Flex gap={8} wrap style={{ marginTop: 12 }}>
           {canCreateStorage && (
             <Button
               type="primary"

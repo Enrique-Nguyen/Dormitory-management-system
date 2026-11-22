@@ -179,7 +179,7 @@ function CreateStorageModal({
       <Alert
         type="info"
         showIcon
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 12 }}
         title="Chỉ áp dụng cho hợp đồng đang ACTIVE"
         description="Sinh viên phải có lựa chọn tạm rời hè đã duyệt và hợp đồng đã được gia hạn qua học kỳ hè. Tạo phiếu sẽ đóng phân phòng hiện tại nhưng giữ nguyên hợp đồng và tiền cọc."
       />
@@ -423,10 +423,9 @@ function ReturnStorageModal({
     >
       {record && (
         <Descriptions
-          bordered
           size="small"
           column={{ xs: 1, sm: 2 }}
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           items={[
             {
               key: 'student',
@@ -521,7 +520,7 @@ function ReturnStorageModal({
         <Alert
           type="success"
           showIcon
-          style={{ marginTop: 16 }}
+          style={{ marginTop: 12 }}
           title={`Đã chọn giường ${selected.label}`}
         />
       )}

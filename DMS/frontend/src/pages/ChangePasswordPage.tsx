@@ -35,7 +35,7 @@ export default function ChangePasswordPage() {
             type="error"
             showIcon
             title={error}
-            style={{ marginBottom: 16 }}
+            style={{ marginBottom: 12 }}
           />
         )}
         <Button

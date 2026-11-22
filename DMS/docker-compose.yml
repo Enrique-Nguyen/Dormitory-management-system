@@ -50,6 +50,7 @@ services:
       - "127.0.0.1:8180:8080"
     volumes:
       - ./keycloak/dms-realm.json:/opt/keycloak/data/import/dms-realm.json:ro
+      - ./keycloak/themes/dms:/opt/keycloak/themes/dms:ro
     depends_on:
       keycloak-postgres:
         condition: service_healthy

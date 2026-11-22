@@ -1653,9 +1653,9 @@ class CrudApiIntegrationTest {
                 .andExpect(jsonPath("$.permissions").value(hasItem("ROOM_TRANSFER_UPDATE")))
                 .andExpect(jsonPath("$.permissions").value(not(hasItem("ROOM_TRANSFER_DELETE"))))
                 .andExpect(jsonPath("$.permissions").value(hasItem("SUMMER_REGISTRATION_READ")))
+                .andExpect(jsonPath("$.permissions").value(hasItem("SUMMER_REGISTRATION_UPDATE")))
                 .andExpect(
-                        jsonPath("$.permissions")
-                                .value(not(hasItem("SUMMER_REGISTRATION_UPDATE"))));
+                        jsonPath("$.permissions").value(not(hasItem("SUMMER_REGISTRATION_CREATE"))));
         mvc.perform(get("/api/auth/me").with(asUser(technicianId, "TECHNICIAN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.permissions").value(hasItem("MAINTENANCE_UPDATE")))

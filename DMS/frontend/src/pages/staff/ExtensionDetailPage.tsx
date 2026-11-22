@@ -226,7 +226,7 @@ export default function ExtensionDetailPage({
         <Alert
           type="warning"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           title="Yêu cầu đang chờ duyệt"
           description="Duyệt sẽ cập nhật ngày kết thúc hợp đồng; từ chối bắt buộc ghi lý do để sinh viên biết."
         />
@@ -236,7 +236,7 @@ export default function ExtensionDetailPage({
         <Alert
           type="error"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           title="Khoảng gia hạn chồng hợp đồng khác"
           description={
             <>
@@ -325,7 +325,7 @@ export default function ExtensionDetailPage({
             <Alert
               type="info"
               showIcon
-              style={{ marginTop: 16 }}
+              style={{ marginTop: 12 }}
               title="Yêu cầu đã được xử lý"
               description={
                 detail.status === ExtensionStatus.APPROVED

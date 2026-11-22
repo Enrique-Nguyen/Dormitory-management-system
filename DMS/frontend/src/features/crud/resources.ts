@@ -274,6 +274,13 @@ export const dashboardUiLabels = {
 
 /** Nhãn thao tác hóa đơn, xác nhận thanh toán và sổ cọc dùng lại trên các màn hiện có. */
 export const crudDetailUiLabels = {
+  /** Lý do khóa sửa/xóa riêng của từng màn; màn không khai báo dùng editBlocked/deleteBlocked. */
+  lockedReasons: {
+    readings: 'Chỉ số đã lên hóa đơn hoặc đã có kỳ sau nên bị khóa sửa/xóa.',
+    invoices: 'Chỉ hóa đơn tạo tay, chưa thanh toán và chưa có chi tiết mới được sửa/xóa.',
+  } as Record<string, string>,
+  editBlocked: 'Không sửa được: bản ghi đang ở trạng thái khóa hoặc ngoài phạm vi cho phép.',
+  deleteBlocked: 'Không xóa được: bản ghi đã phát sinh dữ liệu hoặc đang ở trạng thái khóa.',
   information: 'Thông tin chung',
   additionalInformation: 'Thông tin bổ sung',
   filters: 'Bộ lọc',
@@ -282,6 +289,7 @@ export const crudDetailUiLabels = {
   all: 'Tất cả',
   results: 'Kết quả',
   moreActions: 'Thao tác khác',
+  resetPassword: 'Đặt lại mật khẩu',
   countError: 'Không tải được số lượng',
   statusFilterNames: ['status', 'locked', 'active'],
   collections: { items: 'Dòng hóa đơn', transactions: 'Giao dịch cọc', timeline: 'Lịch sử' },
@@ -1256,10 +1264,12 @@ export const resources: Record<string, CrudResource> = {
     formSections: [
       {
         title: 'Thông tin sinh viên & Đơn',
+        note: 'Chỉ hiện đơn đã duyệt và chưa có hợp đồng. Chỗ ở và giá phòng được chốt khi phân giường; tiền cọc theo mức của tòa, thu khi kích hoạt hợp đồng.',
         fields: ['applicationId'],
       },
       {
         title: 'Thời hạn hợp đồng',
+        note: 'Thường trùng ngày bắt đầu và kết thúc của học kỳ. Ngày kết thúc phải sau ngày bắt đầu.',
         fields: ['startDate', 'endDate'],
       },
     ],
@@ -1269,7 +1279,7 @@ export const resources: Record<string, CrudResource> = {
           'applicationId',
           'Đơn đã duyệt',
           '/applications',
-          'student.fullName',
+          '{student.studentCode} · {student.fullName} — {priorityScore} điểm ưu tiên',
         ),
         lookupFilters: { status: ApplicationStatus.APPROVED },
         createOnly: true,
@@ -1277,15 +1287,30 @@ export const resources: Record<string, CrudResource> = {
       date('startDate', 'Ngày bắt đầu'),
       date('endDate', 'Ngày kết thúc'),
     ],
-    columns: columns(
-      ['code', 'Mã hợp đồng'],
-      ['studentId', 'Sinh viên'],
-      ['startDate', 'Bắt đầu'],
-      ['endDate', 'Kết thúc'],
-      ['status', 'Trạng thái'],
-    ),
+    columns: [
+      ...columns(
+        ['code', 'Mã hợp đồng'],
+        ['studentName', 'Sinh viên'],
+        ['summary.placement', 'Phòng · Giường'],
+        ['summary.roomTypeName', 'Loại phòng'],
+      ),
+      money('summary.priceMain', 'Giá phòng / kỳ'),
+      money('summary.depositDue', 'Tiền cọc'),
+      money('depositBalance', 'Số dư cọc'),
+      dateColumn('startDate', 'Bắt đầu'),
+      dateColumn('endDate', 'Kết thúc'),
+      count('daysRemaining', 'Còn lại (ngày)'),
+      ...columns(['status', 'Trạng thái']),
+    ],
     detailColumns: [
-      { key: 'depositAmount', label: 'Tiền đặt cọc', format: 'money' },
+      { key: 'summary.unitName', label: 'Khu quản lý' },
+      { key: 'summary.buildingName', label: 'Tòa' },
+      { key: 'summary.placement', label: 'Phòng · Giường' },
+      { key: 'summary.roomTypeName', label: 'Loại phòng' },
+      { key: 'summary.priceMain', label: 'Giá phòng / học kỳ', format: 'money' },
+      { key: 'summary.priceSummer', label: 'Giá phòng kỳ hè', format: 'money' },
+      { key: 'summary.depositDue', label: 'Tiền cọc', format: 'money' },
+      { key: 'depositBalance', label: 'Số dư cọc hiện tại', format: 'money' },
     ],
     editStates: [ContractStatus.PENDING],
     detailRoutes: {
@@ -1307,12 +1332,15 @@ export const resources: Record<string, CrudResource> = {
     ],
     detailEndpoint: '/contracts',
     fields: [],
-    columns: columns(
-      ['code', 'Mã'],
-      ['startDate', 'Bắt đầu'],
-      ['endDate', 'Kết thúc'],
-      ['status', 'Trạng thái'],
-    ),
+    columns: [
+      ...columns(['code', 'Mã'], ['summary.placement', 'Phòng · Giường'], ['summary.roomTypeName', 'Loại phòng']),
+      money('summary.priceMain', 'Giá phòng / kỳ'),
+      money('summary.depositDue', 'Tiền cọc'),
+      money('depositBalance', 'Số dư cọc'),
+      dateColumn('startDate', 'Bắt đầu'),
+      dateColumn('endDate', 'Kết thúc'),
+      ...columns(['status', 'Trạng thái']),
+    ],
     readOnly: true,
     detailRoutes: { [Role.STUDENT]: STUDENT_CONTRACTS_PATH },
   },

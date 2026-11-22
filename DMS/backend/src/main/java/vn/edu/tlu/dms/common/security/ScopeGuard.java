@@ -160,7 +160,8 @@ public class ScopeGuard {
                         Permission.STUDENT_RESET_PASSWORD,
                         Permission.DASHBOARD_READ,
                         Permission.ROOM_TRANSFER_APPROVE));
-        // Đơn/yêu cầu do sinh viên tạo: Staff xử lý, không tạo hoặc hủy thay sinh viên.
+        // Đơn/yêu cầu do sinh viên tạo: Staff xử lý, không tạo hoặc hủy thay sinh viên. Quyền UPDATE
+        // đăng ký hè được giữ cho Staff để duyệt/từ chối; việc sửa lựa chọn vẫn chỉ dành cho chủ sở hữu.
         staff.removeAll(
                 Set.of(
                         Permission.ROOM_APPLICATION_CREATE,
@@ -170,7 +171,6 @@ public class ScopeGuard {
                         Permission.ROOM_TRANSFER_CREATE,
                         Permission.ROOM_TRANSFER_DELETE,
                         Permission.SUMMER_REGISTRATION_CREATE,
-                        Permission.SUMMER_REGISTRATION_UPDATE,
                         Permission.SUMMER_REGISTRATION_DELETE));
         var student = new LinkedHashSet<>(shared);
         for (String resource :

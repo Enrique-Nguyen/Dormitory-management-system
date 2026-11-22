@@ -14,6 +14,7 @@ import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.ReasonRequest;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
+import vn.edu.tlu.dms.registration.api.ApplicationDtos.AssignContractRequest;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.AssignRequest;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Input;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.PriorityVerifyRequest;
@@ -85,6 +86,13 @@ public class RoomApplicationController {
     public Response assignApplication(
             @PathVariable Long id, @Valid @RequestBody AssignRequest input) {
         return service.assignBed(id, input.bedId());
+    }
+
+    @RequirePrivilege(Permission.ROOM_APPLICATION_UPDATE)
+    @PostMapping("/api/applications/{id}/assign-contract")
+    public Response assignContract(
+            @PathVariable Long id, @Valid @RequestBody AssignContractRequest input) {
+        return service.assignAndActivate(id, input);
     }
 
     @RequirePrivilege(Permission.ROOM_APPLICATION_UPDATE)

@@ -13,6 +13,7 @@ import {
 import { useViewport } from '../../hooks/useViewport'
 import { hasAnyPermission, hasPermission } from '../../services/api/auth'
 import ThemeSwitcher from '../../components/layout/ThemeSwitcher'
+import { useAppTheme } from '../themeStore'
 
 // Thông báo đã có chuông trên header nên không lặp trong menu
 const moreNav = studentMoreNav.filter((item) => item.path !== '/student/notifications')
@@ -27,6 +28,7 @@ export default function StudentLayout() {
   const isMobile = viewport === 'mobile'
   const { pathname } = useLocation()
   const { data: me } = useMe()
+  const { solidAccentChrome } = useAppTheme()
   const visibleNav = allNav.filter((item) => hasAnyPermission(me, item.permissions))
   const visibleMoreNav = moreNav.filter((item) => hasAnyPermission(me, item.permissions))
   const active = findActivePath(visibleNav, pathname)
@@ -35,7 +37,10 @@ export default function StudentLayout() {
 
   return (
     <Layout className="dms-touch" style={{ minHeight: '100vh' }}>
-      <Layout.Header className="dms-topbar">
+      <Layout.Header
+        className="dms-topbar"
+        data-topbar={solidAccentChrome ? 'accent' : undefined}
+      >
         <Link to="/student" className="dms-brand-logo">
           <span className="dms-brand-icon">TLU</span>
           <span>DMS</span>

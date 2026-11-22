@@ -217,7 +217,7 @@ function CreateExtensionRequestModal({
       <Alert
         type="info"
         showIcon
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 12 }}
         title="Mỗi hợp đồng chỉ có một yêu cầu gia hạn chờ xử lý"
         description={`Ngày kết thúc hiện tại: ${formatDate(contract.endDate)}. Staff sẽ kiểm tra chồng khoảng lưu trú trước khi duyệt.`}
       />
@@ -244,7 +244,7 @@ function CreateExtensionRequestModal({
           />
         )}
       </FormField>
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 12 }}>
         <FormField
           label="Lý do gia hạn"
           required
@@ -493,7 +493,7 @@ export default function ContractDetailView({
         <Alert
           type="warning"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           title="Hợp đồng đang chờ kích hoạt"
           description={
             detail.activationDeadline
@@ -507,7 +507,7 @@ export default function ContractDetailView({
         <Alert
           type="info"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           title="Sinh viên đang gửi đồ"
           description={embedded ? (
             <>Phiếu gửi đồ #{detail.openStorageRecordId}</>
@@ -609,6 +609,23 @@ export default function ContractDetailView({
                   children: contractBedLabel(currentAssignment),
                 },
                 {
+                  key: 'roomType',
+                  label: 'Loại phòng',
+                  children: detail.summary?.roomTypeName ?? '—',
+                },
+                {
+                  key: 'unit',
+                  label: 'Khu · Tòa · Tầng',
+                  children:
+                    [
+                      detail.summary?.unitName,
+                      detail.summary?.buildingName,
+                      detail.summary?.floor != null ? 'Tầng ' + detail.summary.floor : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || '—',
+                },
+                {
                   key: 'kind',
                   label: 'Trạng thái chỗ',
                   children: kindLabel(currentAssignment.kind),
@@ -625,16 +642,20 @@ export default function ContractDetailView({
                   key: 'priceMain',
                   label: 'Giá học kỳ',
                   children:
-                    currentAssignment.priceMain != null
-                      ? formatMoney(currentAssignment.priceMain)
+                    (currentAssignment.priceMain ?? detail.summary?.priceMain) != null
+                      ? formatMoney(
+                          (currentAssignment.priceMain ?? detail.summary?.priceMain) as number,
+                        )
                       : '—',
                 },
                 {
                   key: 'priceSummer',
                   label: 'Giá hè',
                   children:
-                    currentAssignment.priceSummer != null
-                      ? formatMoney(currentAssignment.priceSummer)
+                    (currentAssignment.priceSummer ?? detail.summary?.priceSummer) != null
+                      ? formatMoney(
+                          (currentAssignment.priceSummer ?? detail.summary?.priceSummer) as number,
+                        )
                       : '—',
                 },
               ]}

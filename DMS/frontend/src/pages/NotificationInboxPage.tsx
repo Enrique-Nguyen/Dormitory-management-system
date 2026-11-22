@@ -223,7 +223,7 @@ export default function NotificationInboxPage() {
           </Button>
         }
       />
-      <Card>
+      <Card className="dms-crud-frame">
         <div className="dms-toolbar">
           <FilterBar>
             <SearchInput
@@ -279,7 +279,7 @@ export default function NotificationInboxPage() {
         <Alert
           type="info"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           title={excelUiLabels.readonlyHint}
           description={config.note}
         />
