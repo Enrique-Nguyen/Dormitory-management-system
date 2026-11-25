@@ -22,11 +22,11 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.ContractStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceSource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.MeterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
-import vn.edu.tlu.dms.common.constants.DmsConstants.RoomStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SemesterType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SummerChoice;
 import vn.edu.tlu.dms.common.constants.DmsConstants.SummerStatus;
@@ -48,6 +48,8 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -155,19 +157,35 @@ public class InvoiceServiceImpl implements InvoiceService {
                                 .toList());
         var pageable = PageRequest.of(requested.getPageNumber(), requested.getPageSize(), sqlSort);
         var actor = currentUser.get();
-        return PageResponse.from(
-                invoices.searchAccessibleInvoices(
-                                actor.role(),
-                                actor.id(),
-                                actor.unitId(),
-                                actor.crossUnitAccess(),
-                                mine,
-                                input.type(),
-                                filterStatuses,
-                                filterStatuses ? statuses : List.of(InvoiceStatus.UNPAID),
-                                LikePattern.contains(input.q().trim()),
-                                pageable)
-                        .map(invoice -> toInvoiceResponse(invoice, false)));
+        var page = invoices.searchAccessibleInvoices(
+                actor.role(),
+                actor.id(),
+                actor.unitId(),
+                actor.crossUnitAccess(),
+                mine,
+                input.type(),
+                filterStatuses,
+                filterStatuses ? statuses : List.of(InvoiceStatus.UNPAID),
+                LikePattern.contains(input.q().trim()),
+                input.billingMonth(),
+                input.totalAmountMin(),
+                input.totalAmountMax(),
+                input.dueDateFrom(),
+                input.dueDateTo(),
+                pageable);
+        Set<Long> semesterIds = page.getContent().stream()
+                .filter(invoice -> InvoiceType.ROOM_FEE.equals(invoice.getType()))
+                .map(Invoice::getSemesterId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        // Chỉ bổ sung nhãn sau truy vấn đã lọc quyền/phân trang, không mở thêm quyền danh mục.
+        var semesterLabels = rooms.getSemesterLabels(semesterIds);
+        var actions = invoiceActions(page.getContent(), false);
+        return PageResponse.from(page.map(invoice -> toInvoiceResponse(
+                invoice,
+                false,
+                invoice.getSemesterId() == null ? null : semesterLabels.get(invoice.getSemesterId()),
+                actions.getOrDefault(invoice.getId(), List.of()))));
     }
 
     /** Đọc chi tiết hóa đơn sau khi kiểm tra quyền sở hữu hoặc đơn vị. */
@@ -398,7 +416,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         return result;
     }
 
-    /** Phát hành điện nước trong đơn vị ghi, khóa phòng/chỉ số trước kiểm tra hóa đơn trùng. */
+    /**
+     * Phát hành điện nước trong đơn vị ghi cho mọi phòng có người ở trong tháng lập hóa đơn, khóa
+     * phòng/chỉ số trước kiểm tra hóa đơn trùng.
+     */
     @Transactional
     @Override
     public InvoiceDtos.BatchIssueResult issueUtility(
@@ -436,7 +457,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                         .orElseThrow(
                                 () ->
                                         BusinessException.invalid(
-                                                "rate", ValidationMessage.ELECTRIC_RATE_REQUIRED));
+                                                ApiField.RATE, ValidationMessage.ELECTRIC_RATE_REQUIRED));
 
         Long waterRate =
                 jdbc
@@ -454,7 +475,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                         .orElseThrow(
                                 () ->
                                         BusinessException.invalid(
-                                                "rate", ValidationMessage.WATER_RATE_REQUIRED));
+                                                ApiField.RATE, ValidationMessage.WATER_RATE_REQUIRED));
 
         String unitCondition = effectiveUnitId != null ? "bd.management_unit_id = ?" : "TRUE";
         List<Object> args = new ArrayList<>();
@@ -467,15 +488,20 @@ public class InvoiceServiceImpl implements InvoiceService {
                 SELECT r.id, r.code, r.leader_student_id
                 FROM room r
                 JOIN building bd ON bd.id = r.building_id
-                WHERE %s AND r.status = ?
+                WHERE %s
                   AND EXISTS (SELECT 1 FROM room_assignment_history h JOIN bed b ON b.id=h.bed_id
-                      WHERE b.room_id=r.id AND h.kind=? AND h.ended_at IS NULL)
+                      WHERE b.room_id=r.id AND h.kind=?
+                          AND h.stay_started_at < ?::date + INTERVAL '1 month'
+                          AND (h.ended_at IS NULL OR h.ended_at > ?::date))
                 ORDER BY r.id FOR UPDATE OF r
                 """
                         .formatted(unitCondition);
 
-        args.add(RoomStatus.ACTIVE);
+        // Phòng có người ở trong tháng lập hóa đơn (kể cả đã trả phòng/đổi trạng thái sau đó),
+        // cùng khoảng ở với phạm vi hóa đơn điện nước của sinh viên.
         args.add(AssignmentKind.STAY);
+        args.add(billingMonth);
+        args.add(billingMonth);
         List<Map<String, Object>> roomRows = jdbc.queryForList(sql, args.toArray());
 
         int created = 0;
@@ -587,7 +613,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
 
         var result = new InvoiceDtos.BatchIssueResult(created, skipped, totalAmount);
-        var auditValue = new java.util.LinkedHashMap<String, Object>();
+        var auditValue = new LinkedHashMap<String, Object>();
         auditValue.put("type", InvoiceType.UTILITY);
         auditValue.put("managementUnitId", effectiveUnitId);
         auditValue.put("billingMonth", billingMonth);
@@ -611,6 +637,21 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private InvoiceDtos.Response toInvoiceResponse(Invoice invoice, boolean detail) {
+        RoomReferenceService.SemesterLabel semester = null;
+        if (InvoiceType.ROOM_FEE.equals(invoice.getType()) && invoice.getSemesterId() != null) {
+            semester = rooms.getSemesterLabels(Set.of(invoice.getSemesterId()))
+                    .get(invoice.getSemesterId());
+        }
+        var actions = invoiceActions(List.of(invoice), detail);
+        return toInvoiceResponse(
+                invoice, detail, semester, actions.getOrDefault(invoice.getId(), List.of()));
+    }
+
+    private InvoiceDtos.Response toInvoiceResponse(
+            Invoice invoice,
+            boolean detail,
+            RoomReferenceService.SemesterLabel semester,
+            List<String> actions) {
         List<InvoiceDtos.Item> itemResponses =
                 detail
                         ? items
@@ -630,22 +671,15 @@ public class InvoiceServiceImpl implements InvoiceService {
                                                         item.getNote()))
                                 .toList()
                         : null;
-        // ADMIN được ghi mọi đơn vị; STAFF tổng hợp chỉ mở rộng đọc, còn xác nhận tiền vẫn đúng đơn
-        // vị.
-        List<String> actions = List.of();
-        if (detail
-                && scopeGuard.hasPermission(Permission.INVOICE_UPDATE)
-                && invoice.getStatus().equals(InvoiceStatus.UNPAID)
-                && (currentUser.get().isAdmin()
-                        || invoices.isInStaffUnit(invoice.getId(), currentUser.get().unitId()))) {
-            actions = List.of(BusinessAction.CONFIRM_PAYMENT);
-        }
         return new InvoiceDtos.Response(
                 invoice.getId(),
                 invoice.getCode(),
                 invoice.getType(),
                 invoice.getStudentId(),
                 invoice.getSemesterId(),
+                semester == null ? null : semester.name(),
+                semester == null ? null : semester.type(),
+                semester == null ? null : semester.academicYear(),
                 invoice.getRoomId(),
                 invoice.getBillingMonth(),
                 invoice.getTotalAmount(),
@@ -653,7 +687,46 @@ public class InvoiceServiceImpl implements InvoiceService {
                 invoice.getStatus(),
                 invoice.getPaidAt(),
                 itemResponses,
-                detail ? actions : null,
+                actions,
                 detail ? historyService.list(EntityType.INVOICE, invoice.getId()) : null);
+    }
+
+    /** Tính thao tác theo quyền, phạm vi ghi, nguồn tạo và thanh toán trong một truy vấn cho cả trang. */
+    private Map<Long, List<String>> invoiceActions(List<Invoice> records, boolean detail) {
+        var actor = currentUser.get();
+        if (!actor.isAdmin() && !Role.STAFF.equals(actor.role())) {
+            return Map.of();
+        }
+        boolean canUpdate = scopeGuard.hasPermission(Permission.INVOICE_UPDATE);
+        boolean canDelete = scopeGuard.hasPermission(Permission.INVOICE_DELETE);
+        if ((!canUpdate && !canDelete) || records.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = records.stream()
+                .filter(invoice -> InvoiceStatus.UNPAID.equals(invoice.getStatus()))
+                .map(Invoice::getId)
+                .toList();
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, List<String>> result = new HashMap<>();
+        for (var state : invoices.findUnpaidWriteStates(
+                ids, actor.unitId(), actor.isAdmin(), InvoiceStatus.UNPAID, InvoiceSource.MANUAL)) {
+            List<String> actions = new ArrayList<>();
+            if (state.getManual()) {
+                if (canUpdate) {
+                    actions.add(BusinessAction.EDIT);
+                }
+                if (canDelete) {
+                    actions.add(BusinessAction.DELETE);
+                }
+            }
+            // Xác nhận thu chỉ mở từ chi tiết; hóa đơn đã phát hành vẫn được thu tiền.
+            if (detail && canUpdate) {
+                actions.add(BusinessAction.CONFIRM_PAYMENT);
+            }
+            result.put(state.getId(), List.copyOf(actions));
+        }
+        return Map.copyOf(result);
     }
 }

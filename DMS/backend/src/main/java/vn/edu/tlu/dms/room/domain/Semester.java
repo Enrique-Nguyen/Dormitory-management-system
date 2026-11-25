@@ -37,6 +37,16 @@ public class Semester {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
+    /** Mã sinh bởi CSDL từ loại + năm đầu (cột GENERATED, V18); chỉ đọc. */
+    @Column(name = "code", insertable = false, updatable = false)
+    private String code;
+
+    @Column(name = "room_fee_due_date")
+    private LocalDate roomFeeDueDate;
+
+    @Column(name = "note", length = 1000)
+    private String note;
+
     public Long getId() {
         return id;
     }
@@ -83,5 +93,26 @@ public class Semester {
 
     public void setEndDate(LocalDate value) {
         this.endDate = value;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+
+    public LocalDate getRoomFeeDueDate() {
+        return roomFeeDueDate;
+    }
+
+    public void setRoomFeeDueDate(LocalDate value) {
+        this.roomFeeDueDate = value;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String value) {
+        this.note = value;
     }
 }

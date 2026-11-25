@@ -2,11 +2,13 @@ package vn.edu.tlu.dms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -22,6 +24,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -62,6 +65,10 @@ class StudentImportIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        jdbc.update("INSERT INTO faculty(code,name) VALUES ('IMPORT_TEST_F','CNTT')"
+                + " ON CONFLICT(school_id,name) DO UPDATE SET active=true");
+        jdbc.update("INSERT INTO student_cohort(code,name) VALUES ('IMPORT_TEST_C','K65')"
+                + " ON CONFLICT(name) DO UPDATE SET active=true");
         subject = UUID.randomUUID().toString();
         adminId =
                 jdbc.queryForObject(
@@ -152,7 +159,7 @@ class StudentImportIntegrationTest {
     void writesOnlyValidRowsSkipsExistingAndAllDuplicateOccurrences() throws Exception {
         jdbc.update(
                 "INSERT INTO app_user(username,full_name,role)"
-                    + " VALUES('9900100002','Existing','ADMIN')");
+                        + " VALUES('9900100002','Existing','ADMIN')");
         String[] invalidPhone = valid("9900100003");
         invalidPhone[6] = "123";
         var source =
@@ -188,7 +195,7 @@ class StudentImportIntegrationTest {
         assertThat(
                         jdbc.queryForList(
                                         "SELECT old_value::text,new_value::text FROM audit_log"
-                                            + " WHERE actor_id=?",
+                                                + " WHERE actor_id=?",
                                         adminId)
                                 .toString())
                 .doesNotContain(password, "temporaryPassword");
@@ -197,6 +204,131 @@ class StudentImportIntegrationTest {
                 .andExpect(jsonPath("createdRows").value(0))
                 .andExpect(jsonPath("existingRows").value(2))
                 .andExpect(jsonPath("createdAccounts").isEmpty());
+    }
+
+    @Test
+    void unknownAndInactiveCatalogValuesAreRowErrorsBeforeProvisioning() throws Exception {
+        String[] unknownFaculty = valid("9900100041");
+        unknownFaculty[4] = "UNKNOWN-FACULTY";
+        String[] unknownCohort = valid("9900100042");
+        unknownCohort[5] = "UNKNOWN-COHORT";
+        upload(file(unknownFaculty, unknownCohort), false)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("createdRows").value(0))
+                .andExpect(jsonPath("errorRows").value(2))
+                .andExpect(jsonPath("rows[0].errors[0].column").value("faculty"))
+                .andExpect(jsonPath("rows[1].errors[0].column").value("cohort"));
+        jdbc.update("UPDATE faculty SET active=false WHERE name='CNTT'");
+        upload(file(valid("9900100043")), false)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("errorRows").value(1))
+                .andExpect(jsonPath("rows[0].errors[0].column").value("faculty"));
+        verifyNoInteractions(identities);
+    }
+
+    @Test
+    void exactCatalogCodesResolveToIdsWithoutLegacyCohortPattern() throws Exception {
+        jdbc.update("INSERT INTO student_cohort(code,name) VALUES ('COHORT_2026','C2026')");
+        String[] values = valid("9900100044");
+        values[4] = jdbc.queryForObject("SELECT code FROM faculty WHERE name='CNTT'", String.class);
+        values[5] = "COHORT_2026";
+        upload(file(values), false)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("createdRows").value(1));
+        assertThat(jdbc.queryForMap("SELECT f.name AS faculty,c.name AS cohort FROM student_profile p"
+                + " JOIN faculty f ON f.id=p.faculty_id JOIN student_cohort c ON c.id=p.cohort_id"
+                + " WHERE p.student_code='9900100044'"))
+                .containsEntry("faculty", "CNTT").containsEntry("cohort", "C2026");
+    }
+
+    @Test
+    void studentSaveRejectsLegacyLabelsAndNonpositiveCatalogIds() throws Exception {
+        for (String body : List.of("{\"faculty\":\"CNTT\"}", "{\"cohortId\":0}",
+                "{\"hometownId\":-1}", "{\"schoolId\":\"invalid\"}")) {
+            mvc.perform(post("/api/admin/students/save-or-update").with(token("ADMIN"))
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(identities);
+    }
+
+    @Test
+    void managedPartialUpdatesRetainInactiveIdsAndLabelsButRejectNewInactiveIds() throws Exception {
+        upload(file(valid("9900100045")), false).andExpect(jsonPath("createdRows").value(1));
+        Long studentId = jdbc.queryForObject("SELECT user_id FROM student_profile WHERE student_code=?",
+                Long.class, "9900100045");
+        Long facultyId = jdbc.queryForObject("SELECT faculty_id FROM student_profile WHERE user_id=?",
+                Long.class, studentId);
+        Long cohortId = jdbc.queryForObject("SELECT cohort_id FROM student_profile WHERE user_id=?",
+                Long.class, studentId);
+        jdbc.update("UPDATE faculty SET active=false WHERE id=?", facultyId);
+        jdbc.update("UPDATE student_cohort SET active=false WHERE id=?", cohortId);
+        for (String endpoint : List.of("/api/admin/students/save-or-update", "/api/admin/users/save-or-update")) {
+            save(endpoint, Map.of("id", studentId, "phone", "0900000001", "facultyId", facultyId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("facultyId").value(facultyId))
+                    .andExpect(jsonPath("cohortId").value(cohortId))
+                    .andExpect(jsonPath("faculty").value("CNTT"))
+                    .andExpect(jsonPath("cohort").value("K65"));
+        }
+        Long inactiveId = jdbc.queryForObject(
+                "INSERT INTO student_cohort(code,name,active) VALUES ('INACTIVE_TEST','Old',false) RETURNING id",
+                Long.class);
+        for (String endpoint : List.of("/api/admin/students/save-or-update", "/api/admin/users/save-or-update")) {
+            save(endpoint, Map.of("id", studentId, "cohortId", inactiveId))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("details.fieldErrors[0].field").value("cohortId"));
+        }
+    }
+
+    @Test
+    void schoolFacultyMismatchRejectsBothManagementApisBeforeIdentitySynchronization() throws Exception {
+        upload(file(valid("9900100046")), false).andExpect(jsonPath("createdRows").value(1));
+        Long studentId = jdbc.queryForObject("SELECT user_id FROM student_profile WHERE student_code=?",
+                Long.class, "9900100046");
+        Long firstSchool = jdbc.queryForObject(
+                "INSERT INTO school(code,name) VALUES ('FIRST_TEST','First test') RETURNING id", Long.class);
+        Long secondSchool = jdbc.queryForObject(
+                "INSERT INTO school(code,name) VALUES ('SECOND_TEST','Second test') RETURNING id", Long.class);
+        jdbc.update("UPDATE faculty SET school_id=? WHERE name='CNTT'", firstSchool);
+        jdbc.update("UPDATE student_profile SET school_id=? WHERE user_id=?", firstSchool, studentId);
+        clearInvocations(identities);
+        for (String endpoint : List.of("/api/admin/students/save-or-update", "/api/admin/users/save-or-update")) {
+            save(endpoint, Map.of("id", studentId, "schoolId", secondSchool))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("details.fieldErrors[0].field").value("facultyId"));
+        }
+        verifyNoInteractions(identities);
+    }
+
+    @Test
+    void profileOnlyStudentCanReadLabelsAndEditOnlyOwnHometownReference() throws Exception {
+        upload(file(valid("9900100047")), false).andExpect(jsonPath("createdRows").value(1));
+        Long studentId = jdbc.queryForObject("SELECT user_id FROM student_profile WHERE student_code=?",
+                Long.class, "9900100047");
+        Long hometownId = jdbc.queryForObject(
+                "INSERT INTO hometown(code,name) VALUES ('HOME_TEST','Home test') RETURNING id", Long.class);
+        subject = jdbc.queryForObject("SELECT keycloak_user_id FROM app_user WHERE id=?", String.class, studentId);
+        jdbc.update("UPDATE role_permission_matrix SET permissions='[\"PROFILE_READ\",\"PROFILE_UPDATE\"]'::jsonb"
+                + " WHERE role='STUDENT'");
+        mvc.perform(get("/api/me/profile").with(token("STUDENT")))
+                .andExpect(status().isOk()).andExpect(jsonPath("faculty").value("CNTT"));
+        mvc.perform(post("/api/me/profile/save-or-update").with(token("STUDENT"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsBytes(Map.of("hometownId", hometownId))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("hometownId").value(hometownId))
+                .andExpect(jsonPath("hometown").value("Home test"));
+        mvc.perform(post("/api/me/profile/save-or-update").with(token("STUDENT"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"facultyId\":1}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    private ResultActions save(String endpoint, Map<String, Object> body) throws Exception {
+        return mvc.perform(post(endpoint).with(token("ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsBytes(body)));
     }
 
     @Test
@@ -347,9 +479,160 @@ class StudentImportIntegrationTest {
         var original = file(valid("9900100001"));
         try (var workbook = new XSSFWorkbook(original.getInputStream());
                 var out = new ByteArrayOutputStream()) {
-            workbook.getSheetAt(0).createRow(5001).createCell(0).setCellValue("9900199999");
+            for (int index = 2; index <= 5001; index++) {
+                workbook.getSheetAt(0).createRow(index).createCell(0).setCellValue("9900199999");
+            }
             workbook.write(out);
             upload(new MockMultipartFile("file", "too-many.xlsx", null, out.toByteArray()), false)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("errorCode").value("IMPORT_FILE_INVALID"));
+            verifyNoInteractions(identities);
+        }
+    }
+
+    @Test
+    void readsLongNumericStudentCodeWithoutScientificNotation() throws Exception {
+        var original = file(valid("990010123456"), valid("990010123457"));
+        try (var workbook = new XSSFWorkbook(original.getInputStream());
+                var out = new ByteArrayOutputStream()) {
+            workbook.getSheetAt(0).getRow(1).getCell(0).setCellValue(990010123456d);
+            var scientific = workbook.getSheetAt(0).getRow(2).getCell(0);
+            scientific.setCellValue(990010123457d);
+            var style = workbook.createCellStyle();
+            style.setDataFormat(workbook.createDataFormat().getFormat("0.00E+00"));
+            scientific.setCellStyle(style);
+            workbook.write(out);
+            upload(
+                            new MockMultipartFile(
+                                    "file", "numeric-code.xlsx", null, out.toByteArray()),
+                            false)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("validRows").value(2))
+                    .andExpect(jsonPath("createdRows").value(2))
+                    .andExpect(jsonPath("createdAccounts[0].username").value("990010123456"))
+                    .andExpect(jsonPath("createdAccounts[1].username").value("990010123457"));
+        }
+    }
+
+    @Test
+    void ignoresFormattedEmptyRowsBeyondTheDataLimitAndKeepsExcelRowNumbers() throws Exception {
+        var original = file(valid("9900100001"));
+        try (var workbook = new XSSFWorkbook(original.getInputStream());
+                var out = new ByteArrayOutputStream()) {
+            var sheet = workbook.getSheetAt(0);
+            var empty = sheet.createRow(10000).createCell(0);
+            var style = workbook.createCellStyle();
+            style.setDataFormat(workbook.createDataFormat().getFormat("@"));
+            empty.setCellStyle(style);
+            sheet.getRow(0).createCell(1000).setCellStyle(style);
+            sheet.createRow(10001).createCell(0).setCellValue("BAD");
+            workbook.write(out);
+            upload(new MockMultipartFile("file", "formatted.xlsx", null, out.toByteArray()), true)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("totalRows").value(2))
+                    .andExpect(jsonPath("validRows").value(1))
+                    .andExpect(jsonPath("errorRows").value(1))
+                    .andExpect(jsonPath("rows[0].rowNumber").value(10002));
+        }
+    }
+
+    @Test
+    void acceptsUnicodeSpacesAndDecomposedVietnameseFromCopiedExcelHeaders() throws Exception {
+        var original = file(valid("9900100001"));
+        try (var workbook = new XSSFWorkbook(original.getInputStream());
+                var out = new ByteArrayOutputStream()) {
+            var sheet = workbook.getSheetAt(0);
+            for (var cell : sheet.getRow(0)) {
+                cell.setCellValue(
+                        java.text.Normalizer.normalize(
+                                "\uFEFF"
+                                        + cell.getStringCellValue().replace(' ', '\u00A0')
+                                        + "\u00A0",
+                                java.text.Normalizer.Form.NFD));
+            }
+            sheet.getRow(1)
+                    .getCell(2)
+                    .setCellValue(
+                            java.text.Normalizer.normalize("Nữ", java.text.Normalizer.Form.NFD));
+            workbook.write(out);
+            upload(new MockMultipartFile("file", "copied.xlsx", null, out.toByteArray()), false)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("createdRows").value(1));
+            assertThat(
+                            jdbc.queryForObject(
+                                    "SELECT gender FROM student_profile WHERE"
+                                        + " student_code='9900100001'",
+                                    String.class))
+                    .isEqualTo("F");
+        }
+    }
+
+    @Test
+    void keepsExplicitLeadingZerosAndRejectsRoundedOrOverPrecisionNumericCodes() throws Exception {
+        var original =
+                file(
+                        valid("0000100001"),
+                        valid("9900100002"),
+                        valid("9900100003"),
+                        valid("00009900101234567890"));
+        try (var workbook = new XSSFWorkbook(original.getInputStream());
+                var out = new ByteArrayOutputStream()) {
+            var sheet = workbook.getSheetAt(0);
+            var format = workbook.createCellStyle();
+            format.setDataFormat(workbook.createDataFormat().getFormat("0000000000"));
+            sheet.getRow(1).getCell(0).setCellValue(100001d);
+            sheet.getRow(1).getCell(0).setCellStyle(format);
+            sheet.getRow(2).getCell(0).setCellValue(9900100002.4d);
+            sheet.getRow(2).getCell(0).setCellStyle(format);
+            sheet.getRow(3).getCell(0).setCellValue(9900101234567890d);
+            workbook.write(out);
+            upload(new MockMultipartFile("file", "precision.xlsx", null, out.toByteArray()), false)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("totalRows").value(4))
+                    .andExpect(jsonPath("createdRows").value(2))
+                    .andExpect(jsonPath("errorRows").value(2))
+                    .andExpect(jsonPath("createdAccounts[0].username").value("0000100001"))
+                    .andExpect(
+                            jsonPath("createdAccounts[1].username").value("00009900101234567890"));
+        }
+    }
+
+    @Test
+    void acceptsExactlyFiveThousandNonemptyRowsWithoutCountingStyledRows() throws Exception {
+        try (var workbook = new XSSFWorkbook();
+                var out = new ByteArrayOutputStream()) {
+            var sheet = workbook.createSheet("Sinh viên");
+            var header = sheet.createRow(0);
+            for (int column = 0; column < StudentImport.HEADERS.size(); column++) {
+                header.createCell(column).setCellValue(StudentImport.HEADERS.get(column));
+            }
+            for (int index = 1; index <= StudentImport.MAX_ROWS; index++) {
+                var row = sheet.createRow(index);
+                String[] values =
+                        valid("990011" + String.format(java.util.Locale.ROOT, "%04d", index));
+                for (int column = 0; column < values.length; column++) {
+                    row.createCell(column).setCellValue(values[column]);
+                }
+            }
+            sheet.createRow(10000).createCell(0).setBlank();
+            workbook.write(out);
+            upload(new MockMultipartFile("file", "full.xlsx", null, out.toByteArray()), true)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("totalRows").value(5000))
+                    .andExpect(jsonPath("validRows").value(5000))
+                    .andExpect(jsonPath("createdRows").value(0));
+            verifyNoInteractions(identities);
+        }
+    }
+
+    @Test
+    void duplicateHeadersAfterUnicodeNormalizationAreStillRejected() throws Exception {
+        var original = file(valid("9900100001"));
+        try (var workbook = new XSSFWorkbook(original.getInputStream());
+                var out = new ByteArrayOutputStream()) {
+            workbook.getSheetAt(0).getRow(0).createCell(7).setCellValue("Ma\u0303\u00A0SV");
+            workbook.write(out);
+            upload(new MockMultipartFile("file", "duplicate.xlsx", null, out.toByteArray()), false)
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("errorCode").value("IMPORT_FILE_INVALID"));
             verifyNoInteractions(identities);
@@ -380,7 +663,7 @@ class StudentImportIntegrationTest {
         assertThat(
                         jdbc.queryForObject(
                                 "SELECT count(*) FROM app_user WHERE username IN"
-                                    + " ('9900190001','9900190002')",
+                                        + " ('9900190001','9900190002')",
                                 Long.class))
                 .isZero();
         assertThat(

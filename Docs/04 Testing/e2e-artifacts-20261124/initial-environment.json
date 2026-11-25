@@ -1,0 +1,13 @@
+{
+  "phase": "Before isolated E2E setup",
+  "frontend": "Initially unreachable; started dev server later HTTP200",
+  "backendHealth": "fetch failed port8080",
+  "backendAuthMe": "fetch failed port8080",
+  "frontendApiProxy": "502",
+  "keycloakDms": "fetch failed port8180",
+  "keycloakE2e": "fetch failed port8180",
+  "docker": "Binary not found on PATH",
+  "e2eCredentials": "All 8 E2E role USERNAME/PASSWORD variables unset",
+  "isolatedSetupApproval": "User chose Dựng E2E riêng in AskUserQuestion",
+  "nonDemoWriteGuard": "No business data writes before isolation approval"
+}

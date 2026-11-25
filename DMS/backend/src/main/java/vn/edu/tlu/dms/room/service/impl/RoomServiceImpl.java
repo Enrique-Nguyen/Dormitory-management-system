@@ -16,6 +16,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Facility;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.PlacementSource;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
@@ -52,6 +53,7 @@ import vn.edu.tlu.dms.room.repository.BedRepository;
 import vn.edu.tlu.dms.room.repository.RoomAssignmentHistoryRepository;
 import vn.edu.tlu.dms.room.repository.RoomRepository;
 import vn.edu.tlu.dms.room.repository.RoomTypeRepository;
+import vn.edu.tlu.dms.room.service.FloorService;
 import vn.edu.tlu.dms.room.service.OccupancyQuery;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
 import vn.edu.tlu.dms.room.service.RoomService;
@@ -97,6 +99,8 @@ public class RoomServiceImpl implements RoomService {
 
     private final EntityManager entityManager;
 
+    private final FloorService floors;
+
     public RoomServiceImpl(
             RoomRepository rooms,
             BedRepository beds,
@@ -110,7 +114,8 @@ public class RoomServiceImpl implements RoomService {
             AuditService audit,
             OccupancyQuery occupancy,
             List<PlacementContextLookup> placementLookups,
-            EntityManager entityManager) {
+            EntityManager entityManager,
+            FloorService floors) {
         this.rooms = rooms;
         this.beds = beds;
         this.types = types;
@@ -124,6 +129,7 @@ public class RoomServiceImpl implements RoomService {
         this.occupancy = occupancy;
         this.placementLookups = placementLookups;
         this.entityManager = entityManager;
+        this.floors = floors;
     }
 
     @Override
@@ -160,7 +166,8 @@ public class RoomServiceImpl implements RoomService {
         var actor = current.get();
         var pageable =
                 PageQuery.of(
-                        page, size, sort, Set.of("id", "code", "floor", "buildingId"), "code,asc");
+                        page, size, sort, Set.of("id", "code", "floor", "buildingId", "roomTypeId", "gender", "status"),
+                        "code,asc");
         Specification<Room> spec =
                 (r, q, b) -> {
                     var filters = new ArrayList<Predicate>();
@@ -256,9 +263,12 @@ public class RoomServiceImpl implements RoomService {
         r.setBuildingId(input.buildingId());
         r.setRoomTypeId(input.roomTypeId());
         r.setFloor(requireValue(input.floor(), "floor"));
+        floors.requireActiveFloor(r.getBuildingId(), r.getFloor());
         r.setCode(trimRequiredText(input.code(), "code"));
         r.setGender(requireValue(input.gender(), "gender"));
+        requireGenderAllowed(r.getBuildingId(), r.getFloor(), r.getGender());
         r.setStatus(RoomStatus.ACTIVE);
+        applyProfile(r, input);
         rooms.saveAndFlush(r);
         syncBeds(r, type.getBedCount());
         audit.record(
@@ -276,7 +286,7 @@ public class RoomServiceImpl implements RoomService {
         lockRoomBedsInAscendingOrder(id);
         var r = findAccessibleRoom(id, true);
         if (input.buildingId() != null && !input.buildingId().equals(r.getBuildingId())) {
-            throw BusinessException.invalid("buildingId", "Không chuyển phòng sang tòa khác");
+            throw BusinessException.invalid(ApiField.BUILDING_ID, ValidationMessage.ROOM_BUILDING_IMMUTABLE);
         }
         boolean typeChanged =
                 input.roomTypeId() != null && !input.roomTypeId().equals(r.getRoomTypeId());
@@ -285,7 +295,8 @@ public class RoomServiceImpl implements RoomService {
         if (sensitive) {
             requireRoomWithoutOpenAssignments(r);
         }
-        if (input.floor() != null) {
+        if (input.floor() != null && !input.floor().equals(r.getFloor())) {
+            floors.requireActiveFloor(r.getBuildingId(), input.floor());
             r.setFloor(input.floor());
         }
         if (input.code() != null) {
@@ -294,6 +305,10 @@ public class RoomServiceImpl implements RoomService {
         if (input.gender() != null) {
             r.setGender(input.gender());
         }
+        if (input.gender() != null || input.floor() != null) {
+            requireGenderAllowed(r.getBuildingId(), r.getFloor(), r.getGender());
+        }
+        applyProfile(r, input);
         if (input.roomTypeId() != null) {
             references.requireActiveRoomType(input.roomTypeId());
             r.setRoomTypeId(input.roomTypeId());
@@ -329,6 +344,7 @@ public class RoomServiceImpl implements RoomService {
         }
         String before = r.getStatus();
         r.setStatus(input.status());
+        r.setStatusReason(trimRequiredText(input.reason(), ApiField.REASON));
         rooms.saveAndFlush(r);
         audit.record(
                 current.get().id(),
@@ -360,6 +376,7 @@ public class RoomServiceImpl implements RoomService {
         bed.setRoomId(r.getId());
         bed.setCode(trimRequiredText(input.code(), "code"));
         bed.setStatus(BedOperationStatus.ACTIVE);
+        applyBedProfile(bed, input);
         beds.saveAndFlush(bed);
         audit.record(
                 current.get().id(),
@@ -376,12 +393,13 @@ public class RoomServiceImpl implements RoomService {
         var bed = lockAndFindBed(id);
         findAccessibleRoom(bed.getRoomId(), true);
         if (input.roomId() != null && !input.roomId().equals(bed.getRoomId())) {
-            throw BusinessException.invalid("roomId", "Không chuyển giường sang phòng khác");
+            throw BusinessException.invalid(ApiField.ROOM_ID, ValidationMessage.BED_ROOM_IMMUTABLE);
         }
         String previous = bed.getCode();
         if (input.code() != null) {
             bed.setCode(trimRequiredText(input.code(), "code"));
         }
+        applyBedProfile(bed, input);
         beds.saveAndFlush(bed);
         audit.record(
                 current.get().id(),
@@ -560,7 +578,7 @@ public class RoomServiceImpl implements RoomService {
         if (sources != 1) {
             throw BusinessException.invalid(
                     PlacementSource.APPLICATION,
-                    "Truyền đúng một trong applicationId, transferRequestId hoặc storageRecordId");
+                    ValidationMessage.PLACEMENT_SOURCE_EXACTLY_ONE);
         }
         String source;
         Long sourceId;
@@ -774,16 +792,20 @@ public class RoomServiceImpl implements RoomService {
             return result;
         }
         jdbc.query(
-                "SELECT room_id,active_beds,held_beds,occupied_beds,free_beds FROM"
-                        + " v_room_occupancy WHERE room_id = ANY (?)",
+                "SELECT o.room_id,o.active_beds,o.held_beds,o.occupied_beds,o.free_beds,"
+                        + " b.code AS building_code,b.name AS building_name,t.name AS room_type_name"
+                        + " FROM v_room_occupancy o JOIN building b ON b.id=o.building_id"
+                        + " JOIN room_type t ON t.id=o.room_type_id WHERE o.room_id = ANY (?)",
                 row -> {
-                    result.put(
-                            row.getLong("room_id"),
-                            Map.of(
-                                    "active_beds", row.getLong("active_beds"),
-                                    "held_beds", row.getLong("held_beds"),
-                                    "occupied_beds", row.getLong("occupied_beds"),
-                                    "free_beds", row.getLong("free_beds")));
+                    var values = new HashMap<String, Object>();
+                    values.put("active_beds", row.getLong("active_beds"));
+                    values.put("held_beds", row.getLong("held_beds"));
+                    values.put("occupied_beds", row.getLong("occupied_beds"));
+                    values.put("free_beds", row.getLong("free_beds"));
+                    values.put("building_code", row.getString("building_code"));
+                    values.put("building_name", row.getString("building_name"));
+                    values.put("room_type_name", row.getString("room_type_name"));
+                    result.put(row.getLong("room_id"), values);
                 },
                 (Object) roomIds.toArray(new Long[0]));
         return result;
@@ -812,7 +834,68 @@ public class RoomServiceImpl implements RoomService {
                 r.getLeaderStudentId() == null && occupied > 0,
                 detail ? studentRef(r.getLeaderStudentId()) : null,
                 children,
-                detail ? leaderHistory(r.getId()) : null);
+                detail ? leaderHistory(r.getId()) : null,
+                (String) counts.get("building_code"),
+                (String) counts.get("building_name"),
+                (String) counts.get("room_type_name"),
+                r.getDisplayName(),
+                r.getAreaM2(),
+                r.getOrientation(),
+                r.getElectricMeterNo(),
+                r.getWaterMeterNo(),
+                r.getCommissionedOn(),
+                r.getStatusReason(),
+                r.getNote());
+    }
+
+    /** Ghi các trường mô tả phòng; null giữ nguyên, chuỗi rỗng xóa trường tùy chọn. */
+    private void applyProfile(Room r, Input input) {
+        r.setDisplayName(mergeText(input.displayName(), r.getDisplayName()));
+        if (input.areaM2() != null) {
+            r.setAreaM2(input.areaM2());
+        }
+        r.setOrientation(mergeText(input.orientation(), r.getOrientation()));
+        r.setElectricMeterNo(mergeText(input.electricMeterNo(), r.getElectricMeterNo()));
+        r.setWaterMeterNo(mergeText(input.waterMeterNo(), r.getWaterMeterNo()));
+        if (input.commissionedOn() != null) {
+            r.setCommissionedOn(input.commissionedOn());
+        }
+        r.setNote(mergeText(input.note(), r.getNote()));
+    }
+
+    /** Ghi thông tin mô tả giường; mã và phòng nguồn được xử lý riêng. */
+    private void applyBedProfile(Bed bed, BedInput input) {
+        bed.setPosition(mergeText(input.position(), bed.getPosition()));
+        bed.setAssetCode(mergeText(input.assetCode(), bed.getAssetCode()));
+        bed.setNote(mergeText(input.note(), bed.getNote()));
+    }
+
+    /**
+     * Giới tính phòng phải khớp đối tượng của tòa (trừ tòa MIXED) và giới tính tầng nếu tầng đã khai.
+     */
+    private void requireGenderAllowed(Long buildingId, Short floor, String gender) {
+        var row =
+                jdbc.queryForMap(
+                        "SELECT b.gender_policy, (SELECT f.gender FROM building_floor f"
+                                + " WHERE f.building_id=b.id AND f.floor=?) AS floor_gender"
+                                + " FROM building b WHERE b.id=?",
+                        floor,
+                        buildingId);
+        String policy = (String) row.get("gender_policy");
+        Object floorGender = row.get("floor_gender");
+        boolean buildingMismatch = !Facility.GENDER_MIXED.equals(policy) && !gender.equals(policy);
+        boolean floorMismatch = floorGender != null && !gender.equals(floorGender.toString().trim());
+        if (buildingMismatch || floorMismatch) {
+            throw BusinessException.conflict(ErrorCode.GENDER_MISMATCH);
+        }
+    }
+
+    private static String mergeText(String input, String current) {
+        if (input == null) {
+            return current;
+        }
+        String trimmed = input.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     /** Lịch sử đổi trưởng phòng từ audit_log, gồm cả lần hệ thống tự gỡ (FR-ROOM-09, 10). */
@@ -890,7 +973,14 @@ public class RoomServiceImpl implements RoomService {
             var u = accounts.user(a.getStudentId());
             occupant = new Occupant(u.id(), u.fullName(), u.username(), a.getKind());
         }
-        return new BedResponse(b.getId(), b.getCode(), b.getStatus(), occupant);
+        return new BedResponse(
+                b.getId(),
+                b.getCode(),
+                b.getStatus(),
+                occupant,
+                b.getPosition(),
+                b.getAssetCode(),
+                b.getNote());
     }
 
     private <T> T requireValue(T value, String field) {

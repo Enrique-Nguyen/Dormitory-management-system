@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Phiên bản | **0.13** |
-| Ngày | 22/10/2026 |
+| Phiên bản | **0.17** |
+| Ngày | 05/11/2026 |
 | Học phần | Chuyên đề CNTT, lớp 65CNTT, Nhóm 3 |
 | Giảng viên | Hoàng Quốc Dũng |
 | Thành viên | Nguyễn Văn Séc, Nguyễn Phú Nguyên, Lê Đức Nguyên, Nguyễn Văn Quyền, Nguyễn Tiến Lộc |
@@ -15,6 +15,10 @@
 
 | Phiên bản | Ngày | Người thực hiện | Nội dung |
 |---|---|---|---|
+| 0.17 | 05/11/2026 | TV5 | Theo yêu cầu vận hành: phân biệt nguồn hóa đơn MANUAL/ISSUED. Hóa đơn tạo tay UNPAID được sửa tổng tiền/hạn đóng hoặc xóa trong phạm vi quyền; lịch sử trạng thái không tự khóa bản tạo tay. Hóa đơn phát hành tự động và mọi hóa đơn PAID khóa CRUD. Giữ lịch sử/audit và các ràng buộc tham chiếu tài chính. |
+| 0.16 | 04/11/2026 | Nhóm 3 | Theo review chuyên sâu module đăng ký KTX: FR-REG-01 KTV được xem đợt của đơn vị mình, tạo/sửa/xóa đợt ghi audit; FR-REG-05 danh sách đơn của Staff mặc định sắp điểm giảm dần, sinh viên không thấy trọng số diện ưu tiên; FR-REG-08 giường giữ chỗ phải thuộc đơn vị nguyện vọng của đơn, kể cả với ADMIN; FR-REG-14 lựa chọn hè chỉ tạo/sửa khi đợt hè của đơn vị đang mở, lựa chọn bị từ chối được sửa và gửi lại, rút lựa chọn chờ duyệt chuyển CANCELLED thay vì xóa. |
+| 0.15 | 04/11/2026 | Nhóm 3 | Chuẩn hóa danh mục dùng chung cho form, bộ lọc và Excel; trường/khoa/khóa/địa giới, tầng theo tòa, năm học, tiện nghi, hạng mục sửa chữa và vị trí kho dùng dữ liệu quản trị có tham chiếu. |
+| 0.14 | 31/10/2026 | Nhóm 3 | Theo quyết định DEC-BIL-01: khi đã có lịch sử chỉ số, phải nhập đủ kỳ liên tiếp; không tạo kỳ mới nếu còn thiếu kỳ liền trước. Kỳ đầu vẫn nhập chỉ số đầu, thay đồng hồ theo quy tắc hiện hành. |
 | 0.13 | 22/10/2026 | TV5 Nguyễn Tiến Lộc | Đồng bộ phân hệ 6 & 7: chuẩn hóa nghiệp vụ sổ cọc (thu cọc ban đầu, trừ cọc FIFO, bù cọc, hoàn cọc), tra cứu công nợ sinh viên/phòng, tự động phát hành hóa đơn phòng và điện nước theo đợt/chỉ số, cùng tổng hợp KPI Staff Dashboard |
 | 0.12 | 21/10/2026 | TV1 Nguyễn Văn Séc | Đồng bộ phần tài khoản và khung chung: làm rõ lỗi JWT, giữ FR-ACC-05 hai bước và trả mật khẩu tạm một lần; khung job SYSTEM có transaction riêng từng ID, nhắc bù cọc ít nhất mỗi giờ theo NFR-REL-03. Không đổi luồng nghiệp vụ của các module khác |
 | 0.1 | 07/10/2026 | Nhóm 3 | Bản đầu tiên, dựng từ tài liệu đề xuất đã chốt |
@@ -45,6 +49,13 @@
 10. Phụ lục: sơ đồ trạng thái
 
 ---
+
+### Bổ sung yêu cầu danh mục dùng chung (04/11/2026)
+
+- FR-CAT-01: Nhóm **Danh mục dùng chung** có màn thêm/sửa/xóa và tìm kiếm cho trường, khoa, khóa, quê quán/địa giới, năm học, tiện nghi, hạng mục sửa chữa, tầng theo tòa và vị trí kho theo đơn vị; dùng lại danh mục đơn vị, tòa, loại phòng, học kỳ, diện ưu tiên và đợt đăng ký hiện có.
+- FR-CAT-02: Form và bộ lọc dùng cùng API danh mục, không nhập nhãn hoặc ID tham chiếu bằng tay; khoa lọc theo trường, tầng theo tòa, vị trí kho theo đơn vị của hợp đồng. Giới tính hiển thị Nam/Nữ qua lựa chọn mã M/F cố định, không CRUD tùy ý các mã có ràng buộc nghiệp vụ.
+- FR-CAT-03: Chỉ gán mới danh mục đang hoạt động; dữ liệu lịch sử vẫn đọc và lọc được mục ngừng dùng. Chặn xóa mục đang được tham chiếu, kiểm tra quyền và phạm vi ở backend; thay đổi tên không làm mất liên kết.
+- FR-CAT-04: Migration chuyển nhãn cũ sang khóa ngoại và giữ nguyên tên đã lưu; không suy đoán trường của khoa cũ hoặc tách chuỗi tiện nghi cũ. Import sinh viên chỉ nhận mã/tên khoa và khóa khớp chính xác danh mục đang hoạt động; không tự sinh danh mục từ Excel. Ghi chú, mô tả và thông tin liên hệ vẫn là văn bản tự do.
 
 ## 1. Giới thiệu
 
@@ -217,20 +228,20 @@ Quy ước chung cho mọi yêu cầu:
 
 | Mã | Yêu cầu | Vai trò | Ưu tiên |
 |---|---|---|---|
-| FR-REG-01 | Staff tạo đợt đăng ký: học kỳ, ngày mở, ngày đóng, chỉ tiêu theo tòa; đợt có thể áp dụng cho một hoặc cả hai đơn vị | Staff | Must |
+| FR-REG-01 | Staff tạo đợt đăng ký: học kỳ, ngày mở, ngày đóng, chỉ tiêu theo tòa; đợt có thể áp dụng cho một hoặc cả hai đơn vị. Tạo/sửa/xóa đợt ghi audit. Kỹ thuật viên được xem đợt có đơn vị của mình (chỉ đọc) | Staff | Must |
 | FR-REG-02 | Sinh viên soạn đơn khi đợt đang mở: **đơn vị nguyện vọng**, loại phòng mong muốn, diện ưu tiên tự khai, ghi chú. Mỗi sinh viên tối đa **một đơn mỗi đợt** | Student | Must |
 | FR-REG-03 | Không cho nộp đơn khi sinh viên đang có hợp đồng PENDING hoặc ACTIVE (sinh viên đang ở dùng gia hạn, FR-CON-06) | Student | Must |
 | FR-REG-04 | Sinh viên nộp đơn (DRAFT → SUBMITTED) hoặc hủy đơn (DRAFT, SUBMITTED, và APPROVED khi chưa sinh hợp đồng PENDING / ACTIVE; đơn APPROVED đã có hợp đồng bị chặn 409 `APPLICATION_HAS_CONTRACT`, xem mục 10.1) | Student | Must |
-| FR-REG-05 | Hệ thống tính **điểm ưu tiên** khi nộp theo trọng số cấu hình; Staff xem danh sách đơn của đơn vị mình sắp theo điểm | Hệ thống, Staff | Must ✂ |
+| FR-REG-05 | Hệ thống tính **điểm ưu tiên** khi nộp theo trọng số cấu hình; Staff xem danh sách đơn của đơn vị mình, mặc định sắp theo điểm giảm dần rồi thời điểm nộp tăng dần. Sinh viên xem diện ưu tiên đã khai nhưng không thấy trọng số | Hệ thống, Staff | Must ✂ |
 | FR-REG-06 | Staff xác nhận diện ưu tiên sinh viên khai (đúng / không đúng); điểm được tính lại theo kết quả xác nhận | Staff | Should |
 | FR-REG-07 | Staff duyệt (→ APPROVED) hoặc từ chối (→ REJECTED, bắt buộc lý do) đơn thuộc đơn vị mình | Staff | Must |
-| FR-REG-08 | Staff phân giường cho đơn APPROVED: chọn giường trống phù hợp giới tính, loại phòng, phòng Hoạt động thuộc đơn vị mình. Hệ thống thực hiện trong một transaction: tạo phân phòng loại **giữ chỗ** (chụp đơn giá từ loại phòng), tạo hợp đồng PENDING, chuyển đơn sang ASSIGNED | Staff | Must |
+| FR-REG-08 | Staff phân giường cho đơn APPROVED: chọn giường trống phù hợp giới tính, loại phòng, phòng Hoạt động thuộc **đơn vị nguyện vọng của đơn** (áp dụng cả với ADMIN liên đơn vị; sai đơn vị → `BED_UNIT_MISMATCH`). Hệ thống thực hiện trong một transaction: tạo phân phòng loại **giữ chỗ** (chụp đơn giá từ loại phòng), tạo hợp đồng PENDING, chuyển đơn sang ASSIGNED | Staff | Must |
 | FR-REG-09 | Hai yêu cầu đồng thời vào cùng một giường: chỉ một thành công, yêu cầu còn lại nhận lỗi "Giường vừa được phân, chọn giường khác"; không có bản ghi thừa | Hệ thống | Must |
 | FR-REG-10 | Gửi lặp cùng một yêu cầu phân phòng không tạo phân phòng thứ hai (trả lỗi 409) | Hệ thống | Must |
 | FR-REG-11 | Staff hủy giữ chỗ để phân lại (ASSIGNED → APPROVED, bắt buộc lý do); sinh viên tự hủy giữ chỗ (ASSIGNED → CANCELLED). Cả hai đóng phân phòng và chuyển hợp đồng sang CANCELLED trong cùng transaction | Staff, Student | Must |
 | FR-REG-12 | Sinh viên xem trạng thái đơn, lý do từ chối, giường được giữ và hạn kích hoạt | Student | Must |
 | FR-REG-13 | Staff mở **đợt đăng ký học kỳ hè**; khi mở, hệ thống tạo thông báo cho mọi sinh viên có hợp đồng ACTIVE thuộc đơn vị | Staff, Hệ thống | Must |
-| FR-REG-14 | Sinh viên đang ở chọn một trong ba lựa chọn cho hè: **ở hè**, **tạm rời hè** (tiếp tục năm học sau), **rời KTX**. Staff duyệt lựa chọn | Student, Staff | Must |
+| FR-REG-14 | Sinh viên đang ở chọn một trong ba lựa chọn cho hè: **ở hè**, **tạm rời hè** (tiếp tục năm học sau), **rời KTX**. Chỉ hợp đồng đang ACTIVE và chỉ khi đợt đăng ký hè của học kỳ đó đang mở cho đơn vị của sinh viên. Sinh viên sửa lựa chọn đang chờ hoặc bị từ chối (sửa lựa chọn bị từ chối là gửi lại, về chờ duyệt); rút lựa chọn đang chờ chuyển sang **Đã hủy** (giữ lịch sử), gửi lại cùng học kỳ mở lại chính bản ghi đó. Staff duyệt lựa chọn | Student, Staff | Must |
 | FR-REG-15 | Sinh viên **ở hè**: khi duyệt, ngày kết thúc hợp đồng được gia hạn qua học kỳ hè (ghi như một gia hạn, FR-CON-06) và sinh viên được phát hành hóa đơn phí phòng học kỳ hè như HK1, HK2. Staff có thể chuyển sinh viên sang giường khác cùng đơn vị để gom phòng ở hè (dùng FR-CON-08) | Staff, Hệ thống | Must |
 
 ### 3.4. Hợp đồng (CON)
@@ -280,7 +291,7 @@ Có hai loại hóa đơn và một sổ cọc:
 | Mã | Yêu cầu | Vai trò | Ưu tiên |
 |---|---|---|---|
 | FR-BIL-01 | Staff cấu hình đơn giá điện (đ/kWh), nước (đ/m³), có ngày hiệu lực | Staff | Must |
-| FR-BIL-02 | Staff nhập chỉ số cuối kỳ theo phòng và loại đồng hồ; chỉ số đầu kỳ tự lấy từ chỉ số cuối kỳ trước. Từ chối nếu cuối < đầu | Staff | Must |
+| FR-BIL-02 | Staff nhập chỉ số cuối kỳ theo phòng và loại đồng hồ; chỉ số đầu kỳ tự lấy từ chỉ số cuối kỳ trước. Với kỳ đầu chưa có lịch sử, Staff nhập chỉ số đầu; khi đã có lịch sử phải nhập đủ các kỳ liên tiếp, không tạo kỳ mới nếu thiếu kỳ liền trước. Từ chối nếu cuối < đầu, trừ trường hợp thay đồng hồ có ghi nhận theo FR-BIL-03 | Staff | Must |
 | FR-BIL-03 | Staff ghi nhận thay / reset đồng hồ (chỉ số cũ chốt, chỉ số mới bắt đầu, lý do) | Staff | Should |
 | FR-BIL-04 | Staff phát hành **hóa đơn điện nước theo phòng** cho kỳ điện nước: tiền điện = tiêu thụ × đơn giá điện, tiền nước = tiêu thụ × đơn giá nước; đơn giá chụp vào dòng hóa đơn. Hóa đơn gửi đến **trưởng phòng**; mọi thành viên đang ở trong phòng xem được. Hệ thống **không** chia cho từng sinh viên | Staff | Must |
 | FR-BIL-05 | Staff phát hành **hóa đơn phí phòng theo học kỳ** cho từng sinh viên đang ở trong học kỳ đó (với học kỳ hè: chỉ sinh viên đã đăng ký ở hè): số tiền = đơn giá học kỳ trên phân phòng hiệu lực tại ngày phát hành, **đủ cả học kỳ** kể cả khi vào ở hoặc rời đi giữa kỳ; chuyển phòng giữa kỳ không thu thêm hay hoàn chênh lệch. Đơn giá chụp vào dòng hóa đơn. Phạm vi Staff xem và phát hành xác định theo `semester_id` của hóa đơn (sinh viên có lịch sử ở tại đơn vị trong kỳ hoặc nộp đơn vào đơn vị cho đợt thuộc kỳ) | Staff | Must |
@@ -312,8 +323,8 @@ Có hai loại hóa đơn và một sổ cọc:
 |---|---|---|
 | **BR-01 Sức chứa** | Mỗi giường có tối đa một phân phòng hiệu lực (giữ chỗ hoặc đang ở). Không phân vào phòng Bảo trì / Ngừng, giường Hỏng. Giới tính sinh viên phải khớp giới tính phòng | CSDL: `UNIQUE(bed_id) WHERE ended_at IS NULL`. Service: khóa giường (`SELECT … FOR UPDATE`), kiểm tra lại sau khi khóa |
 | **BR-02 Hợp đồng** | Mỗi sinh viên có tối đa một phân phòng hiệu lực và tối đa một hợp đồng PENDING / ACTIVE. Khoảng lưu trú của một sinh viên không chồng nhau. Hợp đồng ACTIVE luôn có một phân phòng đang ở, **trừ khi** đang tạm rời hè (có phiếu gửi đồ chưa nhận lại). Hợp đồng chỉ chuyển EXPIRED / TERMINATED qua thủ tục trả phòng | CSDL: `UNIQUE(student_id) WHERE ended_at IS NULL` trên phân phòng. Service: khóa bản ghi sinh viên khi thay đổi |
-| **BR-03 Điện nước** | Chỉ số cuối ≥ đầu; đầu kỳ nối tiếp cuối kỳ trước trừ khi có ghi nhận thay đồng hồ; một chỉ số cho mỗi (phòng, loại đồng hồ, kỳ); hóa đơn điện nước thuộc về phòng, không chia cho sinh viên | CSDL: `UNIQUE(room_id, meter_type, period)`, `CHECK(end_reading >= start_reading)` |
-| **BR-04 Hóa đơn** | Một hóa đơn phí phòng cho mỗi (sinh viên, học kỳ); một hóa đơn điện nước cho mỗi (phòng, kỳ điện nước). Hóa đơn đã thanh toán không sửa | CSDL: hai partial unique index theo loại hóa đơn. Service: chặn sửa khi đã thanh toán |
+| **BR-03 Điện nước** | Chỉ số cuối ≥ đầu; đầu kỳ nối tiếp cuối kỳ trước trừ khi có ghi nhận thay đồng hồ; sau kỳ đầu phải nhập đủ các kỳ liên tiếp, không tạo kỳ mới nếu thiếu kỳ liền trước; một chỉ số cho mỗi (phòng, loại đồng hồ, kỳ); hóa đơn điện nước thuộc về phòng, không chia cho sinh viên | CSDL: `UNIQUE(room_id, meter_type, period)`, `CHECK(end_reading >= start_reading)`; service kiểm tra kỳ liền trước trong transaction |
+| **BR-04 Hóa đơn** | Một hóa đơn phí phòng cho mỗi (sinh viên, học kỳ); một hóa đơn điện nước cho mỗi (phòng, kỳ điện nước). Hóa đơn MANUAL chưa thanh toán được sửa tổng tiền/hạn đóng hoặc xóa theo quyền/phạm vi; lịch sử trạng thái được giữ lại. Hóa đơn ISSUED và hóa đơn đã thanh toán không sửa/xóa. Không bỏ ràng buộc tham chiếu tài chính. | CSDL: hai partial unique index theo loại hóa đơn. Service: chặn sửa khi đã thanh toán |
 | **BR-05 Chuyển phòng** | Giường đích trống và **cùng đơn vị** với giường nguồn; đóng phân phòng cũ và mở mới trong một transaction; hợp đồng không thay đổi | Service: khóa hai giường theo thứ tự `bed_id` tăng dần |
 | **BR-06 Sửa chữa** | Sinh viên chỉ tạo ticket cho phòng đang ở; chỉ KTV được giao cập nhật xử lý; chỉ đóng sau RESOLVED; KTV không tự đóng | Service: kiểm tra chuyển trạng thái theo bảng ở mục 10 |
 | **BR-07 Phạm vi** | Staff chỉ thấy và thao tác dữ liệu thuộc đơn vị mình. Đơn đăng ký thuộc đơn vị nguyện vọng. Sinh viên thuộc phạm vi đơn vị khi có đơn trong đợt hiện hành hoặc phân phòng hiệu lực tại đơn vị đó. Hóa đơn phí phòng thuộc phạm vi đơn vị theo học kỳ (`semester_id`) của hóa đơn (sinh viên có lịch sử ở tại đơn vị trong học kỳ hoặc nộp đơn vào đơn vị cho đợt thuộc học kỳ, tránh lộ hóa đơn khi chuyển đơn vị giữa các kỳ); quyền ghi (xác nhận thanh toán) chỉ tính phân phòng/phòng thực tế của đúng đơn vị. Admin được làm mọi nghiệp vụ ở mọi đơn vị, vẫn kiểm tra trạng thái và ràng buộc dữ liệu | Service: mọi truy vấn của Staff lọc theo `management_unit_id`; kiểm tra trên từng đối tượng |
@@ -350,7 +361,7 @@ Mục này mô tả ở mức nghiệp vụ. Tên bảng, kiểu dữ liệu và
 | `RoomTransferRequest` | id, contract_id, lý do, giường đích, trạng thái, người xử lý | |
 | `MoveOutRecord` | id, contract_id, tình trạng tài sản, ghi chú, công nợ tại thời điểm trả, tiền hoàn cọc, người xác nhận, thời gian | 1–1 với hợp đồng |
 | `MaintenanceRequest` | id, **mã** (TK-1024), requester_id, room_id hoặc (building_id, tầng), assigned_to, loại sự cố, mức độ, mô tả, trạng thái, **nguyên nhân** (hao mòn tự nhiên / hư hỏng do sử dụng), **chi phí sửa chữa** | Nguyên nhân, chi phí chỉ có ở ticket của phòng. Ảnh sự cố (≤ 3) ở bảng phụ |
-| `SummerChoice` | id, contract_id, semester_id (hè), lựa chọn (ở hè / tạm rời hè / rời KTX), trạng thái, người duyệt | Một lựa chọn cho mỗi (hợp đồng, học kỳ hè) |
+| `SummerChoice` | id, contract_id, semester_id (hè), lựa chọn (ở hè / tạm rời hè / rời KTX), trạng thái (chờ / duyệt / từ chối / đã hủy), người duyệt | Một lựa chọn cho mỗi (hợp đồng, học kỳ hè) |
 | `StorageRecord` | id, contract_id, số kiện, mô tả, vị trí kho, giường cũ, ngày gửi, người nhận gửi, ngày nhận lại, người trả | Phiếu gửi đồ khi tạm rời hè; giường cũ dùng để gợi ý khi phân lại đầu HK1 |
 | `StatusHistory` | id, loại đối tượng (đơn / hợp đồng / ticket / yêu cầu…), id đối tượng, từ trạng thái, đến trạng thái, người, thời gian, lý do | Dùng chung cho mọi đối tượng có trạng thái; dữ liệu cho timeline |
 | `UtilityRate` | id, loại (điện / nước), đơn giá, hiệu lực từ | |

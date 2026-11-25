@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import vn.edu.tlu.dms.billing.domain.Invoice;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,8 +28,9 @@ public interface InvoiceRepository
 
     /**
      * Phạm vi đơn vị của Staff. Điện nước theo đơn vị của phòng. Phí phòng theo đơn vị mà sinh viên
-     * ở trong học kỳ của hóa đơn (hoặc đã đăng ký nguyện vọng trong đợt thuộc học kỳ đó), không lấy
-     * mọi lịch sử ở từng đơn vị để sinh viên chuyển đơn vị không làm lộ hóa đơn kỳ khác.
+     * ở trong học kỳ của hóa đơn (hoặc có đơn nguyện vọng đã duyệt/đã xếp trong đợt thuộc học kỳ
+     * đó), không lấy mọi lịch sử ở từng đơn vị để sinh viên chuyển đơn vị không làm lộ hóa đơn kỳ
+     * khác. Đơn nháp, bị từ chối hoặc đã hủy không gắn sinh viên vào đơn vị.
      */
     String STAFF_UNIT_SCOPE =
             """
@@ -46,6 +48,7 @@ public interface InvoiceRepository
                 OR EXISTS (SELECT 1 FROM room_application ap
                     JOIN registration_period rp ON rp.id = ap.period_id
                     WHERE ap.student_id = i.student_id AND ap.preferred_unit_id = :unitId
+                        AND ap.status IN ('APPROVED', 'ASSIGNED')
                         AND rp.semester_id = i.semester_id)))
             """;
 
@@ -72,6 +75,11 @@ public interface InvoiceRepository
             """
             AND (:type IS NULL OR i.type = :type)
             AND (:filterStatuses = false OR i.status IN (:statuses))
+            AND (CAST(:billingMonth AS date) IS NULL OR i.billing_month = CAST(:billingMonth AS date))
+            AND (CAST(:totalAmountMin AS bigint) IS NULL OR i.total_amount >= CAST(:totalAmountMin AS bigint))
+            AND (CAST(:totalAmountMax AS bigint) IS NULL OR i.total_amount <= CAST(:totalAmountMax AS bigint))
+            AND (CAST(:dueDateFrom AS date) IS NULL OR i.due_date >= CAST(:dueDateFrom AS date))
+            AND (CAST(:dueDateTo AS date) IS NULL OR i.due_date <= CAST(:dueDateTo AS date))
             AND (i.code ILIKE :q OR EXISTS(SELECT 1 FROM app_user u WHERE u.id=i.student_id AND u.full_name ILIKE :q))
             """;
 
@@ -93,6 +101,11 @@ public interface InvoiceRepository
             boolean filterStatuses,
             List<String> statuses,
             String q,
+            LocalDate billingMonth,
+            Long totalAmountMin,
+            Long totalAmountMax,
+            LocalDate dueDateFrom,
+            LocalDate dueDateTo,
             Pageable pageable);
 
     @Query(
@@ -109,4 +122,22 @@ public interface InvoiceRepository
                             + "))",
             nativeQuery = true)
     boolean isInStaffUnit(Long id, Long unitId);
+
+    /** Trạng thái ghi của các hóa đơn đã lọc quyền đọc; không mở rộng theo quyền tổng hợp. */
+    @Query(
+            value = """
+                    SELECT i.id AS id,
+                        (i.creation_source=:manualSource) AS manual
+                    FROM invoice i
+                    WHERE i.id IN (:ids) AND i.status=:unpaidStatus AND (:admin=true OR (
+                    """ + STAFF_UNIT_SCOPE + "))",
+            nativeQuery = true)
+    List<InvoiceWriteState> findUnpaidWriteStates(
+            List<Long> ids, Long unitId, boolean admin, String unpaidStatus, String manualSource);
+
+    interface InvoiceWriteState {
+        Long getId();
+
+        boolean getManual();
+    }
 }

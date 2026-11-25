@@ -1,17 +1,19 @@
 import { Role } from '../../constants/authorization'
 import type { RouteObject } from 'react-router'
-import CrudPage from '../../pages/CrudPage'
-import CrudTabsPage from '../../pages/CrudTabsPage'
-import NotificationInboxPage from '../../pages/NotificationInboxPage'
-import StudentApplicationDetailPage from '../../pages/student/ApplicationDetailPage'
-import StudentContractDetailPage from '../../pages/student/ContractDetailPage'
-import StudentExtensionDetailPage from '../../pages/student/ExtensionDetailPage'
-import StudentHomePage from '../../pages/student/StudentHomePage'
-import StudentMaintenanceDetailPage from '../../pages/student/MaintenanceDetailPage'
-import StudentSummerChoiceDetailPage from '../../pages/student/SummerChoiceDetailPage'
-import TransferRequestPage from '../../pages/student/TransferRequestPage'
 import RequireRole from '../guards/RequireRole'
 import StudentLayout from '../layouts/StudentLayout'
+import { lazyPage } from './lazyPage'
+
+const CrudPage = lazyPage(() => import('../../pages/CrudPage'))
+const CrudTabsPage = lazyPage(() => import('../../pages/CrudTabsPage'))
+const NotificationInboxPage = lazyPage(() => import('../../pages/NotificationInboxPage'))
+const StudentApplicationDetailPage = lazyPage(() => import('../../pages/student/ApplicationDetailPage'))
+const StudentContractDetailPage = lazyPage(() => import('../../pages/student/ContractDetailPage'))
+const StudentExtensionDetailPage = lazyPage(() => import('../../pages/student/ExtensionDetailPage'))
+const StudentHomePage = lazyPage(() => import('../../pages/student/StudentHomePage'))
+const StudentMaintenanceDetailPage = lazyPage(() => import('../../pages/student/MaintenanceDetailPage'))
+const StudentSummerChoiceDetailPage = lazyPage(() => import('../../pages/student/SummerChoiceDetailPage'))
+const TransferRequestPage = lazyPage(() => import('../../pages/student/TransferRequestPage'))
 
 // UI mục 26. Thay `element` bằng trang thật của bạn (pages/student/...). Phụ trách theo UI 27.3.
 export const studentRoutes: RouteObject = {

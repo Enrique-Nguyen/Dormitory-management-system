@@ -2,11 +2,13 @@ package vn.edu.tlu.dms.registration.api;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.service.StatusHistoryService;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -48,6 +50,26 @@ public final class ApplicationDtos {
             @NotNull(message = ValidationMessage.BED_REQUIRED_FOR_ASSIGN)
                     @Positive(message = ValidationMessage.ID_POSITIVE)
                     Long bedId) {}
+
+    /**
+     * Gộp phân giường, chốt giá/cọc riêng và kích hoạt trong một lần lưu từ màn hợp đồng. Ngày,
+     * đơn giá để trống thì lấy theo học kỳ và loại phòng; {@code activate} true thì bắt buộc kèm
+     * số tiền cọc, hình thức thu và xác nhận đã ký giấy.
+     */
+    public record AssignContractRequest(
+            @NotNull(message = ValidationMessage.BED_REQUIRED_FOR_ASSIGN)
+                    @Positive(message = ValidationMessage.ID_POSITIVE)
+                    Long bedId,
+            LocalDate startDate,
+            LocalDate endDate,
+            @PositiveOrZero(message = ValidationMessage.ASSIGNMENT_PRICE_REQUIRED) Long priceMain,
+            @PositiveOrZero(message = ValidationMessage.ASSIGNMENT_PRICE_REQUIRED)
+                    Long priceSummer,
+            Boolean activate,
+            @Positive(message = ValidationMessage.DEPOSIT_AMOUNT_POSITIVE) Long depositAmount,
+            String paymentMethod,
+            Boolean paperContractSigned,
+            @Size(max = 500) String note) {}
 
     /**
      * Xác nhận một diện ưu tiên của đơn. {@code verified} bắt buộc để phân biệt "chưa xác nhận";

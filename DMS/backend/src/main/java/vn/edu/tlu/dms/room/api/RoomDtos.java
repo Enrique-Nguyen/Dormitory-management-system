@@ -1,5 +1,7 @@
 package vn.edu.tlu.dms.room.api;
 
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -8,9 +10,12 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.BedOperationStatus;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Facility;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Gender;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RoomStatus;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -18,16 +23,35 @@ public final class RoomDtos {
 
     private RoomDtos() {}
 
+    /**
+     * Body lưu phòng: không có ID là tạo, có ID là sửa từng phần. Trường null giữ nguyên; chuỗi rỗng
+     * xóa trường văn bản tùy chọn.
+     */
     public record Input(
             @Positive Long id,
             @Positive Long buildingId,
             @Min(0) Short floor,
             @Size(max = 20) String code,
             @Positive Long roomTypeId,
-            @Pattern(regexp = Gender.PATTERN) String gender) {
+            @Pattern(regexp = Gender.PATTERN) String gender,
+            @Size(max = 50) String displayName,
+            @DecimalMin(value = "0.0", inclusive = false) @Digits(integer = 4, fraction = 2)
+                    BigDecimal areaM2,
+            @Pattern(regexp = Facility.ORIENTATION_PATTERN) String orientation,
+            @Size(max = 30) String electricMeterNo,
+            @Size(max = 30) String waterMeterNo,
+            LocalDate commissionedOn,
+            @Size(max = 1000) String note) {
 
         public Input(Long buildingId, Short floor, String code, Long roomTypeId, String gender) {
-            this(null, buildingId, floor, code, roomTypeId, gender);
+            this(null, buildingId, floor, code, roomTypeId, gender,
+                    null, null, null, null, null, null, null);
+        }
+
+        public Input(
+                Long id, Long buildingId, Short floor, String code, Long roomTypeId, String gender) {
+            this(id, buildingId, floor, code, roomTypeId, gender,
+                    null, null, null, null, null, null, null);
         }
     }
 
@@ -42,14 +66,24 @@ public final class RoomDtos {
         }
     }
 
-    public record BedInput(@Positive Long id, @Positive Long roomId, @Size(max = 10) String code) {
+    public record BedInput(
+            @Positive Long id,
+            @Positive Long roomId,
+            @Size(max = 10) String code,
+            @Pattern(regexp = Facility.BED_POSITION_PATTERN) String position,
+            @Size(max = 30) String assetCode,
+            @Size(max = 500) String note) {
 
         public BedInput(String code) {
-            this(null, null, code);
+            this(null, null, code, null, null, null);
         }
 
         public BedInput(Long roomId, String code) {
-            this(null, roomId, code);
+            this(null, roomId, code, null, null, null);
+        }
+
+        public BedInput(Long id, Long roomId, String code) {
+            this(id, roomId, code, null, null, null);
         }
     }
 
@@ -68,7 +102,14 @@ public final class RoomDtos {
 
     public record Occupant(Long studentId, String fullName, String studentCode, String kind) {}
 
-    public record BedResponse(Long id, String code, String status, Occupant occupant) {}
+    public record BedResponse(
+            Long id,
+            String code,
+            String status,
+            Occupant occupant,
+            String position,
+            String assetCode,
+            String note) {}
 
     public record Response(
             Long id,
@@ -86,7 +127,18 @@ public final class RoomDtos {
             boolean missingLeader,
             StudentRef leader,
             List<BedResponse> beds,
-            List<LeaderChange> leaderHistory) {}
+            List<LeaderChange> leaderHistory,
+            String buildingCode,
+            String buildingName,
+            String roomTypeName,
+            String displayName,
+            BigDecimal areaM2,
+            String orientation,
+            String electricMeterNo,
+            String waterMeterNo,
+            LocalDate commissionedOn,
+            String statusReason,
+            String note) {}
 
     /**
      * Sinh viên tham chiếu trong thông tin phòng; studentCode là tên đăng nhập (mã sinh viên).

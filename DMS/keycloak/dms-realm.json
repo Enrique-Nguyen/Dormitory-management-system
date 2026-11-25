@@ -1,6 +1,7 @@
 {
   "realm": "dms",
   "enabled": true,
+  "loginTheme": "dms",
   "displayName": "Hệ thống Quản lý Ký túc xá",
   "registrationAllowed": false,
   "resetPasswordAllowed": false,

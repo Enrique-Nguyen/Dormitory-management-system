@@ -71,6 +71,9 @@ public interface DepositService {
             OffsetDateTime createdAt,
             String note) {}
 
-    /** Tra cứu sổ cọc theo phân trang SearchRequest; mine = true lọc theo người đăng nhập. */
+    /**
+     * Tra cứu sổ cọc theo phân trang SearchRequest; mine = true lọc theo người đăng nhập.
+     * Danh sách không tính allowedActions, giao diện lấy hành động từ getBalance.
+     */
     PageResponse<DepositDtos.Balance> searchBalancesByPage(SearchRequest request, boolean mine);
 }

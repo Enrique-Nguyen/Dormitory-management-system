@@ -521,6 +521,9 @@ class MaintenanceConcludeIntegrationTest {
     }
 
     private Long createRoom(String code) {
+        jdbc.update(
+                "INSERT INTO building_floor(building_id,floor,name) VALUES(?,1,'Tang 1') ON CONFLICT DO NOTHING",
+                buildingId);
         return jdbc.queryForObject(
                 "INSERT INTO room(building_id, room_type_id, code, floor, gender, status)"
                         + " VALUES(?, ?, ?, 1, 'M', 'ACTIVE') RETURNING id",
@@ -583,6 +586,7 @@ class MaintenanceConcludeIntegrationTest {
     }
 
     private Long createCommonTicket(String status) {
+        jdbc.update("INSERT INTO building_floor(building_id,floor,name) VALUES (?,2,'Tang 2') ON CONFLICT DO NOTHING", buildingId);
         return jdbc.queryForObject(
                 """
                 INSERT INTO maintenance_request(code, requester_id, building_id, floor, category,

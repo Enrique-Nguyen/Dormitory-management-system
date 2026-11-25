@@ -62,7 +62,12 @@ public class GlobalExceptionHandler {
                             ErrorCode.SUMMER_CHOICE_EXISTS),
                     Map.entry("ux_room_leader", ErrorCode.LEADER_ALREADY_ASSIGNED),
                     Map.entry("student_profile_student_code_key", ErrorCode.STUDENT_CODE_EXISTS),
-                    Map.entry("bed_room_id_code_key", ErrorCode.BED_CODE_EXISTS));
+                    Map.entry("bed_room_id_code_key", ErrorCode.BED_CODE_EXISTS),
+                    Map.entry("ux_room_type_code", ErrorCode.DUPLICATE_VALUE),
+                    Map.entry("ux_room_electric_meter", ErrorCode.DUPLICATE_VALUE),
+                    Map.entry("ux_room_water_meter", ErrorCode.DUPLICATE_VALUE),
+                    Map.entry("ux_school_home_school", ErrorCode.DUPLICATE_VALUE),
+                    Map.entry("ex_academic_year_period", ErrorCode.ACADEMIC_YEAR_OVERLAP));
 
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<ApiError> business(BusinessException e, HttpServletRequest request) {

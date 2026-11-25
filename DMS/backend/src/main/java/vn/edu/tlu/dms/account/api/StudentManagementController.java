@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.account.service.StudentManagementService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Facility;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Gender;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
@@ -38,10 +40,15 @@ public class StudentManagementController {
             @Size(max = 100) String fullName,
             @Pattern(regexp = Gender.PATTERN) String gender,
             LocalDate dateOfBirth,
-            @Size(max = 100) String faculty,
-            @Size(max = 10) String cohort,
-            @Size(max = 20) String phone,
-            @Size(max = 200) String hometown,
+            @Positive Long schoolId,
+            @Positive Long facultyId,
+            @Positive Long cohortId,
+            @Size(max = 20)
+                    @Pattern(
+                            regexp = Facility.PHONE_PATTERN,
+                            message = ValidationMessage.PHONE_INVALID)
+                    String phone,
+            @Positive Long hometownId,
             @Size(max = 200) String emergencyContact) {}
 
     @RequirePrivilege(Permission.STUDENT_READ)

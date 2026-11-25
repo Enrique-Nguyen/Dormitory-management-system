@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import vn.edu.tlu.dms.contract.domain.DormitoryContract;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +30,11 @@ public interface DormitoryContractRepository
                             WHERE a.contract_id = c.id AND bd.management_unit_id = :unitId) OR (NOT EXISTS(SELECT 1 FROM room_assignment_history h WHERE h.contract_id=c.id) AND EXISTS(SELECT 1 FROM room_application ap WHERE ap.id=c.application_id AND ap.preferred_unit_id=:unitId)))))
                     AND (:mine = false OR c.student_id = :userId)
                     AND (:allStatuses = true OR c.status IN (:statuses))
+                    AND (CAST(:studentId AS bigint) IS NULL OR c.student_id = CAST(:studentId AS bigint))
+                    AND (CAST(:startDateFrom AS date) IS NULL OR c.start_date >= CAST(:startDateFrom AS date))
+                    AND (CAST(:startDateTo AS date) IS NULL OR c.start_date <= CAST(:startDateTo AS date))
+                    AND (CAST(:endDateFrom AS date) IS NULL OR c.end_date >= CAST(:endDateFrom AS date))
+                    AND (CAST(:endDateTo AS date) IS NULL OR c.end_date <= CAST(:endDateTo AS date))
                     AND (c.code ILIKE :q OR EXISTS(SELECT 1 FROM app_user u WHERE u.id=c.student_id AND u.full_name ILIKE :q))
                     """,
             countQuery =
@@ -43,6 +49,11 @@ public interface DormitoryContractRepository
                             WHERE a.contract_id = c.id AND bd.management_unit_id = :unitId) OR (NOT EXISTS(SELECT 1 FROM room_assignment_history h WHERE h.contract_id=c.id) AND EXISTS(SELECT 1 FROM room_application ap WHERE ap.id=c.application_id AND ap.preferred_unit_id=:unitId)))))
                     AND (:mine = false OR c.student_id = :userId)
                     AND (:allStatuses = true OR c.status IN (:statuses))
+                    AND (CAST(:studentId AS bigint) IS NULL OR c.student_id = CAST(:studentId AS bigint))
+                    AND (CAST(:startDateFrom AS date) IS NULL OR c.start_date >= CAST(:startDateFrom AS date))
+                    AND (CAST(:startDateTo AS date) IS NULL OR c.start_date <= CAST(:startDateTo AS date))
+                    AND (CAST(:endDateFrom AS date) IS NULL OR c.end_date >= CAST(:endDateFrom AS date))
+                    AND (CAST(:endDateTo AS date) IS NULL OR c.end_date <= CAST(:endDateTo AS date))
                     AND (c.code ILIKE :q OR EXISTS(SELECT 1 FROM app_user u WHERE u.id=c.student_id AND u.full_name ILIKE :q))
                     """,
             nativeQuery = true)
@@ -55,6 +66,11 @@ public interface DormitoryContractRepository
             boolean allStatuses,
             List<String> statuses,
             String q,
+            Long studentId,
+            LocalDate startDateFrom,
+            LocalDate startDateTo,
+            LocalDate endDateFrom,
+            LocalDate endDateTo,
             Pageable pageable);
 
     @Query(

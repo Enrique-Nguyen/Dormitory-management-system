@@ -144,6 +144,10 @@ class BedOccupancyIntegrationTest {
                         createBed(roomB, "02"),
                         createBed(femaleRoom, "01"),
                         createBed(otherUnitRoom, "01"));
+        jdbc.update(
+                "INSERT INTO academic_year(code,name) VALUES(?,?) ON CONFLICT DO NOTHING",
+                "2050-2051",
+                "2050-2051");
         semesterId =
                 jdbc.queryForObject(
                         "INSERT INTO semester(academic_year,type,name,start_date,end_date)"
@@ -787,6 +791,9 @@ class BedOccupancyIntegrationTest {
     }
 
     private Long createRoom(Long buildingId, String code, String gender) {
+        jdbc.update(
+                "INSERT INTO building_floor(building_id,floor,name) VALUES(?,1,'Tang 1') ON CONFLICT DO NOTHING",
+                buildingId);
         return jdbc.queryForObject(
                 "INSERT INTO room(building_id,room_type_id,floor,code,gender)"
                         + " VALUES(?,?,1,?,?) RETURNING id",
@@ -837,6 +844,10 @@ class BedOccupancyIntegrationTest {
         jdbc.update("DELETE FROM semester WHERE id=?", semesterId);
         jdbc.update("DELETE FROM bed WHERE room_id IN (" + roomIds + ")");
         jdbc.update("DELETE FROM room WHERE id IN (" + roomIds + ")");
+        jdbc.update(
+                "DELETE FROM building_floor WHERE building_id IN (?, ?)",
+                firstBuildingId,
+                otherBuildingId);
         jdbc.update(
                 "DELETE FROM building WHERE id IN (?, ?)", firstBuildingId, otherBuildingId);
         jdbc.update("DELETE FROM room_type WHERE id=?", roomTypeId);

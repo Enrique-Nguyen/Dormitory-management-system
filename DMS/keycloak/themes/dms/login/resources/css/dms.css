@@ -1,0 +1,173 @@
+/* Giao diện đăng nhập Keycloak cho DMS KTX Thủy Lợi. Đổi màu chủ đạo bằng hai biến dưới đây. */
+:root {
+  --dms-accent: #4a8660;
+  --dms-accent-dark: #386a4b;
+  --dms-accent-soft: #e8f1ec;
+  --dms-text: #2b2b29;
+  --dms-muted: #6b6a66;
+  --dms-border: #d9d7d2;
+  --pf-v5-global--primary-color--100: var(--dms-accent);
+  --pf-v5-global--primary-color--200: var(--dms-accent-dark);
+  --pf-v5-global--link--Color: var(--dms-accent);
+  --pf-v5-global--link--Color--hover: var(--dms-accent-dark);
+  --pf-v5-global--FontFamily--text: 'Be Vietnam Pro', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --pf-v5-global--FontFamily--heading: var(--pf-v5-global--FontFamily--text);
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+.pf-v5-c-login {
+  background-image: none !important;
+  background-color: var(--dms-accent-soft) !important;
+  background:
+    linear-gradient(160deg, var(--dms-accent-dark) 0%, var(--dms-accent) 46%, #7eb394 100%) !important;
+}
+
+.pf-v5-c-login__container {
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  grid-template-columns: 1fr;
+}
+
+/* Thương hiệu phía trên thẻ đăng nhập */
+.pf-v5-c-login__header {
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+#kc-header-wrapper {
+  color: #ffffff;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  line-height: 1.4;
+}
+
+#kc-header-wrapper::before {
+  content: 'TLU';
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--dms-accent-dark);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 56px;
+  letter-spacing: 0.04em;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+/* Thẻ đăng nhập */
+.pf-v5-c-login__main {
+  border-radius: 12px;
+  border: 0;
+  border-top: 4px solid var(--dms-accent);
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(20, 40, 28, 0.28);
+  overflow: hidden;
+}
+
+.pf-v5-c-login__main-header {
+  padding: 28px 32px 0;
+  border: 0;
+}
+
+.pf-v5-c-login__main-header .pf-v5-c-title,
+#kc-page-title {
+  color: var(--dms-text);
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.pf-v5-c-login__main-body {
+  padding: 16px 32px 28px;
+}
+
+/* Ô nhập */
+.pf-v5-c-form__label-text {
+  color: var(--dms-text);
+  font-weight: 500;
+}
+
+.pf-v5-c-form-control {
+  --pf-v5-c-form-control--BorderColor: var(--dms-border);
+  --pf-v5-c-form-control--BorderRadius: 6px;
+  border-radius: 6px;
+}
+
+.pf-v5-c-form-control::after,
+.pf-v5-c-form-control::before {
+  border-radius: 6px;
+}
+
+.pf-v5-c-form-control:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--dms-accent) 35%, transparent);
+  outline-offset: 0;
+}
+
+.pf-v5-c-form-control:focus-within::after {
+  border-bottom-color: var(--dms-accent);
+  border-bottom-width: 2px;
+}
+
+/* Nút đăng nhập */
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--dms-accent);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--dms-accent-dark);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--dms-accent-dark);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--dms-accent-dark);
+  --pf-v5-c-button--BorderRadius: 6px;
+  border-radius: 6px;
+  min-height: 44px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.pf-v5-c-button.pf-m-link,
+.pf-v5-c-login__main-footer-band a,
+#kc-form a {
+  color: var(--dms-accent);
+}
+
+.pf-v5-c-check__input:checked {
+  accent-color: var(--dms-accent);
+}
+
+/* Thông báo lỗi và thành công */
+.pf-v5-c-alert {
+  border-radius: 6px;
+}
+
+.pf-v5-c-alert.pf-m-danger {
+  --pf-v5-c-alert--BorderTopColor: #d44c47;
+}
+
+.pf-v5-c-login__main-footer-band {
+  background: var(--dms-accent-soft);
+  border-top: 1px solid var(--dms-border);
+  color: var(--dms-muted);
+}
+
+.pf-v5-c-login__footer {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+@media (max-width: 480px) {
+  .pf-v5-c-login__container {
+    padding: 12px;
+  }
+
+  .pf-v5-c-login__main-header,
+  .pf-v5-c-login__main-body {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}

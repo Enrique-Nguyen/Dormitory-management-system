@@ -1,0 +1,915 @@
+{
+  "config": {
+    "argv": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "D:\\Dormitory-management-system\\DMS\\frontend\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--config",
+      "D:\\Dormitory-management-system\\DMS\\frontend\\playwright.config.ts",
+      "--workers=1",
+      "--reporter=list,json,html",
+      "--trace=off",
+      "--output",
+      "D:\\Dormitory-management-system\\Docs\\04 Testing\\e2e-artifacts-20261124\\playwright-isolated"
+    ],
+    "configFile": "D:\\Dormitory-management-system\\DMS\\frontend\\playwright.config.ts",
+    "rootDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "D:/Dormitory-management-system/Docs/04 Testing/e2e-artifacts-20261124/playwright-isolated",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/auth\\.setup\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "D:/Dormitory-management-system/Docs/04 Testing/e2e-artifacts-20261124/playwright-isolated",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "anonymous",
+        "name": "anonymous",
+        "testDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/anonymous\\/.*\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "D:/Dormitory-management-system/Docs/04 Testing/e2e-artifacts-20261124/playwright-isolated",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "student",
+        "name": "student",
+        "testDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/student\\/.*[.]spec[.]ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "D:/Dormitory-management-system/Docs/04 Testing/e2e-artifacts-20261124/playwright-isolated",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "staff",
+        "name": "staff",
+        "testDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/staff\\/.*[.]spec[.]ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "D:/Dormitory-management-system/Docs/04 Testing/e2e-artifacts-20261124/playwright-isolated",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "technician",
+        "name": "technician",
+        "testDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/technician\\/.*[.]spec[.]ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "D:/Dormitory-management-system/Docs/04 Testing/e2e-artifacts-20261124/playwright-isolated",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "admin",
+        "name": "admin",
+        "testDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/admin\\/.*[.]spec[.]ts/"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "D:\\Dormitory-management-system\\Docs\\04 Testing\\e2e-artifacts-20261124\\playwright-isolated",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "setup",
+        "testDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "snapshotDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5174",
+          "trace": "off",
+          "screenshot": "only-on-failure",
+          "video": "retain-on-failure",
+          "locale": "vi-VN",
+          "timezoneId": "Asia/Ho_Chi_Minh"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "setup"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "D:\\Dormitory-management-system\\Docs\\04 Testing\\e2e-artifacts-20261124\\playwright-isolated",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "anonymous",
+        "testDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "snapshotDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5174",
+          "trace": "off",
+          "screenshot": "only-on-failure",
+          "video": "retain-on-failure",
+          "locale": "vi-VN",
+          "timezoneId": "Asia/Ho_Chi_Minh"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "anonymous"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "D:\\Dormitory-management-system\\Docs\\04 Testing\\e2e-artifacts-20261124\\playwright-isolated",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "student",
+        "testDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "snapshotDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5174",
+          "trace": "off",
+          "screenshot": "only-on-failure",
+          "video": "retain-on-failure",
+          "locale": "vi-VN",
+          "timezoneId": "Asia/Ho_Chi_Minh",
+          "userAgent": "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.8154.6 Mobile Safari/537.36",
+          "viewport": {
+            "width": 393,
+            "height": 727
+          },
+          "screen": {
+            "width": 393,
+            "height": 851
+          },
+          "deviceScaleFactor": 2.75,
+          "isMobile": true,
+          "hasTouch": true,
+          "defaultBrowserType": "chromium",
+          "storageState": "e2e/.auth/student.json"
+        },
+        "dependencies": [
+          "setup"
+        ],
+        "ignoreSnapshots": false,
+        "__projectId": "student"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "D:\\Dormitory-management-system\\Docs\\04 Testing\\e2e-artifacts-20261124\\playwright-isolated",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "staff",
+        "testDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "snapshotDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5174",
+          "trace": "off",
+          "screenshot": "only-on-failure",
+          "video": "retain-on-failure",
+          "locale": "vi-VN",
+          "timezoneId": "Asia/Ho_Chi_Minh",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.8154.6 Safari/537.36",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "chromium",
+          "storageState": "e2e/.auth/staff.json"
+        },
+        "dependencies": [
+          "setup"
+        ],
+        "ignoreSnapshots": false,
+        "__projectId": "staff"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "D:\\Dormitory-management-system\\Docs\\04 Testing\\e2e-artifacts-20261124\\playwright-isolated",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "technician",
+        "testDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "snapshotDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5174",
+          "trace": "off",
+          "screenshot": "only-on-failure",
+          "video": "retain-on-failure",
+          "locale": "vi-VN",
+          "timezoneId": "Asia/Ho_Chi_Minh",
+          "userAgent": "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.8154.6 Mobile Safari/537.36",
+          "viewport": {
+            "width": 393,
+            "height": 727
+          },
+          "screen": {
+            "width": 393,
+            "height": 851
+          },
+          "deviceScaleFactor": 2.75,
+          "isMobile": true,
+          "hasTouch": true,
+          "defaultBrowserType": "chromium",
+          "storageState": "e2e/.auth/technician.json"
+        },
+        "dependencies": [
+          "setup"
+        ],
+        "ignoreSnapshots": false,
+        "__projectId": "technician"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "D:\\Dormitory-management-system\\Docs\\04 Testing\\e2e-artifacts-20261124\\playwright-isolated",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "admin",
+        "testDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "snapshotDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5174",
+          "trace": "off",
+          "screenshot": "only-on-failure",
+          "video": "retain-on-failure",
+          "locale": "vi-VN",
+          "timezoneId": "Asia/Ho_Chi_Minh",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.8154.6 Safari/537.36",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "chromium",
+          "storageState": "e2e/.auth/admin.json"
+        },
+        "dependencies": [
+          "setup"
+        ],
+        "ignoreSnapshots": false,
+        "__projectId": "admin"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list"
+      ],
+      [
+        "json"
+      ],
+      [
+        "html"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.65.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "auth.setup.ts",
+      "file": "auth.setup.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "đăng nhập student",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1737,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:07.009Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-a92640d7454e993e57ae",
+          "file": "auth.setup.ts",
+          "line": 10,
+          "column": 3
+        },
+        {
+          "title": "đăng nhập staff",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1663,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:08.871Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-910ef5b23da666ce7079",
+          "file": "auth.setup.ts",
+          "line": 10,
+          "column": 3
+        },
+        {
+          "title": "đăng nhập technician",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1484,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:10.550Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-cff37d8f43dd589e0959",
+          "file": "auth.setup.ts",
+          "line": 10,
+          "column": 3
+        },
+        {
+          "title": "đăng nhập admin",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1515,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:12.044Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-b8967c4eec2d8759abec",
+          "file": "auth.setup.ts",
+          "line": 10,
+          "column": 3
+        }
+      ]
+    },
+    {
+      "title": "anonymous\\login.spec.ts",
+      "file": "anonymous/login.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "trang đăng nhập hiển thị nút đăng nhập",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "anonymous",
+              "projectName": "anonymous",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 927,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:14.106Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4d119177f9b53f268196-5bf0f71f412389b06fe1",
+          "file": "anonymous/login.spec.ts",
+          "line": 3,
+          "column": 1
+        },
+        {
+          "title": "chưa đăng nhập vào cổng quản trị thì bị chuyển về trang đăng nhập",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "anonymous",
+              "projectName": "anonymous",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 891,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:15.160Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4d119177f9b53f268196-b14b4dbdb6ca63e7889f",
+          "file": "anonymous/login.spec.ts",
+          "line": 9,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "student\\portal.spec.ts",
+      "file": "student/portal.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "vào đúng cổng student sau khi đăng nhập",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "student",
+              "projectName": "student",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 793,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:16.580Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "36de22ffc17bcbf36a4a-f29522c7fcbf3cebce0f",
+          "file": "student/portal.spec.ts",
+          "line": 8,
+          "column": 1
+        },
+        {
+          "title": "vào cổng của vai trò khác thì bị chuyển về cổng của mình",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "student",
+              "projectName": "student",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1057,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:17.492Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "36de22ffc17bcbf36a4a-53701cd3467bfb481128",
+          "file": "student/portal.spec.ts",
+          "line": 13,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "staff\\portal.spec.ts",
+      "file": "staff/portal.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "vào đúng cổng staff sau khi đăng nhập",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "staff",
+              "projectName": "staff",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 737,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:19.053Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "30813bd883ab737a369a-2f879bbd016c2c102298",
+          "file": "staff/portal.spec.ts",
+          "line": 8,
+          "column": 1
+        },
+        {
+          "title": "vào cổng của vai trò khác thì bị chuyển về cổng của mình",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "staff",
+              "projectName": "staff",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1101,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:19.905Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "30813bd883ab737a369a-1d6d39fba6926e0abcce",
+          "file": "staff/portal.spec.ts",
+          "line": 13,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "technician\\portal.spec.ts",
+      "file": "technician/portal.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "vào đúng cổng technician sau khi đăng nhập",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "technician",
+              "projectName": "technician",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 786,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:21.506Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1e8d1812f9b039f21555-8fa561b9bce7782309e3",
+          "file": "technician/portal.spec.ts",
+          "line": 8,
+          "column": 1
+        },
+        {
+          "title": "vào cổng của vai trò khác thì bị chuyển về cổng của mình",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "technician",
+              "projectName": "technician",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1073,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:22.417Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1e8d1812f9b039f21555-4ce18815aedbae168a6a",
+          "file": "technician/portal.spec.ts",
+          "line": 13,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "admin\\portal.spec.ts",
+      "file": "admin/portal.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "vào đúng cổng admin sau khi đăng nhập",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "admin",
+              "projectName": "admin",
+              "results": [
+                {
+                  "workerIndex": 5,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1062,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:24.010Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "503a0f5b96e7cb37f24c-35c74e024d5d8b3b4221",
+          "file": "admin/portal.spec.ts",
+          "line": 8,
+          "column": 1
+        },
+        {
+          "title": "vào cổng của vai trò khác thì bị chuyển về cổng của mình",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "admin",
+              "projectName": "admin",
+              "results": [
+                {
+                  "workerIndex": 5,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 981,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T17:03:25.200Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "503a0f5b96e7cb37f24c-a5d27ba604c6dd3aa7ee",
+          "file": "admin/portal.spec.ts",
+          "line": 13,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-24T17:03:06.390Z",
+    "duration": 19990.23,
+    "expected": 14,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

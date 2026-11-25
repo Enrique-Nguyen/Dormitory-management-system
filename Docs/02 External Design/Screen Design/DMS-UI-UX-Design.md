@@ -6,12 +6,13 @@
 > Backend: Spring Boot REST API  
 > Database: PostgreSQL  
 > Responsive: từ 360px
-> Phiên bản: 1.1, 22/10/2026
+> Phiên bản: 1.2, 30/10/2026
 
 ### Lịch sử thay đổi
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 1.2 | 30/10/2026 | TV1: làm rõ preview đã đọc được dữ liệu hợp lệ, chỉ hiện bảng khi có lỗi/mã trùng; báo tên cột thiếu, buộc kiểm tra lại sau lỗi ghi; giữ preview/tài khoản khi đổi tab và chặn thay/xóa file trước khi tải tài khoản |
 | 1.1 | 22/10/2026 | Bổ sung mô tả triển khai frontend TV5: màn hình Quản lý sổ cọc (bảng số dư, chi tiết ledger giao dịch, dialog nộp/bù/hoàn cọc), Quản lý hóa đơn & công nợ (modal phát hành tiền phòng/điện nước hàng loạt, dialog xác nhận thanh toán), và Staff Dashboard (KPI thẻ số liệu phòng, giường, công nợ, ticket) |
 | 1.0 | 21/10/2026 | Bắt đầu ghi phiên bản; giữ thiết kế hiện có, bổ sung luồng import và đọc chi tiết audit đã triển khai bởi TV1 |
 
@@ -1492,7 +1493,11 @@ Mã SV: 20230023
 
 Triển khai tại `/admin/import` gồm tab **Import Excel** và **Hồ sơ sinh viên**. Dùng FormControls/Surface/DataTable và ConfirmDialog chung; kiểm tra quyền `STUDENT_CREATE` cho chọn file, tải mẫu và ghi. Kiểm tra lại sau khi đổi file; chỉ hiện nút ghi khi preview có dòng hợp lệ. Lỗi dòng hiển thị số dòng Excel, mã SV, tên cột và lý do tiếng Việt; mã đã tồn tại được bỏ qua.
 
+Preview có dòng hợp lệ hiển thị thông báo đã đọc được dữ liệu và hướng dẫn bước xác nhận. Bảng chỉ liệt kê lỗi/mã đã tồn tại theo API; không dựng bảng rỗng khiến người dùng tưởng file không có dữ liệu. File thiếu cột hiển thị tên cột từ `details.missingColumns`; file không có dòng hợp lệ hiện cảnh báo và không có nút ghi. Sau lỗi ghi, đóng xác nhận và xóa preview cũ; người dùng phải chủ động kiểm tra lại trước khi gửi lần tiếp theo.
+
 Sau khi ghi thành công, hiển thị tổng số đã tạo và nút tải tài khoản vừa tạo. Không hiển thị mật khẩu trực tiếp trên bảng, không lưu vào query cache/localStorage/sessionStorage; người quản trị tải và bàn giao một lần. Tài khoản mới bắt đổi mật khẩu qua Keycloak. Mất bản tải được xử lý bằng reset có quyền.
+
+Đổi qua lại giữa tab Import Excel và Hồ sơ sinh viên giữ trạng thái import trong bộ nhớ của màn. Khi còn tài khoản chưa tải, khóa chọn/xóa file để tránh làm mất kết quả; sau khi tải mới cho chọn lô tiếp theo. Rời màn hoặc tải lại trang vẫn kết thúc bộ nhớ tạm, nên phải tải và bàn giao tài khoản trước khi rời màn. Hướng dẫn nhắc dùng Text cho mã dài hơn 15 chữ số, mã có số 0 đầu và điện thoại.
 
 Màn nhật ký `/admin/audit-logs` giữ bộ lọc hiện tại; mở chi tiết tải dữ liệu trước/sau, lý do và requestId. Người thực hiện trống trong CSDL hiển thị **SYSTEM**; chỉ có quyền xem, không có sửa/xóa. Staff sửa hồ sơ sinh viên không có trường mã SV/họ tên/giới tính; backend vẫn từ chối nếu tự gửi các trường này để thay đổi danh tính.
 

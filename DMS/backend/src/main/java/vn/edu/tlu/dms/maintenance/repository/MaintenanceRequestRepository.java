@@ -26,6 +26,8 @@ public interface MaintenanceRequestRepository
                     AND (:allStatuses = true OR m.status IN (:statuses)) AND (:category IS NULL OR m.category=:category)
                     AND (:severity IS NULL OR m.severity=:severity)
                     AND (m.code ILIKE :q OR m.description ILIKE :q)
+                    AND m.code ILIKE :code
+                    AND m.description ILIKE :description
                     """,
             countQuery =
                     """
@@ -37,6 +39,8 @@ public interface MaintenanceRequestRepository
                     AND (:allStatuses = true OR m.status IN (:statuses)) AND (:category IS NULL OR m.category=:category)
                     AND (:severity IS NULL OR m.severity=:severity)
                     AND (m.code ILIKE :q OR m.description ILIKE :q)
+                    AND m.code ILIKE :code
+                    AND m.description ILIKE :description
                     """,
             nativeQuery = true)
     Page<MaintenanceRequest> searchVisibleRequests(
@@ -50,5 +54,7 @@ public interface MaintenanceRequestRepository
             String category,
             String severity,
             String q,
+            String code,
+            String description,
             Pageable pageable);
 }

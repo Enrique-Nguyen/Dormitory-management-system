@@ -1,0 +1,52 @@
+[rtk] /!\ No hook installed — run `rtk init -g` for automatic token savings
+
+> dms-frontend@0.0.0 lint
+> oxlint
+
+
+  ! eslint(no-control-regex): Unexpected control characters
+    ,-[src/features/crud/excel.ts:38:48]
+ 37 |   link.href = url
+ 38 |   link.download = `${title.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')}.xlsx`
+    :                                                ^^^|^^ ^^^|^^
+    :                                                   |      `-- 'U+001F' is a control character.
+    :                                                   `-- 'U+0000' is a control character.
+ 39 |   document.body.appendChild(link)
+    `----
+  help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+     ,-[src/components/ui/Surface.tsx:188:14]
+ 187 | /** Ba cỡ hộp thoại chuẩn: nhỏ (xác nhận, ghi chú), vừa (biểu mẫu), lớn (chi tiết, nhiều cột). */
+ 188 | export const MODAL_WIDTHS = { small: 560, medium: 720, large: 960 } as const
+     :              ^^^^^^^^^^^^
+ 189 | 
+     `----
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/NotificationInboxPage.tsx:61:5]
+ 59 | 
+ 60 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 61 |     setDraftFrom(from)
+    :     ^^^^^^|^^^^^
+    :           `-- Avoid calling setState() directly within an effect
+ 62 |     setDraftTo(to)
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(preserve-manual-memoization): Existing memoization could not be preserved
+      ,-[src/pages/CrudPage.tsx:1297:6]
+ 1296 |         ),
+ 1297 |     [fields, modalMode, resource, role, visible],
+      :      ^^^|^^
+      :         `-- This dependency may be modified later
+ 1298 |   )
+      `----
+  help: React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. This dependency may be mutated later, which could cause the value to change unexpectedly
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/preserve-manual-memoization
+
+Found 4 warnings and 0 errors.
+Finished in 238ms on 144 files with 116 rules using 20 threads.

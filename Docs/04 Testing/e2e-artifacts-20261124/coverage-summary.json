@@ -1,0 +1,1334 @@
+{
+  "generatedAt": "2026-11-24T17:26:06.941Z",
+  "totalPlanCases": 220,
+  "totalCheckpoints": 276,
+  "totals": {
+    "PASS": 22,
+    "FAIL": 4,
+    "MOT_PHAN": 88,
+    "BLOCKED": 1,
+    "CHUA_CHAY": 105
+  },
+  "cases": [
+    {
+      "id": "E2E-AUTH-01",
+      "group": "AUTH",
+      "status": "PASS",
+      "checkpoints": 15
+    },
+    {
+      "id": "E2E-AUTH-02",
+      "group": "AUTH",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-AUTH-03",
+      "group": "AUTH",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-AUTH-04",
+      "group": "AUTH",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-AUTH-05",
+      "group": "AUTH",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-AUTH-06",
+      "group": "AUTH",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-AUTH-07",
+      "group": "AUTH",
+      "status": "PASS",
+      "checkpoints": 5
+    },
+    {
+      "id": "E2E-AUTH-08",
+      "group": "AUTH",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-AUTH-09",
+      "group": "AUTH",
+      "status": "MOT_PHAN",
+      "checkpoints": 4
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "group": "AUTH",
+      "status": "MOT_PHAN",
+      "checkpoints": 12
+    },
+    {
+      "id": "E2E-AUTH-11",
+      "group": "AUTH",
+      "status": "MOT_PHAN",
+      "checkpoints": 6
+    },
+    {
+      "id": "E2E-AUTH-12",
+      "group": "AUTH",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-AUTH-13",
+      "group": "AUTH",
+      "status": "MOT_PHAN",
+      "checkpoints": 3
+    },
+    {
+      "id": "E2E-AUTH-14",
+      "group": "AUTH",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-AUTH-15",
+      "group": "AUTH",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-AUTH-16",
+      "group": "AUTH",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-AUTH-17",
+      "group": "AUTH",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-AUTH-18",
+      "group": "AUTH",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-ACC-01",
+      "group": "ACC",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-ACC-02",
+      "group": "ACC",
+      "status": "FAIL",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-ACC-03",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ACC-04",
+      "group": "ACC",
+      "status": "PASS",
+      "checkpoints": 5
+    },
+    {
+      "id": "E2E-ACC-05",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ACC-06",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ACC-07",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ACC-08",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ACC-09",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ACC-10",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ACC-11",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ACC-12",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ACC-13",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ACC-14",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ACC-15",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ACC-16",
+      "group": "ACC",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-ACC-17",
+      "group": "ACC",
+      "status": "MOT_PHAN",
+      "checkpoints": 5
+    },
+    {
+      "id": "E2E-ACC-18",
+      "group": "ACC",
+      "status": "FAIL",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-ACC-19",
+      "group": "ACC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-RBAC-01",
+      "group": "RBAC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-RBAC-02",
+      "group": "RBAC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-RBAC-03",
+      "group": "RBAC",
+      "status": "PASS",
+      "checkpoints": 11
+    },
+    {
+      "id": "E2E-RBAC-04",
+      "group": "RBAC",
+      "status": "MOT_PHAN",
+      "checkpoints": 5
+    },
+    {
+      "id": "E2E-RBAC-05",
+      "group": "RBAC",
+      "status": "PASS",
+      "checkpoints": 9
+    },
+    {
+      "id": "E2E-RBAC-06",
+      "group": "RBAC",
+      "status": "MOT_PHAN",
+      "checkpoints": 4
+    },
+    {
+      "id": "E2E-RBAC-07",
+      "group": "RBAC",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-RBAC-08",
+      "group": "RBAC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-RBAC-09",
+      "group": "RBAC",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-RBAC-10",
+      "group": "RBAC",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-RBAC-11",
+      "group": "RBAC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-RBAC-12",
+      "group": "RBAC",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-RBAC-13",
+      "group": "RBAC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-RBAC-14",
+      "group": "RBAC",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-RBAC-15",
+      "group": "RBAC",
+      "status": "MOT_PHAN",
+      "checkpoints": 5
+    },
+    {
+      "id": "E2E-RBAC-16",
+      "group": "RBAC",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-ROOM-01",
+      "group": "ROOM",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ROOM-02",
+      "group": "ROOM",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ROOM-03",
+      "group": "ROOM",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ROOM-04",
+      "group": "ROOM",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ROOM-05",
+      "group": "ROOM",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-ROOM-06",
+      "group": "ROOM",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-ROOM-07",
+      "group": "ROOM",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-ROOM-08",
+      "group": "ROOM",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ROOM-09",
+      "group": "ROOM",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-ROOM-10",
+      "group": "ROOM",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ROOM-11",
+      "group": "ROOM",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-ROOM-12",
+      "group": "ROOM",
+      "status": "MOT_PHAN",
+      "checkpoints": 3
+    },
+    {
+      "id": "E2E-ROOM-13",
+      "group": "ROOM",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-ROOM-14",
+      "group": "ROOM",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ROOM-15",
+      "group": "ROOM",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-ROOM-16",
+      "group": "ROOM",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ROOM-17",
+      "group": "ROOM",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-ROOM-18",
+      "group": "ROOM",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-REG-01",
+      "group": "REG",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-REG-02",
+      "group": "REG",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-REG-03",
+      "group": "REG",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-REG-04",
+      "group": "REG",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-REG-05",
+      "group": "REG",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-REG-06",
+      "group": "REG",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-REG-07",
+      "group": "REG",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-REG-08",
+      "group": "REG",
+      "status": "PASS",
+      "checkpoints": 3
+    },
+    {
+      "id": "E2E-REG-09",
+      "group": "REG",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-REG-10",
+      "group": "REG",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-REG-11",
+      "group": "REG",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-REG-12",
+      "group": "REG",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-REG-13",
+      "group": "REG",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-REG-14",
+      "group": "REG",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-REG-15",
+      "group": "REG",
+      "status": "MOT_PHAN",
+      "checkpoints": 3
+    },
+    {
+      "id": "E2E-REG-16",
+      "group": "REG",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-REG-17",
+      "group": "REG",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-REG-18",
+      "group": "REG",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-REG-19",
+      "group": "REG",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-REG-20",
+      "group": "REG",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-REG-21",
+      "group": "REG",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-REG-22",
+      "group": "REG",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-REG-23",
+      "group": "REG",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-REG-24",
+      "group": "REG",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-01",
+      "group": "CON",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-CON-02",
+      "group": "CON",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-CON-03",
+      "group": "CON",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-CON-04",
+      "group": "CON",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-CON-05",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-06",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-07",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-08",
+      "group": "CON",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-CON-09",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-10",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-11",
+      "group": "CON",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-CON-12",
+      "group": "CON",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-CON-13",
+      "group": "CON",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-CON-14",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-15",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-16",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-17",
+      "group": "CON",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-CON-18",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-19",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-20",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-21",
+      "group": "CON",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-CON-22",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-23",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-24",
+      "group": "CON",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-CON-25",
+      "group": "CON",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-MNT-01",
+      "group": "MNT",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-MNT-02",
+      "group": "MNT",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-MNT-03",
+      "group": "MNT",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-MNT-04",
+      "group": "MNT",
+      "status": "MOT_PHAN",
+      "checkpoints": 3
+    },
+    {
+      "id": "E2E-MNT-05",
+      "group": "MNT",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-MNT-06",
+      "group": "MNT",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-MNT-07",
+      "group": "MNT",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-MNT-08",
+      "group": "MNT",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-MNT-09",
+      "group": "MNT",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-MNT-10",
+      "group": "MNT",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-MNT-11",
+      "group": "MNT",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-MNT-12",
+      "group": "MNT",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-MNT-13",
+      "group": "MNT",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-MNT-14",
+      "group": "MNT",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-MNT-15",
+      "group": "MNT",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-MNT-16",
+      "group": "MNT",
+      "status": "MOT_PHAN",
+      "checkpoints": 3
+    },
+    {
+      "id": "E2E-MNT-17",
+      "group": "MNT",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-MNT-18",
+      "group": "MNT",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-MNT-19",
+      "group": "MNT",
+      "status": "MOT_PHAN",
+      "checkpoints": 3
+    },
+    {
+      "id": "E2E-MNT-20",
+      "group": "MNT",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-BIL-01",
+      "group": "BIL",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-BIL-02",
+      "group": "BIL",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-BIL-03",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-BIL-04",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-BIL-05",
+      "group": "BIL",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-BIL-06",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-BIL-07",
+      "group": "BIL",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-BIL-08",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-BIL-09",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-BIL-10",
+      "group": "BIL",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-BIL-11",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-BIL-12",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-BIL-13",
+      "group": "BIL",
+      "status": "BLOCKED",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-BIL-14",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-BIL-15",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-BIL-16",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 3
+    },
+    {
+      "id": "E2E-BIL-17",
+      "group": "BIL",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-BIL-18",
+      "group": "BIL",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-BIL-19",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-BIL-20",
+      "group": "BIL",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-BIL-21",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-BIL-22",
+      "group": "BIL",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-BIL-23",
+      "group": "BIL",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-BIL-24",
+      "group": "BIL",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-BIL-25",
+      "group": "BIL",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-BIL-26",
+      "group": "BIL",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-BIL-27",
+      "group": "BIL",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-SUM-01",
+      "group": "SUM",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-SUM-02",
+      "group": "SUM",
+      "status": "MOT_PHAN",
+      "checkpoints": 3
+    },
+    {
+      "id": "E2E-SUM-03",
+      "group": "SUM",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-SUM-04",
+      "group": "SUM",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-SUM-05",
+      "group": "SUM",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-SUM-06",
+      "group": "SUM",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-SUM-07",
+      "group": "SUM",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-SUM-08",
+      "group": "SUM",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-SUM-09",
+      "group": "SUM",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-NOT-01",
+      "group": "NOT",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-NOT-02",
+      "group": "NOT",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-NOT-03",
+      "group": "NOT",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-NOT-04",
+      "group": "NOT",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-NOT-05",
+      "group": "NOT",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-NOT-06",
+      "group": "NOT",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-NOT-07",
+      "group": "NOT",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-NOT-08",
+      "group": "NOT",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-NOT-09",
+      "group": "NOT",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-JOB-01",
+      "group": "JOB",
+      "status": "PASS",
+      "checkpoints": 3
+    },
+    {
+      "id": "E2E-JOB-02",
+      "group": "JOB",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-JOB-03",
+      "group": "JOB",
+      "status": "PASS",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-JOB-04",
+      "group": "JOB",
+      "status": "PASS",
+      "checkpoints": 3
+    },
+    {
+      "id": "E2E-JOB-05",
+      "group": "JOB",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-JOB-06",
+      "group": "JOB",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-JOB-07",
+      "group": "JOB",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-UI-01",
+      "group": "UI",
+      "status": "MOT_PHAN",
+      "checkpoints": 4
+    },
+    {
+      "id": "E2E-UI-02",
+      "group": "UI",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-UI-03",
+      "group": "UI",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-UI-04",
+      "group": "UI",
+      "status": "PASS",
+      "checkpoints": 5
+    },
+    {
+      "id": "E2E-UI-05",
+      "group": "UI",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-UI-06",
+      "group": "UI",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-UI-07",
+      "group": "UI",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-UI-08",
+      "group": "UI",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-UI-09",
+      "group": "UI",
+      "status": "MOT_PHAN",
+      "checkpoints": 6
+    },
+    {
+      "id": "E2E-UI-10",
+      "group": "UI",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-UI-11",
+      "group": "UI",
+      "status": "FAIL",
+      "checkpoints": 10
+    },
+    {
+      "id": "E2E-UI-12",
+      "group": "UI",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-UI-13",
+      "group": "UI",
+      "status": "MOT_PHAN",
+      "checkpoints": 4
+    },
+    {
+      "id": "E2E-UI-14",
+      "group": "UI",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-SEC-01",
+      "group": "SEC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-SEC-02",
+      "group": "SEC",
+      "status": "MOT_PHAN",
+      "checkpoints": 2
+    },
+    {
+      "id": "E2E-SEC-03",
+      "group": "SEC",
+      "status": "FAIL",
+      "checkpoints": 9
+    },
+    {
+      "id": "E2E-SEC-04",
+      "group": "SEC",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-SEC-05",
+      "group": "SEC",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-SEC-06",
+      "group": "SEC",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-SEC-07",
+      "group": "SEC",
+      "status": "MOT_PHAN",
+      "checkpoints": 1
+    },
+    {
+      "id": "E2E-SEC-08",
+      "group": "SEC",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-XF-01",
+      "group": "XF",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-XF-02",
+      "group": "XF",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-XF-03",
+      "group": "XF",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-XF-04",
+      "group": "XF",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-XF-05",
+      "group": "XF",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    },
+    {
+      "id": "E2E-XF-06",
+      "group": "XF",
+      "status": "CHUA_CHAY",
+      "checkpoints": 0
+    }
+  ]
+}

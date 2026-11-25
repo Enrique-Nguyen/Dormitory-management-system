@@ -10,11 +10,12 @@ export const SummerChoiceAction = {
   EDIT: 'edit',
 } as const
 
-/** Trạng thái lựa chọn hè (khớp CHECK `summer_choice.status`: chỉ ba giá trị này). */
+/** Trạng thái lựa chọn hè (khớp CHECK `summer_choice.status`, V14 thêm CANCELLED khi sinh viên rút). */
 export const SummerChoiceStatus = {
   PENDING: 'PENDING',
   APPROVED: 'APPROVED',
   REJECTED: 'REJECTED',
+  CANCELLED: 'CANCELLED',
 } as const
 
 /** Phương án hè (khớp `summer_choice.choice`). */

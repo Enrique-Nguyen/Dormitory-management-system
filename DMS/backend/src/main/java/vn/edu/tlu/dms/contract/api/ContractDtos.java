@@ -28,18 +28,6 @@ public final class ContractDtos {
         private Label() {}
     }
 
-    /**
-     * Nguồn yêu cầu gia hạn và loại đối tượng timeline tương ứng; giá trị khớp CHECK của
-     * contract_extension_request.source và status_history.entity_type.
-     */
-    public static final class ExtensionSource {
-        public static final String STUDENT = "STUDENT";
-        public static final String SUMMER_STAY = "SUMMER_STAY";
-        public static final String ENTITY_TYPE = "EXTENSION";
-
-        private ExtensionSource() {}
-    }
-
     /** Không có id là tạo; có id là sửa đúng hợp đồng PENDING đã tồn tại. */
     public record Save(
             @Positive Long id,
@@ -93,7 +81,48 @@ public final class ContractDtos {
             List<AssignmentInfo> assignments,
             PendingRequestsInfo pendingRequests,
             Long openStorageRecordId,
-            MoveOutInfo moveOut) {
+            MoveOutInfo moveOut,
+            Summary summary) {
+
+        /** Bản 29 trường trước khi có khối tóm tắt; khối tóm tắt để trống. */
+        public Response(
+                Long id,
+                String code,
+                Long studentId,
+                Long applicationId,
+                LocalDate startDate,
+                LocalDate endDate,
+                String status,
+                OffsetDateTime activationDeadline,
+                Long depositRequired,
+                OffsetDateTime activatedAt,
+                String statusReason,
+                List<String> allowedActions,
+                List<StatusHistoryService.Entry> timeline,
+                String studentCode,
+                String studentName,
+                List<String> labels,
+                Long daysRemaining,
+                Long depositBalance,
+                CurrentBed currentAssignment,
+                Long pendingExtensionRequestId,
+                Long pendingTransferRequestId,
+                Long pendingSummerChoiceId,
+                StudentInfo student,
+                DepositInfo deposit,
+                ActorInfo activatedBy,
+                List<AssignmentInfo> assignments,
+                PendingRequestsInfo pendingRequests,
+                Long openStorageRecordId,
+                MoveOutInfo moveOut) {
+            this(
+                    id, code, studentId, applicationId, startDate, endDate, status,
+                    activationDeadline, depositRequired, activatedAt, statusReason, allowedActions,
+                    timeline, studentCode, studentName, labels, daysRemaining, depositBalance,
+                    currentAssignment, pendingExtensionRequestId, pendingTransferRequestId,
+                    pendingSummerChoiceId, student, deposit, activatedBy, assignments,
+                    pendingRequests, openStorageRecordId, moveOut, null);
+        }
 
         /** Bản danh sách/không chi tiết: giữ 22 trường phẳng, các trường bổ sung để trống. */
         public Response(
@@ -148,9 +177,25 @@ public final class ContractDtos {
                     null,
                     null,
                     null,
+                    null,
                     null);
         }
     }
+
+    /**
+     * Tóm tắt giá và chỗ ở của hợp đồng để hiển thị ngay ở danh sách. Phòng và giá lấy từ phân
+     * phòng đang mở, nếu không còn thì lấy lần phân phòng gần nhất; đơn giá là ảnh chụp lúc phân
+     * phòng. {@code depositDue} là cọc đã chốt khi kích hoạt, hoặc mức cọc của tòa khi chưa kích hoạt.
+     */
+    public record Summary(
+            String placement,
+            String roomTypeName,
+            Long priceMain,
+            Long priceSummer,
+            Long depositDue,
+            String unitName,
+            String buildingName,
+            Integer floor) {}
 
     /** Sinh viên của hợp đồng trong chi tiết (API 4.5); gender đọc từ student_profile. */
     public record StudentInfo(Long id, String studentCode, String fullName, String gender) {}

@@ -4,10 +4,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Facility;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Gender;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -46,36 +50,56 @@ public final class AccountDtos {
             @Positive Long id,
             @Size(max = 50) String username,
             @Size(max = 100) String fullName,
-            @Size(max = 20) String phone,
+            @Size(max = 20)
+                    @Pattern(
+                            regexp = Facility.PHONE_PATTERN,
+                            message = ValidationMessage.PHONE_INVALID)
+                    String phone,
             @Pattern(regexp = Role.MANAGEMENT_ROLE_PATTERN) String role,
             @Positive Long managementUnitId,
             @Size(max = 20) String studentCode,
             @Pattern(regexp = Gender.PATTERN) String gender,
             LocalDate dateOfBirth,
-            @Size(max = 100) String faculty,
-            @Size(max = 10) String cohort) {}
+            @Positive Long schoolId,
+            @Positive Long facultyId,
+            @Positive Long cohortId,
+            @Positive Long hometownId) {}
 
     public record Create(
             @NotBlank @Size(max = 50) String username,
             @NotBlank @Size(max = 100) String fullName,
-            @Size(max = 20) String phone,
+            @Size(max = 20)
+                    @Pattern(
+                            regexp = Facility.PHONE_PATTERN,
+                            message = ValidationMessage.PHONE_INVALID)
+                    String phone,
             @NotBlank @Pattern(regexp = Role.MANAGEMENT_ROLE_PATTERN) String role,
             Long managementUnitId) {}
 
     public record Update(
             @Size(max = 100) String fullName,
-            @Size(max = 20) String phone,
+            @Size(max = 20)
+                    @Pattern(
+                            regexp = Facility.PHONE_PATTERN,
+                            message = ValidationMessage.PHONE_INVALID)
+                    String phone,
             @Pattern(regexp = Role.MANAGEMENT_ROLE_PATTERN) String role,
             Long managementUnitId,
             @Size(max = 20) String studentCode,
             @Pattern(regexp = Gender.PATTERN) String gender,
             LocalDate dateOfBirth,
-            @Size(max = 100) String faculty,
-            @Size(max = 10) String cohort) {}
+            @Positive Long schoolId,
+            @Positive Long facultyId,
+            @Positive Long cohortId,
+            @Positive Long hometownId) {}
 
     public record ProfileInput(
-            @Size(max = 20) String phone,
-            @Size(max = 200) String hometown,
+            @Size(max = 20)
+                    @Pattern(
+                            regexp = Facility.PHONE_PATTERN,
+                            message = ValidationMessage.PHONE_INVALID)
+                    String phone,
+            @Positive Long hometownId,
             @Size(max = 200) String emergencyContact) {}
 
     public record Profile(
@@ -91,10 +115,26 @@ public final class AccountDtos {
             String studentCode,
             String gender,
             LocalDate dateOfBirth,
+            Long schoolId,
+            Long facultyId,
+            Long cohortId,
+            Long hometownId,
+            String schoolName,
             String faculty,
             String cohort,
             String hometown,
             String emergencyContact) {}
+
+    /** Sở thích giao diện của chính tài khoản đang đăng nhập; version 0 khi chưa có bản ghi. */
+    public record Preference(
+            String themeMode, String themePreset, boolean tableDense, long version) {}
+
+    /** Chỉ nhận preset đã duyệt; version null khi lưu lần đầu, có version khi sửa. */
+    public record PreferenceInput(
+            @NotBlank @Pattern(regexp = DmsConstants.Preference.MODE_PATTERN) String themeMode,
+            @NotBlank @Pattern(regexp = DmsConstants.Preference.PRESET_PATTERN) String themePreset,
+            @NotNull Boolean tableDense,
+            @PositiveOrZero Long version) {}
 
     public record TemporaryPassword(Long userId, String temporaryPassword) {
         @Override

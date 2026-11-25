@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type { ApiError } from '../services/api/client'
-import { formatDate, formatDateTime } from './format'
+import { formatDate, formatDateTime, formatMoney } from './format'
 
 // errorCode → câu tiếng Việt (UI 27.2, danh mục mã ở API Spec mục 5). Không parse chuỗi message.
 // Mỗi câu nói rõ nguyên nhân → cách xử lý (Rule 06). Thêm mã vào đây cùng lúc với danh mục API Spec.
@@ -8,8 +8,14 @@ import { formatDate, formatDateTime } from './format'
 type Details = Record<string, unknown>
 
 const messages: Record<string, (d: Details) => string> = {
-  IMPORT_FILE_INVALID: () =>
-    'File import không hợp lệ. Dùng file mẫu .xlsx, kiểm tra tên cột và giới hạn 5.000 dòng; không dùng công thức.',
+  IMPORT_FILE_INVALID: (d) => {
+    const missing = Array.isArray(d.missingColumns)
+      ? d.missingColumns.filter((value): value is string => typeof value === 'string')
+      : []
+    return missing.length
+      ? `File import thiếu cột: ${missing.join(', ')}. Dùng tên cột trong file mẫu.`
+      : 'File import không hợp lệ. Dùng file mẫu .xlsx, kiểm tra tên cột và giới hạn 5.000 dòng có dữ liệu; bỏ các tiêu đề trùng.'
+  },
   // 5.1 Chung
   IDENTITY_NOT_LINKED: () =>
     'Tài khoản đăng nhập chưa được cấp hồ sơ DMS. Liên hệ quản trị viên.',
@@ -64,6 +70,10 @@ const messages: Record<string, (d: Details) => string> = {
   FILE_TOO_LARGE: (d) =>
     `File vượt quá ${d.maxMb ?? ''} MB. Vui lòng chọn file nhỏ hơn.`,
   DUPLICATE_VALUE: () => 'Giá trị này đã tồn tại. Vui lòng nhập giá trị khác.',
+  FLOOR_IN_USE: () => 'Không thể giảm số tầng: vẫn còn tầng hoặc phòng ở các tầng cao hơn.',
+  FLOOR_OUT_OF_RANGE: () => 'Số tầng nằm ngoài quy mô của tòa. Kiểm tra số tầng và tùy chọn tầng trệt của tòa.',
+  ACADEMIC_YEAR_OVERLAP: () => 'Khoảng thời gian của năm học bị trùng với một năm học khác.',
+  USER_UNIT_MISMATCH: () => 'Người phụ trách phải là nhân viên thuộc đúng đơn vị quản lý.',
   METHOD_NOT_ALLOWED: () =>
     'Thao tác không được hỗ trợ. Hãy tải lại trang rồi thử lại.',
   UNSUPPORTED_MEDIA_TYPE: () =>
@@ -110,9 +120,13 @@ const messages: Record<string, (d: Details) => string> = {
   BED_NOT_AVAILABLE: (d) =>
     `Giường ${d.bedCode ?? ''} hoặc phòng đang không hoạt động. Vui lòng chọn giường khác.`,
   GENDER_MISMATCH: (d) =>
-    `Phòng${d.roomCode ? ` ${String(d.roomCode)}` : ''} dành cho giới tính khác, không phù hợp với sinh viên. Chọn phòng khác.`,
+    d.roomCode
+      ? `Phòng ${String(d.roomCode)} dành cho giới tính khác, không phù hợp với sinh viên. Chọn phòng khác.`
+      : 'Giới tính không khớp với đối tượng của tòa, giới tính tầng hoặc các phòng hiện có.',
   STUDENT_ALREADY_ASSIGNED: () =>
     'Sinh viên đã có chỗ ở hoặc đang giữ chỗ. Tải lại trang để xem phân phòng hiện tại.',
+  BED_UNIT_MISMATCH: () =>
+    'Giường không thuộc đơn vị nguyện vọng của đơn. Chọn giường trong đơn vị sinh viên đã đăng ký.',
   TRANSFER_CROSS_UNIT: () =>
     'Chỉ chuyển sang giường cùng đơn vị quản lý. Chọn giường khác.',
   SAME_BED: () => 'Giường đích trùng giường hiện tại. Chọn giường khác.',
@@ -166,6 +180,24 @@ const messages: Record<string, (d: Details) => string> = {
     'Tài khoản này đã được liên kết với một danh tính đăng nhập khác. Hãy kiểm tra lại với quản trị viên.',
   BOOTSTRAP_USERNAME_IN_USE: () =>
     'Tên đăng nhập khởi tạo đã tồn tại trên hệ thống định danh. Hãy dùng tên khác hoặc liên hệ quản trị viên.',
+  // 5.6 Hợp đồng và kích hoạt
+  DEPOSIT_AMOUNT_MISMATCH: (d) =>
+    typeof d.required === 'number' && d.required > 0
+      ? `Tiền cọc phải đúng ${formatMoney(d.required)} theo mức cọc của tòa. Hãy sửa số tiền rồi xác nhận lại.`
+      : 'Tiền cọc không khớp mức cọc của tòa. Hãy tải lại hợp đồng để lấy mức cọc hiện hành.',
+  CONTRACT_ACTIVATION_EXPIRED: () =>
+    'Hợp đồng đã quá hạn kích hoạt nên không nhận phòng được. Giữ chỗ sẽ bị hủy; hãy lập lại quyền ở cho sinh viên.',
+  CONTRACT_AUTO_CANCELLED: () =>
+    'Hợp đồng đã được hệ thống tự hủy do quá hạn kích hoạt. Hãy tải lại danh sách hợp đồng.',
+  CONTRACT_PERIOD_OVERLAP: (d) =>
+    `Khoảng thời gian mới trùng với hợp đồng${typeof d.contractCode === 'string' ? ` ${d.contractCode}` : ' khác'} của sinh viên. Hãy chọn ngày kết thúc khác.`,
+  APPLICATION_NOT_APPROVED: () =>
+    'Đơn đăng ký chưa được duyệt nên chưa tạo được hợp đồng. Hãy duyệt đơn trước.',
+  NO_HOLD_ASSIGNMENT: () =>
+    'Không còn giữ chỗ (HOLD) nào cho hồ sơ này. Hãy phân lại giường trước khi xác nhận.',
+  // 5.7 Hóa đơn
+  ADJUSTMENT_INVALID: (d) =>
+    `Điều chỉnh hóa đơn không hợp lệ${typeof d.totalAfter === 'number' ? ` (tổng sau điều chỉnh ${formatMoney(d.totalAfter)})` : ''}. Chỉ điều chỉnh hóa đơn đã thanh toán và tổng tiền không được âm.`,
 }
 
 export function errorMessage(error: unknown): string {

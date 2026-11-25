@@ -1,7 +1,10 @@
 package vn.edu.tlu.dms.contract.service;
 
+import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.contract.api.ContractDtos;
+
+import java.util.Map;
 
 /**
  * Khai báo CRUD hồ sơ hợp đồng và yêu cầu lưu trú đang chờ xử lý. ADMIN có quyền trên mọi đơn vị;
@@ -33,7 +36,7 @@ public interface ContractCrudService {
      * @param mine true chỉ lấy tài khoản hiện tại; endpoint quyết định, không lấy từ client
      * @return trang yêu cầu lưu trú được phép xem
      */
-    Object searchStayRequestsByPage(boolean extension, SearchRequest input, boolean mine);
+    PageResponse<Map<String, Object>> searchStayRequestsByPage(boolean extension, SearchRequest input, boolean mine);
 
     /**
      * Lấy chi tiết yêu cầu gia hạn sau khi kiểm tra quyền xem hợp đồng, kèm ngày cũ/mới, hành động

@@ -21,3 +21,8 @@ npm-debug.log*
 Thumbs.db
 desktop.ini
 ~$*
+
+# Playwright
+/DMS/frontend/e2e/.auth/
+playwright-report/
+test-results/

@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.security.RequirePrivilege;
 import vn.edu.tlu.dms.contract.service.ContractCrudService;
+
+import java.util.Map;
 
 /** Chỉ CRUD cơ bản, không chứa các lệnh kích hoạt, thu cọc, phân giường hoặc xét duyệt. */
 @RestController
@@ -40,25 +43,25 @@ public class ContractCrudController {
 
     @RequirePrivilege(Permission.CONTRACT_EXTENSION_READ)
     @PostMapping("/api/extension-requests/search-by-page")
-    public Object searchExtensionsByPage(@Valid @RequestBody SearchRequest input) {
+    public PageResponse<Map<String, Object>> searchExtensionsByPage(@Valid @RequestBody SearchRequest input) {
         return service.searchStayRequestsByPage(true, input, false);
     }
 
     @RequirePrivilege(Permission.CONTRACT_EXTENSION_READ)
     @PostMapping("/api/me/extension-requests/search-by-page")
-    public Object searchMyExtensionsByPage(@Valid @RequestBody SearchRequest input) {
+    public PageResponse<Map<String, Object>> searchMyExtensionsByPage(@Valid @RequestBody SearchRequest input) {
         return service.searchStayRequestsByPage(true, input, true);
     }
 
     @RequirePrivilege(Permission.ROOM_TRANSFER_READ)
     @PostMapping("/api/transfer-requests/search-by-page")
-    public Object searchTransfersByPage(@Valid @RequestBody SearchRequest input) {
+    public PageResponse<Map<String, Object>> searchTransfersByPage(@Valid @RequestBody SearchRequest input) {
         return service.searchStayRequestsByPage(false, input, false);
     }
 
     @RequirePrivilege(Permission.ROOM_TRANSFER_READ)
     @PostMapping("/api/me/transfer-requests/search-by-page")
-    public Object searchMyTransfersByPage(@Valid @RequestBody SearchRequest input) {
+    public PageResponse<Map<String, Object>> searchMyTransfersByPage(@Valid @RequestBody SearchRequest input) {
         return service.searchStayRequestsByPage(false, input, true);
     }
 

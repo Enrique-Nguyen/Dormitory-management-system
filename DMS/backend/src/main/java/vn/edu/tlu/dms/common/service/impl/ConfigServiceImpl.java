@@ -88,6 +88,10 @@ public class ConfigServiceImpl implements ConfigService {
                                 builder.like(builder.lower(row.get("key")), keyword),
                                 builder.like(builder.lower(row.get("description")), keyword),
                                 builder.like(builder.lower(row.get("value")), keyword));
+        if (input.key() != null && !input.key().isBlank()) {
+            specification = specification.and(
+                    (row, query, builder) -> builder.equal(row.get("key"), input.key()));
+        }
         return PageResponse.from(
                 repository
                         .findAll(specification, pageable)
@@ -118,7 +122,7 @@ public class ConfigServiceImpl implements ConfigService {
     public ConfigValue saveOrUpdate(String key, String value) {
         guard.requirePermission(Permission.CONFIG_UPDATE);
         if (key == null || key.isBlank()) {
-            throw BusinessException.invalid("key", "Phải chọn khóa cấu hình đã tồn tại");
+            throw BusinessException.invalid(ApiField.KEY, ValidationMessage.CONFIG_KEY_EXISTING);
         }
         var row = repository.findById(key).orElseThrow(BusinessException::notFound);
         try {

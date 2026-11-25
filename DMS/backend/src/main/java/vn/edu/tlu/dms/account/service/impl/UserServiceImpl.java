@@ -17,12 +17,15 @@ import vn.edu.tlu.dms.account.repository.AppUserRepository;
 import vn.edu.tlu.dms.account.repository.StudentProfileRepository;
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.account.service.AuthService;
+import vn.edu.tlu.dms.account.service.CatalogService;
 import vn.edu.tlu.dms.account.service.IdentityAccountService;
 import vn.edu.tlu.dms.account.service.UserService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Catalog;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Facility;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
@@ -64,6 +67,8 @@ public class UserServiceImpl implements UserService {
 
     private final IdentityAccountService identities;
 
+    private final CatalogService catalogs;
+
     private static final SecureRandom RANDOM = new SecureRandom();
 
     public UserServiceImpl(
@@ -74,7 +79,8 @@ public class UserServiceImpl implements UserService {
             ScopeGuard guard,
             AuditService audit,
             AuthService authService,
-            IdentityAccountService identities) {
+            IdentityAccountService identities,
+            CatalogService catalogs) {
         this.users = users;
         this.students = students;
         this.references = references;
@@ -83,6 +89,7 @@ public class UserServiceImpl implements UserService {
         this.audit = audit;
         this.authService = authService;
         this.identities = identities;
+        this.catalogs = catalogs;
     }
 
     @Override
@@ -96,7 +103,7 @@ public class UserServiceImpl implements UserService {
         Boolean locked = input.locked();
         guard.requirePermission(Permission.USER_READ);
         if (managementUnitId != null && managementUnitId <= 0) {
-            throw BusinessException.invalid("managementUnitId", "ID đơn vị phải lớn hơn 0");
+            throw BusinessException.invalid(ApiField.MANAGEMENT_UNIT_ID, ValidationMessage.UNIT_ID_POSITIVE);
         }
         var pageable =
                 PageQuery.of(
@@ -145,8 +152,10 @@ public class UserServiceImpl implements UserService {
             rejectStudentFieldOnCreate("studentCode", input.studentCode());
             rejectStudentFieldOnCreate("gender", input.gender());
             rejectStudentFieldOnCreate("dateOfBirth", input.dateOfBirth());
-            rejectStudentFieldOnCreate("faculty", input.faculty());
-            rejectStudentFieldOnCreate("cohort", input.cohort());
+            rejectStudentFieldOnCreate(ApiField.SCHOOL_ID, input.schoolId());
+            rejectStudentFieldOnCreate(ApiField.FACULTY_ID, input.facultyId());
+            rejectStudentFieldOnCreate(ApiField.COHORT_ID, input.cohortId());
+            rejectStudentFieldOnCreate(ApiField.HOMETOWN_ID, input.hometownId());
             String username = trimRequiredText(input.username(), "username");
             String fullName = trimRequiredText(input.fullName(), "fullName");
             String role = trimRequiredText(input.role(), "role");
@@ -160,7 +169,7 @@ public class UserServiceImpl implements UserService {
         // Tên đăng nhập bất biến ở API tài khoản; mã sinh viên có luồng kiểm soát riêng.
         if (input.username() != null) {
             throw BusinessException.invalid(
-                    "username", "Không được cập nhật tên đăng nhập qua API tài khoản");
+                    ApiField.USERNAME, ValidationMessage.USERNAME_IMMUTABLE);
         }
         return update(
                 input.id(),
@@ -172,8 +181,10 @@ public class UserServiceImpl implements UserService {
                         input.studentCode(),
                         input.gender(),
                         input.dateOfBirth(),
-                        input.faculty(),
-                        input.cohort()));
+                        input.schoolId(),
+                        input.facultyId(),
+                        input.cohortId(),
+                        input.hometownId()));
     }
 
     private TemporaryPassword create(Create input) {
@@ -182,13 +193,13 @@ public class UserServiceImpl implements UserService {
         if (unitRole) {
             references.requireUnit(input.managementUnitId());
         } else if (input.managementUnitId() != null) {
-            throw BusinessException.invalid("managementUnitId", "Admin không gắn đơn vị");
+            throw BusinessException.invalid(ApiField.MANAGEMENT_UNIT_ID, ValidationMessage.ADMIN_NO_UNIT);
         }
         var u = new AppUser();
         String temporary = generateTemporaryPassword();
         u.setUsername(input.username().trim());
         u.setFullName(trimRequiredText(input.fullName(), "fullName"));
-        u.setPhone(input.phone());
+        u.setPhone(normalizeOptionalPhone(input.phone()));
         u.setRole(input.role());
         u.setManagementUnitId(input.managementUnitId());
         u.setCrossUnitAccess(false);
@@ -220,10 +231,10 @@ public class UserServiceImpl implements UserService {
         Long previousUnitId = u.getManagementUnitId();
         if (input.role() != null && !input.role().equals(previousRole)) {
             if (Role.STUDENT.equals(previousRole)) {
-                throw BusinessException.invalid("role", "Hồ sơ sinh viên giữ vai trò STUDENT");
+                throw BusinessException.invalid(ApiField.ROLE, ValidationMessage.STUDENT_ROLE_FIXED);
             }
             if (id.equals(current.get().id())) {
-                throw BusinessException.invalid("role", "Không đổi vai trò tài khoản đang sử dụng");
+                throw BusinessException.invalid(ApiField.ROLE, ValidationMessage.ROLE_IN_USE_IMMUTABLE);
             }
             u.setRole(input.role());
             if (Role.ADMIN.equals(input.role())) {
@@ -232,7 +243,7 @@ public class UserServiceImpl implements UserService {
                 u.setCrossUnitAccess(false);
             } else if (u.getManagementUnitId() == null && input.managementUnitId() == null) {
                 throw BusinessException.invalid(
-                        "managementUnitId", "Staff/KTV phải có đơn vị quản lý");
+                        ApiField.MANAGEMENT_UNIT_ID, ValidationMessage.UNIT_REQUIRED_FOR_ROLE);
             }
             if (!Role.STAFF.equals(input.role())) {
                 u.setCrossUnitAccess(false);
@@ -242,11 +253,11 @@ public class UserServiceImpl implements UserService {
             u.setFullName(trimRequiredText(input.fullName(), "fullName"));
         }
         if (input.phone() != null) {
-            u.setPhone(input.phone().trim());
+            u.setPhone(normalizeOptionalPhone(input.phone()));
         }
         if (input.managementUnitId() != null && !Role.ADMIN.equals(input.role())) {
             if (!Set.of(Role.STAFF, Role.TECHNICIAN).contains(u.getRole())) {
-                throw BusinessException.invalid("managementUnitId", "Vai trò không có đơn vị");
+                throw BusinessException.invalid(ApiField.MANAGEMENT_UNIT_ID, ValidationMessage.ROLE_HAS_NO_UNIT);
             }
             references.requireUnit(input.managementUnitId());
             u.setManagementUnitId(input.managementUnitId());
@@ -263,19 +274,25 @@ public class UserServiceImpl implements UserService {
             if (input.dateOfBirth() != null) {
                 p.setDateOfBirth(input.dateOfBirth());
             }
-            if (input.faculty() != null) {
-                p.setFaculty(input.faculty());
-            }
-            if (input.cohort() != null) {
-                p.setCohort(input.cohort());
-            }
+            var selected =
+                    StudentCatalogReferences.merge(
+                            catalogs,
+                            new StudentCatalogReferences(
+                                    p.getSchoolId(), p.getFacultyId(), p.getCohortId(), p.getHometownId()),
+                            input.schoolId(), input.facultyId(), input.cohortId(), input.hometownId());
+            p.setSchoolId(selected.schoolId());
+            p.setFacultyId(selected.facultyId());
+            p.setCohortId(selected.cohortId());
+            p.setHometownId(selected.hometownId());
             students.saveAndFlush(p);
         } else if (input.studentCode() != null
                 || input.gender() != null
                 || input.dateOfBirth() != null
-                || input.faculty() != null
-                || input.cohort() != null) {
-            throw BusinessException.invalid("studentCode", "Chỉ áp dụng cho sinh viên");
+                || input.schoolId() != null
+                || input.facultyId() != null
+                || input.cohortId() != null
+                || input.hometownId() != null) {
+            throw BusinessException.invalid(ApiField.STUDENT_CODE, ValidationMessage.STUDENT_ONLY);
         }
         // Phiên đã mở giữ thông tin đăng nhập/phạm vi cũ, nên phải đăng nhập lại khi đổi chúng.
         if (!Objects.equals(previousUsername, u.getUsername())
@@ -301,7 +318,7 @@ public class UserServiceImpl implements UserService {
     public void lock(Long id, String reason) {
         guard.requirePermission(Permission.USER_LOCK);
         if (id.equals(current.get().id())) {
-            throw BusinessException.invalid(ApiField.ID, "Không tự khóa tài khoản đang dùng");
+            throw BusinessException.invalid(ApiField.ID, ValidationMessage.SELF_LOCK_FORBIDDEN);
         }
         var u = authService.lockAccount(id);
         u.setLocked(true);
@@ -387,19 +404,22 @@ public class UserServiceImpl implements UserService {
         // kiểm tra lại phiên sau khi chờ khóa tài khoản
         current.get();
         if (input.phone() != null) {
-            u.setPhone(input.phone().trim());
+            u.setPhone(normalizeOptionalPhone(input.phone()));
         }
         var p = students.findById(u.getId()).orElse(null);
         if (p != null) {
-            if (input.hometown() != null) {
-                p.setHometown(input.hometown().trim());
+            if (input.hometownId() != null) {
+                StudentCatalogReferences.reference(
+                        catalogs, Catalog.HOMETOWNS, ApiField.HOMETOWN_ID,
+                        input.hometownId(), p.getHometownId());
+                p.setHometownId(input.hometownId());
             }
             if (input.emergencyContact() != null) {
                 p.setEmergencyContact(input.emergencyContact().trim());
             }
             students.saveAndFlush(p);
-        } else if (input.hometown() != null || input.emergencyContact() != null) {
-            throw BusinessException.invalid("hometown", "Chỉ áp dụng cho sinh viên");
+        } else if (input.hometownId() != null || input.emergencyContact() != null) {
+            throw BusinessException.invalid(ApiField.HOMETOWN_ID, ValidationMessage.STUDENT_ONLY);
         }
         users.saveAndFlush(u);
         return toUserProfileResponse(u);
@@ -420,9 +440,14 @@ public class UserServiceImpl implements UserService {
                 p == null ? null : p.getStudentCode(),
                 p == null ? null : p.getGender(),
                 p == null ? null : p.getDateOfBirth(),
-                p == null ? null : p.getFaculty(),
-                p == null ? null : p.getCohort(),
-                p == null ? null : p.getHometown(),
+                p == null ? null : p.getSchoolId(),
+                p == null ? null : p.getFacultyId(),
+                p == null ? null : p.getCohortId(),
+                p == null ? null : p.getHometownId(),
+                p == null ? null : StudentCatalogReferences.label(catalogs, Catalog.SCHOOLS, p.getSchoolId()),
+                p == null ? null : StudentCatalogReferences.label(catalogs, Catalog.FACULTIES, p.getFacultyId()),
+                p == null ? null : StudentCatalogReferences.label(catalogs, Catalog.COHORTS, p.getCohortId()),
+                p == null ? null : StudentCatalogReferences.label(catalogs, Catalog.HOMETOWNS, p.getHometownId()),
                 p == null ? null : p.getEmergencyContact());
     }
 
@@ -437,11 +462,23 @@ public class UserServiceImpl implements UserService {
         return value.trim();
     }
 
+    /** Chuẩn hóa và kiểm tra SĐT tùy chọn; chuỗi rỗng dùng để xóa giá trị hiện có. */
+    private String normalizeOptionalPhone(String phone) {
+        if (phone == null) {
+            return null;
+        }
+        String trimmed = phone.trim();
+        if (!trimmed.matches(Facility.PHONE_PATTERN)) {
+            throw BusinessException.invalid(ApiField.PHONE, ValidationMessage.PHONE_INVALID);
+        }
+        return trimmed;
+    }
+
     /** Trả lỗi đúng tên trường khi client gửi dữ liệu sinh viên vào nhánh tạo cán bộ. */
     private void rejectStudentFieldOnCreate(String field, Object value) {
         if (value != null) {
             throw BusinessException.invalid(
-                    field, "Trường hồ sơ sinh viên không áp dụng khi tạo tài khoản cán bộ");
+                    field, ValidationMessage.STUDENT_FIELD_NOT_FOR_STAFF);
         }
     }
 

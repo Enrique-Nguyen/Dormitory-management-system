@@ -16,9 +16,10 @@ import {
   Alert,
   BedPicker,
   Button,
-  Card,
+  DetailSection as Card,
   DataTable,
   Descriptions,
+  DetailLayout,
   EmptyState,
   PageHeader,
   PageSkeleton,
@@ -117,6 +118,9 @@ function priorityVerifierLabel(priority: ApplicationPriority): string {
 export interface ApplicationDetailViewProps {
   /** Cổng đang xem; mặc định lấy từ /auth/me. */
   role?: Role
+  applicationId?: number
+  embedded?: boolean
+  readOnly?: boolean
 }
 
 /**
@@ -127,8 +131,12 @@ export interface ApplicationDetailViewProps {
  */
 export default function ApplicationDetailView({
   role,
+  applicationId,
+  embedded = false,
+  readOnly = false,
 }: ApplicationDetailViewProps = {}) {
-  const id = Number(useParams().id)
+  const params = useParams()
+  const id = applicationId ?? Number(params.id)
   const application = useApplicationDetail(id)
   const { data: me } = useMe()
   const actorRole = role ?? me?.role
@@ -137,8 +145,8 @@ export default function ApplicationDetailView({
 
   const detail = application.data
   const allowedActions = detail?.allowedActions ?? []
-  const canUpdate = hasPermission(me, Permission.ROOM_APPLICATION_UPDATE)
-  const canDelete = hasPermission(me, Permission.ROOM_APPLICATION_DELETE)
+  const canUpdate = !readOnly && hasPermission(me, Permission.ROOM_APPLICATION_UPDATE)
+  const canDelete = !readOnly && hasPermission(me, Permission.ROOM_APPLICATION_DELETE)
   const canAssign =
     canUpdate && allowedActions.includes(ApplicationAction.ASSIGN)
   const canVerify =
@@ -154,7 +162,7 @@ export default function ApplicationDetailView({
 
   // Chỉ gọi API giường/danh mục khi đơn đang chờ phân giường; cổng Sinh viên không phát sinh request.
   const beds = useAvailableBeds({ applicationId: id, ...filter }, canAssign)
-  const assignCatalog = useAssignCatalog(canAssign)
+  const assignCatalog = useAssignCatalog(canAssign, detail?.preferredUnitId)
   const needsCatalog =
     detail != null &&
     ((detail.periodId != null && !detail.period?.name) ||
@@ -194,8 +202,9 @@ export default function ApplicationDetailView({
     return (
       <>
         <PageHeader
+        showHeading
           title="Không tìm thấy đơn đăng ký"
-          breadcrumb={[{ label: list.label, to: list.path }]}
+          breadcrumb={embedded ? undefined : [{ label: list.label, to: list.path }]}
         />
         <EmptyState
           title="Không tìm thấy đơn đăng ký"
@@ -205,9 +214,11 @@ export default function ApplicationDetailView({
               : errorMessage(application.error)
           }
           action={
-            <Button type="primary" onClick={() => navigate(list.path)}>
-              Quay lại danh sách
-            </Button>
+            !embedded && (
+              <Button type="primary" onClick={() => navigate(list.path)}>
+                Quay lại danh sách
+              </Button>
+            )
           }
         />
       </>
@@ -406,12 +417,17 @@ export default function ApplicationDetailView({
       title: 'Diện ưu tiên',
       dataIndex: 'name',
     },
-    {
-      title: 'Trọng số',
-      dataIndex: 'weight',
-      align: 'center',
-      width: 100,
-    },
+    // Sinh viên không thấy trọng số (backend cũng trả null cho vai trò này).
+    ...(actorRole === Role.STUDENT
+      ? []
+      : [
+          {
+            title: 'Trọng số',
+            dataIndex: 'weight',
+            align: 'center' as const,
+            width: 100,
+          },
+        ]),
     {
       title: 'Xác nhận',
       dataIndex: 'verified',
@@ -492,6 +508,7 @@ export default function ApplicationDetailView({
   return (
     <>
       <PageHeader
+        showHeading
         title={`Đơn đăng ký #${detail.id}`}
         status={<StatusBadge entity="application" status={detail.status} />}
         subtitle={
@@ -499,11 +516,11 @@ export default function ApplicationDetailView({
             ? `${student.fullName} (${student.studentCode}) · ${periodName}`
             : periodName
         }
-        breadcrumb={[
+        breadcrumb={embedded ? undefined : [
           { label: list.label, to: list.path },
           { label: `#${detail.id}` },
         ]}
-        extra={
+        extra={(!embedded || !readOnly) && (
           <div
             style={{
               display: 'flex',
@@ -513,18 +530,19 @@ export default function ApplicationDetailView({
               gap: 'var(--space-2)',
             }}
           >
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate(list.path)}
-            >
-              Quay lại danh sách
-            </Button>
-            <ActionBar
-              allowedActions={allowedActions}
-              actions={actions}
-            />
+            {!embedded && (
+              <Button
+                icon={<ArrowLeftOutlined />}
+                onClick={() => navigate(list.path)}
+              >
+                Quay lại danh sách
+              </Button>
+            )}
+            {!readOnly && (
+              <ActionBar allowedActions={allowedActions} actions={actions} />
+            )}
           </div>
-        }
+        )}
       />
 
       {detail.rejectReason ? (
@@ -537,215 +555,214 @@ export default function ApplicationDetailView({
         />
       ) : null}
 
-      <div className="dms-split-view">
-        <div>
-          <Card title="Sinh viên">
-            {student ? (
-              <Descriptions
-                column={{ xs: 1, sm: 2 }}
-                items={[
-                  {
-                    key: 'studentCode',
-                    label: 'Mã sinh viên',
-                    children: student.studentCode,
-                  },
-                  {
-                    key: 'fullName',
-                    label: 'Họ tên',
-                    children: student.fullName,
-                  },
-                  {
-                    key: 'gender',
-                    label: 'Giới tính',
-                    children: student.gender
-                      ? (crudValueLabels[student.gender] ?? student.gender)
-                      : '—',
-                  },
-                ]}
-              />
-            ) : (
-              <p className="dms-page-subtitle" style={{ margin: 0 }}>
-                Không có thông tin sinh viên trong đơn.
-              </p>
-            )}
-          </Card>
-
-          <Card title="Thông tin đơn">
+      <DetailLayout>
+        <Card title="Sinh viên">
+          {student ? (
             <Descriptions
+              className="dms-application-student-details"
               column={{ xs: 1, sm: 2 }}
               items={[
                 {
-                  key: 'period',
-                  label: 'Đợt đăng ký',
-                  children: periodName,
+                  key: 'studentCode',
+                  label: 'Mã sinh viên',
+                  children: student.studentCode,
                 },
                 {
-                  key: 'unit',
-                  label: 'Đơn vị nguyện vọng',
-                  children: unitName,
+                  key: 'fullName',
+                  label: 'Họ tên',
+                  children: student.fullName,
                 },
                 {
-                  key: 'roomType',
-                  label: 'Loại phòng mong muốn',
-                  children: roomTypeName,
-                },
-                {
-                  key: 'priorityScore',
-                  label: 'Điểm ưu tiên',
-                  children: detail.priorityScore ?? '—',
-                },
-                {
-                  key: 'submittedAt',
-                  label: 'Ngày nộp',
-                  children: formatDateTime(detail.submittedAt),
+                  key: 'gender',
+                  label: 'Giới tính',
+                  children: student.gender
+                    ? (crudValueLabels[student.gender] ?? student.gender)
+                    : '—',
                 },
               ]}
             />
+          ) : (
+            <p className="dms-page-subtitle" style={{ margin: 0 }}>
+              Không có thông tin sinh viên trong đơn.
+            </p>
+          )}
+        </Card>
+
+        <Card title="Thông tin đơn">
+          <Descriptions
+            column={{ xs: 1, sm: 2 }}
+            items={[
+              {
+                key: 'period',
+                label: 'Đợt đăng ký',
+                children: periodName,
+              },
+              {
+                key: 'unit',
+                label: 'Đơn vị nguyện vọng',
+                children: unitName,
+              },
+              {
+                key: 'roomType',
+                label: 'Loại phòng mong muốn',
+                children: roomTypeName,
+              },
+              {
+                key: 'priorityScore',
+                label: 'Điểm ưu tiên',
+                children: detail.priorityScore ?? '—',
+              },
+              {
+                key: 'submittedAt',
+                label: 'Ngày nộp',
+                children: formatDateTime(detail.submittedAt),
+              },
+            ]}
+          />
+        </Card>
+
+        {detail.note ? (
+          <Card title="Ghi chú của sinh viên">
+            <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+              {detail.note}
+            </p>
           </Card>
+        ) : null}
 
-          {detail.note ? (
-            <Card title="Ghi chú của sinh viên">
-              <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                {detail.note}
-              </p>
-            </Card>
-          ) : null}
-
-          {showHold ? (
-            <Card title="Giường đang giữ">
-              {hold || holdContractId ? (
-                <>
-                  <Descriptions
-                    column={1}
-                    size="small"
-                    items={[
-                      {
-                        key: 'bed',
-                        label: 'Giường',
-                        children: holdBedLabel ?? '—',
-                      },
-                      {
-                        key: 'room',
-                        label: 'Phòng',
-                        children: holdRoom ?? '—',
-                      },
-                      {
-                        key: 'contract',
-                        label: 'Hợp đồng',
-                        children:
-                          hold?.contractCode ??
-                          (holdContractId ? `#${holdContractId}` : '—'),
-                      },
-                      {
-                        key: 'deadline',
-                        label: 'Hạn kích hoạt',
-                        children: (
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              flexWrap: 'wrap',
-                              alignItems: 'center',
-                              gap: 'var(--space-2)',
-                            }}
-                          >
-                            {formatDateTime(holdDeadline)}
-                            {deadlineTag}
-                          </span>
-                        ),
-                      },
-                    ]}
-                  />
-                  {holdContractId ? (
-                    <div style={{ marginTop: 'var(--space-4)' }}>
-                      <Button
-                        onClick={() =>
-                          navigate(contractPath(actorRole, holdContractId))
-                        }
-                      >
-                        Xem hợp đồng
-                      </Button>
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <p className="dms-page-subtitle" style={{ margin: 0 }}>
-                  {actorRole === Role.STUDENT
-                    ? 'Đơn đã duyệt và đang chờ Ban quản lý phân giường.'
-                    : 'Đơn đã duyệt nhưng chưa phân giường. Chọn giường ở bảng bên cạnh để giữ chỗ.'}
-                </p>
-              )}
-            </Card>
-          ) : null}
-        </div>
-
-        <div>
-          {canAssign ? (
-            <>
-              {beds.isError ? (
-                <Alert
-                  type="error"
-                  showIcon
-                  style={{ marginBottom: 'var(--space-4)' }}
-                  title="Không tải được danh sách giường trống"
-                  description={errorMessage(beds.error)}
-                  action={
-                    <Button size="small" onClick={() => void beds.refetch()}>
-                      Thử lại
-                    </Button>
-                  }
+        {showHold ? (
+          <Card title="Giường đang giữ">
+            {hold || holdContractId ? (
+              <>
+                <Descriptions
+                  column={1}
+                  size="small"
+                  items={[
+                    {
+                      key: 'bed',
+                      label: 'Giường',
+                      children: holdBedLabel ?? '—',
+                    },
+                    {
+                      key: 'room',
+                      label: 'Phòng',
+                      children: holdRoom ?? '—',
+                    },
+                    {
+                      key: 'contract',
+                      label: 'Hợp đồng',
+                      children:
+                        hold?.contractCode ??
+                        (holdContractId ? `#${holdContractId}` : '—'),
+                    },
+                    {
+                      key: 'deadline',
+                      label: 'Hạn kích hoạt',
+                      children: (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            gap: 'var(--space-2)',
+                          }}
+                        >
+                          {formatDateTime(holdDeadline)}
+                          {deadlineTag}
+                        </span>
+                      ),
+                    },
+                  ]}
                 />
-              ) : null}
-              <BedPicker
-                title="Chọn giường để phân"
-                rooms={beds.data ?? []}
-                loading={beds.isLoading}
-                selectedBedId={selected?.id}
-                onSelect={setPicked}
-                buildings={buildingOptions}
-                roomTypes={roomTypeOptions}
-                buildingId={filter.buildingId}
-                roomTypeId={filter.roomTypeId}
-                onFilterChange={setFilter}
-              />
-            </>
-          ) : null}
-
-          <Card title="Diện ưu tiên">
-            {priorities.length === 0 ? (
-              <EmptyState
-                title="Chưa có diện ưu tiên"
-                description="Đơn không đăng ký diện ưu tiên nào; điểm ưu tiên bằng 0."
-              />
+                {holdContractId && !embedded ? (
+                  <div style={{ marginTop: 'var(--space-4)' }}>
+                    <Button
+                      onClick={() =>
+                        navigate(contractPath(actorRole, holdContractId))
+                      }
+                    >
+                      Xem hợp đồng
+                    </Button>
+                  </div>
+                ) : null}
+              </>
             ) : (
-              <DataTable<ApplicationPriority>
-                dataSource={priorities}
-                columns={priorityColumns}
-                rowKey={(row) => row.categoryId}
-                pagination={false}
-                size="small"
-              />
+              <p className="dms-page-subtitle" style={{ margin: 0 }}>
+                {actorRole === Role.STUDENT || readOnly
+                  ? 'Đơn đã duyệt và đang chờ Ban quản lý phân giường.'
+                  : 'Đơn đã duyệt nhưng chưa phân giường. Chọn giường ở bảng bên cạnh để giữ chỗ.'}
+              </p>
             )}
           </Card>
+        ) : null}
 
-          <Card title="Tiến trình xử lý">
-            <StatusTimeline steps={steps} />
-          </Card>
+        {canAssign ? (
+          <>
+            {beds.isError ? (
+              <Alert
+                type="error"
+                showIcon
+                style={{ marginBottom: 'var(--space-4)' }}
+                title="Không tải được danh sách giường trống"
+                description={errorMessage(beds.error)}
+                action={
+                  <Button size="small" onClick={() => void beds.refetch()}>
+                    Thử lại
+                  </Button>
+                }
+              />
+            ) : null}
+            <BedPicker
+              title="Chọn giường để phân"
+              rooms={beds.data ?? []}
+              loading={beds.isLoading}
+              selectedBedId={selected?.id}
+              onSelect={setPicked}
+              buildings={buildingOptions}
+              roomTypes={roomTypeOptions}
+              buildingId={filter.buildingId}
+              roomTypeId={filter.roomTypeId}
+              onFilterChange={setFilter}
+            />
+          </>
+        ) : null}
 
-          <Card title="Lịch sử xử lý">
-            <DataTable<ApplicationTimelineEntry>
-              dataSource={timeline}
-              columns={timelineColumns}
-              rowKey={(row) =>
-                `${row.at}-${row.toStatus}-${row.actorId ?? ''}-${row.reason ?? ''}`
-              }
+        <Card title="Diện ưu tiên">
+          {priorities.length === 0 ? (
+            <EmptyState
+              title="Chưa có diện ưu tiên"
+              description="Đơn không đăng ký diện ưu tiên nào; điểm ưu tiên bằng 0."
+            />
+          ) : (
+            <DataTable<ApplicationPriority>
+            scroll={{ x: 720 }}
+              dataSource={priorities}
+              columns={priorityColumns}
+              rowKey={(row) => row.categoryId}
               pagination={false}
               size="small"
             />
-          </Card>
-        </div>
-      </div>
+          )}
+        </Card>
 
-      {verifyPriority ? (
+        <Card title="Tiến trình xử lý">
+          <StatusTimeline steps={steps} />
+        </Card>
+
+        <Card title="Lịch sử xử lý">
+          <DataTable<ApplicationTimelineEntry>
+            scroll={{ x: 720 }}
+            dataSource={timeline}
+            columns={timelineColumns}
+            rowKey={(row) =>
+              `${row.at}-${row.toStatus}-${row.actorId ?? ''}-${row.reason ?? ''}`
+            }
+            pagination={false}
+            size="small"
+          />
+        </Card>
+      </DetailLayout>
+
+      {canVerify && verifyPriority ? (
         <VerifyPriorityModal
           applicationId={id}
           priority={verifyPriority}

@@ -37,8 +37,8 @@ public class StorageRecord {
     @Column(name = "description", nullable = false, length = 500)
     private String description;
 
-    @Column(name = "location", nullable = false, length = 100)
-    private String location;
+    @Column(name = "location_id", nullable = false)
+    private Long locationId;
 
     @Column(name = "deposited_at", nullable = false)
     private LocalDate depositedAt;
@@ -100,12 +100,12 @@ public class StorageRecord {
         this.description = value;
     }
 
-    public String getLocation() {
-        return location;
+    public Long getLocationId() {
+        return locationId;
     }
 
-    public void setLocation(String value) {
-        this.location = value;
+    public void setLocationId(Long value) {
+        this.locationId = value;
     }
 
     public LocalDate getDepositedAt() {

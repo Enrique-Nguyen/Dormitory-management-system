@@ -32,14 +32,17 @@ public class StudentProfile {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
-    @Column(name = "faculty", length = 100)
-    private String faculty;
+    @Column(name = "school_id")
+    private Long schoolId;
 
-    @Column(name = "cohort", length = 10)
-    private String cohort;
+    @Column(name = "faculty_id")
+    private Long facultyId;
 
-    @Column(name = "hometown", length = 200)
-    private String hometown;
+    @Column(name = "cohort_id")
+    private Long cohortId;
+
+    @Column(name = "hometown_id")
+    private Long hometownId;
 
     @Column(name = "emergency_contact", length = 200)
     private String emergencyContact;
@@ -76,28 +79,36 @@ public class StudentProfile {
         this.dateOfBirth = value;
     }
 
-    public String getFaculty() {
-        return faculty;
+    public Long getSchoolId() {
+        return schoolId;
     }
 
-    public void setFaculty(String value) {
-        this.faculty = value;
+    public void setSchoolId(Long value) {
+        this.schoolId = value;
     }
 
-    public String getCohort() {
-        return cohort;
+    public Long getFacultyId() {
+        return facultyId;
     }
 
-    public void setCohort(String value) {
-        this.cohort = value;
+    public void setFacultyId(Long value) {
+        this.facultyId = value;
     }
 
-    public String getHometown() {
-        return hometown;
+    public Long getCohortId() {
+        return cohortId;
     }
 
-    public void setHometown(String value) {
-        this.hometown = value;
+    public void setCohortId(Long value) {
+        this.cohortId = value;
+    }
+
+    public Long getHometownId() {
+        return hometownId;
+    }
+
+    public void setHometownId(Long value) {
+        this.hometownId = value;
     }
 
     public String getEmergencyContact() {

@@ -1,0 +1,195 @@
+{
+  "groups": [
+    {
+      "group": "AUTH",
+      "count": 7,
+      "testcases": [
+        "E2E-AUTH-04",
+        "E2E-AUTH-05",
+        "E2E-AUTH-06",
+        "E2E-AUTH-12",
+        "E2E-AUTH-14",
+        "E2E-AUTH-15",
+        "E2E-AUTH-16"
+      ]
+    },
+    {
+      "group": "ACC",
+      "count": 13,
+      "testcases": [
+        "E2E-ACC-03",
+        "E2E-ACC-05",
+        "E2E-ACC-06",
+        "E2E-ACC-07",
+        "E2E-ACC-08",
+        "E2E-ACC-09",
+        "E2E-ACC-10",
+        "E2E-ACC-11",
+        "E2E-ACC-12",
+        "E2E-ACC-13",
+        "E2E-ACC-14",
+        "E2E-ACC-15",
+        "E2E-ACC-19"
+      ]
+    },
+    {
+      "group": "RBAC",
+      "count": 5,
+      "testcases": [
+        "E2E-RBAC-01",
+        "E2E-RBAC-02",
+        "E2E-RBAC-08",
+        "E2E-RBAC-11",
+        "E2E-RBAC-13"
+      ]
+    },
+    {
+      "group": "ROOM",
+      "count": 10,
+      "testcases": [
+        "E2E-ROOM-01",
+        "E2E-ROOM-02",
+        "E2E-ROOM-03",
+        "E2E-ROOM-04",
+        "E2E-ROOM-08",
+        "E2E-ROOM-10",
+        "E2E-ROOM-14",
+        "E2E-ROOM-16",
+        "E2E-ROOM-17",
+        "E2E-ROOM-18"
+      ]
+    },
+    {
+      "group": "REG",
+      "count": 11,
+      "testcases": [
+        "E2E-REG-01",
+        "E2E-REG-02",
+        "E2E-REG-04",
+        "E2E-REG-09",
+        "E2E-REG-11",
+        "E2E-REG-12",
+        "E2E-REG-14",
+        "E2E-REG-21",
+        "E2E-REG-22",
+        "E2E-REG-23",
+        "E2E-REG-24"
+      ]
+    },
+    {
+      "group": "CON",
+      "count": 14,
+      "testcases": [
+        "E2E-CON-05",
+        "E2E-CON-06",
+        "E2E-CON-07",
+        "E2E-CON-09",
+        "E2E-CON-10",
+        "E2E-CON-14",
+        "E2E-CON-15",
+        "E2E-CON-16",
+        "E2E-CON-18",
+        "E2E-CON-19",
+        "E2E-CON-20",
+        "E2E-CON-22",
+        "E2E-CON-23",
+        "E2E-CON-24"
+      ]
+    },
+    {
+      "group": "MNT",
+      "count": 7,
+      "testcases": [
+        "E2E-MNT-07",
+        "E2E-MNT-11",
+        "E2E-MNT-12",
+        "E2E-MNT-13",
+        "E2E-MNT-14",
+        "E2E-MNT-17",
+        "E2E-MNT-20"
+      ]
+    },
+    {
+      "group": "BIL",
+      "count": 12,
+      "testcases": [
+        "E2E-BIL-01",
+        "E2E-BIL-02",
+        "E2E-BIL-07",
+        "E2E-BIL-10",
+        "E2E-BIL-17",
+        "E2E-BIL-18",
+        "E2E-BIL-20",
+        "E2E-BIL-23",
+        "E2E-BIL-24",
+        "E2E-BIL-25",
+        "E2E-BIL-26",
+        "E2E-BIL-27"
+      ]
+    },
+    {
+      "group": "SUM",
+      "count": 2,
+      "testcases": [
+        "E2E-SUM-05",
+        "E2E-SUM-09"
+      ]
+    },
+    {
+      "group": "NOT",
+      "count": 5,
+      "testcases": [
+        "E2E-NOT-02",
+        "E2E-NOT-05",
+        "E2E-NOT-07",
+        "E2E-NOT-08",
+        "E2E-NOT-09"
+      ]
+    },
+    {
+      "group": "JOB",
+      "count": 3,
+      "testcases": [
+        "E2E-JOB-02",
+        "E2E-JOB-06",
+        "E2E-JOB-07"
+      ]
+    },
+    {
+      "group": "UI",
+      "count": 8,
+      "testcases": [
+        "E2E-UI-02",
+        "E2E-UI-03",
+        "E2E-UI-05",
+        "E2E-UI-06",
+        "E2E-UI-07",
+        "E2E-UI-08",
+        "E2E-UI-12",
+        "E2E-UI-14"
+      ]
+    },
+    {
+      "group": "SEC",
+      "count": 2,
+      "testcases": [
+        "E2E-SEC-01",
+        "E2E-SEC-08"
+      ]
+    },
+    {
+      "group": "XF",
+      "count": 6,
+      "testcases": [
+        "E2E-XF-01",
+        "E2E-XF-02",
+        "E2E-XF-03",
+        "E2E-XF-04",
+        "E2E-XF-05",
+        "E2E-XF-06"
+      ]
+    }
+  ],
+  "total": 105,
+  "followUp": "Complete missing cases using independent fixtures and UI journeys; unit/API evidence does not imply UI completion."
+}

@@ -4,6 +4,8 @@ import { Link } from 'react-router'
 
 interface Props {
   title: ReactNode
+  /** Giữ để tương thích: mọi màn đều hiện tiêu đề như V5. */
+  showHeading?: boolean
   /** Rule 01: trạng thái hiện trước hành động, nên badge nằm cạnh tiêu đề. */
   status?: ReactNode
   subtitle?: ReactNode
@@ -33,7 +35,7 @@ export default function PageHeader({
           }))}
         />
       )}
-      <Flex justify="space-between" align="center" wrap gap={12}>
+      <Flex justify="space-between" align="flex-start" wrap gap={8}>
         <div className="dms-wrap">
           <Flex align="center" wrap gap={10}>
             <h1 className="dms-page-title">{title}</h1>

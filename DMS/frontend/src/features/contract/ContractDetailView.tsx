@@ -15,16 +15,18 @@ import {
   ActionBar,
   Alert,
   Button,
-  Card,
+  DetailSection as Card,
   ContractStatus as ContractStatusBadges,
   DatePicker,
   Descriptions,
+  DetailLayout,
   EmptyState,
   FormField,
   Modal,
   PageHeader,
   PageSkeleton,
   ResponsiveTable,
+  StatusBadge,
   StatusTimeline,
   TextArea,
   stepsFromFlow,
@@ -55,6 +57,7 @@ import {
   type ContractAssignment,
   type ContractDetail,
   type ContractPendingRef,
+  type TimelineEntry,
 } from '../../services/api/contract'
 import { errorMessage } from '../../utils/errorMessages'
 import {
@@ -63,6 +66,8 @@ import {
   formatMoney,
 } from '../../utils/format'
 import { useMe } from '../account/useMe'
+import DepositLedgerModal from '../billing/DepositLedgerModal'
+import { billingUiLabels } from '../crud/resources'
 import ActivateContractModal from './ActivateContractModal'
 import {
   useContractDetail,
@@ -123,6 +128,8 @@ export interface ContractDetailViewProps {
   role?: Role
   /** Route có thể truyền thẳng ID hợp đồng. */
   contractId?: number
+  embedded?: boolean
+  readOnly?: boolean
 }
 
 interface CreateExtensionModalProps {
@@ -210,7 +217,7 @@ function CreateExtensionRequestModal({
       <Alert
         type="info"
         showIcon
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 12 }}
         title="Mỗi hợp đồng chỉ có một yêu cầu gia hạn chờ xử lý"
         description={`Ngày kết thúc hiện tại: ${formatDate(contract.endDate)}. Staff sẽ kiểm tra chồng khoảng lưu trú trước khi duyệt.`}
       />
@@ -237,7 +244,7 @@ function CreateExtensionRequestModal({
           />
         )}
       </FormField>
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 12 }}>
         <FormField
           label="Lý do gia hạn"
           required
@@ -272,21 +279,18 @@ function CreateExtensionRequestModal({
 export default function ContractDetailView({
   role,
   contractId,
+  embedded = false,
+  readOnly = false,
 }: ContractDetailViewProps = {}) {
   const params = useParams()
-  const routeId = Number(params.id ?? params.contractId)
-  const id =
-    contractId != null && Number.isSafeInteger(contractId) && contractId > 0
-      ? contractId
-      : Number.isSafeInteger(routeId) && routeId > 0
-        ? routeId
-        : 0
+  const id = contractId ?? Number(params.id ?? params.contractId)
   const { data: me } = useMe()
   const navigate = useNavigate()
   const contractQuery = useContractDetail(id)
   const detail = contractQuery.data
   const [activateOpen, setActivateOpen] = useState(false)
   const [extensionOpen, setExtensionOpen] = useState(false)
+  const [ledgerOpen, setLedgerOpen] = useState(false)
 
   const actorRole = role ?? me?.role
   const manager = actorRole === Role.STAFF || actorRole === Role.ADMIN
@@ -301,20 +305,23 @@ export default function ContractDetailView({
     return (
       <>
         <PageHeader
+        showHeading
           title="Không tìm thấy hợp đồng"
-          breadcrumb={[{ label: 'Hợp đồng', to: listPath }]}
+          breadcrumb={embedded ? undefined : [{ label: 'Hợp đồng', to: listPath }]}
         />
         <EmptyState
           title="Không tìm thấy hợp đồng"
           description={
-            id > 0
+            Number.isSafeInteger(id) && id > 0
               ? errorMessage(contractQuery.error)
               : 'Đường dẫn hợp đồng không hợp lệ.'
           }
           action={
-            <Button type="primary" onClick={() => navigate(listPath)}>
-              Quay lại danh sách
-            </Button>
+            !embedded && (
+              <Button type="primary" onClick={() => navigate(listPath)}>
+                Quay lại danh sách
+              </Button>
+            )
           }
         />
       </>
@@ -352,14 +359,14 @@ export default function ContractDetailView({
   )
 
   const actions: Record<string, ActionDef> = {}
-  if (manager && hasPermission(me, Permission.CONTRACT_UPDATE)) {
+  if (!readOnly && manager && hasPermission(me, Permission.CONTRACT_UPDATE)) {
     actions[ContractAction.ACTIVATE] = {
       label: 'Kích hoạt',
       icon: <CheckCircleOutlined />,
       onAction: () => setActivateOpen(true),
     }
   }
-  if (manager && hasPermission(me, Permission.MOVE_OUT_CREATE)) {
+  if (!readOnly && manager && hasPermission(me, Permission.MOVE_OUT_CREATE)) {
     actions[ContractAction.MOVE_OUT] = {
       label: 'Trả phòng',
       danger: true,
@@ -367,28 +374,28 @@ export default function ContractDetailView({
       onAction: () => navigate(`${managerBase}/${detail.id}/move-out`),
     }
   }
-  if (manager && hasPermission(me, Permission.STORAGE_CREATE)) {
+  if (!readOnly && manager && hasPermission(me, Permission.STORAGE_CREATE)) {
     actions[ContractAction.CREATE_STORAGE_RECORD] = {
       label: 'Gửi đồ',
       icon: <InboxOutlined />,
       onAction: () => navigate(`${storagePath}?contractId=${detail.id}`),
     }
   }
-  if (manager && hasPermission(me, Permission.DEPOSIT_CREATE)) {
+  if (!readOnly && manager && hasPermission(me, Permission.DEPOSIT_CREATE)) {
     actions[ContractAction.TOP_UP] = {
       label: 'Nộp bù cọc',
       icon: <WalletOutlined />,
-      onAction: () => navigate(depositPath),
+      onAction: () => embedded ? setLedgerOpen(true) : navigate(depositPath),
     }
   }
-  if (hasPermission(me, Permission.CONTRACT_EXTENSION_CREATE)) {
+  if (!readOnly && hasPermission(me, Permission.CONTRACT_EXTENSION_CREATE)) {
     actions[ContractAction.CREATE_EXTENSION_REQUEST] = {
       label: 'Yêu cầu gia hạn',
       icon: <EditOutlined />,
       onAction: () => setExtensionOpen(true),
     }
   }
-  if (!manager && hasPermission(me, Permission.ROOM_TRANSFER_CREATE)) {
+  if (!readOnly && !embedded && !manager && hasPermission(me, Permission.ROOM_TRANSFER_CREATE)) {
     actions[ContractAction.CREATE_TRANSFER_REQUEST] = {
       label: 'Yêu cầu chuyển phòng',
       icon: <SwapOutlined />,
@@ -446,13 +453,16 @@ export default function ContractDetailView({
     deposit.balance == null &&
     deposit.topUpRequired == null
   const canTopUp =
+    !readOnly &&
     manager &&
     hasPermission(me, Permission.DEPOSIT_CREATE) &&
     allowedActions.includes(ContractAction.TOP_UP)
+  const canReadLedger = hasPermission(me, Permission.DEPOSIT_READ)
 
   return (
     <>
       <PageHeader
+        showHeading
         title={`Hợp đồng ${contractCodeOf(detail)}`}
         status={
           <ContractStatusBadges status={detail.status} labels={labels} />
@@ -467,23 +477,23 @@ export default function ContractDetailView({
         ]
           .filter(Boolean)
           .join(' · ')}
-        breadcrumb={[
+        breadcrumb={embedded ? undefined : [
           { label: 'Hợp đồng', to: listPath },
           { label: contractCodeOf(detail) },
         ]}
-        extra={
+        extra={(!embedded || !readOnly) && (
           <Flex gap={8} wrap justify="flex-end">
-            <Button onClick={() => navigate(listPath)}>Danh sách</Button>
-            <ActionBar allowedActions={allowedActions} actions={actions} />
+            {!embedded && <Button onClick={() => navigate(listPath)}>Danh sách</Button>}
+            {!readOnly && <ActionBar allowedActions={allowedActions} actions={actions} />}
           </Flex>
-        }
+        )}
       />
 
       {detail.status === ContractState.PENDING && (
         <Alert
           type="warning"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           title="Hợp đồng đang chờ kích hoạt"
           description={
             detail.activationDeadline
@@ -497,269 +507,341 @@ export default function ContractDetailView({
         <Alert
           type="info"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           title="Sinh viên đang gửi đồ"
-          description={
+          description={embedded ? (
+            <>Phiếu gửi đồ #{detail.openStorageRecordId}</>
+          ) : (
             <Link to={`${storagePath}?contractId=${detail.id}`}>
               Mở kho gửi đồ để xem phiếu #{detail.openStorageRecordId}
             </Link>
-          }
+          )}
         />
       )}
 
-      <div className="dms-split-view">
-        <div>
-          <Card title="Thông tin hợp đồng">
+      <DetailLayout>
+        <Card title="Thông tin hợp đồng">
+          <Descriptions
+            column={{ xs: 1, sm: 2 }}
+            size="small"
+            items={[
+              {
+                key: 'student',
+                label: 'Sinh viên',
+                children: student.fullName
+                  ? `${student.fullName}${student.studentCode ? ` (${student.studentCode})` : ''}`
+                  : student.studentId != null
+                    ? `Sinh viên #${student.studentId}`
+                    : '—',
+              },
+              {
+                key: 'gender',
+                label: 'Giới tính',
+                children: student.gender
+                  ? (roomGender[student.gender] ?? student.gender)
+                  : '—',
+              },
+              {
+                key: 'startDate',
+                label: 'Ngày bắt đầu',
+                children: formatDate(detail.startDate),
+              },
+              {
+                key: 'endDate',
+                label: 'Ngày kết thúc',
+                children: formatDate(detail.endDate),
+              },
+              {
+                key: 'activationDeadline',
+                label: 'Hạn kích hoạt',
+                children: formatDateTime(detail.activationDeadline),
+              },
+              {
+                key: 'activatedAt',
+                label: 'Kích hoạt lúc',
+                children: formatDateTime(detail.activatedAt),
+              },
+              {
+                key: 'activatedBy',
+                label: 'Người kích hoạt',
+                children: contractActorLabel(detail.activatedBy),
+              },
+              {
+                key: 'daysRemaining',
+                label: 'Số ngày còn lại',
+                children:
+                  detail.daysRemaining != null
+                    ? `${detail.daysRemaining} ngày`
+                    : '—',
+              },
+              ...(detail.statusReason
+                ? [
+                    {
+                      key: 'statusReason',
+                      label: 'Lý do trạng thái',
+                      children: detail.statusReason,
+                      span: 2,
+                    },
+                  ]
+                : []),
+              ...(detail.moveOut
+                ? [
+                    {
+                      key: 'moveOut',
+                      label: 'Đã trả phòng',
+                      children: formatDate(detail.moveOut.moveOutDate),
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        </Card>
+
+        <Card title="Phân phòng hiện tại">
+          {currentAssignment ? (
             <Descriptions
               column={{ xs: 1, sm: 2 }}
               size="small"
               items={[
                 {
-                  key: 'student',
-                  label: 'Sinh viên',
-                  children: student.fullName
-                    ? `${student.fullName}${student.studentCode ? ` (${student.studentCode})` : ''}`
-                    : student.studentId != null
-                      ? `Sinh viên #${student.studentId}`
-                      : '—',
+                  key: 'bed',
+                  label: 'Giường',
+                  children: contractBedLabel(currentAssignment),
                 },
                 {
-                  key: 'gender',
-                  label: 'Giới tính',
-                  children: student.gender
-                    ? (roomGender[student.gender] ?? student.gender)
-                    : '—',
+                  key: 'roomType',
+                  label: 'Loại phòng',
+                  children: detail.summary?.roomTypeName ?? '—',
                 },
                 {
-                  key: 'startDate',
-                  label: 'Ngày bắt đầu',
-                  children: formatDate(detail.startDate),
-                },
-                {
-                  key: 'endDate',
-                  label: 'Ngày kết thúc',
-                  children: formatDate(detail.endDate),
-                },
-                {
-                  key: 'activationDeadline',
-                  label: 'Hạn kích hoạt',
-                  children: formatDateTime(detail.activationDeadline),
-                },
-                {
-                  key: 'activatedAt',
-                  label: 'Kích hoạt lúc',
-                  children: formatDateTime(detail.activatedAt),
-                },
-                {
-                  key: 'activatedBy',
-                  label: 'Người kích hoạt',
-                  children: contractActorLabel(detail.activatedBy),
-                },
-                {
-                  key: 'daysRemaining',
-                  label: 'Số ngày còn lại',
+                  key: 'unit',
+                  label: 'Khu · Tòa · Tầng',
                   children:
-                    detail.daysRemaining != null
-                      ? `${detail.daysRemaining} ngày`
+                    [
+                      detail.summary?.unitName,
+                      detail.summary?.buildingName,
+                      detail.summary?.floor != null ? 'Tầng ' + detail.summary.floor : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || '—',
+                },
+                {
+                  key: 'kind',
+                  label: 'Trạng thái chỗ',
+                  children: kindLabel(currentAssignment.kind),
+                },
+                {
+                  key: 'startedAt',
+                  label: 'Bắt đầu',
+                  children: formatDateTime(
+                    currentAssignment.startedAt ??
+                      currentAssignment.stayStartedAt,
+                  ),
+                },
+                {
+                  key: 'priceMain',
+                  label: 'Giá học kỳ',
+                  children:
+                    (currentAssignment.priceMain ?? detail.summary?.priceMain) != null
+                      ? formatMoney(
+                          (currentAssignment.priceMain ?? detail.summary?.priceMain) as number,
+                        )
                       : '—',
                 },
-                ...(detail.statusReason
-                  ? [
-                      {
-                        key: 'statusReason',
-                        label: 'Lý do trạng thái',
-                        children: detail.statusReason,
-                      },
-                    ]
-                  : []),
-                ...(detail.moveOut
-                  ? [
-                      {
-                        key: 'moveOut',
-                        label: 'Đã trả phòng',
-                        children: formatDate(detail.moveOut.moveOutDate),
-                      },
-                    ]
-                  : []),
+                {
+                  key: 'priceSummer',
+                  label: 'Giá hè',
+                  children:
+                    (currentAssignment.priceSummer ?? detail.summary?.priceSummer) != null
+                      ? formatMoney(
+                          (currentAssignment.priceSummer ?? detail.summary?.priceSummer) as number,
+                        )
+                      : '—',
+                },
               ]}
             />
-          </Card>
+          ) : (
+            <EmptyState
+              title="Chưa có phân phòng mở"
+              description="Hợp đồng PENDING thường có giường giữ chỗ; nếu chưa thấy, tải lại sau khi Staff phân giường."
+            />
+          )}
+        </Card>
 
-          <Card
-            title="Tiền cọc"
-            style={{ marginTop: 16 }}
-            extra={
-              canTopUp && deposit.topUpRequired != null && deposit.topUpRequired > 0 ? (
-                <Button size="small" onClick={() => navigate(depositPath)}>
+        <Card
+          title="Tiền cọc"
+          extra={
+            <Flex gap={8} wrap>
+              {canReadLedger && (
+                <Button size="small" onClick={() => setLedgerOpen(true)}>
+                  {billingUiLabels.depositHistory}
+                </Button>
+              )}
+              {canTopUp && deposit.topUpRequired != null && deposit.topUpRequired > 0 && (
+                <Button size="small" onClick={() => embedded ? setLedgerOpen(true) : navigate(depositPath)}>
                   Nộp bù cọc
                 </Button>
-              ) : undefined
-            }
-          >
-            {depositMissing ? (
-              <EmptyState
-                title="Chưa có dữ liệu tiền cọc"
-                description="Hợp đồng chưa kích hoạt hoặc backend chưa trả thông tin sổ cọc."
-              />
-            ) : (
-              <>
-                <Descriptions
-                  column={{ xs: 1, sm: 2 }}
-                  size="small"
-                  items={[
-                    {
-                      key: 'required',
-                      label: 'Mức cọc bắt buộc',
-                      children:
-                        deposit.required != null
-                          ? formatMoney(deposit.required)
-                          : '—',
-                    },
-                    {
-                      key: 'balance',
-                      label: 'Số dư hiện tại',
-                      children:
-                        deposit.balance != null
-                          ? formatMoney(deposit.balance)
-                          : '—',
-                    },
-                    {
-                      key: 'topUp',
-                      label: 'Cần bù',
-                      children:
-                        deposit.topUpRequired != null
-                          ? formatMoney(deposit.topUpRequired)
-                          : '—',
-                    },
-                  ]}
-                />
-                {deposit.topUpOverdue && (
-                  <Alert
-                    type="error"
-                    showIcon
-                    style={{ marginTop: 12 }}
-                    title="Đã quá hạn bù cọc"
-                    description="Sinh viên cần nộp bù cọc; xác nhận tại màn Tiền cọc sau khi nhận tiền."
-                  />
-                )}
-                {!deposit.topUpOverdue &&
-                  deposit.topUpRequired != null &&
-                  deposit.topUpRequired > 0 && (
-                    <Alert
-                      type="warning"
-                      showIcon
-                      style={{ marginTop: 12 }}
-                      title="Còn thiếu tiền cọc"
-                      description={`Cần bù ${formatMoney(deposit.topUpRequired)} để đủ mức cọc của tòa.`}
-                    />
-                  )}
-              </>
-            )}
-          </Card>
-
-          <Card title="Phân phòng hiện tại" style={{ marginTop: 16 }}>
-            {currentAssignment ? (
+              )}
+            </Flex>
+          }
+        >
+          {depositMissing ? (
+            <EmptyState
+              title="Chưa có dữ liệu tiền cọc"
+              description="Hợp đồng chưa kích hoạt hoặc backend chưa trả thông tin sổ cọc."
+            />
+          ) : (
+            <>
               <Descriptions
                 column={{ xs: 1, sm: 2 }}
                 size="small"
                 items={[
                   {
-                    key: 'bed',
-                    label: 'Giường',
-                    children: contractBedLabel(currentAssignment),
-                  },
-                  {
-                    key: 'kind',
-                    label: 'Trạng thái chỗ',
-                    children: kindLabel(currentAssignment.kind),
-                  },
-                  {
-                    key: 'startedAt',
-                    label: 'Bắt đầu',
-                    children: formatDateTime(
-                      currentAssignment.startedAt ??
-                        currentAssignment.stayStartedAt,
-                    ),
-                  },
-                  {
-                    key: 'priceMain',
-                    label: 'Giá học kỳ',
+                    key: 'required',
+                    label: 'Mức cọc bắt buộc',
                     children:
-                      currentAssignment.priceMain != null
-                        ? formatMoney(currentAssignment.priceMain)
+                      deposit.required != null
+                        ? formatMoney(deposit.required)
                         : '—',
                   },
                   {
-                    key: 'priceSummer',
-                    label: 'Giá hè',
+                    key: 'balance',
+                    label: 'Số dư hiện tại',
                     children:
-                      currentAssignment.priceSummer != null
-                        ? formatMoney(currentAssignment.priceSummer)
+                      deposit.balance != null
+                        ? formatMoney(deposit.balance)
+                        : '—',
+                  },
+                  {
+                    key: 'topUp',
+                    label: 'Cần bù',
+                    children:
+                      deposit.topUpRequired != null
+                        ? formatMoney(deposit.topUpRequired)
                         : '—',
                   },
                 ]}
               />
-            ) : (
-              <EmptyState
-                title="Chưa có phân phòng mở"
-                description="Hợp đồng PENDING thường có giường giữ chỗ; nếu chưa thấy, tải lại sau khi Staff phân giường."
-              />
-            )}
-          </Card>
+              {deposit.topUpOverdue && (
+                <Alert
+                  type="error"
+                  showIcon
+                  style={{ marginTop: 12 }}
+                  title="Đã quá hạn bù cọc"
+                  description="Sinh viên cần nộp bù cọc; xác nhận tại màn Tiền cọc sau khi nhận tiền."
+                />
+              )}
+              {!deposit.topUpOverdue &&
+                deposit.topUpRequired != null &&
+                deposit.topUpRequired > 0 && (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    style={{ marginTop: 12 }}
+                    title="Còn thiếu tiền cọc"
+                    description={`Cần bù ${formatMoney(deposit.topUpRequired)} để đủ mức cọc của tòa.`}
+                  />
+                )}
+            </>
+          )}
+        </Card>
 
-          <Card title="Yêu cầu đang chờ" style={{ marginTop: 16 }}>
-            {pendingRefs.length === 0 ? (
-              <EmptyState
-                title="Không có yêu cầu chờ"
-                description="Yêu cầu gia hạn/chuyển phòng/lựa chọn hè đang chờ sẽ xuất hiện tại đây."
-              />
-            ) : (
-              <Flex vertical gap={10}>
-                {pendingRefs.map((ref) => (
-                  <Flex key={`${ref.type}-${ref.id}`} gap={8} wrap>
-                    <span>{PENDING_REF_LABELS[ref.type]}</span>
+        <Card title="Yêu cầu đang chờ">
+          {pendingRefs.length === 0 ? (
+            <EmptyState
+              title="Không có yêu cầu chờ"
+              description="Yêu cầu gia hạn/chuyển phòng/lựa chọn hè đang chờ sẽ xuất hiện tại đây."
+            />
+          ) : (
+            <Flex vertical gap={10}>
+              {pendingRefs.map((ref) => (
+                <Flex key={`${ref.type}-${ref.id}`} gap={8} wrap>
+                  <span>{PENDING_REF_LABELS[ref.type]}</span>
+                  {embedded ? (
+                    <span>#{ref.id}</span>
+                  ) : (
                     <Link to={pendingRefPath(actorRole, ref)}>
                       #{ref.id} — xem chi tiết
                     </Link>
-                  </Flex>
-                ))}
-              </Flex>
-            )}
-          </Card>
-        </div>
+                  )}
+                </Flex>
+              ))}
+            </Flex>
+          )}
+        </Card>
 
-        <div>
-          <Card title="Tiến trình hợp đồng">
-            <StatusTimeline steps={steps} />
-          </Card>
+        <Card title="Tiến trình hợp đồng">
+          <StatusTimeline steps={steps} />
+        </Card>
 
-          <Card title="Lịch sử phân phòng" style={{ marginTop: 16 }}>
-            <ResponsiveTable<ContractAssignment>
-              columns={assignmentColumns}
-              data={assignments}
-              rowKey={(row) =>
-                String(
-                  row.id ??
-                    `${row.bedId ?? row.bed?.id ?? ''}-${row.startedAt ?? ''}`,
-                )
-              }
-              emptyTitle="Chưa có lịch sử phân phòng"
-              emptyDescription="Lịch sử giữ chỗ/đang ở sẽ xuất hiện sau khi Staff phân giường hoặc chuyển phòng."
-            />
-          </Card>
-        </div>
-      </div>
+        <Card title="Lịch sử xử lý">
+          <ResponsiveTable<TimelineEntry>
+            scroll={{ x: 720 }}
+            data={timeline}
+            rowKey={(row) => `${row.at}-${row.toStatus}-${row.actorId ?? ''}`}
+            columns={[
+              {
+                title: 'Thời điểm',
+                dataIndex: 'at',
+                render: (value: string) => formatDateTime(value),
+              },
+              {
+                title: 'Trạng thái',
+                dataIndex: 'toStatus',
+                render: (value: string) => <StatusBadge entity="contract" status={value} />,
+              },
+              {
+                title: 'Người thực hiện',
+                dataIndex: 'actorId',
+                render: (value: number | null) => value == null ? 'Hệ thống' : contractActorLabel(value),
+              },
+              { title: 'Ghi chú / lý do', dataIndex: 'reason' },
+            ]}
+          />
+        </Card>
 
-      <ActivateContractModal
-        open={activateOpen}
-        contract={detail}
-        onClose={() => setActivateOpen(false)}
-      />
-      <CreateExtensionRequestModal
-        open={extensionOpen}
-        contract={detail}
-        onClose={() => setExtensionOpen(false)}
-      />
+        <Card title="Lịch sử phân phòng">
+          <ResponsiveTable<ContractAssignment>
+            scroll={{ x: 880 }}
+            columns={assignmentColumns}
+            data={assignments}
+            rowKey={(row) =>
+              String(
+                row.id ??
+                  `${row.bedId ?? row.bed?.id ?? ''}-${row.startedAt ?? ''}`,
+              )
+            }
+            emptyTitle="Chưa có lịch sử phân phòng"
+            emptyDescription="Lịch sử giữ chỗ/đang ở sẽ xuất hiện sau khi Staff phân giường hoặc chuyển phòng."
+          />
+        </Card>
+      </DetailLayout>
+
+      {!readOnly && actions[ContractAction.ACTIVATE] && allowedActions.includes(ContractAction.ACTIVATE) && activateOpen && (
+        <ActivateContractModal
+          open
+          contract={detail}
+          onClose={() => setActivateOpen(false)}
+        />
+      )}
+      {!readOnly && actions[ContractAction.CREATE_EXTENSION_REQUEST] && allowedActions.includes(ContractAction.CREATE_EXTENSION_REQUEST) && extensionOpen && (
+        <CreateExtensionRequestModal
+          open
+          contract={detail}
+          onClose={() => setExtensionOpen(false)}
+        />
+      )}
+      {canReadLedger && ledgerOpen && (
+        <DepositLedgerModal
+          key={readOnly ? 'read-only' : 'workflow'}
+          open
+          contractId={detail.id}
+          contractCode={contractCodeOf(detail)}
+          studentName={student.fullName ?? undefined}
+          readOnly={readOnly}
+          onClose={() => setLedgerOpen(false)}
+        />
+      )}
     </>
   )
 }

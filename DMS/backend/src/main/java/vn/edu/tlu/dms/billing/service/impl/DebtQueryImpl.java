@@ -9,6 +9,7 @@ import vn.edu.tlu.dms.billing.service.DebtQuery;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.InvoiceType;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -99,7 +100,7 @@ public class DebtQueryImpl implements DebtQuery {
                                 rs.getLong("id"),
                                 rs.getString("code"),
                                 rs.getLong("total_amount"),
-                                rs.getObject("due_date", java.time.LocalDate.class)),
+                                rs.getObject("due_date", LocalDate.class)),
                 studentId,
                 InvoiceType.ROOM_FEE,
                 InvoiceStatus.UNPAID);
@@ -119,7 +120,7 @@ public class DebtQueryImpl implements DebtQuery {
                                 rs.getLong("id"),
                                 rs.getString("code"),
                                 rs.getLong("total_amount"),
-                                rs.getObject("due_date", java.time.LocalDate.class)),
+                                rs.getObject("due_date", LocalDate.class)),
                 roomId,
                 InvoiceType.UTILITY,
                 InvoiceStatus.UNPAID);

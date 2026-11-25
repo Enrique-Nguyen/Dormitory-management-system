@@ -50,3 +50,13 @@ Số dư/công suất/quá hạn đọc từ view, không ghi giá trị suy di�
 File Excel kiểm thử và kết quả chạy UI/API trên máy này nằm trong thư mục kết quả local; xem `README.md` ở đó. File hợp lệ dùng một dải mã riêng; file hỗn hợp có dòng hợp lệ, mã đã có, trùng trong file, sai điện thoại/ngày sinh/giới tính. Mật khẩu xuất từ import chỉ lưu ở file `.local` khi kiểm thử, không đưa vào ảnh chụp hoặc tài liệu.
 
 Các màn của TV2–TV5 được nạp dữ liệu theo phần code đã có. Có dữ liệu hiển thị không có nghĩa mọi luồng xét duyệt/kích hoạt/thu tiền/báo cáo của các thành viên đã hoàn thành; đối chiếu ma trận kiểm tra trong `Docs/04 Testing`.
+
+## Kiểm tra hồi quy import
+
+`StudentImportIntegrationTest` dùng workbook Apache POI và PostgreSQL thật, có sáu ca bổ sung cho lỗi không nhận dữ liệu: mã số General/số mũ, giữ đệm 0 và mã Text 20 ký tự, từ chối số bị làm tròn/quá 15 chữ số, tiêu đề Unicode, dòng định dạng trống và biên 5.000/5.001 dòng có dữ liệu. Chạy riêng từ `DMS/backend`:
+
+```powershell
+.\mvnw.cmd -Dtest=StudentImportIntegrationTest test
+```
+
+Kiểm tra giao diện: tải mẫu, điền dữ liệu, chọn file rồi bấm **Kiểm tra dữ liệu**. File hợp lệ hiển thị tổng số và thông báo đọc thành công; bảng chỉ có dòng lỗi/mã trùng nên không xuất hiện khi tất cả dòng hợp lệ. Đặt mã dài hơn 15 chữ số, mã có số 0 đầu và điện thoại ở dạng Text. Sau khi xác nhận ghi, tải tài khoản trước khi đổi file; đổi qua lại tab Hồ sơ sinh viên không làm mất kết quả. File thiếu cột phải báo rõ tên cột; sau lỗi ghi cần kiểm tra lại trước khi gửi lô mới.

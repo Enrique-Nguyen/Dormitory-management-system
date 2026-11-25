@@ -1,0 +1,258 @@
+{
+  "version": 1,
+  "marker": "E2E-QA-GOLDEN-v1",
+  "money": {
+    "depositK1": 1000000,
+    "depositN23": 2000000,
+    "priceMain4": 3000000,
+    "priceSummer4": 1500000,
+    "priceMain6": 2400000,
+    "priceSummer6": 1200000,
+    "electricRate": 3000,
+    "waterRate": 15000,
+    "repairCost": 100000,
+    "split": [
+      33333,
+      33333,
+      33334
+    ]
+  },
+  "units": {
+    "K1": 1,
+    "N23": 2
+  },
+  "accounts": {
+    "admin": 2,
+    "staff": 3,
+    "staffN23": 4,
+    "technician": 5,
+    "student": 6,
+    "student2": 7,
+    "cross": 8,
+    "technicianN23": 9,
+    "free": 10,
+    "female": 11,
+    "extra1": 12,
+    "extra2": 13,
+    "extra3": 14,
+    "extra4": 15,
+    "extra5": 16,
+    "extra6": 17,
+    "extra7": 18,
+    "extra8": 19,
+    "extra9": 20,
+    "extra10": 21,
+    "extra11": 22,
+    "extra12": 23
+  },
+  "building": {
+    "E2E-K1": 1,
+    "E2E-N2": 2
+  },
+  "type": {
+    "E2E-4G": 1,
+    "E2E-6G": 2
+  },
+  "room": {
+    "E2E-A101": 1,
+    "E2E-A102": 2,
+    "E2E-A103": 3,
+    "E2E-A104": 4,
+    "E2E-B201": 5
+  },
+  "beds": {
+    "E2E-A101": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "E2E-A102": [
+      5,
+      6,
+      7,
+      8
+    ],
+    "E2E-A103": [
+      9,
+      10,
+      11,
+      12
+    ],
+    "E2E-A104": [
+      13,
+      14,
+      15,
+      16
+    ],
+    "E2E-B201": [
+      17,
+      18,
+      19,
+      20,
+      21,
+      22
+    ]
+  },
+  "semester": {
+    "current": {
+      "id": 1,
+      "start": "2026-09-26",
+      "end": "2027-01-24"
+    },
+    "summer": {
+      "id": 2,
+      "start": "2027-01-25",
+      "end": "2027-03-25"
+    },
+    "next": {
+      "id": 3,
+      "start": "2027-03-26",
+      "end": "2027-07-23"
+    }
+  },
+  "periodId": 1,
+  "periods": {
+    "next": 2,
+    "closed": 3,
+    "futureSummer": 4
+  },
+  "goldenContracts": [
+    {
+      "studentId": 6,
+      "appId": 1,
+      "contractId": 1,
+      "bedId": 1
+    },
+    {
+      "studentId": 7,
+      "appId": 2,
+      "contractId": 2,
+      "bedId": 2
+    },
+    {
+      "studentId": 14,
+      "appId": 3,
+      "contractId": 3,
+      "bedId": 3
+    }
+  ],
+  "locationId": 1,
+  "today": "2026-11-25",
+  "billingMonth": "2026-11-01",
+  "config": {
+    "contract.activation_days": "7",
+    "contract.expiring_days": "15",
+    "maintenance.autoclose_days": "3",
+    "invoice.due_days": "7",
+    "deposit.topup_due_days": "7"
+  },
+  "caveats": [],
+  "flows": {
+    "room": {
+      "id": 6,
+      "bedIds": [
+        23,
+        24,
+        25,
+        26
+      ],
+      "code": "E2E-T0041bf5e"
+    },
+    "maintenance": {
+      "ticket": {
+        "id": 3,
+        "photoId": 1
+      },
+      "concluded": {
+        "ticketId": 3,
+        "amounts": [
+          -33333,
+          -33333,
+          -33334
+        ],
+        "due": "2026-12-02"
+      }
+    },
+    "registration": {
+      "app": {
+        "id": 4,
+        "studentId": 10
+      },
+      "held": {
+        "applicationId": 4,
+        "contractId": 6,
+        "assignmentId": 4,
+        "bedId": 5
+      },
+      "race": {
+        "winnerAppId": 7,
+        "contractId": 7,
+        "loserAppId": 6,
+        "bedId": 4
+      }
+    },
+    "scope": {
+      "n23": {
+        "id": 8
+      },
+      "contract": {
+        "id": 9
+      },
+      "ticket": {
+        "id": 4
+      },
+      "invoice": {
+        "id": 1
+      }
+    },
+    "billing": {
+      "readings": {
+        "electricId": 1,
+        "waterId": 2
+      },
+      "utility": {
+        "id": 2,
+        "total": 240000,
+        "batch": {
+          "totalCreated": 1,
+          "totalSkipped": 0,
+          "totalAmount": 240000
+        }
+      },
+      "fee": {
+        "batch": {
+          "totalCreated": 3,
+          "totalSkipped": 0,
+          "totalAmount": 9000000
+        },
+        "ids": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    "notification": {
+      "note": {
+        "id": 19,
+        "title": "E2E-QA room 20261124170041bf5e"
+      }
+    },
+    "summer": {},
+    "jobs": {
+      "candidate": {
+        "id": 10,
+        "applicationId": 9
+      },
+      "ticket": {
+        "old": 5,
+        "young": 6
+      },
+      "deposit": {
+        "id": 6,
+        "contractId": 3
+      }
+    }
+  }
+}

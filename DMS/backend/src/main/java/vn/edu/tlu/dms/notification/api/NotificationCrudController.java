@@ -36,7 +36,7 @@ public class NotificationCrudController {
 
     @RequirePrivilege(Permission.NOTIFICATION_READ)
     @GetMapping("/api/notifications/published/{id}")
-    public Object getPublished(@PathVariable Long id) {
+    public Map<String, Object> getPublished(@PathVariable Long id) {
         return service.getPublished(id);
     }
 

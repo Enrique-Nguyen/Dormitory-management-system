@@ -3,6 +3,10 @@ package vn.edu.tlu.dms.room.service.impl;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import vn.edu.tlu.dms.account.service.CatalogService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Catalog;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.constants.DmsConstants;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Resource;
@@ -19,6 +23,7 @@ import vn.edu.tlu.dms.room.domain.Semester;
 import vn.edu.tlu.dms.room.repository.SemesterRepository;
 import vn.edu.tlu.dms.room.service.SemesterService;
 
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -28,13 +33,17 @@ public class SemesterServiceImpl
 
     private final ScopeGuard guard;
 
+    private final CatalogService catalogs;
+
     public SemesterServiceImpl(
             SemesterRepository repository,
             ScopeGuard guard,
             CurrentUser currentUser,
-            AuditService auditService) {
+            AuditService auditService,
+            CatalogService catalogs) {
         super(repository, auditService, currentUser);
         this.guard = guard;
+        this.catalogs = catalogs;
     }
 
     @Override
@@ -64,15 +73,41 @@ public class SemesterServiceImpl
 
     @Override
     protected Set<String> sortableFields() {
-        return Set.of("id", "name", "academicYear", "type", "startDate", "endDate");
+        return Set.of("id", "name", "academicYear", "type", "startDate", "endDate", "code");
     }
 
     @Override
     protected Specification<Semester> searchScope(SearchRequest search) {
-        return (root, query, builder) ->
-                search.type() == null || search.type().isBlank()
-                        ? builder.conjunction()
-                        : builder.equal(root.get("type"), search.type());
+        Specification<Semester> scope =
+                (root, query, builder) ->
+                        search.type() == null || search.type().isBlank()
+                                ? builder.conjunction()
+                                : builder.equal(root.get("type"), search.type());
+        if (search.academicYear() != null && !search.academicYear().isBlank()) {
+            scope =
+                    scope.and(
+                            (root, query, builder) ->
+                                    builder.equal(
+                                            root.get(ApiField.ACADEMIC_YEAR),
+                                            search.academicYear().trim()));
+        }
+        if (search.name() != null && !search.name().isBlank()) {
+            scope = scope.and((root, query, builder) -> builder.greaterThan(builder.locate(
+                    builder.lower(root.get("name")), search.name().trim().toLowerCase(Locale.ROOT)), 0));
+        }
+        if (search.startDateFrom() != null) {
+            scope = scope.and((root, query, builder) -> builder.greaterThanOrEqualTo(root.get("startDate"), search.startDateFrom()));
+        }
+        if (search.startDateTo() != null) {
+            scope = scope.and((root, query, builder) -> builder.lessThanOrEqualTo(root.get("startDate"), search.startDateTo()));
+        }
+        if (search.endDateFrom() != null) {
+            scope = scope.and((root, query, builder) -> builder.greaterThanOrEqualTo(root.get("endDate"), search.endDateFrom()));
+        }
+        if (search.endDateTo() != null) {
+            scope = scope.and((root, query, builder) -> builder.lessThanOrEqualTo(root.get("endDate"), search.endDateTo()));
+        }
+        return scope;
     }
 
     @Override
@@ -91,8 +126,14 @@ public class SemesterServiceImpl
         if (creating) {
             requireValue(input.academicYear(), "academicYear");
         }
+        boolean academicYearChanged = input.academicYear() != null
+                && !input.academicYear().trim().equals(entity.getAcademicYear());
         if (input.academicYear() != null) {
-            entity.setAcademicYear(trimRequiredText(input.academicYear(), "academicYear"));
+            String academicYear = trimRequiredText(input.academicYear(), ApiField.ACADEMIC_YEAR);
+            if (creating || !academicYear.equals(entity.getAcademicYear())) {
+                catalogs.requireActiveCode(Catalog.ACADEMIC_YEARS, academicYear);
+            }
+            entity.setAcademicYear(academicYear);
         }
         if (creating) {
             requireValue(input.type(), "type");
@@ -113,11 +154,21 @@ public class SemesterServiceImpl
             entity.setEndDate(input.endDate());
         }
         if (!entity.getEndDate().isAfter(entity.getStartDate())) {
-            throw BusinessException.invalid("endDate", "Ngày kết thúc phải sau ngày bắt đầu");
+            throw BusinessException.invalid(ApiField.END_DATE, ValidationMessage.END_DATE_AFTER_START);
         }
+        if (creating || academicYearChanged || input.startDate() != null || input.endDate() != null) {
+            catalogs.requireWithinAcademicYear(entity.getAcademicYear(), entity.getStartDate(), entity.getEndDate());
+        }
+        if (input.roomFeeDueDate() != null) {
+            entity.setRoomFeeDueDate(input.roomFeeDueDate());
+        }
+        if (entity.getRoomFeeDueDate() != null && entity.getRoomFeeDueDate().isBefore(entity.getStartDate())) {
+            throw BusinessException.invalid("roomFeeDueDate", ValidationMessage.ROOM_FEE_DUE_AFTER_START);
+        }
+        entity.setNote(mergeText(input.note(), entity.getNote()));
         String[] years = entity.getAcademicYear().split("-");
-        if (Integer.parseInt(years[1]) != Integer.parseInt(years[0]) + 1) {
-            throw BusinessException.invalid("academicYear", "Hai năm phải liền nhau");
+        if ((creating || academicYearChanged) && Integer.parseInt(years[1]) != Integer.parseInt(years[0]) + 1) {
+            throw BusinessException.invalid(ApiField.ACADEMIC_YEAR, ValidationMessage.ACADEMIC_YEAR_CONSECUTIVE);
         }
     }
 
@@ -129,7 +180,10 @@ public class SemesterServiceImpl
                 entity.getAcademicYear(),
                 entity.getType(),
                 entity.getStartDate(),
-                entity.getEndDate());
+                entity.getEndDate(),
+                entity.getCode(),
+                entity.getRoomFeeDueDate(),
+                entity.getNote());
     }
 
     @Override

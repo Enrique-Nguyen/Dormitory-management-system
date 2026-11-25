@@ -77,13 +77,13 @@ public class UtilityReadingController {
 
     @RequirePrivilege(Permission.UTILITY_READING_READ)
     @GetMapping("/{id}")
-    public Object getReading(@PathVariable Long id) {
+    public Map<String, Object> getReading(@PathVariable Long id) {
         return service.getReading(id);
     }
 
     @RequirePrivilege({Permission.UTILITY_READING_CREATE, Permission.UTILITY_READING_UPDATE})
     @PostMapping("/save-or-update")
-    public Object saveOrUpdate(@Valid @RequestBody Input input) {
+    public Map<String, Object> saveOrUpdate(@Valid @RequestBody Input input) {
         return service.saveOrUpdate(input);
     }
 

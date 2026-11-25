@@ -52,7 +52,7 @@ API giữ tiền tố `/api`, dùng `/search-by-page` và `/save-or-update` theo
 - Tạo tài khoản/sinh viên trả `{userId,temporaryPassword}` một lần như trước; sửa trả Profile/StudentMap. Không đưa mật khẩu tạm vào cache hồ sơ hay audit. Các resource khác trả dữ liệu sau khi lưu.
 - Sửa chữa giữ multipart: POST `/api/maintenance-requests/save-or-update`, phần JSON `data` chứa `id` và nội dung, phần `photos` cho ảnh khi tạo. Khi sửa chỉ đổi nội dung ticket OPEN, giữ ảnh/vị trí; không làm mất ảnh cũ.
 - Giường: POST `/api/beds/save-or-update` với `{id,roomId,code}`; tạo cần roomId, sửa không đổi phòng nguồn. DELETE và POST đổi trạng thái giữ endpoint riêng.
-- Hồ sơ cá nhân vẫn GET `/api/me/profile`, lưu qua POST `/api/me/profile/save-or-update` và chỉ sửa người đăng nhập. Cấu hình dùng `/api/admin/configs/search-by-page` và `/api/admin/configs/save-or-update` với `{key,value}`, chỉ sửa khóa đã có. `/api/me/room/search-by-page` là danh sách phòng cá nhân, không có chỗ ở trả trang rỗng.
+- Hồ sơ cá nhân vẫn GET `/api/me/profile`, lưu qua POST `/api/me/profile/save-or-update` và chỉ sửa người đăng nhập. Sở thích giao diện theo tài khoản dùng GET `/api/me/preferences` và POST `/api/me/preferences/save-or-update` (Flyway V8, quyền PROFILE_READ/PROFILE_UPDATE, version chống ghi đè). Cấu hình dùng `/api/admin/configs/search-by-page` và `/api/admin/configs/save-or-update` với `{key,value}`, chỉ sửa khóa đã có. `/api/me/room/search-by-page` là danh sách phòng cá nhân, không có chỗ ở trả trang rỗng.
 - GET chi tiết, DELETE, hành động trạng thái, reset/khóa tài khoản, hộp thư đã đọc/chưa đọc và GET/PUT ma trận role giữ chuyên biệt. API `/auth/me` và `/notifications/unread-count` không đổi thành search. Không gộp trạng thái/tài chính/phân phòng vào lệnh lưu dữ liệu.
 - Đây là thay đổi contract cần cập nhật frontend/caller đồng thời. Không duy trì cặp API tạo/sửa cũ hoặc danh sách GET để làm đường vòng. Đặc tả đầy đủ và ví dụ ở [API Spec](../../Docs/02%20External%20Design/API%20Specification/API-Spec-DMS.md), mục 1.1, 2.5, 2.9 và 3.
 
@@ -91,6 +91,28 @@ Response nghiệp vụ hiện là DTO phục vụ khung: một số tham chiếu
 ## Chạy thử
 
 Xem [README chung](../../README.md). Windows local dùng start-local.ps1; máy khác dùng Compose và đặt secret backend từ môi trường. Không có tài khoản/mật khẩu mặc định trong Git.
+
+### Sự cố: `Migration checksum mismatch for migration version 10` (05/11/2026)
+
+**Triệu chứng:** `mvnw spring-boot:run` dừng với `Process terminated with exit code: 1`. Lỗi thật nằm trong log khởi động: `FlywayValidateException: Validate failed ... Migration checksum mismatch for migration version 10`.
+
+**Nguyên nhân:** commit `1436022` sửa `V10__shared_catalogs.sql` sau khi file đã được áp dụng trên CSDL dev. Thay đổi gồm hai phần: bỏ khối sửa dữ liệu năm học `2908-2910`, và nới `ck_academic_year_code` từ `YYYY-YYYY` có năm sau = năm trước + 1 thành chỉ kiểm định dạng `YYYY-YYYY`. Máy nào đã chạy V10 trước commit này đều có checksum `-1224946798`, khác với checksum của file hiện tại (`1020332633`).
+
+**Cách xử lý trên CSDL dev local** (không dùng cho môi trường có dữ liệu thật):
+
+- Cách 1, giữ dữ liệu: trước hết kiểm tra không có `academic_year`/`semester` nào ở dạng lỗi `2908-2910`. Sau đó cho schema khớp với V10 hiện tại và cập nhật checksum (tương đương `flyway repair`):
+
+  ```sql
+  BEGIN;
+  ALTER TABLE academic_year DROP CONSTRAINT ck_academic_year_code;
+  ALTER TABLE academic_year ADD CONSTRAINT ck_academic_year_code CHECK (code ~ '^[0-9]{4}-[0-9]{4}$');
+  UPDATE flyway_schema_history SET checksum = 1020332633 WHERE version = '10' AND checksum = -1224946798;
+  COMMIT;
+  ```
+
+- Cách 2, bỏ dữ liệu local: chạy `docker compose down -v` trong `DMS/`, sau đó `docker compose up -d` để Flyway migrate lại từ đầu.
+
+**Phòng tránh:** đúng quy tắc 9 ở trên, không sửa migration đã chạy, kể cả V5 trở đi. Muốn đổi ràng buộc hoặc dữ liệu thì thêm `V<n>__*.sql` mới.
 
 ## Luồng đăng nhập Keycloak
 

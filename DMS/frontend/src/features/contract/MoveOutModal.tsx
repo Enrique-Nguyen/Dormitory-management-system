@@ -18,6 +18,7 @@ import {
   useConfirm,
 } from '../../components'
 import { Permission, Role } from '../../constants/authorization'
+import { assetConditionLabels } from '../../constants/statusConfig'
 import { hasPermission } from '../../services/api/auth'
 import {
   AssetCondition,
@@ -81,7 +82,7 @@ function InvoiceSection({
   invoices: MoveOutInvoice[]
 }) {
   return (
-    <div style={{ marginTop: 20 }}>
+    <div style={{ marginTop: 12 }}>
       <strong>{title}</strong>
       {invoices.length === 0 ? (
         <p>Không có hóa đơn chưa thanh toán.</p>
@@ -302,7 +303,7 @@ export default function MoveOutModal({
             </FormField>
 
             {(previewQuery.isLoading || me.isLoading) && (
-              <div style={{ marginTop: 16 }}>
+              <div style={{ marginTop: 12 }}>
                 <PageSkeleton rows={4} />
               </div>
             )}
@@ -311,7 +312,7 @@ export default function MoveOutModal({
               <Alert
                 type="error"
                 showIcon
-                style={{ marginTop: 16 }}
+                style={{ marginTop: 12 }}
                 title="Không thể xem trước trả phòng"
                 description={errorMessage(previewQuery.error)}
               />
@@ -321,7 +322,7 @@ export default function MoveOutModal({
               <Alert
                 type="warning"
                 showIcon
-                style={{ marginTop: 16 }}
+                style={{ marginTop: 12 }}
                 title="Bạn không có quyền thực hiện trả phòng"
                 description={
                   isStudent
@@ -334,10 +335,9 @@ export default function MoveOutModal({
             {preview && (
               <>
                 <Descriptions
-                  bordered
                   size="small"
                   column={{ xs: 1, sm: 2 }}
-                  style={{ marginTop: 16 }}
+                  style={{ marginTop: 12 }}
                   items={[
                     {
                       key: 'status',
@@ -378,7 +378,7 @@ export default function MoveOutModal({
                   <Alert
                     type="warning"
                     showIcon
-                    style={{ marginTop: 16 }}
+                    style={{ marginTop: 12 }}
                     title="Số dư cọc đang âm"
                     description="Sinh viên còn nợ cọc; lần trả phòng này không tạo giao dịch hoàn cọc."
                   />
@@ -387,7 +387,7 @@ export default function MoveOutModal({
                   <Alert
                     type="info"
                     showIcon
-                    style={{ marginTop: 16 }}
+                    style={{ marginTop: 12 }}
                     title="Sinh viên đang là trưởng phòng"
                     description="Vai trò trưởng phòng sẽ được gỡ tự động trong cùng giao dịch trả phòng."
                   />
@@ -402,7 +402,7 @@ export default function MoveOutModal({
                   invoices={moveOutUtilityInvoices(preview)}
                 />
 
-                <div style={{ marginTop: 20 }}>
+                <div style={{ marginTop: 12 }}>
                   <strong>Ticket chưa kết luận chi phí</strong>
                   {preview.unsettledTickets.length === 0 ? (
                     <p>Không có ticket sửa chữa chưa kết luận.</p>
@@ -433,7 +433,7 @@ export default function MoveOutModal({
                   )}
                 </div>
 
-                <div style={{ marginTop: 20 }}>
+                <div style={{ marginTop: 12 }}>
                   <strong>Cảnh báo</strong>
                   {hasWarnings ? (
                     <Alert
@@ -454,7 +454,7 @@ export default function MoveOutModal({
                   )}
                 </div>
 
-                <div style={{ marginTop: 20 }}>
+                <div style={{ marginTop: 12 }}>
                   <FormField label="Tình trạng tài sản" required>
                     {(control) => (
                       <RadioGroup
@@ -472,16 +472,18 @@ export default function MoveOutModal({
                           }
                         }}
                       >
-                        <Radio value={AssetCondition.OK}>Bình thường</Radio>
+                        <Radio value={AssetCondition.OK}>
+                          {assetConditionLabels[AssetCondition.OK]}
+                        </Radio>
                         <Radio value={AssetCondition.DAMAGED}>
-                          Có hư hỏng
+                          {assetConditionLabels[AssetCondition.DAMAGED]}
                         </Radio>
                       </RadioGroup>
                     )}
                   </FormField>
 
                   {assetCondition === AssetCondition.DAMAGED && (
-                    <div style={{ marginTop: 16 }}>
+                    <div style={{ marginTop: 12 }}>
                       <FormField
                         label="Ghi chú hư hỏng"
                         required
@@ -506,7 +508,7 @@ export default function MoveOutModal({
                   )}
 
                   {hasWarnings && (
-                    <div style={{ marginTop: 16 }}>
+                    <div style={{ marginTop: 12 }}>
                       <Checkbox
                         checked={acknowledged}
                         onChange={(event) => {

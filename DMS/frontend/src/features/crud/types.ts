@@ -5,22 +5,30 @@ export interface CrudField {
   name: string
   label: string
   kind?:
-    'text' | 'number' | 'date' | 'datetime' | 'textarea' | 'select' | 'boolean'
+    'text' | 'number' | 'date' | 'datetime' | 'time' | 'textarea' | 'select' | 'boolean'
   required?: boolean
   maxLength?: number
+  pattern?: RegExp
+  patternMessage?: string
   min?: number
   max?: number
   createOnly?: boolean
+  /** Chỉ hỗ trợ chọn dữ liệu trên form; không gửi API hoặc đưa vào file nhập Excel. */
+  formOnly?: boolean
+  /** Trường bí mật chỉ nhập khi tạo, không hiển thị khi xem/sửa. */
+  sensitive?: boolean
   editOnly?: boolean
   options?: { value: string | number; label: string }[]
   lookup?: string
   /** Bộ lọc lookup gửi trong body search-by-page, không ghép query vào đường dẫn API. */
   lookupFilters?: Record<string, string | number | boolean>
   lookupLabel?: string
+  lookupValue?: string
+  lookupDependsOn?: { field: string; parameter?: string; required?: boolean }
   multiple?: boolean
   /** Kiểu JSON của bộ lọc khi control/URL giữ giá trị dạng chuỗi. */
   filterValueType?: 'string' | 'number' | 'boolean'
-  visibleWhen?: { field: string; value: string }
+  visibleWhen?: { field: string; value: string | string[] }
   /** Gợi ý ngắn dưới trường nhập; nội dung tĩnh khai tại registry tài nguyên. */
   hint?: string
 }
@@ -59,7 +67,7 @@ export interface CrudResource {
   filters?: CrudField[]
   columns: CrudColumn[]
   /** Trường chỉ hiện ở chi tiết, không được đưa vào payload thêm/sửa. */
-  detailColumns?: { key: string; label: string }[]
+  detailColumns?: CrudColumn[]
   /** Dùng dữ liệu danh sách cho form khi tài nguyên không có API chi tiết riêng. */
   useListRecordForEdit?: boolean
   note?: string
@@ -75,6 +83,8 @@ export interface CrudResource {
   /** Màn Tài chính dùng khung trình bày thống nhất cho danh sách và hộp thoại. */
   finance?: boolean
   editStates?: string[]
+  /** Trạng thái được xóa/rút; thiếu thì dùng chung editStates. */
+  deleteStates?: string[]
   deleteLabel?: string
   deleteAction?: string
   /** Tài nguyên chỉ có ghi sửa (cấu hình, bản ghi sẵn): không xóa dù được cấp quyền DELETE. */

@@ -2,6 +2,7 @@ package vn.edu.tlu.dms.common.service.impl;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.exception.BusinessException;
@@ -85,7 +86,7 @@ public abstract class AbstractSqlCrudServiceImpl {
             String table, Long id, Map<String, String> fields, Map<String, Object> input) {
         var values = convertFields(fields, input);
         if (values.isEmpty()) {
-            throw BusinessException.invalid("form", "Chưa có trường để cập nhật");
+            throw BusinessException.invalid(ApiField.FORM, ValidationMessage.NOTHING_TO_UPDATE);
         }
         var before = queries.one("SELECT * FROM " + table + " WHERE id=?", id);
         var args = new ArrayList<>(values.values());
@@ -126,7 +127,7 @@ public abstract class AbstractSqlCrudServiceImpl {
         for (var entry : input.entrySet()) {
             String definition = fields.get(entry.getKey());
             if (definition == null) {
-                throw BusinessException.invalid(entry.getKey(), "Trường không được phép ghi");
+                throw BusinessException.invalid(entry.getKey(), ValidationMessage.FIELD_NOT_WRITABLE);
             }
             Object value = entry.getValue();
             if (value == null) {
@@ -143,10 +144,10 @@ public abstract class AbstractSqlCrudServiceImpl {
                             default -> throw new IllegalArgumentException("Kiểu chưa hỗ trợ");
                         };
             } catch (IllegalArgumentException | DateTimeParseException e) {
-                throw BusinessException.invalid(entry.getKey(), "Giá trị không đúng định dạng");
+                throw BusinessException.invalid(entry.getKey(), ValidationMessage.VALUE_FORMAT_INVALID);
             }
             if (value instanceof String text && (text.isBlank() || text.length() > 500)) {
-                throw BusinessException.invalid(entry.getKey(), "Nhập từ 1 đến 500 ký tự");
+                throw BusinessException.invalid(entry.getKey(), ValidationMessage.TEXT_LENGTH_500);
             }
             converted.put(parts[0], value);
         }

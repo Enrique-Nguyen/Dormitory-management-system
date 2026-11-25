@@ -141,6 +141,9 @@ class BillingConcurrencyIntegrationTest {
                         Long.class,
                         "T4-" + suffix);
 
+        jdbc.update(
+                "INSERT INTO building_floor(building_id,floor,name) VALUES(?,1,'Tang 1') ON CONFLICT DO NOTHING",
+                buildingId);
         roomId =
                 jdbc.queryForObject(
                         "INSERT INTO room(building_id, room_type_id, code, floor, gender, status)"
@@ -172,6 +175,10 @@ class BillingConcurrencyIntegrationTest {
             jdbc.update("DELETE FROM bed WHERE room_id=?", roomId);
             jdbc.update("DELETE FROM room WHERE id=?", roomId);
         }
+        jdbc.update(
+                "DELETE FROM building_floor WHERE building_id IN"
+                        + " (SELECT id FROM building WHERE management_unit_id=?)",
+                unitId);
         jdbc.update("DELETE FROM building WHERE management_unit_id=?", unitId);
         jdbc.update("DELETE FROM room_type WHERE name LIKE ?", "T4-" + suffix);
         jdbc.update("DELETE FROM notification_read WHERE user_id IN (?, ?)", staffId, studentId);

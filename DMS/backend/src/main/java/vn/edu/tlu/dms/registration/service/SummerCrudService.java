@@ -21,14 +21,14 @@ public interface SummerCrudService {
      * @param id mã định danh lựa chọn hè
      * @return dữ liệu lựa chọn kèm allowedActions và lịch sử trạng thái
      */
-    Object getChoice(Long id);
+    Map<String, Object> getChoice(Long id);
 
     /**
      * Đọc lựa chọn hè mới nhất của sinh viên đang đăng nhập.
      *
      * @return chi tiết lựa chọn mới nhất; null nếu sinh viên chưa gửi lựa chọn nào
      */
-    Object getMyCurrentChoice();
+    Map<String, Object> getMyCurrentChoice();
 
     /**
      * ID trống tạo hồ sơ chờ, có ID sửa lựa chọn đang chờ; kiểm CREATE/UPDATE riêng. Không đổi hợp

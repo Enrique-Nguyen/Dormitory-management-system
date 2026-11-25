@@ -196,4 +196,21 @@ public abstract class AbstractCrudServiceImpl<E, I, R> implements CrudService<I,
         }
         return value.trim();
     }
+
+    /**
+     * Gộp trường văn bản tùy chọn khi sửa từng phần: null giữ giá trị cũ, chuỗi rỗng xóa trường,
+     * chuỗi có nội dung được cắt khoảng trắng hai đầu.
+     */
+    protected String mergeText(String input, String current) {
+        if (input == null) {
+            return current;
+        }
+        String trimmed = input.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    /** Gộp trường không phải văn bản: null giữ giá trị cũ, có giá trị thì ghi đè. */
+    protected <T> T mergeValue(T input, T current) {
+        return input == null ? current : input;
+    }
 }

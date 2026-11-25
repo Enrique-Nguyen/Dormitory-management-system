@@ -12,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.account.service.CatalogService;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Catalog;
+import vn.edu.tlu.dms.room.service.FloorService;
 import vn.edu.tlu.dms.billing.service.DepositService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
@@ -110,6 +113,10 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
     private final ApplicationEventPublisher events;
 
+    private final CatalogService catalogs;
+
+    private final FloorService floors;
+
     public MaintenanceRequestServiceImpl(
             MaintenanceRequestRepository requests,
             MaintenancePhotoRepository photoRows,
@@ -125,7 +132,9 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             JdbcTemplate jdbc,
             AuditService audit,
             EntityManager entityManager,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events,
+            CatalogService catalogs,
+            FloorService floors) {
         this.requests = requests;
         this.photoRows = photoRows;
         this.photos = photos;
@@ -141,6 +150,8 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         this.audit = audit;
         this.entityManager = entityManager;
         this.events = events;
+        this.catalogs = catalogs;
+        this.floors = floors;
     }
 
     @Override
@@ -183,6 +194,8 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                 request.category(),
                                 request.severity(),
                                 LikePattern.contains(request.q()),
+                                LikePattern.contains(request.code() == null ? "" : request.code()),
+                                LikePattern.contains(request.description() == null ? "" : request.description()),
                                 PageRequest.of(request.page(), request.size(), sort))
                         .map(row -> toMaintenanceResponse(row, false)));
     }
@@ -199,7 +212,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             return createMaintenanceRequest(input, files);
         }
         if (files != null && files.stream().anyMatch(f -> f != null && !f.isEmpty())) {
-            throw BusinessException.invalid("photos", "Không hỗ trợ cập nhật ảnh khi sửa yêu cầu");
+            throw BusinessException.invalid(ApiField.PHOTOS, ValidationMessage.PHOTO_UPDATE_UNSUPPORTED);
         }
         // Khóa trước, nạp lại dữ liệu thật rồi mới kiểm tra OPEN/chủ sở hữu, tránh ghi theo dữ liệu
         // cũ.
@@ -211,12 +224,15 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
         }
         if (input.roomId() != null || input.buildingId() != null || input.floor() != null) {
-            throw BusinessException.invalid("roomId", "Không đổi vị trí của yêu cầu đã tạo");
+            throw BusinessException.invalid(ApiField.ROOM_ID, ValidationMessage.MAINTENANCE_LOCATION_IMMUTABLE);
         }
         if (input.category() == null && input.severity() == null && input.description() == null) {
             throw BusinessException.invalid(ApiField.FORM, ValidationMessage.NOTHING_TO_UPDATE);
         }
-        if (input.category() != null) req.setCategory(input.category());
+        if (input.category() != null && !input.category().equals(req.getCategory())) {
+            catalogs.requireActiveCode(Catalog.MAINTENANCE_CATEGORIES, input.category());
+            req.setCategory(input.category());
+        }
         if (input.severity() != null) req.setSeverity(input.severity());
         if (input.description() != null) {
             requireNonBlank(input.description(), "description");
@@ -245,6 +261,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         guard.requirePermission(Permission.MAINTENANCE_CREATE);
         guard.requireRole(Role.STUDENT, Role.STAFF);
         requireNonBlank(input.category(), "category");
+        catalogs.requireActiveCode(Catalog.MAINTENANCE_CATEGORIES, input.category());
         requireNonBlank(input.severity(), "severity");
         requireNonBlank(input.description(), "description");
         var actor = current.get();
@@ -271,6 +288,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                 request.setRoomId(input.roomId());
             } else {
                 guard.requireUnit(rooms.getBuildingManagementUnitId(input.buildingId()));
+                floors.requireActiveFloor(input.buildingId(), input.floor());
                 request.setBuildingId(input.buildingId());
                 request.setFloor(input.floor());
             }
@@ -334,13 +352,13 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                 BusinessAction.RESOLVE)
                         .contains(action)
                 && (reason == null || reason.trim().length() < 5)) {
-            throw BusinessException.invalid("reason", "Cần lý do hoặc ghi chú tối thiểu 5 ký tự");
+            throw BusinessException.invalid(ApiField.REASON, ValidationMessage.REASON_MIN_5);
         }
         if (action.equals(BusinessAction.ACCEPT)
                 && (actor.is(Role.STAFF) || actor.isAdmin())
                 && !actor.id().equals(request.getRequesterId())
                 && (reason == null || reason.trim().length() < 5)) {
-            throw BusinessException.invalid("reason", "Nghiệm thu thay sinh viên cần lý do");
+            throw BusinessException.invalid(ApiField.REASON, ValidationMessage.PROXY_ACCEPT_REASON_REQUIRED);
         }
         String next =
                 switch (action) {
@@ -350,7 +368,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                             MaintenanceStatus.IN_PROGRESS;
                     case BusinessAction.RESOLVE -> MaintenanceStatus.RESOLVED;
                     case BusinessAction.ACCEPT -> MaintenanceStatus.CLOSED;
-                    default -> throw BusinessException.invalid("action", "Hành động không hỗ trợ");
+                    default -> throw BusinessException.invalid(ApiField.ACTION, ValidationMessage.ACTION_UNSUPPORTED);
                 };
         if (next.equals(MaintenanceStatus.RESOLVED)) {
             request.setResolvedAt(OffsetDateTime.now());
@@ -689,10 +707,10 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         var actor = current.get();
         return actor.is(Role.STAFF)
                 && Objects.equals(actor.unitId(), requestUnitId(r))
+                // Nghiệm thu thay chỉ khi người yêu cầu là Staff hoặc đã trả phòng (FR-MNT-07); chuyển
+                // phòng vẫn là đang ở nên không đủ điều kiện (MNT-01).
                 && (accounts.user(r.getRequesterId()).role().equals(Role.STAFF)
-                        || !Objects.equals(
-                                r.getRoomId(),
-                                rooms.findCurrentStayingRoomId(r.getRequesterId()).orElse(-1L)));
+                        || rooms.findCurrentStayingRoomId(r.getRequesterId()).isEmpty());
     }
 
     private void changeStatusAndRecordHistory(MaintenanceRequest r, String next, String reason) {

@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-11-24T17:16:44.456Z",
+  "ports": [
+    {
+      "port": 8080,
+      "listening": false
+    },
+    {
+      "port": 8180,
+      "listening": false
+    },
+    {
+      "port": 5174,
+      "listening": false
+    },
+    {
+      "port": 55432,
+      "listening": false
+    }
+  ],
+  "retainedDatabases": [
+    "dms_e2e",
+    "keycloak_e2e",
+    "dms_e2e_integration",
+    "dms_e2e_unicode"
+  ],
+  "noDemoDatabaseChanged": true
+}

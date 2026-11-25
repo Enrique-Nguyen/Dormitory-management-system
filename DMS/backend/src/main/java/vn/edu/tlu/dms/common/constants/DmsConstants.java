@@ -28,6 +28,7 @@ public final class DmsConstants {
         public static final String BED_NOT_AVAILABLE = "BED_NOT_AVAILABLE";
         public static final String BED_OCCUPIED = "BED_OCCUPIED";
         public static final String BED_TAKEN = "BED_TAKEN";
+        public static final String BED_UNIT_MISMATCH = "BED_UNIT_MISMATCH";
         public static final String BOOTSTRAP_USERNAME_IN_USE = "BOOTSTRAP_USERNAME_IN_USE";
         public static final String CONCURRENT_UPDATE = "CONCURRENT_UPDATE";
         public static final String CONFIG_VALUE_INVALID = "CONFIG_VALUE_INVALID";
@@ -46,9 +47,12 @@ public final class DmsConstants {
         public static final String DUPLICATE_DEPOSIT = "DUPLICATE_DEPOSIT";
         public static final String DUPLICATE_INVOICE = "DUPLICATE_INVOICE";
         public static final String DUPLICATE_REFUND = "DUPLICATE_REFUND";
+        public static final String ACADEMIC_YEAR_OVERLAP = "ACADEMIC_YEAR_OVERLAP";
         public static final String DUPLICATE_USERNAME = "DUPLICATE_USERNAME";
         public static final String DUPLICATE_VALUE = "DUPLICATE_VALUE";
         public static final String FILE_TOO_LARGE = "FILE_TOO_LARGE";
+        public static final String FLOOR_IN_USE = "FLOOR_IN_USE";
+        public static final String FLOOR_OUT_OF_RANGE = "FLOOR_OUT_OF_RANGE";
         public static final String FORBIDDEN = "FORBIDDEN";
         public static final String GENDER_MISMATCH = "GENDER_MISMATCH";
         public static final String IDENTITY_ALREADY_LINKED = "IDENTITY_ALREADY_LINKED";
@@ -104,6 +108,7 @@ public final class DmsConstants {
         public static final String UNIT_NOT_IN_PERIOD = "UNIT_NOT_IN_PERIOD";
         public static final String UNSUPPORTED_MEDIA_TYPE = "UNSUPPORTED_MEDIA_TYPE";
         public static final String USERNAME_EXISTS = "USERNAME_EXISTS";
+        public static final String USER_UNIT_MISMATCH = "USER_UNIT_MISMATCH";
         public static final String VALIDATION_FAILED = "VALIDATION_FAILED";
 
         private ErrorCode() {}
@@ -111,6 +116,18 @@ public final class DmsConstants {
 
     /** Tên field của hợp đồng validation, audit và ma trận quyền; không dùng làm tên cột SQL. */
     public static final class ApiField {
+        public static final String CODE = "code";
+        public static final String ACTIVE = "active";
+        public static final String PARENT_ID = "parentId";
+        public static final String PARENT_NAME = "parentName";
+        public static final String SCHOOL_ID = "schoolId";
+        public static final String FACULTY_ID = "facultyId";
+        public static final String COHORT_ID = "cohortId";
+        public static final String HOMETOWN_ID = "hometownId";
+        public static final String SCHOOL_NAME = "schoolName";
+        public static final String KIND = "kind";
+        public static final String ALLOWED_ACTIONS = "allowedActions";
+        public static final String CREATION_SOURCE = "creationSource";
         public static final String STUDENT_CODE = "studentCode";
         public static final String FULL_NAME = "fullName";
         public static final String GENDER = "gender";
@@ -164,6 +181,8 @@ public final class DmsConstants {
         public static final String RETURNED_AT = "returnedAt";
         public static final String PAPER_CONTRACT_SIGNED = "paperContractSigned";
         public static final String DEPOSIT_AMOUNT = "depositAmount";
+        public static final String PRICE_MAIN = "priceMain";
+        public static final String PRICE_SUMMER = "priceSummer";
         public static final String PAYMENT_METHOD = "paymentMethod";
         public static final String VERIFIED = "verified";
         public static final String NEW_END_DATE = "newEndDate";
@@ -185,6 +204,40 @@ public final class DmsConstants {
         public static final String APPLICATION_ID = "applicationId";
         public static final String NOTE = "note";
 
+        public static final String MANAGEMENT_UNIT_ID = "managementUnitId";
+        public static final String USERNAME = "username";
+        public static final String HOMETOWN = "hometown";
+        public static final String THEME_MODE = "themeMode";
+        public static final String THEME_PRESET = "themePreset";
+        public static final String TABLE_DENSE = "tableDense";
+        public static final String INPUT = "input";
+        public static final String TOTAL_AMOUNT = "totalAmount";
+        public static final String RATE = "rate";
+        public static final String METER_TYPE = "meterType";
+        public static final String UNIT_PRICE = "unitPrice";
+        public static final String EFFECTIVE_FROM = "effectiveFrom";
+        public static final String ROOM_ID = "roomId";
+        public static final String START_READING = "startReading";
+        public static final String OLD_METER_FINAL = "oldMeterFinal";
+        public static final String END_READING = "endReading";
+        public static final String ACTOR_ID = "actorId";
+        public static final String TO = "to";
+        public static final String KEY = "key";
+        public static final String PHOTOS = "photos";
+        public static final String ACTION = "action";
+        public static final String SCOPE = "scope";
+        public static final String CLOSE_AT = "closeAt";
+        public static final String PERIOD = "period";
+        public static final String NAME = "name";
+        public static final String WEIGHT = "weight";
+        public static final String UNIT_IDS = "unitIds";
+        public static final String QUOTAS = "quotas";
+        public static final String PERIOD_ID = "periodId";
+        public static final String PRIORITY_CATEGORY_IDS = "priorityCategoryIds";
+        public static final String BUILDING_ID = "buildingId";
+        public static final String ACADEMIC_YEAR = "academicYear";
+        public static final String MISSING_COLUMNS = "missingColumns";
+        public static final String MAX_ROWS = "maxRows";
         private ApiField() {}
     }
 
@@ -192,6 +245,8 @@ public final class DmsConstants {
     public static final class StudentImport {
         public static final long MAX_BYTES = 5L * 1024 * 1024;
         public static final int MAX_ROWS = 5000;
+        public static final int MAX_HEADER_COLUMNS = 100;
+        public static final int MAX_NUMERIC_CODE_DIGITS = 15;
         public static final long MAX_UNCOMPRESSED_BYTES = 50L * 1024 * 1024;
         public static final int MAX_ZIP_ENTRIES = 200;
         public static final String FILE_NAME = "mau-import-sinh-vien.xlsx";
@@ -229,7 +284,40 @@ public final class DmsConstants {
         private StudentImport() {}
     }
 
+    /** Giới hạn ảnh sự cố (SAD: tối đa 3 ảnh, mỗi ảnh ≤ 5 MB) và mã lý do trong details của PHOTO_INVALID. */
+    public static final class PhotoUpload {
+        public static final int MAX_COUNT = 3;
+        public static final long MAX_BYTES = 5L * 1024 * 1024;
+        public static final String REASON_COUNT = "COUNT";
+        public static final String REASON_SIZE = "SIZE";
+        public static final String REASON_TYPE = "TYPE";
+
+        private PhotoUpload() {}
+    }
+
     /** Thông báo validation dùng chung; giữ nguyên từng chuỗi đã trả về qua API. */
+    public static final class Catalog {
+        public static final String SCHOOLS = "schools";
+        public static final String FACULTIES = "faculties";
+        public static final String COHORTS = "cohorts";
+        public static final String HOMETOWNS = "hometowns";
+        public static final String ACADEMIC_YEARS = "academic-years";
+        public static final String AMENITIES = "amenities";
+        public static final String MAINTENANCE_CATEGORIES = "maintenance-categories";
+        public static final String INVALID_VALUE = "Giá trị danh mục không hợp lệ hoặc không còn hoạt động";
+        public static final String IMMUTABLE_CODE = "Không được thay đổi mã danh mục đã tạo";
+        public static final String INVALID_HIERARCHY = "Quan hệ danh mục không hợp lệ hoặc tạo chu trình";
+        public static final String INVALID_YEAR = "Năm học phải có dạng YYYY-YYYY và hai năm liên tiếp";
+        public static final String FIELD_NOT_APPLICABLE = "Trường này không thuộc loại danh mục đang lưu";
+        public static final String START_YEAR_MISMATCH = "Năm của ngày bắt đầu phải bằng năm đầu của mã năm học";
+        public static final String YEAR_RANGE = "Năm nhập học phải từ 2000 đến năm sau năm hiện tại";
+        public static final String GRADUATION_AFTER_ENROLLMENT = "Năm tốt nghiệp dự kiến phải sau năm nhập học";
+        public static final String ADMIN_LEVEL_PARENT = "Cấp tỉnh không có cấp cha; cấp xã phải thuộc một tỉnh";
+        public static final String SEMESTER_OUTSIDE_YEAR = "Học kỳ phải nằm trong khoảng ngày của năm học";
+        public static final String INVALID_FORMAT = "Giá trị không đúng định dạng";
+        private Catalog() {}
+    }
+
     public static final class ValidationMessage {
         public static final String ID_POSITIVE = "ID phải lớn hơn 0";
         public static final String ID_POSITIVE_INTEGER = "ID phải là số nguyên dương";
@@ -308,6 +396,107 @@ public final class DmsConstants {
         public static final String SUMMER_SEMESTER_AFTER_CONTRACT =
                 "Học kỳ hè phải kết thúc sau ngày hết hạn hợp đồng";
 
+        public static final String NOT_BLANK = "Không để trống";
+        public static final String PREFERENCE_MODE_INVALID =
+                "Chế độ giao diện phải là light hoặc dark";
+        public static final String PREFERENCE_PRESET_INVALID =
+                "Tông màu phải là blue, indigo, teal, emerald, violet, amber, gray, brown, pink hoặc red";
+        public static final String PREFERENCE_TABLE_DENSE_REQUIRED =
+                "Phải chọn mật độ bảng (dày hoặc gọn)";
+        public static final String PREFERENCE_VERSION_REQUIRED =
+                "Thiếu version khi cập nhật sở thích đã có";
+        public static final String UNIT_ID_POSITIVE = "ID đơn vị phải lớn hơn 0";
+        public static final String USERNAME_IMMUTABLE =
+                "Không được cập nhật tên đăng nhập qua API tài khoản";
+        public static final String ADMIN_NO_UNIT = "Admin không gắn đơn vị";
+        public static final String STUDENT_ROLE_FIXED = "Hồ sơ sinh viên giữ vai trò STUDENT";
+        public static final String ROLE_IN_USE_IMMUTABLE =
+                "Không đổi vai trò tài khoản đang sử dụng";
+        public static final String UNIT_REQUIRED_FOR_ROLE = "Staff/KTV phải có đơn vị quản lý";
+        public static final String ROLE_HAS_NO_UNIT = "Vai trò không có đơn vị";
+        public static final String STUDENT_ONLY = "Chỉ áp dụng cho sinh viên";
+        public static final String SELF_LOCK_FORBIDDEN = "Không tự khóa tài khoản đang dùng";
+        public static final String STUDENT_FIELD_NOT_FOR_STAFF =
+                "Trường hồ sơ sinh viên không áp dụng khi tạo tài khoản cán bộ";
+        public static final String INVOICE_INPUT_REQUIRED = "Dữ liệu hóa đơn không được để trống";
+        public static final String INVOICE_EDIT_UNISSUED_ONLY =
+                "Chỉ sửa tổng tiền/hạn đóng của hồ sơ chưa phát hành";
+        public static final String UPDATE_INPUT_REQUIRED = "Thiếu thông tin cập nhật";
+        public static final String INVOICE_TYPE_CHOICE = "Chọn ROOM_FEE hoặc UTILITY";
+        public static final String ROOM_FEE_TARGET = "Phí phòng chỉ gắn sinh viên/học kỳ";
+        public static final String UTILITY_TARGET = "Điện nước chỉ gắn phòng/tháng";
+        public static final String FIRST_DAY_OF_MONTH = "Dùng ngày đầu tháng";
+        public static final String FIRST_DAY_OF_MONTH_VALID = "Nhập ngày đầu tháng hợp lệ";
+        public static final String AMOUNT_NOT_NEGATIVE = "Số tiền không được âm";
+        public static final String DUE_DATE_NOT_PAST = "Hạn đóng không được trước hôm nay";
+        public static final String DUE_DATE_FROM_TODAY = "Hạn đóng phải từ hôm nay";
+        public static final String NUMBER_REQUIRED = "Giá trị số bắt buộc";
+        public static final String METER_TYPE_INVALID = "Loại đồng hồ không hợp lệ";
+        public static final String RATE_INPUT_REQUIRED = "Thông tin đơn giá không được để trống";
+        public static final String METER_TYPE_REQUIRED = "Phải chọn loại đồng hồ hợp lệ";
+        public static final String UNIT_PRICE_POSITIVE = "Đơn giá phải lớn hơn 0";
+        public static final String EFFECTIVE_FROM_REQUIRED = "Phải nhập ngày hiệu lực";
+        public static final String EFFECTIVE_FROM_NOT_PAST =
+                "Ngày hiệu lực của đơn giá mới không được trước hôm nay";
+        public static final String READING_INPUT_REQUIRED = "Phải nhập thông tin chỉ số";
+        public static final String READING_KEY_IMMUTABLE =
+                "Không đổi phòng, loại đồng hồ hoặc kỳ của bản ghi";
+        public static final String START_READING_REQUIRED = "Tháng đầu phải nhập chỉ số đầu";
+        public static final String OLD_METER_FINAL_REQUIRED = "Thiếu chỉ số chốt đồng hồ cũ";
+        public static final String ROOM_REQUIRED = "Phải chọn phòng hợp lệ";
+        public static final String READING_MONTH_REQUIRED = "Phải chọn kỳ ghi chỉ số";
+        public static final String READING_PREVIOUS_MONTH_REQUIRED = "Phải nhập chỉ số kỳ trước trước khi nhập kỳ này";
+        public static final String END_READING_REQUIRED = "Phải nhập chỉ số cuối";
+        public static final String READING_NOT_NEGATIVE = "Chỉ số không được âm";
+        public static final String FIELD_NOT_WRITABLE = "Trường không được phép ghi";
+        public static final String VALUE_FORMAT_INVALID = "Giá trị không đúng định dạng";
+        public static final String TEXT_LENGTH_500 = "Nhập từ 1 đến 500 ký tự";
+        public static final String ACTOR_ID_POSITIVE = "ID người thực hiện phải lớn hơn 0";
+        public static final String TIME_RANGE_INVALID =
+                "Mốc kết thúc phải bằng hoặc sau mốc bắt đầu";
+        public static final String CONFIG_KEY_EXISTING = "Phải chọn khóa cấu hình đã tồn tại";
+        public static final String CONTRACT_APPLICATION_IMMUTABLE =
+                "Không đổi nguồn đơn của hợp đồng";
+        public static final String DATE_FORMAT_ISO = "Ngày dùng yyyy-MM-dd";
+        public static final String TRANSFER_NO_END_DATE =
+                "Yêu cầu chuyển phòng không nhận ngày gia hạn";
+        public static final String CONTRACT_IMMUTABLE = "Không đổi hợp đồng";
+        public static final String DATE_INVALID = "Ngày không hợp lệ";
+        public static final String PHOTO_UPDATE_UNSUPPORTED =
+                "Không hỗ trợ cập nhật ảnh khi sửa yêu cầu";
+        public static final String MAINTENANCE_LOCATION_IMMUTABLE =
+                "Không đổi vị trí của yêu cầu đã tạo";
+        public static final String REASON_MIN_5 = "Cần lý do hoặc ghi chú tối thiểu 5 ký tự";
+        public static final String PROXY_ACCEPT_REASON_REQUIRED =
+                "Nghiệm thu thay sinh viên cần lý do";
+        public static final String ACTION_UNSUPPORTED = "Hành động không hỗ trợ";
+        public static final String NOTIFICATION_SCOPE_IMMUTABLE =
+                "Không đổi phạm vi thông báo đã đăng";
+        public static final String NOTIFICATION_SCOPE_MISMATCH =
+                "Các trường vị trí không khớp phạm vi thông báo";
+        public static final String SCOPE_UNSUPPORTED = "Phạm vi không hỗ trợ";
+        public static final String PERIOD_EXTEND_CLOSE_ONLY = "Chỉ được gia hạn ngày đóng";
+        public static final String PERIOD_INPUT_REQUIRED = "Thiếu trường bắt buộc của đợt đăng ký";
+        public static final String NAME_REQUIRED = "Không để trống tên";
+        public static final String CLOSE_AFTER_OPEN = "Ngày đóng phải sau ngày mở";
+        public static final String SUMMER_PERIOD_SEMESTER = "Đợt hè phải dùng học kỳ hè";
+        public static final String UNIT_IDS_INVALID =
+                "Danh sách đơn vị phải khác rỗng và không trùng";
+        public static final String SUMMER_NO_QUOTA = "Đợt hè không có chỉ tiêu";
+        public static final String QUOTA_BUILDING_INVALID =
+                "Tòa phải thuộc đơn vị áp dụng và không được trùng";
+        public static final String PERIOD_UNIT_REQUIRED = "Thiếu đợt hoặc đơn vị nguyện vọng";
+        public static final String APPLICATION_PERIOD_IMMUTABLE = "Không đổi đợt của đơn đã tạo";
+        public static final String PRIORITY_DUPLICATE = "Không khai trùng diện ưu tiên";
+        public static final String END_REASON_INVALID = "Lý do đóng phân phòng không hợp lệ";
+        public static final String ROOM_BUILDING_IMMUTABLE = "Không chuyển phòng sang tòa khác";
+        public static final String BED_ROOM_IMMUTABLE = "Không chuyển giường sang phòng khác";
+        public static final String PLACEMENT_SOURCE_EXACTLY_ONE =
+                "Truyền đúng một trong applicationId, transferRequestId hoặc storageRecordId";
+        public static final String ACADEMIC_YEAR_CONSECUTIVE = "Hai năm phải liền nhau";
+        public static final String ROOM_FEE_DUE_AFTER_START = "Hạn đóng phí phòng không được trước ngày bắt đầu học kỳ";
+        public static final String PHONE_INVALID =
+                "Số điện thoại phải bắt đầu bằng 0 hoặc +84 và gồm 10–11 chữ số";
         private ValidationMessage() {}
     }
 
@@ -396,6 +585,7 @@ public final class DmsConstants {
                         new ScreenDefinition(Resource.PROFILE, "Hồ sơ cá nhân", Group.PERSONAL),
                         new ScreenDefinition(
                                 Resource.MANAGEMENT_UNIT, "Đơn vị quản lý", Group.CATALOG),
+                        new ScreenDefinition(Resource.CATALOG, "Danh mục dùng chung", Group.CATALOG),
                         new ScreenDefinition(Resource.BUILDING, "Tòa nhà", Group.CATALOG),
                         new ScreenDefinition(
                                 Resource.PRIORITY_CATEGORY, "Diện ưu tiên", Group.CATALOG),
@@ -467,6 +657,7 @@ public final class DmsConstants {
 
     /** Mã đối tượng/màn hình phân quyền; không phải tên bảng SQL. */
     public static final class Resource {
+        public static final String CATALOG = "CATALOG";
         public static final String USER = "USER";
         public static final String STUDENT = "STUDENT";
         public static final String MANAGEMENT_UNIT = "MANAGEMENT_UNIT";
@@ -501,6 +692,10 @@ public final class DmsConstants {
 
     /** Mã quyền đã đăng ký; hằng compile-time dùng được trực tiếp trong @RequirePrivilege. */
     public static final class Permission {
+        public static final String CATALOG_READ = Resource.CATALOG + PERMISSION_SEPARATOR + Action.READ;
+        public static final String CATALOG_CREATE = Resource.CATALOG + PERMISSION_SEPARATOR + Action.CREATE;
+        public static final String CATALOG_UPDATE = Resource.CATALOG + PERMISSION_SEPARATOR + Action.UPDATE;
+        public static final String CATALOG_DELETE = Resource.CATALOG + PERMISSION_SEPARATOR + Action.DELETE;
         public static final String USER_READ = Resource.USER + PERMISSION_SEPARATOR + Action.READ;
         public static final String USER_CREATE =
                 Resource.USER + PERMISSION_SEPARATOR + Action.CREATE;
@@ -725,6 +920,10 @@ public final class DmsConstants {
                         BUILDING_CREATE,
                         BUILDING_UPDATE,
                         BUILDING_DELETE,
+                        CATALOG_READ,
+                        CATALOG_CREATE,
+                        CATALOG_UPDATE,
+                        CATALOG_DELETE,
                         PRIORITY_CATEGORY_READ,
                         PRIORITY_CATEGORY_CREATE,
                         PRIORITY_CATEGORY_UPDATE,
@@ -971,6 +1170,8 @@ public final class DmsConstants {
         public static final String PENDING = "PENDING";
         public static final String APPROVED = "APPROVED";
         public static final String REJECTED = "REJECTED";
+        /** Sinh viên rút lựa chọn còn chờ; giữ bản ghi và lịch sử thay cho xóa cứng (V14). */
+        public static final String CANCELLED = "CANCELLED";
 
         private SummerStatus() {}
     }
@@ -990,6 +1191,105 @@ public final class DmsConstants {
         public static final String PATTERN = M + "|" + F;
 
         private Gender() {}
+    }
+
+    /**
+     * Mã định dạng và tập giá trị của trường hồ sơ cơ sở vật chất (đặc tả trường nghiệp vụ đầy đủ,
+     * Phần I). Giá trị khớp CHECK trong migration V16; không đổi khi đã lưu.
+     */
+    public static final class Facility {
+        /** SĐT Việt Nam: 0 hoặc +84 và 9–10 chữ số; chuỗi rỗng dùng để xóa trường tùy chọn. */
+        public static final String PHONE_PATTERN = "^$|^(\\+84|0)[0-9]{9,10}$";
+        public static final String EMAIL_PATTERN = "^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$";
+        public static final String GENDER_MIXED = "MIXED";
+        public static final String GENDER_POLICY_PATTERN = Gender.M + "|" + Gender.F + "|" + GENDER_MIXED;
+        public static final String BED_STYLE_SINGLE = "SINGLE";
+        public static final String BED_STYLE_BUNK = "BUNK";
+        public static final String BED_STYLE_PATTERN = BED_STYLE_SINGLE + "|" + BED_STYLE_BUNK;
+        public static final String BED_POSITION_PATTERN = "^$|^(UPPER|LOWER|SINGLE)$";
+        public static final String ORIENTATION_PATTERN = "^$|^(N|S|E|W|NE|NW|SE|SW)$";
+        public static final String ROOM_TYPE_CODE_PATTERN = "^[A-Z0-9_-]{1,30}$";
+        public static final int MAX_FLOOR_COUNT = 30;
+        public static final int MIN_COMMISSIONED_YEAR = 1950;
+
+        private Facility() {}
+    }
+
+    /**
+     * Tập giá trị của trường danh mục (đặc tả trường nghiệp vụ đầy đủ, Phần II mục 8–19). Giá trị khớp
+     * CHECK trong migration V18; mã đã lưu không đổi.
+     */
+    public static final class CatalogValue {
+        public static final String ADMIN_LEVEL_PROVINCE = "PROVINCE";
+        public static final String ADMIN_LEVEL_COMMUNE = "COMMUNE";
+        public static final String ADMIN_LEVEL_PATTERN = ADMIN_LEVEL_PROVINCE + "|" + ADMIN_LEVEL_COMMUNE;
+        public static final String PRIORITY_AREA_PATTERN = "^$|^(KV1|KV2NT|KV2|KV3)$";
+        public static final String APPLIES_TO_ROOM = "ROOM";
+        public static final String APPLIES_TO_PATTERN = "ROOM|BUILDING|BOTH";
+        public static final String SEVERITY_PATTERN = "^$|^(LOW|MEDIUM|HIGH)$";
+        public static final String SKILL_PATTERN = "^$|^(ELECTRIC|PLUMBING|CARPENTRY|HVAC|NETWORK|GENERAL)$";
+        public static final String AUTO_RULE_PATTERN = "^$|^(ETHNIC_MINORITY|HARDSHIP_AREA|NONE)$";
+        public static final int MIN_ENROLLMENT_YEAR = 2000;
+        public static final int MAX_SLA_HOURS = 720;
+
+        private CatalogValue() {}
+    }
+
+    /**
+     * Sở thích giao diện theo tài khoản; giá trị khớp CHECK của bảng {@code user_preference} và
+     * hợp đồng API. Chỉ nhận các mã đã duyệt, không nhận CSS/màu tùy ý từ client.
+     */
+    public static final class Preference {
+        public static final String MODE_LIGHT = "light";
+        public static final String MODE_DARK = "dark";
+        public static final String MODE_PATTERN = MODE_LIGHT + "|" + MODE_DARK;
+        public static final Set<String> MODES = Set.of(MODE_LIGHT, MODE_DARK);
+
+        public static final String PRESET_BLUE = "blue";
+        public static final String PRESET_INDIGO = "indigo";
+        public static final String PRESET_TEAL = "teal";
+        public static final String PRESET_EMERALD = "emerald";
+        public static final String PRESET_VIOLET = "violet";
+        public static final String PRESET_AMBER = "amber";
+        public static final String PRESET_GRAY = "gray";
+        public static final String PRESET_BROWN = "brown";
+        public static final String PRESET_PINK = "pink";
+        public static final String PRESET_RED = "red";
+        public static final String PRESET_PATTERN =
+                PRESET_BLUE
+                        + "|"
+                        + PRESET_INDIGO
+                        + "|"
+                        + PRESET_TEAL
+                        + "|"
+                        + PRESET_EMERALD
+                        + "|"
+                        + PRESET_VIOLET
+                        + "|"
+                        + PRESET_AMBER
+                        + "|" + PRESET_GRAY
+                        + "|" + PRESET_BROWN
+                        + "|" + PRESET_PINK
+                        + "|" + PRESET_RED;
+        public static final Set<String> PRESETS =
+                Set.of(
+                        PRESET_BLUE,
+                        PRESET_INDIGO,
+                        PRESET_TEAL,
+                        PRESET_EMERALD,
+                        PRESET_VIOLET,
+                        PRESET_AMBER,
+                        PRESET_GRAY,
+                        PRESET_BROWN,
+                        PRESET_PINK,
+                        PRESET_RED);
+
+        public static final String DEFAULT_MODE = MODE_LIGHT;
+        public static final String DEFAULT_PRESET = PRESET_BLUE;
+        public static final boolean DEFAULT_TABLE_DENSE = false;
+        public static final long INITIAL_VERSION = 0L;
+
+        private Preference() {}
     }
 
     /** Loại học kỳ; SUMMER dùng cho học kỳ hè. */
@@ -1063,6 +1363,14 @@ public final class DmsConstants {
         private InvoiceType() {}
     }
 
+    /** Nguồn hóa đơn chỉ do server ghi, dùng để phân biệt quyền CRUD với phát hành tự động. */
+    public static final class InvoiceSource {
+        public static final String MANUAL = "MANUAL";
+        public static final String ISSUED = "ISSUED";
+
+        private InvoiceSource() {}
+    }
+
     /** Phạm vi nhận thông báo; USER chỉ do hệ thống tạo, không nhận từ form thủ công. */
     public static final class NotificationScope {
         public static final String ALL = "ALL";
@@ -1084,6 +1392,7 @@ public final class DmsConstants {
         public static final String MANUAL = "MANUAL";
         public static final String SUMMER_PERIOD_OPENED = "SUMMER_PERIOD_OPENED";
         public static final String APPLICATION_APPROVED = "APPLICATION_APPROVED";
+        public static final String APPLICATION_REJECTED = "APPLICATION_REJECTED";
         public static final String BED_HELD = "BED_HELD";
         public static final String INVOICE_ISSUED = "INVOICE_ISSUED";
         public static final String TICKET_STATUS_CHANGED = "TICKET_STATUS_CHANGED";
@@ -1131,6 +1440,9 @@ public final class DmsConstants {
      * đồng riêng; không đổi mã audit khi đổi cách đặt tên hoặc cấp quyền.
      */
     public static final class AuditAction {
+        public static final String CATALOG_CREATE = "CATALOG_CREATE";
+        public static final String CATALOG_UPDATE = "CATALOG_UPDATE";
+        public static final String CATALOG_DELETE = "CATALOG_DELETE";
         public static final String BED_CREATE = "BED_CREATE";
         public static final String BED_DELETE = "BED_DELETE";
         public static final String BED_OCCUPY = "BED_OCCUPY";
@@ -1193,29 +1505,46 @@ public final class DmsConstants {
         public static final String APPLICATION_PRIORITY_VERIFY = "APPLICATION_PRIORITY_VERIFY";
         public static final String SUMMER_CHOICE_APPROVE = "SUMMER_CHOICE_APPROVE";
         public static final String SUMMER_CHOICE_REJECT = "SUMMER_CHOICE_REJECT";
+        public static final String SUMMER_CHOICE_RESUBMIT = "SUMMER_CHOICE_RESUBMIT";
+        public static final String SUMMER_CHOICE_CANCEL = "SUMMER_CHOICE_CANCEL";
+        public static final String REGISTRATION_PERIOD_CREATE = "REGISTRATION_PERIOD_CREATE";
+        public static final String REGISTRATION_PERIOD_UPDATE = "REGISTRATION_PERIOD_UPDATE";
+        public static final String REGISTRATION_PERIOD_DELETE = "REGISTRATION_PERIOD_DELETE";
 
         private AuditAction() {}
     }
 
     /** Mã đối tượng audit/timeline tách khỏi mã quyền để giữ nguyên dữ liệu lịch sử. */
     public static final class EntityType {
+        public static final String CATALOG = "CATALOG";
         public static final String APPLICATION = "APPLICATION";
         public static final String ASSIGNMENT = "ASSIGNMENT";
         public static final String BED = "BED";
         public static final String CONTRACT = "CONTRACT";
         public static final String DEPOSIT_TRANSACTION = "DEPOSIT_TRANSACTION";
+        public static final String EXTENSION = "EXTENSION";
         public static final String INVOICE = "INVOICE";
         public static final String MAINTENANCE = "MAINTENANCE";
         public static final String MOVE_OUT = "MOVE_OUT";
         public static final String NOTIFICATION = "NOTIFICATION";
+        public static final String REGISTRATION_PERIOD = "REGISTRATION_PERIOD";
         public static final String ROOM = "ROOM";
         public static final String STORAGE = "STORAGE";
         public static final String SUMMER_CHOICE = "SUMMER_CHOICE";
         public static final String TRANSFER = "TRANSFER";
         public static final String USER = "USER";
         public static final String UTILITY_RATE = "UTILITY_RATE";
+        public static final String UTILITY_READING = Resource.UTILITY_READING;
 
         private EntityType() {}
+    }
+
+    /** Nguồn yêu cầu gia hạn; giá trị khớp CHECK của contract_extension_request.source. */
+    public static final class ExtensionSource {
+        public static final String STUDENT = "STUDENT";
+        public static final String SUMMER_STAY = "SUMMER_STAY";
+
+        private ExtensionSource() {}
     }
 
     /** Tác vụ nội bộ không giả danh Admin, actor_id null được hiển thị là SYSTEM. */

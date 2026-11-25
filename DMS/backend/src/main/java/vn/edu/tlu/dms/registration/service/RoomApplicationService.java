@@ -2,6 +2,7 @@ package vn.edu.tlu.dms.registration.service;
 
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
+import vn.edu.tlu.dms.registration.api.ApplicationDtos.AssignContractRequest;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Input;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Response;
 
@@ -51,6 +52,19 @@ public interface RoomApplicationService {
      * @return chi tiết đơn kèm giường đang giữ, hợp đồng và hạn kích hoạt
      */
     Response assignBed(Long id, Long bedId);
+
+    /**
+     * Phân giường như {@link #assignBed(Long, Long)} nhưng cho chốt ngay ngày hợp đồng, đơn giá
+     * riêng và (tùy chọn) kích hoạt trong cùng một transaction, để màn hợp đồng nhập hết một lần.
+     * Ngày hoặc đơn giá để trống thì dùng học kỳ của đợt và đơn giá loại phòng. Khi kích hoạt, số
+     * tiền cọc nhập vào được chốt làm mức cọc riêng của hợp đồng; mọi bước lỗi đều rollback tất cả.
+     * Bảng giá loại phòng và mức cọc của tòa không bị thay đổi.
+     *
+     * @param id mã đơn đăng ký đã APPROVED
+     * @param input giường, ngày, đơn giá, cọc và cờ kích hoạt
+     * @return chi tiết đơn sau khi phân giường (và kích hoạt nếu có)
+     */
+    Response assignAndActivate(Long id, AssignContractRequest input);
 
     /**
      * Hủy giữ chỗ để phân lại: đóng phân phòng HOLD, hủy hợp đồng PENDING và đưa đơn ASSIGNED về

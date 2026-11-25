@@ -10,6 +10,9 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 /**
  * Entity ánh xạ bảng đã có trong Flyway. Tham chiếu chéo module lưu bằng ID, tránh phụ thuộc vòng
  * và tải quan hệ ngoài ý muốn.
@@ -44,6 +47,30 @@ public class Room {
 
     @Column(name = "leader_student_id")
     private Long leaderStudentId;
+
+    @Column(name = "display_name", length = 50)
+    private String displayName;
+
+    @Column(name = "area_m2", precision = 6, scale = 2)
+    private BigDecimal areaM2;
+
+    @Column(name = "orientation", length = 2)
+    private String orientation;
+
+    @Column(name = "electric_meter_no", length = 30)
+    private String electricMeterNo;
+
+    @Column(name = "water_meter_no", length = 30)
+    private String waterMeterNo;
+
+    @Column(name = "commissioned_on")
+    private LocalDate commissionedOn;
+
+    @Column(name = "status_reason", length = 500)
+    private String statusReason;
+
+    @Column(name = "note", length = 1000)
+    private String note;
 
     public Long getId() {
         return id;
@@ -107,5 +134,69 @@ public class Room {
 
     public void setLeaderStudentId(Long value) {
         this.leaderStudentId = value;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String value) {
+        this.displayName = value;
+    }
+
+    public BigDecimal getAreaM2() {
+        return areaM2;
+    }
+
+    public void setAreaM2(BigDecimal value) {
+        this.areaM2 = value;
+    }
+
+    public String getOrientation() {
+        return orientation;
+    }
+
+    public void setOrientation(String value) {
+        this.orientation = value;
+    }
+
+    public String getElectricMeterNo() {
+        return electricMeterNo;
+    }
+
+    public void setElectricMeterNo(String value) {
+        this.electricMeterNo = value;
+    }
+
+    public String getWaterMeterNo() {
+        return waterMeterNo;
+    }
+
+    public void setWaterMeterNo(String value) {
+        this.waterMeterNo = value;
+    }
+
+    public LocalDate getCommissionedOn() {
+        return commissionedOn;
+    }
+
+    public void setCommissionedOn(LocalDate value) {
+        this.commissionedOn = value;
+    }
+
+    public String getStatusReason() {
+        return statusReason;
+    }
+
+    public void setStatusReason(String value) {
+        this.statusReason = value;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String value) {
+        this.note = value;
     }
 }

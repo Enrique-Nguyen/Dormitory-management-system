@@ -21,6 +21,9 @@ export const registrationKeys = {
   detail: (id: number) => ['applications', 'detail', id] as const,
   /** Cùng khóa với lookup của CrudPage để một lần làm mới cập nhật mọi màn. */
   catalog: (endpoint: string) => ['crud-lookup', endpoint] as const,
+  /** Tòa thuộc một đơn vị quản lý, dùng khi phân giường theo đơn vị nguyện vọng của đơn. */
+  unitBuildings: (managementUnitId: number | null | undefined) =>
+    ['crud-lookup', '/buildings', { managementUnitId }] as const,
 }
 
 export function useApplicationDetail(id: number) {
@@ -32,13 +35,20 @@ export function useApplicationDetail(id: number) {
 }
 
 /**
- * Danh mục tòa/loại phòng cho bộ lọc BedPicker khi phân giường. Dùng cùng khóa cache với
- * features/room nên dữ liệu được chia sẻ và một lần làm mới cập nhật cả hai nơi.
+ * Danh mục tòa/loại phòng cho bộ lọc BedPicker khi phân giường. Tòa được lọc ở API theo đơn vị
+ * nguyện vọng của đơn vì backend chỉ cho giữ giường thuộc đúng đơn vị đó (BED_UNIT_MISMATCH).
  */
-export function useAssignCatalog(enabled: boolean) {
+export function useAssignCatalog(
+  enabled: boolean,
+  managementUnitId: number | null | undefined,
+) {
   const buildings = useQuery({
-    queryKey: registrationKeys.catalog('/buildings'),
-    queryFn: () => getLookupRecords('/buildings'),
+    queryKey: registrationKeys.unitBuildings(managementUnitId),
+    queryFn: () =>
+      getLookupRecords(
+        '/buildings',
+        managementUnitId == null ? {} : { managementUnitId },
+      ),
     enabled,
     staleTime: 5 * 60 * 1000,
   })
@@ -112,6 +122,7 @@ function useApplicationMutation<T>(
         ['contracts'],
         ['staff'],
         ['notifications'],
+        ['pending-items'],
       ])
         void queryClient.invalidateQueries({ queryKey })
       return queryClient.invalidateQueries({

@@ -1,10 +1,11 @@
 -- =====================================================================
 -- DMS - Hệ thống quản lý ký túc xá sinh viên
--- Lược đồ nghiệp vụ, bản 0.6 (15/10/2026): Keycloak và ma trận quyền động
+-- Lược đồ nghiệp vụ, bản 0.8 (05/11/2026): bổ sung nguồn hóa đơn theo V15
 -- DBMS: PostgreSQL 16
--- Căn cứ: SRS-DMS.md v0.10. Giải thích chi tiết: DB-Design-DMS.md v0.6
--- Đây là snapshot bảng nghiệp vụ hiện tại, gồm bổ sung của migration V3–V5.
--- Ứng dụng nâng cấp bằng Flyway V1–V5; V2 tạo bảng Spring Session riêng.
+-- Căn cứ: SRS-DMS.md v0.14. Giải thích chi tiết: DB-Design-DMS.md v0.12
+-- Đây là snapshot bảng nghiệp vụ hiện tại, gồm bổ sung của migration V3–V8.
+-- Ứng dụng nâng cấp bằng Flyway V1–V8; V2 tạo bảng Spring Session riêng.
+-- Cột nguồn hóa đơn trong snapshot này bổ sung theo V15; khi nâng cấp dùng toàn bộ migration thực tế.
 --
 -- Quy ước:
 --   * Tên bảng, cột: snake_case, số ít.
@@ -200,6 +201,8 @@ CREATE TABLE application_priority (
     note            VARCHAR(500),            -- V7: ghi chú xác minh của Staff
     PRIMARY KEY (application_id, category_id)
 );
+COMMENT ON COLUMN application_priority.note IS
+    'Ghi chú xác minh của Staff khi duyệt diện ưu tiên (null: chưa xác nhận)';
 
 -- ---------------------------------------------------------------------
 -- 4. Hợp đồng, phân phòng, sổ cọc
@@ -461,6 +464,8 @@ CREATE TABLE invoice (
     id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     code             VARCHAR(20) NOT NULL UNIQUE,
     type             VARCHAR(10) NOT NULL CHECK (type IN ('ROOM_FEE','UTILITY')),
+    creation_source  VARCHAR(10) NOT NULL DEFAULT 'ISSUED'
+                     CONSTRAINT ck_invoice_creation_source CHECK (creation_source IN ('MANUAL','ISSUED')),
     -- phí phòng: theo (sinh viên, học kỳ)
     student_id       BIGINT REFERENCES student_profile(user_id),
     semester_id      BIGINT REFERENCES semester(id),
@@ -809,7 +814,7 @@ CREATE TABLE role_permission_matrix (
     CONSTRAINT ck_role_permission_matrix_version CHECK (version >= 0)
 );
 
--- Giữ nguyên quyền trước khi chuyển sang ma trận động: Staff 72, Student 35, Technician 11.
+-- Quyền mặc định sau V6: Staff 73 (V5 72 + ROOM_TRANSFER_APPROVE), Student 35, Technician 11.
 -- Đây là dữ liệu khởi tạo bất biến của migration; runtime đọc quyền đang lưu trong bảng.
 INSERT INTO role_permission_matrix(role, permissions) VALUES
     ('STAFF', '[
@@ -858,6 +863,7 @@ INSERT INTO role_permission_matrix(role, permissions) VALUES
     "ROOM_CREATE",
     "ROOM_DELETE",
     "ROOM_READ",
+    "ROOM_TRANSFER_APPROVE",
     "ROOM_TRANSFER_READ",
     "ROOM_TRANSFER_UPDATE",
     "ROOM_TYPE_CREATE",
@@ -936,3 +942,26 @@ INSERT INTO role_permission_matrix(role, permissions) VALUES
     "ROOM_TYPE_READ",
     "SEMESTER_READ"
 ]'::jsonb);
+
+-- ---------------------------------------------------------------------
+-- 11. Sở thích giao diện theo tài khoản (Flyway V8)
+-- ---------------------------------------------------------------------
+
+CREATE TABLE user_preference (
+    user_id       BIGINT PRIMARY KEY REFERENCES app_user(id),
+    theme_mode    VARCHAR(10) NOT NULL DEFAULT 'light'
+                  CONSTRAINT ck_user_preference_theme_mode
+                  CHECK (theme_mode IN ('light', 'dark')),
+    theme_preset  VARCHAR(20) NOT NULL DEFAULT 'blue'
+                  CONSTRAINT ck_user_preference_theme_preset
+                  CHECK (theme_preset IN ('blue', 'indigo', 'teal', 'emerald', 'violet', 'amber', 'gray', 'brown', 'pink', 'red')),
+    table_dense   BOOLEAN NOT NULL DEFAULT FALSE,
+    version       BIGINT NOT NULL DEFAULT 0
+                  CONSTRAINT ck_user_preference_version CHECK (version >= 0),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE user_preference IS
+    'Sở thích giao diện của từng tài khoản; module account ghi, không xóa cứng khi tài khoản còn';
+COMMENT ON COLUMN user_preference.version IS
+    'Phiên bản chống ghi đè; tăng 1 sau mỗi lần lưu, không phải security_version của tài khoản';

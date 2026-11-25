@@ -1,12 +1,12 @@
 import { CrownOutlined, UserSwitchOutlined } from '@ant-design/icons'
-import { Flex, Result, Typography } from 'antd'
+import { Descriptions, Flex, Result, Typography } from 'antd'
 import { useState } from 'react'
 import { useParams } from 'react-router'
 import {
   Alert,
   BedCard,
   Button,
-  Card,
+  DetailSection as Card,
   DataTable,
   LeaderDialog,
   PageHeader,
@@ -16,11 +16,15 @@ import {
   useConfirm,
   type LeaderCandidate,
 } from '../../components'
-import { Permission } from '../../constants/authorization'
+import { Permission, type Role } from '../../constants/authorization'
 import { portalPath, STAFF_ROOMS_PATH } from '../../constants/navigation'
 import {
+  assignmentLabel,
   assignmentOccupancy,
   BED_STATUS,
+  bedOperation,
+  bedPositionLabels,
+  orientationLabels,
   roomGender,
   roomOperation,
 } from '../../constants/statusConfig'
@@ -33,9 +37,9 @@ import {
   useRoomDetail,
 } from '../../features/room'
 import { hasPermission } from '../../services/api/auth'
-import type { LeaderChange, StudentRef } from '../../services/api/room'
+import type { LeaderChange, RoomBedItem, StudentRef } from '../../services/api/room'
 import { errorMessage } from '../../utils/errorMessages'
-import { formatDateTime } from '../../utils/format'
+import { formatDate, formatDateTime, formatNumber } from '../../utils/format'
 
 const SYSTEM_ACTOR = 'Hệ thống'
 
@@ -43,17 +47,30 @@ function studentLabel(student: StudentRef | null) {
   return student ? `${student.fullName} (${student.studentCode})` : '—'
 }
 
+export interface RoomDetailPageProps {
+  role?: Role
+  roomId?: number
+  embedded?: boolean
+  readOnly?: boolean
+}
+
 /**
  * Chi tiết phòng (UI 15): giường và người ở, trưởng phòng, cảnh báo thiếu trưởng phòng
  * (FR-ROOM-10), lịch sử đổi trưởng phòng (FR-ROOM-09) và quản lý giường.
  */
-export default function RoomDetailPage() {
-  const id = Number(useParams().id)
+export default function RoomDetailPage({
+  role,
+  roomId,
+  embedded = false,
+  readOnly = false,
+}: RoomDetailPageProps = {}) {
+  const params = useParams()
+  const id = roomId ?? Number(params.id)
   const room = useRoomDetail(id)
   const { data: me } = useMe()
-  const canUpdate = hasPermission(me, Permission.ROOM_UPDATE)
-  const roomTypes = useRoomCatalog('/room-types')
-  const buildings = useRoomCatalog('/buildings')
+  const canUpdate = !readOnly && hasPermission(me, Permission.ROOM_UPDATE)
+  const roomTypes = useRoomCatalog('/room-types', hasPermission(me, Permission.ROOM_TYPE_READ))
+  const buildings = useRoomCatalog('/buildings', hasPermission(me, Permission.BUILDING_READ))
   const assign = useAssignLeader(id)
   const remove = useRemoveLeader(id)
   const { confirm, dialog } = useConfirm()
@@ -80,6 +97,7 @@ export default function RoomDetailPage() {
   return (
     <>
       <PageHeader
+        showHeading
         title={`Phòng ${title}`}
         status={operation && <Tag>{operation.label}</Tag>}
         subtitle={[
@@ -90,10 +108,10 @@ export default function RoomDetailPage() {
         ]
           .filter(Boolean)
           .join(' · ')}
-        breadcrumb={[
+        breadcrumb={embedded ? undefined : [
           {
             label: 'Phòng & Giường',
-            to: portalPath(me?.role, STAFF_ROOMS_PATH),
+            to: portalPath(role ?? me?.role, STAFF_ROOMS_PATH),
           },
           { label: title },
         ]}
@@ -102,7 +120,7 @@ export default function RoomDetailPage() {
         <Alert
           type="warning"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
           message="Phòng còn sinh viên đang ở nhưng chưa có trưởng phòng."
           description="Chỉ định trưởng phòng để nhận hóa đơn điện nước của phòng."
         />
@@ -160,6 +178,34 @@ export default function RoomDetailPage() {
             </Typography.Text>
           )}
         </Card>
+        <Card title="Thông tin phòng">
+          <Descriptions
+            size="small"
+            column={{ xs: 1, sm: 2, lg: 3 }}
+            items={[
+              { key: 'building', label: 'Tòa nhà', children: detail.buildingName ?? detail.buildingCode ?? '—' },
+              { key: 'displayName', label: 'Tên hiển thị', children: detail.displayName || '—' },
+              { key: 'roomType', label: 'Loại phòng', children: detail.roomTypeName ?? (roomType ? String(roomType.name) : '—') },
+              {
+                key: 'area',
+                label: 'Diện tích',
+                children: detail.areaM2 != null ? `${formatNumber(detail.areaM2)} m²` : '—',
+              },
+              {
+                key: 'orientation',
+                label: 'Hướng',
+                children: detail.orientation ? orientationLabels[detail.orientation] ?? detail.orientation : '—',
+              },
+              { key: 'commissionedOn', label: 'Đưa vào sử dụng', children: formatDate(detail.commissionedOn ?? null) },
+              { key: 'electric', label: 'Công tơ điện', children: detail.electricMeterNo || '—' },
+              { key: 'water', label: 'Đồng hồ nước', children: detail.waterMeterNo || '—' },
+              ...(detail.statusReason
+                ? [{ key: 'statusReason', label: 'Lý do trạng thái', children: detail.statusReason }]
+                : []),
+              ...(detail.note ? [{ key: 'note', label: 'Ghi chú', children: detail.note, span: 3 }] : []),
+            ]}
+          />
+        </Card>
         <Tabs
           items={[
             {
@@ -182,11 +228,39 @@ export default function RoomDetailPage() {
                       />
                     ))}
                   </div>
-                  <BedCrudPanel
-                    roomId={id}
-                    beds={detail.beds}
-                    reload={room.refetch}
-                  />
+                  {readOnly ? (
+                    <DataTable<RoomBedItem>
+                      rowKey="id"
+                      dataSource={detail.beds}
+                      pagination={false}
+                      columns={[
+                        { title: 'Mã giường', dataIndex: 'code' },
+                        {
+                          title: 'Vị trí',
+                          dataIndex: 'position',
+                          render: (value: string | null) => (value ? bedPositionLabels[value] ?? value : '—'),
+                        },
+                        {
+                          title: 'Vận hành',
+                          dataIndex: 'status',
+                          render: (value: string) => bedOperation[value]?.label ?? value,
+                        },
+                        {
+                          title: 'Người ở / giữ',
+                          key: 'occupant',
+                          render: (_value, bed) => bed.occupant
+                            ? `${bed.occupant.fullName} · ${bed.occupant.studentCode} · ${assignmentLabel(bed.occupant.kind)}`
+                            : '—',
+                        },
+                      ]}
+                    />
+                  ) : (
+                    <BedCrudPanel
+                      roomId={id}
+                      beds={detail.beds}
+                      reload={room.refetch}
+                    />
+                  )}
                 </Flex>
               ),
             },
@@ -234,16 +308,18 @@ export default function RoomDetailPage() {
           ]}
         />
       </Flex>
-      <LeaderDialog
-        roomCode={title}
-        open={leaderOpen}
-        occupants={occupants}
-        currentLeaderId={detail.leaderStudentId}
-        loading={assign.isPending}
-        onConfirm={(studentId) => assign.mutateAsync(studentId)}
-        onClose={() => setLeaderOpen(false)}
-      />
-      {dialog}
+      {canUpdate && leaderOpen && (
+        <LeaderDialog
+          roomCode={title}
+          open
+          occupants={occupants}
+          currentLeaderId={detail.leaderStudentId}
+          loading={assign.isPending}
+          onConfirm={(studentId) => assign.mutateAsync(studentId)}
+          onClose={() => setLeaderOpen(false)}
+        />
+      )}
+      {canUpdate && dialog}
     </>
   )
 }

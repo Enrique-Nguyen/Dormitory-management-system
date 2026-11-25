@@ -32,6 +32,27 @@ public class PriorityCategory {
     @Column(name = "active", nullable = false)
     private Boolean active;
 
+    @Column(name = "description", length = 1000)
+    private String description;
+
+    @Column(name = "evidence_required", length = 500)
+    private String evidenceRequired;
+
+    @Column(name = "evidence_mandatory", nullable=false)
+    private Boolean evidenceMandatory = Boolean.FALSE;
+
+    @Column(name = "legal_basis", length = 300)
+    private String legalBasis;
+
+    @Column(name = "sort_order")
+    private Short sortOrder;
+
+    @Column(name = "auto_rule", length = 30)
+    private String autoRule;
+
+    @Column(name = "note", length = 1000)
+    private String note;
+
     public Long getId() {
         return id;
     }
@@ -70,5 +91,61 @@ public class PriorityCategory {
 
     public void setActive(Boolean value) {
         this.active = value;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String value) {
+        this.description = value;
+    }
+
+    public String getEvidenceRequired() {
+        return evidenceRequired;
+    }
+
+    public void setEvidenceRequired(String value) {
+        this.evidenceRequired = value;
+    }
+
+    public Boolean getEvidenceMandatory() {
+        return evidenceMandatory;
+    }
+
+    public void setEvidenceMandatory(Boolean value) {
+        this.evidenceMandatory = value;
+    }
+
+    public String getLegalBasis() {
+        return legalBasis;
+    }
+
+    public void setLegalBasis(String value) {
+        this.legalBasis = value;
+    }
+
+    public Short getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(Short value) {
+        this.sortOrder = value;
+    }
+
+    public String getAutoRule() {
+        return autoRule;
+    }
+
+    public void setAutoRule(String value) {
+        this.autoRule = value;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String value) {
+        this.note = value;
     }
 }

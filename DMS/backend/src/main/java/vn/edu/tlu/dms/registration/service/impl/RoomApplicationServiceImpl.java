@@ -3,12 +3,14 @@ package vn.edu.tlu.dms.registration.service.impl;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Predicate;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
+import vn.edu.tlu.dms.account.service.AccountReferenceService.UserRef;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApplicationStatus;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AssignmentEndReason;
@@ -34,6 +36,7 @@ import vn.edu.tlu.dms.common.service.StatusHistoryService;
 import vn.edu.tlu.dms.common.support.LikePattern;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.contract.service.ContractService;
+import vn.edu.tlu.dms.registration.api.ApplicationDtos.AssignContractRequest;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.BedRef;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Hold;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.Input;
@@ -42,6 +45,7 @@ import vn.edu.tlu.dms.registration.api.ApplicationDtos.Response;
 import vn.edu.tlu.dms.registration.api.ApplicationDtos.StudentRef;
 import vn.edu.tlu.dms.registration.domain.ApplicationPriority;
 import vn.edu.tlu.dms.registration.domain.ApplicationPriorityId;
+import vn.edu.tlu.dms.registration.domain.ApplicationStatusChangedEvent;
 import vn.edu.tlu.dms.registration.domain.RegistrationPeriodUnitId;
 import vn.edu.tlu.dms.registration.domain.RoomApplication;
 import vn.edu.tlu.dms.registration.domain.RoomApplicationPolicy;
@@ -55,6 +59,7 @@ import vn.edu.tlu.dms.room.service.BedOccupancyService;
 import vn.edu.tlu.dms.room.service.OccupancyQuery;
 import vn.edu.tlu.dms.room.service.RoomReferenceService;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -79,6 +84,16 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
     private static final int MIN_REASON_LENGTH = 5;
 
     private static final LiveContract NO_CONTRACT = new LiveContract(null, false, false, null, null);
+
+    /** Sinh viên xem đơn của mình theo thời gian tạo mới nhất trước. */
+    private static final String STUDENT_DEFAULT_SORT = "createdAt,desc";
+
+    /**
+     * Staff xét đơn theo điểm ưu tiên giảm dần rồi nộp sớm trước (FR-REG-05). Nhiều tiêu chí được
+     * truyền như danh sách sort giống tham số client gửi.
+     */
+    private static final List<String> STAFF_DEFAULT_SORT =
+            List.of("priorityScore,desc", "submittedAt,asc");
 
     private final RoomApplicationRepository applications;
 
@@ -114,6 +129,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
 
     private final EntityManager entityManager;
 
+    private final ApplicationEventPublisher events;
+
     public RoomApplicationServiceImpl(
             RoomApplicationRepository applications,
             RegistrationPeriodRepository periods,
@@ -131,7 +148,8 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
             OccupancyQuery occupancyQuery,
             ConfigService configs,
             AuditService audit,
-            EntityManager entityManager) {
+            EntityManager entityManager,
+            ApplicationEventPublisher events) {
         this.applications = applications;
         this.periods = periods;
         this.periodUnits = periodUnits;
@@ -149,6 +167,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         this.configs = configs;
         this.audit = audit;
         this.entityManager = entityManager;
+        this.events = events;
     }
 
     @Override
@@ -192,14 +211,17 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         guard.requirePermission(Permission.ROOM_APPLICATION_READ);
         guard.requireRole(mine ? new String[] {Role.STUDENT} : new String[] {Role.STAFF});
         var actor = current.get();
+        // Sort mặc định theo vai trò; client vẫn chỉ được sort theo các cột cho phép.
+        List<String> requestedSort =
+                (sort == null || sort.isEmpty()) && !mine ? STAFF_DEFAULT_SORT : sort;
         var pageable =
                 PageQuery.of(
                         page,
                         size,
-                        sort,
+                        requestedSort,
                         Set.of("id", "priorityScore", "submittedAt", "createdAt"),
-                        "createdAt,desc");
-        return PageResponse.from(
+                        STUDENT_DEFAULT_SORT);
+        var result =
                 applications
                         .findAll(
                                 (r, q, b) -> {
@@ -231,8 +253,14 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                                     }
                                     return b.and(filters.toArray(Predicate[]::new));
                                 },
-                                pageable)
-                        .map(a -> toApplicationResponse(a, false)));
+                                pageable);
+        // Nạp thông tin sinh viên của cả trang trong một lượt để tránh truy vấn N+1.
+        var users =
+                accounts.users(
+                        result.getContent().stream().map(RoomApplication::getStudentId).toList());
+        return PageResponse.from(
+                result.map(
+                        a -> toApplicationResponse(a, false, null, users.get(a.getStudentId()))));
     }
 
     @Override()
@@ -261,7 +289,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         guard.requirePermission(Permission.ROOM_APPLICATION_CREATE);
         guard.requireRole(Role.STUDENT);
         if (input.periodId() == null || input.preferredUnitId() == null) {
-            throw BusinessException.invalid("periodId", "Thiếu đợt hoặc đơn vị nguyện vọng");
+            throw BusinessException.invalid(ApiField.PERIOD_ID, ValidationMessage.PERIOD_UNIT_REQUIRED);
         }
         Long studentId = resolveApplicationStudent(input.studentId());
         rooms.lockStudentProfile(studentId);
@@ -301,7 +329,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                     ApiField.STUDENT_ID, ValidationMessage.STUDENT_IMMUTABLE);
         }
         if (input.periodId() != null && !input.periodId().equals(a.getPeriodId())) {
-            throw BusinessException.invalid("periodId", "Không đổi đợt của đơn đã tạo");
+            throw BusinessException.invalid(ApiField.PERIOD_ID, ValidationMessage.APPLICATION_PERIOD_IMMUTABLE);
         }
         if (input.preferredUnitId() != null) {
             a.setPreferredUnitId(input.preferredUnitId());
@@ -333,6 +361,9 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         RoomApplicationPolicy.requireAction(
                 a, current.get(), action, contract.live(), contract.holdActive());
         if (action.equals(BusinessAction.SUBMIT)) {
+            // Khóa hồ sơ sinh viên (sau đơn) rồi mới kiểm tra hợp đồng để không lọt hợp đồng mới
+            // được tạo đồng thời từ đơn khác của cùng sinh viên.
+            rooms.lockStudentProfile(a.getStudentId());
             validateApplicationPeriod(a);
             if (rooms.hasPendingOrActiveContract(a.getStudentId())) {
                 throw BusinessException.conflict(ErrorCode.CONTRACT_EXISTS);
@@ -357,23 +388,84 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                     case BusinessAction.APPROVE -> ApplicationStatus.APPROVED;
                     case BusinessAction.REJECT -> ApplicationStatus.REJECTED;
                     case BusinessAction.CANCEL -> ApplicationStatus.CANCELLED;
-                    default -> throw BusinessException.invalid("action", "Hành động không hỗ trợ");
+                    default -> throw BusinessException.invalid(ApiField.ACTION, ValidationMessage.ACTION_UNSUPPORTED);
                 });
         a.setStatusReason(reason);
         applications.saveAndFlush(a);
         history.record(
                 EntityType.APPLICATION, id, before, a.getStatus(), current.get().id(), reason);
+        if (BusinessAction.APPROVE.equals(action) || BusinessAction.REJECT.equals(action)) {
+            events.publishEvent(
+                    new ApplicationStatusChangedEvent(
+                            id, a.getStudentId(), a.getStatus(), reason, null));
+        }
         return toApplicationResponse(a, true);
     }
 
     /**
-     * Phân giường cho đơn APPROVED: khóa đơn, tạo hợp đồng PENDING theo học kỳ của đợt rồi giữ chỗ
-     * HOLD qua module room. Thứ tự gọi service giữ nguyên thứ tự khóa bed → student → contract của
-     * module room/contract; lỗi ở bất kỳ bước nào đều rollback cả hợp đồng và phân phòng.
+     * Phân giường cho đơn APPROVED: khóa đơn, khóa giường rồi hồ sơ sinh viên, đối chiếu giường thuộc
+     * đơn vị nguyện vọng, sau đó mới tạo hợp đồng PENDING theo học kỳ của đợt và giữ chỗ HOLD qua
+     * module room. Thứ tự này giữ đúng thứ tự khóa bed → student_profile → dormitory_contract; lỗi
+     * ở bất kỳ bước nào đều rollback cả hợp đồng và phân phòng.
      */
     @Override
     @Transactional
     public Response assignBed(Long id, Long bedId) {
+        return assign(id, bedId, null, null, null, null);
+    }
+
+    /**
+     * Phân giường kèm ngày hợp đồng và đơn giá riêng, rồi kích hoạt nếu được yêu cầu. Kích hoạt chạy
+     * sau khi đã giữ giường trong cùng transaction nên lỗi cọc/giấy tờ hoàn tác cả việc giữ giường.
+     */
+    @Override
+    @Transactional
+    public Response assignAndActivate(Long id, AssignContractRequest input) {
+        guard.requirePermission(Permission.ROOM_APPLICATION_UPDATE);
+        guard.requireRole(Role.STAFF);
+        if ((input.startDate() == null) != (input.endDate() == null)) {
+            throw BusinessException.invalid(
+                    input.startDate() == null ? ApiField.START_DATE : ApiField.END_DATE,
+                    ValidationMessage.REQUIRED);
+        }
+        boolean activate = Boolean.TRUE.equals(input.activate());
+        if (activate) {
+            guard.requirePermission(Permission.CONTRACT_UPDATE);
+            if (input.depositAmount() == null) {
+                throw BusinessException.invalid(
+                        ApiField.DEPOSIT_AMOUNT, ValidationMessage.DEPOSIT_AMOUNT_POSITIVE);
+            }
+        }
+        Response assigned =
+                assign(
+                        id,
+                        input.bedId(),
+                        input.startDate(),
+                        input.endDate(),
+                        input.priceMain(),
+                        input.priceSummer());
+        if (!activate) {
+            return assigned;
+        }
+        contracts.activateWithCustomDeposit(
+                assigned.contractId(),
+                input.paperContractSigned(),
+                input.depositAmount(),
+                input.paymentMethod(),
+                input.note());
+        return toApplicationResponse(
+                applications.findById(id).orElseThrow(BusinessException::notFound),
+                true,
+                estimatedActivationDeadline());
+    }
+
+    private Response assign(
+            Long id,
+            Long bedId,
+            LocalDate startDate,
+            LocalDate endDate,
+            Long priceMain,
+            Long priceSummer) {
         guard.requirePermission(Permission.ROOM_APPLICATION_UPDATE);
         guard.requireRole(Role.STAFF);
         if (bedId == null || bedId <= 0) {
@@ -385,12 +477,29 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         // Policy chỉ cho ASSIGN khi APPROVED và chưa có hợp đồng PENDING/ACTIVE.
         RoomApplicationPolicy.requireAction(
                 a, current.get(), BusinessAction.ASSIGN, existing.live(), existing.holdActive());
+        Long bedUnitId = occupancy.lockBedForAssignment(bedId, a.getStudentId());
+        if (!a.getPreferredUnitId().equals(bedUnitId)) {
+            // ADMIN thao tác liên đơn vị vẫn không được giữ chỗ ngoài đơn vị nguyện vọng của đơn.
+            throw new BusinessException(
+                    ErrorCode.BED_UNIT_MISMATCH,
+                    HttpStatus.CONFLICT,
+                    Map.of(
+                            ApiField.BED_ID,
+                            bedId,
+                            ApiField.MANAGEMENT_UNIT_ID,
+                            a.getPreferredUnitId()));
+        }
         var period = periods.findById(a.getPeriodId()).orElseThrow(BusinessException::notFound);
         var semester = rooms.getSemesterReference(period.getSemesterId());
         Long contractId =
                 contracts.createPendingForApplication(
-                        id, a.getStudentId(), semester.startDate(), semester.endDate());
-        var assignment = occupancy.occupyHold(bedId, a.getStudentId(), contractId, null);
+                        id,
+                        a.getStudentId(),
+                        startDate == null ? semester.startDate() : startDate,
+                        endDate == null ? semester.endDate() : endDate);
+        var assignment =
+                occupancy.occupyHold(
+                        bedId, a.getStudentId(), contractId, null, priceMain, priceSummer);
         var actor = current.get();
         String before = a.getStatus();
         a.setStatus(ApplicationStatus.ASSIGNED);
@@ -406,6 +515,13 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                 Map.of(ApiField.STATUS, before),
                 assignmentValue(a, contractId, assignment),
                 null);
+        events.publishEvent(
+                new ApplicationStatusChangedEvent(
+                        id,
+                        a.getStudentId(),
+                        a.getStatus(),
+                        null,
+                        assignment.bedCode()));
         return toApplicationResponse(a, true, estimatedActivationDeadline());
     }
 
@@ -640,7 +756,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
     private void replaceApplicationPriorities(Long id, List<Long> ids) {
         List<Long> selected = ids == null ? List.of() : ids;
         if (new HashSet<>(selected).size() != selected.size()) {
-            throw BusinessException.invalid("priorityCategoryIds", "Không khai trùng diện ưu tiên");
+            throw BusinessException.invalid(ApiField.PRIORITY_CATEGORY_IDS, ValidationMessage.PRIORITY_DUPLICATE);
         }
         for (Long categoryId : selected) {
             if (!categories.exists(
@@ -664,14 +780,24 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
         return toApplicationResponse(a, detail, null);
     }
 
+    private Response toApplicationResponse(
+            RoomApplication a, boolean detail, OffsetDateTime activationDeadline) {
+        return toApplicationResponse(
+                a, detail, activationDeadline, accounts.user(a.getStudentId()));
+    }
+
     /**
      * Dựng chi tiết đơn; danh sách bỏ qua dữ liệu hợp đồng/giường để không phát sinh truy vấn
      * chéo module. {@code activationDeadline} chỉ có ngay sau phân giường vì hạn kích hoạt do
-     * module contract chụp lúc tạo hợp đồng.
+     * module contract chụp lúc tạo hợp đồng. Trọng số diện ưu tiên là tham số xét duyệt nội bộ nên
+     * không trả cho sinh viên.
      */
     private Response toApplicationResponse(
-            RoomApplication a, boolean detail, OffsetDateTime activationDeadline) {
-        var user = accounts.user(a.getStudentId());
+            RoomApplication a, boolean detail, OffsetDateTime activationDeadline, UserRef user) {
+        if (user == null) {
+            throw BusinessException.notFound();
+        }
+        boolean showWeight = !current.get().is(Role.STUDENT);
         var contract = detail ? liveContract(a) : NO_CONTRACT;
         var priorityRows =
                 detail
@@ -692,7 +818,7 @@ public class RoomApplicationServiceImpl implements RoomApplicationService {
                                             return new Priority(
                                                     p.getCategoryId(),
                                                     category.getName(),
-                                                    category.getWeight(),
+                                                    showWeight ? category.getWeight() : null,
                                                     p.getVerified(),
                                                     p.getVerifiedBy(),
                                                     verifier == null

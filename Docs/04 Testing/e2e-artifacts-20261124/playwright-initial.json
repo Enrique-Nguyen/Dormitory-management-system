@@ -1,0 +1,1242 @@
+{
+  "config": {
+    "argv": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "D:\\Dormitory-management-system\\DMS\\frontend\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--workers=1",
+      "--reporter=list,json"
+    ],
+    "configFile": "D:\\Dormitory-management-system\\DMS\\frontend\\playwright.config.ts",
+    "rootDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "D:/Dormitory-management-system/DMS/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/auth\\.setup\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "D:/Dormitory-management-system/DMS/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "anonymous",
+        "name": "anonymous",
+        "testDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/anonymous\\/.*\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "D:/Dormitory-management-system/DMS/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "student",
+        "name": "student",
+        "testDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/student\\/.*[.]spec[.]ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "D:/Dormitory-management-system/DMS/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "staff",
+        "name": "staff",
+        "testDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/staff\\/.*[.]spec[.]ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "D:/Dormitory-management-system/DMS/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "technician",
+        "name": "technician",
+        "testDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/technician\\/.*[.]spec[.]ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "D:/Dormitory-management-system/DMS/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "admin",
+        "name": "admin",
+        "testDir": "D:/Dormitory-management-system/DMS/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/admin\\/.*[.]spec[.]ts/"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "setup",
+        "testDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "snapshotDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5173",
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure",
+          "video": "retain-on-failure",
+          "locale": "vi-VN",
+          "timezoneId": "Asia/Ho_Chi_Minh"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "setup"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "anonymous",
+        "testDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "snapshotDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5173",
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure",
+          "video": "retain-on-failure",
+          "locale": "vi-VN",
+          "timezoneId": "Asia/Ho_Chi_Minh"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "anonymous"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "student",
+        "testDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "snapshotDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5173",
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure",
+          "video": "retain-on-failure",
+          "locale": "vi-VN",
+          "timezoneId": "Asia/Ho_Chi_Minh",
+          "userAgent": "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.8154.6 Mobile Safari/537.36",
+          "viewport": {
+            "width": 393,
+            "height": 727
+          },
+          "screen": {
+            "width": 393,
+            "height": 851
+          },
+          "deviceScaleFactor": 2.75,
+          "isMobile": true,
+          "hasTouch": true,
+          "defaultBrowserType": "chromium",
+          "storageState": "e2e/.auth/student.json"
+        },
+        "dependencies": [
+          "setup"
+        ],
+        "ignoreSnapshots": false,
+        "__projectId": "student"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "staff",
+        "testDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "snapshotDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5173",
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure",
+          "video": "retain-on-failure",
+          "locale": "vi-VN",
+          "timezoneId": "Asia/Ho_Chi_Minh",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.8154.6 Safari/537.36",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "chromium",
+          "storageState": "e2e/.auth/staff.json"
+        },
+        "dependencies": [
+          "setup"
+        ],
+        "ignoreSnapshots": false,
+        "__projectId": "staff"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "technician",
+        "testDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "snapshotDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5173",
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure",
+          "video": "retain-on-failure",
+          "locale": "vi-VN",
+          "timezoneId": "Asia/Ho_Chi_Minh",
+          "userAgent": "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.8154.6 Mobile Safari/537.36",
+          "viewport": {
+            "width": 393,
+            "height": 727
+          },
+          "screen": {
+            "width": 393,
+            "height": 851
+          },
+          "deviceScaleFactor": 2.75,
+          "isMobile": true,
+          "hasTouch": true,
+          "defaultBrowserType": "chromium",
+          "storageState": "e2e/.auth/technician.json"
+        },
+        "dependencies": [
+          "setup"
+        ],
+        "ignoreSnapshots": false,
+        "__projectId": "technician"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "admin",
+        "testDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "snapshotDir": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5173",
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure",
+          "video": "retain-on-failure",
+          "locale": "vi-VN",
+          "timezoneId": "Asia/Ho_Chi_Minh",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.8154.6 Safari/537.36",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "chromium",
+          "storageState": "e2e/.auth/admin.json"
+        },
+        "dependencies": [
+          "setup"
+        ],
+        "ignoreSnapshots": false,
+        "__projectId": "admin"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.65.1",
+    "workers": 1,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:5173",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "auth.setup.ts",
+      "file": "auth.setup.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "đăng nhập student",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Chưa đặt E2E_STUDENT_USERNAME/PASSWORD",
+                  "location": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\auth.setup.ts",
+                    "line": 15,
+                    "column": 13
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 193,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:08:39.905Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Chưa đặt E2E_STUDENT_USERNAME/PASSWORD",
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\auth.setup.ts",
+                        "line": 15,
+                        "column": 13
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-a92640d7454e993e57ae",
+          "file": "auth.setup.ts",
+          "line": 10,
+          "column": 3
+        },
+        {
+          "title": "đăng nhập staff",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Chưa đặt E2E_STAFF_USERNAME/PASSWORD",
+                  "location": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\auth.setup.ts",
+                    "line": 15,
+                    "column": 13
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 232,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:08:40.222Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Chưa đặt E2E_STAFF_USERNAME/PASSWORD",
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\auth.setup.ts",
+                        "line": 15,
+                        "column": 13
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-910ef5b23da666ce7079",
+          "file": "auth.setup.ts",
+          "line": 10,
+          "column": 3
+        },
+        {
+          "title": "đăng nhập technician",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Chưa đặt E2E_TECHNICIAN_USERNAME/PASSWORD",
+                  "location": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\auth.setup.ts",
+                    "line": 15,
+                    "column": 13
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 158,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:08:40.467Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Chưa đặt E2E_TECHNICIAN_USERNAME/PASSWORD",
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\auth.setup.ts",
+                        "line": 15,
+                        "column": 13
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-cff37d8f43dd589e0959",
+          "file": "auth.setup.ts",
+          "line": 10,
+          "column": 3
+        },
+        {
+          "title": "đăng nhập admin",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Chưa đặt E2E_ADMIN_USERNAME/PASSWORD",
+                  "location": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\auth.setup.ts",
+                    "line": 15,
+                    "column": 13
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 198,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:08:40.635Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Chưa đặt E2E_ADMIN_USERNAME/PASSWORD",
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\auth.setup.ts",
+                        "line": 15,
+                        "column": 13
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-b8967c4eec2d8759abec",
+          "file": "auth.setup.ts",
+          "line": 10,
+          "column": 3
+        }
+      ]
+    },
+    {
+      "title": "anonymous\\login.spec.ts",
+      "file": "anonymous/login.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "trang đăng nhập hiển thị nút đăng nhập",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "anonymous",
+              "projectName": "anonymous",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 13108,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: 'Đăng nhập hệ thống' })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: 'Đăng nhập hệ thống' }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: 'Đăng nhập hệ thống' })\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: 'Đăng nhập hệ thống' })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: 'Đăng nhập hệ thống' }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: 'Đăng nhập hệ thống' })\u001b[22m\n\n    at D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\anonymous\\login.spec.ts:5:75",
+                    "location": {
+                      "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\anonymous\\login.spec.ts",
+                      "column": 75,
+                      "line": 5
+                    },
+                    "snippet": " \u001b[90m 3 |\u001b[39m test(\u001b[32m'trang đăng nhập hiển thị nút đăng nhập'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 4 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/login'\u001b[39m)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 5 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'heading'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m'Đăng nhập hệ thống'\u001b[39m }))\u001b[33m.\u001b[39mtoBeVisible()\n \u001b[90m   |\u001b[39m                                                                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 6 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m'Đăng nhập'\u001b[39m }))\u001b[33m.\u001b[39mtoBeVisible()\n \u001b[90m 7 |\u001b[39m })\n \u001b[90m 8 |\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\anonymous\\login.spec.ts",
+                        "column": 75,
+                        "line": 5
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: 'Đăng nhập hệ thống' })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: 'Đăng nhập hệ thống' }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: 'Đăng nhập hệ thống' })\u001b[22m\n\n\n  3 | test('trang đăng nhập hiển thị nút đăng nhập', async ({ page }) => {\n  4 |   await page.goto('/login')\n> 5 |   await expect(page.getByRole('heading', { name: 'Đăng nhập hệ thống' })).toBeVisible()\n    |                                                                           ^\n  6 |   await expect(page.getByRole('button', { name: 'Đăng nhập' })).toBeVisible()\n  7 | })\n  8 |\n    at D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\anonymous\\login.spec.ts:5:75"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:08:41.520Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results\\anonymous-login-trang-đăng-nhập-hiển-thị-nút-đăng-nhập-anonymous\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results\\anonymous-login-trang-đăng-nhập-hiển-thị-nút-đăng-nhập-anonymous\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results\\anonymous-login-trang-đăng-nhập-hiển-thị-nút-đăng-nhập-anonymous\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results\\anonymous-login-trang-đăng-nhập-hiển-thị-nút-đăng-nhập-anonymous\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\anonymous\\login.spec.ts",
+                    "column": 75,
+                    "line": 5
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "4d119177f9b53f268196-5bf0f71f412389b06fe1",
+          "file": "anonymous/login.spec.ts",
+          "line": 3,
+          "column": 1
+        },
+        {
+          "title": "chưa đăng nhập vào cổng quản trị thì bị chuyển về trang đăng nhập",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "anonymous",
+              "projectName": "anonymous",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 15945,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/\\/login|\\/realms\\//\u001b[39m\nReceived string:  \u001b[31m\"chrome-error://chromewebdata/\"\u001b[39m\nTimeout: 15000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 15000ms\u001b[22m\n\u001b[2m    33 × locator resolved to <html>…</html>\u001b[22m\n\u001b[2m       - unexpected value \"chrome-error://chromewebdata/\"\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/\\/login|\\/realms\\//\u001b[39m\nReceived string:  \u001b[31m\"chrome-error://chromewebdata/\"\u001b[39m\nTimeout: 15000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 15000ms\u001b[22m\n\u001b[2m    33 × locator resolved to <html>…</html>\u001b[22m\n\u001b[2m       - unexpected value \"chrome-error://chromewebdata/\"\u001b[22m\n\n    at D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\anonymous\\login.spec.ts:11:22",
+                    "location": {
+                      "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\anonymous\\login.spec.ts",
+                      "column": 22,
+                      "line": 11
+                    },
+                    "snippet": " \u001b[90m  9 |\u001b[39m test(\u001b[32m'chưa đăng nhập vào cổng quản trị thì bị chuyển về trang đăng nhập'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/users'\u001b[39m)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login|\\/realms\\//\u001b[39m\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m15_000\u001b[39m })\n \u001b[90m    |\u001b[39m                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m })\n \u001b[90m 13 |\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\anonymous\\login.spec.ts",
+                        "column": 22,
+                        "line": 11
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/\\/login|\\/realms\\//\u001b[39m\nReceived string:  \u001b[31m\"chrome-error://chromewebdata/\"\u001b[39m\nTimeout: 15000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 15000ms\u001b[22m\n\u001b[2m    33 × locator resolved to <html>…</html>\u001b[22m\n\u001b[2m       - unexpected value \"chrome-error://chromewebdata/\"\u001b[22m\n\n\n   9 | test('chưa đăng nhập vào cổng quản trị thì bị chuyển về trang đăng nhập', async ({ page }) => {\n  10 |   await page.goto('/admin/users')\n> 11 |   await expect(page).toHaveURL(/\\/login|\\/realms\\//, { timeout: 15_000 })\n     |                      ^\n  12 | })\n  13 |\n    at D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\anonymous\\login.spec.ts:11:22"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:08:55.418Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results\\anonymous-login-chưa-đăng--1364d-ị-chuyển-về-trang-đăng-nhập-anonymous\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results\\anonymous-login-chưa-đăng--1364d-ị-chuyển-về-trang-đăng-nhập-anonymous\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results\\anonymous-login-chưa-đăng--1364d-ị-chuyển-về-trang-đăng-nhập-anonymous\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "D:\\Dormitory-management-system\\DMS\\frontend\\test-results\\anonymous-login-chưa-đăng--1364d-ị-chuyển-về-trang-đăng-nhập-anonymous\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\anonymous\\login.spec.ts",
+                    "column": 22,
+                    "line": 11
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "4d119177f9b53f268196-b14b4dbdb6ca63e7889f",
+          "file": "anonymous/login.spec.ts",
+          "line": 9,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "student\\portal.spec.ts",
+      "file": "student/portal.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "vào đúng cổng student sau khi đăng nhập",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                  "location": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\student\\portal.spec.ts",
+                    "line": 6,
+                    "column": 6
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "student",
+              "projectName": "student",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:09:11.597Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\student\\portal.spec.ts",
+                        "line": 6,
+                        "column": 6
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "36de22ffc17bcbf36a4a-f29522c7fcbf3cebce0f",
+          "file": "student/portal.spec.ts",
+          "line": 8,
+          "column": 1
+        },
+        {
+          "title": "vào cổng của vai trò khác thì bị chuyển về cổng của mình",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                  "location": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\student\\portal.spec.ts",
+                    "line": 6,
+                    "column": 6
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "student",
+              "projectName": "student",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:09:11.598Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\student\\portal.spec.ts",
+                        "line": 6,
+                        "column": 6
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "36de22ffc17bcbf36a4a-53701cd3467bfb481128",
+          "file": "student/portal.spec.ts",
+          "line": 13,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "staff\\portal.spec.ts",
+      "file": "staff/portal.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "vào đúng cổng staff sau khi đăng nhập",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                  "location": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\staff\\portal.spec.ts",
+                    "line": 6,
+                    "column": 6
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "staff",
+              "projectName": "staff",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:09:11.598Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\staff\\portal.spec.ts",
+                        "line": 6,
+                        "column": 6
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "30813bd883ab737a369a-2f879bbd016c2c102298",
+          "file": "staff/portal.spec.ts",
+          "line": 8,
+          "column": 1
+        },
+        {
+          "title": "vào cổng của vai trò khác thì bị chuyển về cổng của mình",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                  "location": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\staff\\portal.spec.ts",
+                    "line": 6,
+                    "column": 6
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "staff",
+              "projectName": "staff",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:09:11.598Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\staff\\portal.spec.ts",
+                        "line": 6,
+                        "column": 6
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "30813bd883ab737a369a-1d6d39fba6926e0abcce",
+          "file": "staff/portal.spec.ts",
+          "line": 13,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "technician\\portal.spec.ts",
+      "file": "technician/portal.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "vào đúng cổng technician sau khi đăng nhập",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                  "location": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\technician\\portal.spec.ts",
+                    "line": 6,
+                    "column": 6
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "technician",
+              "projectName": "technician",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:09:11.598Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\technician\\portal.spec.ts",
+                        "line": 6,
+                        "column": 6
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "1e8d1812f9b039f21555-8fa561b9bce7782309e3",
+          "file": "technician/portal.spec.ts",
+          "line": 8,
+          "column": 1
+        },
+        {
+          "title": "vào cổng của vai trò khác thì bị chuyển về cổng của mình",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                  "location": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\technician\\portal.spec.ts",
+                    "line": 6,
+                    "column": 6
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "technician",
+              "projectName": "technician",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:09:11.598Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\technician\\portal.spec.ts",
+                        "line": 6,
+                        "column": 6
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "1e8d1812f9b039f21555-4ce18815aedbae168a6a",
+          "file": "technician/portal.spec.ts",
+          "line": 13,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "admin\\portal.spec.ts",
+      "file": "admin/portal.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "vào đúng cổng admin sau khi đăng nhập",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                  "location": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\admin\\portal.spec.ts",
+                    "line": 6,
+                    "column": 6
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "admin",
+              "projectName": "admin",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:09:11.598Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\admin\\portal.spec.ts",
+                        "line": 6,
+                        "column": 6
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "503a0f5b96e7cb37f24c-35c74e024d5d8b3b4221",
+          "file": "admin/portal.spec.ts",
+          "line": 8,
+          "column": 1
+        },
+        {
+          "title": "vào cổng của vai trò khác thì bị chuyển về cổng của mình",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                  "location": {
+                    "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\admin\\portal.spec.ts",
+                    "line": 6,
+                    "column": 6
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "admin",
+              "projectName": "admin",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T16:09:11.598Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Chưa cấu hình tài khoản E2E cho vai trò này",
+                      "location": {
+                        "file": "D:\\Dormitory-management-system\\DMS\\frontend\\e2e\\admin\\portal.spec.ts",
+                        "line": 6,
+                        "column": 6
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "503a0f5b96e7cb37f24c-a5d27ba604c6dd3aa7ee",
+          "file": "admin/portal.spec.ts",
+          "line": 13,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-24T16:08:39.303Z",
+    "duration": 32296.033000000003,
+    "expected": 0,
+    "skipped": 12,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}

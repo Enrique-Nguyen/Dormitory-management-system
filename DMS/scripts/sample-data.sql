@@ -1,4 +1,4 @@
--- DMS: dữ liệu mẫu cho toàn bộ khung CRUD, PostgreSQL 16+, schema đã chạy Flyway V1..V5.
+-- DMS: dữ liệu mẫu cho toàn bộ khung CRUD, PostgreSQL 16+, schema đã chạy Flyway V1..V13.
 -- Chạy trong database phát triển bằng psql/DataGrip/pgAdmin; chạy TOÀN BỘ file.
 -- psql -h localhost -p 5432 -U dms -d dms -v ON_ERROR_STOP=1 -f sample-data.sql
 -- Không sửa dữ liệu đang có, không TRUNCATE/DELETE, không vô hiệu hóa constraint/trigger.
@@ -44,6 +44,15 @@ DECLARE
     previous_period BIGINT;
     room_type_four  BIGINT;
     room_type_six   BIGINT;
+    school_id_value BIGINT;
+    faculty_it      BIGINT;
+    faculty_economy BIGINT;
+    cohort_id_value BIGINT;
+    hometown_id_value BIGINT;
+    amenity_four    BIGINT;
+    amenity_six     BIGINT;
+    storage_unit_id BIGINT;
+    storage_location_id BIGINT;
     category_id     BIGINT;
     category_weight INT;
     actor_id        BIGINT;
@@ -70,8 +79,12 @@ DECLARE
     unit_index INT;
     room_index INT;
 BEGIN
-    IF to_regclass('public.role_permission_matrix') IS NULL THEN
-        RAISE EXCEPTION 'Hãy khởi động backend để Flyway chạy đến V5 trước khi nạp dữ liệu mẫu.';
+    IF to_regclass('public.role_permission_matrix') IS NULL
+       OR to_regclass('public.school') IS NULL
+       OR to_regclass('public.building_floor') IS NULL
+       OR to_regclass('public.storage_location') IS NULL
+       OR to_regclass('public.room_type_amenity') IS NULL THEN
+        RAISE EXCEPTION 'Hãy khởi động backend để Flyway chạy đến V13 trước khi nạp dữ liệu mẫu.';
     END IF;
     IF EXISTS (SELECT 1 FROM audit_log WHERE request_id = 'DMS-SAMPLE-V1') THEN
         RAISE NOTICE 'DMS-SAMPLE-V1 đã được nạp. Giữ nguyên dữ liệu hiện tại, không nạp trùng.';
@@ -99,6 +112,27 @@ BEGIN
         ('invoice.due_days', '7', 'Hạn thanh toán hóa đơn'),
         ('deposit.topup_due_days', '7', 'Hạn bù tiền cọc') ON CONFLICT (key) DO NOTHING;
 
+    -- Trường giả cho bộ mẫu; giữ nguyên nhãn khoa/khóa/địa chỉ, không suy đoán tổ chức thật.
+    INSERT INTO school(code, name) VALUES ('MAU-SCHOOL', 'Mẫu - Trường')
+        ON CONFLICT DO NOTHING;
+    SELECT id INTO STRICT school_id_value FROM school WHERE name = 'Mẫu - Trường';
+    INSERT INTO faculty(code, name, school_id) VALUES
+        ('MAU-FACULTY-IT', 'Công nghệ thông tin', school_id_value),
+        ('MAU-FACULTY-ECONOMY', 'Kinh tế và Quản lý', school_id_value)
+        ON CONFLICT DO NOTHING;
+    SELECT id INTO STRICT faculty_it FROM faculty
+        WHERE school_id = school_id_value AND name = 'Công nghệ thông tin';
+    SELECT id INTO STRICT faculty_economy FROM faculty
+        WHERE school_id = school_id_value AND name = 'Kinh tế và Quản lý';
+    INSERT INTO student_cohort(code, name) VALUES ('MAU-COHORT-K65', 'K65')
+        ON CONFLICT DO NOTHING;
+    SELECT id INTO STRICT cohort_id_value FROM student_cohort WHERE name = 'K65';
+    INSERT INTO hometown(code, name, parent_id)
+        VALUES ('MAU-HOMETOWN', 'Địa chỉ mẫu để kiểm thử', NULL)
+        ON CONFLICT DO NOTHING;
+    SELECT id INTO STRICT hometown_id_value FROM hometown
+        WHERE parent_id IS NULL AND name = 'Địa chỉ mẫu để kiểm thử';
+
     -- Tài khoản chỉ phục vụ quan hệ FK và danh sách CRUD; không giả mạo đăng nhập Keycloak.
     FOR i IN 1..2 LOOP
         INSERT INTO app_user(username, role, full_name, management_unit_id, locked,
@@ -117,26 +151,38 @@ BEGIN
         VALUES ('mau.sv.' || lpad(i::TEXT, 2, '0'), 'STUDENT', names[i], TRUE, FALSE)
         RETURNING id INTO row_id;
         student_ids := array_append(student_ids, row_id);
-        INSERT INTO student_profile(user_id, student_code, gender, date_of_birth, faculty,
-                                    cohort, hometown, emergency_contact)
+        INSERT INTO student_profile(user_id, student_code, gender, date_of_birth, school_id,
+                                    faculty_id, cohort_id, hometown_id, emergency_contact)
         VALUES (row_id, 'MAU-SV-' || lpad(i::TEXT, 2, '0'), CASE WHEN i % 2 = 1 THEN 'M' ELSE 'F' END,
-                make_date(2005, 1, 1) + (i * 15),
-                CASE WHEN i % 3 = 0 THEN 'Kinh tế và Quản lý' ELSE 'Công nghệ thông tin' END,
-                'K65', 'Địa chỉ mẫu để kiểm thử', 'Liên hệ mẫu - không phải dữ liệu cá nhân thật');
+                make_date(2005, 1, 1) + (i * 15), school_id_value,
+                CASE WHEN i % 3 = 0 THEN faculty_economy ELSE faculty_it END,
+                cohort_id_value, hometown_id_value, 'Liên hệ mẫu - không phải dữ liệu cá nhân thật');
     END LOOP;
 
-    INSERT INTO room_type(name, bed_count, price_main, price_summer, area_m2, amenities)
-    VALUES ('Mẫu - Phòng 4 người', 4, 2500000, 900000, 28, 'Giường, tủ, bàn học, quạt')
+    -- Mỗi mô tả tiện ích cũ là một mục danh mục nguyên văn, không tách theo dấu phẩy.
+    INSERT INTO amenity(code, name) VALUES
+        ('MAU-AMENITY-FOUR', 'Giường, tủ, bàn học, quạt'),
+        ('MAU-AMENITY-SIX', 'Giường tầng, tủ, bàn học')
+        ON CONFLICT DO NOTHING;
+    SELECT id INTO STRICT amenity_four FROM amenity WHERE name = 'Giường, tủ, bàn học, quạt';
+    SELECT id INTO STRICT amenity_six FROM amenity WHERE name = 'Giường tầng, tủ, bàn học';
+    INSERT INTO room_type(name, bed_count, price_main, price_summer, area_m2)
+    VALUES ('Mẫu - Phòng 4 người', 4, 2500000, 900000, 28)
     RETURNING id INTO room_type_four;
-    INSERT INTO room_type(name, bed_count, price_main, price_summer, area_m2, amenities)
-    VALUES ('Mẫu - Phòng 6 người', 6, 1800000, 650000, 36, 'Giường tầng, tủ, bàn học')
+    INSERT INTO room_type(name, bed_count, price_main, price_summer, area_m2)
+    VALUES ('Mẫu - Phòng 6 người', 6, 1800000, 650000, 36)
     RETURNING id INTO room_type_six;
+    INSERT INTO room_type_amenity(room_type_id, amenity_id) VALUES
+        (room_type_four, amenity_four), (room_type_six, amenity_six)
+        ON CONFLICT (room_type_id, amenity_id) DO NOTHING;
     FOR i IN 1..3 LOOP
         unit_index := CASE WHEN i = 1 THEN 1 ELSE 2 END;
         INSERT INTO building(management_unit_id, code, name, deposit_amount)
         VALUES (unit_ids[unit_index], 'MAU-' || i, 'Mẫu - Tòa nhà ' || i,
                 CASE WHEN i = 1 THEN 1000000 ELSE 2000000 END) RETURNING id INTO row_id;
         building_ids := array_append(building_ids, row_id);
+        INSERT INTO building_floor(building_id, floor, name) VALUES (building_ids[i], 1, 'Tầng 1')
+            ON CONFLICT (building_id, floor) DO NOTHING;
         FOR j IN 1..3 LOOP
             INSERT INTO room(building_id, room_type_id, floor, code, gender, status)
             VALUES (building_ids[i], CASE WHEN j = 3 THEN room_type_six ELSE room_type_four END,
@@ -167,6 +213,8 @@ BEGIN
                          WHEN 2 THEN make_date(academic_start + 1, 6, 30)
                          WHEN 3 THEN make_date(academic_start + 1, 8, 31)
                          ELSE make_date(academic_start, 8, 31) END;
+        INSERT INTO academic_year(code, name) VALUES (year_label, year_label)
+            ON CONFLICT (code) DO NOTHING;
         SELECT id INTO row_id FROM semester WHERE academic_year = year_label AND type = semester_type;
         IF row_id IS NULL THEN
             IF EXISTS (SELECT 1 FROM semester WHERE daterange(start_date, end_date, '[]')
@@ -286,10 +334,18 @@ BEGIN
         VALUES (contract_ids[8], semester_ids[4], 'TEMP_LEAVE', 'APPROVED', actor_id,
                 make_date(academic_start, 7, 1)) RETURNING id INTO summer_id;
     SELECT bed_id INTO bed_id_value FROM room_assignment_history WHERE id = assignment_ids[8];
+    SELECT b.management_unit_id INTO STRICT storage_unit_id
+        FROM bed bd JOIN room r ON r.id = bd.room_id JOIN building b ON b.id = r.building_id
+        WHERE bd.id = bed_id_value;
+    INSERT INTO storage_location(management_unit_id, code, name)
+        VALUES (storage_unit_id, 'MAU-STORAGE-A1', 'Kho mẫu K1 - Kệ A1')
+        ON CONFLICT DO NOTHING;
+    SELECT id INTO STRICT storage_location_id FROM storage_location
+        WHERE management_unit_id = storage_unit_id AND name = 'Kho mẫu K1 - Kệ A1';
     INSERT INTO storage_record(contract_id, summer_choice_id, previous_bed_id, package_count,
-        description, location, deposited_at, received_by)
+        description, location_id, deposited_at, received_by)
     VALUES (contract_ids[8], summer_id, bed_id_value, 2, 'Mẫu - Hai thùng sách và đồ cá nhân',
-            'Kho mẫu K1 - Kệ A1', make_date(academic_start, 7, 1), actor_id);
+            storage_location_id, make_date(academic_start, 7, 1), actor_id);
 
     SELECT deposit_required INTO deposit_value FROM dormitory_contract WHERE id = contract_ids[9];
     INSERT INTO move_out_record(contract_id, moved_out_at, asset_condition, unpaid_room_fee,

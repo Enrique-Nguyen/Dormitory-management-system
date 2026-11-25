@@ -18,6 +18,7 @@ import java.util.List;
 
 /**
  * Controller API quản lý sổ cọc và các giao dịch tiền cọc (FR-CON-01, FR-BIL-09, FR-BIL-10, FR-CON-09).
+ * Thu cọc ban đầu chỉ đi qua action kích hoạt hợp đồng, không có API ghi riêng.
  */
 @RestController
 public class DepositController {
@@ -52,13 +53,6 @@ public class DepositController {
     @GetMapping("/api/contracts/{id}/deposit-transactions")
     public List<DepositDtos.Transaction> listTransactions(@PathVariable Long id) {
         return depositService.listTransactions(id);
-    }
-
-    @RequirePrivilege(Permission.DEPOSIT_CREATE)
-    @PostMapping("/api/contracts/{id}/initial-deposit")
-    public DepositDtos.Transaction recordInitialDeposit(
-            @PathVariable Long id, @Valid @RequestBody DepositDtos.InitialDepositRequest request) {
-        return depositService.collectInitial(id, request.amount(), request.note());
     }
 
     @RequirePrivilege(Permission.DEPOSIT_CREATE)

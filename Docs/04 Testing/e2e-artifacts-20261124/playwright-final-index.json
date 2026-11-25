@@ -1,0 +1,72 @@
+[
+  {
+    "project": "setup",
+    "title": "đăng nhập student",
+    "status": "passed"
+  },
+  {
+    "project": "setup",
+    "title": "đăng nhập staff",
+    "status": "passed"
+  },
+  {
+    "project": "setup",
+    "title": "đăng nhập technician",
+    "status": "passed"
+  },
+  {
+    "project": "setup",
+    "title": "đăng nhập admin",
+    "status": "passed"
+  },
+  {
+    "project": "anonymous",
+    "title": "trang đăng nhập hiển thị nút đăng nhập",
+    "status": "passed"
+  },
+  {
+    "project": "anonymous",
+    "title": "chưa đăng nhập vào cổng quản trị thì bị chuyển về trang đăng nhập",
+    "status": "passed"
+  },
+  {
+    "project": "student",
+    "title": "vào đúng cổng student sau khi đăng nhập",
+    "status": "passed"
+  },
+  {
+    "project": "student",
+    "title": "vào cổng của vai trò khác thì bị chuyển về cổng của mình",
+    "status": "passed"
+  },
+  {
+    "project": "staff",
+    "title": "vào đúng cổng staff sau khi đăng nhập",
+    "status": "passed"
+  },
+  {
+    "project": "staff",
+    "title": "vào cổng của vai trò khác thì bị chuyển về cổng của mình",
+    "status": "passed"
+  },
+  {
+    "project": "technician",
+    "title": "vào đúng cổng technician sau khi đăng nhập",
+    "status": "passed"
+  },
+  {
+    "project": "technician",
+    "title": "vào cổng của vai trò khác thì bị chuyển về cổng của mình",
+    "status": "passed"
+  },
+  {
+    "project": "admin",
+    "title": "vào đúng cổng admin sau khi đăng nhập",
+    "status": "passed"
+  },
+  {
+    "project": "admin",
+    "title": "vào cổng của vai trò khác thì bị chuyển về cổng của mình",
+    "status": "passed"
+  }
+]

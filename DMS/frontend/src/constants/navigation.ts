@@ -1,4 +1,4 @@
-import { Permission, Role } from './authorization'
+import { Action, Permission, Role } from './authorization'
 import {
   AuditOutlined,
   BankOutlined,
@@ -14,6 +14,7 @@ import {
   ReconciliationOutlined,
   SafetyOutlined,
   SolutionOutlined,
+  SunOutlined,
   TeamOutlined,
   ThunderboltOutlined,
   ToolOutlined,
@@ -46,9 +47,27 @@ export const rolePermissionLabels = {
   adminFullAccess: 'Tự động cấp toàn quyền',
 } as const
 
+/** Nhãn cột thao tác CRUD trong ma trận quyền. */
+export const rolePermissionActionLabels: Record<string, string> = {
+  [Action.READ]: 'Xem / Tìm kiếm',
+  [Action.CREATE]: 'Thêm',
+  [Action.UPDATE]: 'Sửa',
+  [Action.DELETE]: 'Xóa',
+}
+
+/** Đoạn đường dẫn chi tiết (dưới /staff) của từng loại việc chờ xử lý; mã loại khớp API. */
+export const pendingItemDetailSegments: Record<string, string> = {
+  APPLICATION: 'applications',
+  EXTENSION: 'extensions',
+  TRANSFER: 'transfers',
+  SUMMER_CHOICE: 'summer',
+  CONTRACT: 'contracts',
+}
+
 export const commonUiLabels = {
   search: 'Tìm kiếm',
   emptyData: 'Chưa có dữ liệu',
+  home: 'Trang chủ',
 } as const
 
 const item = (label: string, path: string, icon?: ComponentType): NavItem => ({
@@ -116,6 +135,15 @@ export function permissionsForPath(path: string): Permission[] {
     tasks: [Permission.MAINTENANCE_READ],
     notifications: [Permission.NOTIFICATION_READ],
     inbox: [Permission.NOTIFICATION_READ],
+    schools: [Permission.CATALOG_READ],
+    faculties: [Permission.CATALOG_READ],
+    cohorts: [Permission.CATALOG_READ],
+    hometowns: [Permission.CATALOG_READ],
+    'academic-years': [Permission.CATALOG_READ],
+    amenities: [Permission.CATALOG_READ],
+    'maintenance-categories': [Permission.CATALOG_READ],
+    floors: [Permission.CATALOG_READ],
+    'storage-locations': [Permission.CATALOG_READ],
     'room-types': [Permission.ROOM_TYPE_READ],
     semesters: [Permission.SEMESTER_READ],
     'registration-periods': [Permission.REGISTRATION_PERIOD_READ],
@@ -192,8 +220,17 @@ export const STUDENT_SUMMER_PATH = '/student/summer'
 
 /** Danh mục phục vụ nghiệp vụ, dùng chung giữa cổng quản lý và cổng quản trị. */
 const catalogNav: NavGroup = {
-  title: 'Danh mục',
+  title: 'Danh mục dùng chung',
   items: [
+    item('Trường', '/staff/schools', BankOutlined),
+    item('Khoa', '/staff/faculties', DatabaseOutlined),
+    item('Khóa', '/staff/cohorts', TeamOutlined),
+    item('Quê quán', '/staff/hometowns', HomeOutlined),
+    item('Năm học', '/staff/academic-years', CalendarOutlined),
+    item('Tiện nghi', '/staff/amenities', DatabaseOutlined),
+    item('Hạng mục sửa chữa', '/staff/maintenance-categories', ToolOutlined),
+    item('Tầng', '/staff/floors', HomeOutlined),
+    item('Vị trí kho', '/staff/storage-locations', InboxOutlined),
     item('Loại phòng', '/staff/room-types', DatabaseOutlined),
     item('Kỳ học', '/staff/semesters', CalendarOutlined),
     item('Đợt đăng ký', '/staff/registration-periods', ProfileOutlined),
@@ -214,7 +251,7 @@ export const staffNav: NavGroup[] = [
       item('Phòng & Giường', STAFF_ROOMS_PATH, HomeOutlined),
       item('Sinh viên', '/staff/students', TeamOutlined),
       item('Hợp đồng', STAFF_CONTRACTS_PATH, SolutionOutlined),
-      item('Kỳ hè', STAFF_SUMMER_PATH, InboxOutlined),
+      item('Kỳ hè', STAFF_SUMMER_PATH, SunOutlined),
       item('Kho gửi đồ', '/staff/storage', InboxOutlined),
     ],
   },
@@ -301,7 +338,7 @@ export const studentMoreNav: NavItem[] = [
     ClockCircleOutlined,
   ),
   item('Tiền cọc', '/student/deposit', WalletOutlined),
-  item('Kỳ hè', '/student/summer', CalendarOutlined),
+  item('Kỳ hè', '/student/summer', SunOutlined),
   item('Thông báo', '/student/notifications', BellOutlined),
   item('Hồ sơ', '/student/profile', UserOutlined),
 ]

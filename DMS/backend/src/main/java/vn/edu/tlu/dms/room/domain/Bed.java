@@ -29,6 +29,15 @@ public class Bed {
     @Column(name = "status", nullable = false, length = 20)
     private String status;
 
+    @Column(name = "position", length = 10)
+    private String position;
+
+    @Column(name = "asset_code", length = 30)
+    private String assetCode;
+
+    @Column(name = "note", length = 500)
+    private String note;
+
     public Long getId() {
         return id;
     }
@@ -59,5 +68,29 @@ public class Bed {
 
     public void setStatus(String value) {
         this.status = value;
+    }
+
+    public String getPosition() {
+        return position;
+    }
+
+    public void setPosition(String value) {
+        this.position = value;
+    }
+
+    public String getAssetCode() {
+        return assetCode;
+    }
+
+    public void setAssetCode(String value) {
+        this.assetCode = value;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String value) {
+        this.note = value;
     }
 }

@@ -1,0 +1,6 @@
+{
+  "totalReportRows": 276,
+  "actualCheckpointRows": 254,
+  "humanFullCoverageSummaryRows": 22,
+  "note": "Summary rows confirm whole-testcase coverage; do not count them as extra browser/API executions."
+}

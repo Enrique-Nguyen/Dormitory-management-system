@@ -71,6 +71,25 @@ public interface ContractService {
     ContractDtos.ActivationResult activate(Long id, ContractDtos.ActivateRequest input);
 
     /**
+     * Kích hoạt hợp đồng PENDING cho luồng gộp phân giường + kích hoạt của màn hợp đồng. Giống
+     * {@link #activate(Long, ContractDtos.ActivateRequest)} nhưng số tiền cọc được chốt làm mức cọc
+     * riêng của hợp đồng này, không bắt buộc bằng mức cọc của tòa; mức cọc của tòa không đổi. Nhận
+     * tham số nguyên thủy để module registration không phụ thuộc DTO của contract.
+     *
+     * @param id hợp đồng cần kích hoạt
+     * @param paperContractSigned đã ký giấy hợp đồng
+     * @param depositAmount số tiền cọc thu và chốt cho hợp đồng này
+     * @param paymentMethod hình thức thu cọc
+     * @param note ghi chú, có thể null
+     */
+    void activateWithCustomDeposit(
+            Long id,
+            Boolean paperContractSigned,
+            Long depositAmount,
+            String paymentMethod,
+            String note);
+
+    /**
      * Tạo hợp đồng PENDING cho đơn đã APPROVED sau khi registration đã khóa đơn/sinh viên. Contract
      * module sở hữu mã, hạn kích hoạt và ghi lịch sử; registration chịu trách nhiệm phân giường.
      */

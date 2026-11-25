@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.tlu.dms.account.service.AccountReferenceService;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
+import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.RegistrationKind;
@@ -20,6 +22,7 @@ import vn.edu.tlu.dms.common.dto.SearchRequest;
 import vn.edu.tlu.dms.common.exception.BusinessException;
 import vn.edu.tlu.dms.common.security.CurrentUser;
 import vn.edu.tlu.dms.common.security.ScopeGuard;
+import vn.edu.tlu.dms.common.service.AuditService;
 import vn.edu.tlu.dms.common.support.PageQuery;
 import vn.edu.tlu.dms.registration.api.RegistrationPeriodDtos.Input;
 import vn.edu.tlu.dms.registration.api.RegistrationPeriodDtos.Quota;
@@ -63,6 +66,8 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
 
     private final ApplicationEventPublisher events;
 
+    private final AuditService audit;
+
     public RegistrationPeriodServiceImpl(
             RegistrationPeriodRepository periods,
             RegistrationPeriodUnitRepository units,
@@ -72,7 +77,8 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
             CurrentUser current,
             ScopeGuard guard,
             JdbcTemplate jdbc,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events,
+            AuditService audit) {
         this.periods = periods;
         this.units = units;
         this.quotas = quotas;
@@ -82,13 +88,21 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         this.guard = guard;
         this.jdbc = jdbc;
         this.events = events;
+        this.audit = audit;
     }
 
-    /** Lọc phạm vi và từ khóa tại CSDL trước cả truy vấn dữ liệu và truy vấn đếm. */
+    /**
+     * Lọc phạm vi và từ khóa tại CSDL trước cả truy vấn dữ liệu và truy vấn đếm. Danh mục quản lý
+     * mở cho STAFF và TECHNICIAN (được cấp REGISTRATION_PERIOD_READ trong ma trận quyền), cả hai
+     * chỉ thấy đợt có đơn vị của mình.
+     */
     @Override
     public PageResponse<Response> searchByPage(SearchRequest search, boolean openForStudent) {
         guard.requirePermission(Permission.REGISTRATION_PERIOD_READ);
-        guard.requireRole(openForStudent ? new String[] {Role.STUDENT} : new String[] {Role.STAFF});
+        guard.requireRole(
+                openForStudent
+                        ? new String[] {Role.STUDENT}
+                        : new String[] {Role.STAFF, Role.TECHNICIAN});
         var actor = current.get();
         var pageable =
                 PageQuery.of(
@@ -129,6 +143,22 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                                                                         .toLowerCase(Locale.ROOT)
                                                                 + "%"));
                                     }
+                                    if (search.name() != null && !search.name().isBlank()) {
+                                        filters.add(b.greaterThan(b.locate(b.lower(r.get("name")),
+                                                search.name().trim().toLowerCase(Locale.ROOT)), 0));
+                                    }
+                                    if (search.openAtFrom() != null) {
+                                        filters.add(b.greaterThanOrEqualTo(r.get("openAt"), search.openAtFrom()));
+                                    }
+                                    if (search.openAtTo() != null) {
+                                        filters.add(b.lessThanOrEqualTo(r.get("openAt"), search.openAtTo()));
+                                    }
+                                    if (search.closeAtFrom() != null) {
+                                        filters.add(b.greaterThanOrEqualTo(r.get("closeAt"), search.closeAtFrom()));
+                                    }
+                                    if (search.closeAtTo() != null) {
+                                        filters.add(b.lessThanOrEqualTo(r.get("closeAt"), search.closeAtTo()));
+                                    }
                                     var isOpen =
                                             b.and(
                                                     b.lessThanOrEqualTo(r.get("openAt"), now),
@@ -149,7 +179,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     @Override()
     public Response getRegistrationPeriodById(Long id) {
         guard.requirePermission(Permission.REGISTRATION_PERIOD_READ);
-        guard.requireRole(Role.STAFF);
+        guard.requireRole(Role.STAFF, Role.TECHNICIAN);
         var period = periods.findById(id).orElseThrow(BusinessException::notFound);
         checkPeriodScope(id);
         return toPeriodResponse(period);
@@ -173,6 +203,15 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         applyPeriodInput(period, input, true);
         periods.saveAndFlush(period);
         replacePeriodChildren(period.getId(), input);
+        var created = toPeriodResponse(period);
+        audit.record(
+                current.get().id(),
+                AuditAction.REGISTRATION_PERIOD_CREATE,
+                EntityType.REGISTRATION_PERIOD,
+                period.getId(),
+                null,
+                created,
+                null);
         events.publishEvent(
                 new RegistrationPeriodCreatedEvent(
                         period.getId(),
@@ -180,7 +219,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                         period.getKind(),
                         input.unitIds(),
                         current.get().id()));
-        return toPeriodResponse(period);
+        return created;
     }
 
     /**
@@ -195,6 +234,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                 id);
         var period = periods.findById(id).orElseThrow(BusinessException::notFound);
         checkPeriodWriteScope(id);
+        var before = toPeriodResponse(period);
         if (!period.getOpenAt().isAfter(OffsetDateTime.now())) {
             if (input.semesterId() != null
                     || input.kind() != null
@@ -205,7 +245,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                 throw BusinessException.conflict(ErrorCode.INVALID_STATE_TRANSITION);
             }
             if (input.closeAt() == null || !input.closeAt().isAfter(period.getCloseAt())) {
-                throw BusinessException.invalid("closeAt", "Chỉ được gia hạn ngày đóng");
+                throw BusinessException.invalid(ApiField.CLOSE_AT, ValidationMessage.PERIOD_EXTEND_CLOSE_ONLY);
             }
             period.setCloseAt(input.closeAt());
         } else {
@@ -213,7 +253,16 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
             replacePeriodChildren(id, input);
         }
         periods.saveAndFlush(period);
-        return toPeriodResponse(period);
+        var after = toPeriodResponse(period);
+        audit.record(
+                current.get().id(),
+                AuditAction.REGISTRATION_PERIOD_UPDATE,
+                EntityType.REGISTRATION_PERIOD,
+                id,
+                before,
+                after,
+                null);
+        return after;
     }
 
     @Transactional
@@ -221,10 +270,15 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     public void deleteUnusedPeriod(Long id) {
         guard.requirePermission(Permission.REGISTRATION_PERIOD_DELETE);
         var period = periods.findById(id).orElseThrow(BusinessException::notFound);
-        jdbc.queryForObject(
-                "SELECT id FROM registration_period WHERE id=? FOR UPDATE", Long.class, id);
+        // Đọc lại thời điểm mở sau khi có khóa: phiên khác có thể vừa đổi openAt (REG-05).
+        OffsetDateTime lockedOpenAt =
+                jdbc.queryForObject(
+                        "SELECT open_at FROM registration_period WHERE id=? FOR UPDATE",
+                        OffsetDateTime.class,
+                        id);
         checkPeriodWriteScope(id);
-        if (!period.getOpenAt().isAfter(OffsetDateTime.now())
+        if (lockedOpenAt == null
+                || !lockedOpenAt.isAfter(OffsetDateTime.now())
                 || Boolean.TRUE.equals(
                         jdbc.queryForObject(
                                 "SELECT EXISTS(SELECT 1 FROM room_application WHERE period_id=?)",
@@ -232,12 +286,21 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                                 id))) {
             throw BusinessException.conflict(ErrorCode.RESOURCE_IN_USE);
         }
+        var before = toPeriodResponse(period);
         quotas.deleteAll(quotas.findAll((r, q, b) -> b.equal(r.get("periodId"), id)));
         quotas.flush();
         units.deleteAll(units.findAll((r, q, b) -> b.equal(r.get("periodId"), id)));
         units.flush();
         periods.deleteById(id);
         periods.flush();
+        audit.record(
+                current.get().id(),
+                AuditAction.REGISTRATION_PERIOD_DELETE,
+                EntityType.REGISTRATION_PERIOD,
+                id,
+                before,
+                null,
+                null);
     }
 
     private void applyPeriodInput(RegistrationPeriod p, Input input, boolean creating) {
@@ -248,7 +311,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                         || input.openAt() == null
                         || input.closeAt() == null
                         || input.unitIds() == null)) {
-            throw BusinessException.invalid("period", "Thiếu trường bắt buộc của đợt đăng ký");
+            throw BusinessException.invalid(ApiField.PERIOD, ValidationMessage.PERIOD_INPUT_REQUIRED);
         }
         if (input.semesterId() != null) {
             p.setSemesterId(input.semesterId());
@@ -258,7 +321,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         }
         if (input.name() != null) {
             if (input.name().isBlank()) {
-                throw BusinessException.invalid("name", "Không để trống tên");
+                throw BusinessException.invalid(ApiField.NAME, ValidationMessage.NAME_REQUIRED);
             }
             p.setName(input.name().trim());
         }
@@ -269,12 +332,12 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
             p.setCloseAt(input.closeAt());
         }
         if (!p.getCloseAt().isAfter(p.getOpenAt())) {
-            throw BusinessException.invalid("closeAt", "Ngày đóng phải sau ngày mở");
+            throw BusinessException.invalid(ApiField.CLOSE_AT, ValidationMessage.CLOSE_AFTER_OPEN);
         }
         var semester = rooms.getSemesterReference(p.getSemesterId());
         if (p.getKind().equals(RegistrationKind.SUMMER)
                 && !semester.type().equals(SemesterType.SUMMER)) {
-            throw BusinessException.invalid("semesterId", "Đợt hè phải dùng học kỳ hè");
+            throw BusinessException.invalid(ApiField.SEMESTER_ID, ValidationMessage.SUMMER_PERIOD_SEMESTER);
         }
     }
 
@@ -282,7 +345,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         List<Long> chosenUnits = input.unitIds() == null ? periodUnitIds(id) : input.unitIds();
         if (chosenUnits.isEmpty() || new HashSet<>(chosenUnits).size() != chosenUnits.size()) {
             throw BusinessException.invalid(
-                    "unitIds", "Danh sách đơn vị phải khác rỗng và không trùng");
+                    ApiField.UNIT_IDS, ValidationMessage.UNIT_IDS_INVALID);
         }
         for (Long unitId : chosenUnits) {
             accounts.requireUnit(unitId);
@@ -299,7 +362,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                                 .toList()
                         : input.quotas();
         if (kind.equals(RegistrationKind.SUMMER) && !chosenQuotas.isEmpty()) {
-            throw BusinessException.invalid("quotas", "Đợt hè không có chỉ tiêu");
+            throw BusinessException.invalid(ApiField.QUOTAS, ValidationMessage.SUMMER_NO_QUOTA);
         }
         Set<Long> seen = new HashSet<>();
         for (var quota : chosenQuotas) {
@@ -307,7 +370,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                     || !chosenUnits.contains(
                             rooms.getBuildingManagementUnitId(quota.buildingId()))) {
                 throw BusinessException.invalid(
-                        "quotas", "Tòa phải thuộc đơn vị áp dụng và không được trùng");
+                        ApiField.QUOTAS, ValidationMessage.QUOTA_BUILDING_INVALID);
             }
         }
         if (input.unitIds() != null) {

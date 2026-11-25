@@ -26,6 +26,7 @@ import vn.edu.tlu.dms.contract.domain.StorageRecord;
 import vn.edu.tlu.dms.contract.domain.StorageRecordChangedEvent;
 import vn.edu.tlu.dms.contract.repository.StorageRecordRepository;
 import vn.edu.tlu.dms.contract.service.StorageService;
+import vn.edu.tlu.dms.contract.service.StorageLocationService;
 import vn.edu.tlu.dms.contract.service.SummerLeaveLookup;
 import vn.edu.tlu.dms.contract.service.SummerLeaveLookup.SummerLeave;
 import vn.edu.tlu.dms.room.service.BedOccupancyService;
@@ -62,9 +63,10 @@ public class StorageServiceImpl implements StorageService {
     private static final String SELECT_STORAGE =
             """
             SELECT s.id, s.contract_id, s.summer_choice_id, s.previous_bed_id, s.package_count,
-                   s.description, s.location, s.deposited_at, s.received_by, s.returned_at,
+                   s.description, s.location_id, l.name AS location, s.deposited_at, s.received_by, s.returned_at,
                    s.returned_by, c.student_id, c.status AS contract_status
             FROM storage_record s
+            JOIN storage_location l ON l.id = s.location_id
             JOIN dormitory_contract c ON c.id = s.contract_id
             WHERE s.id = ?
             """;
@@ -72,6 +74,8 @@ public class StorageServiceImpl implements StorageService {
     private final JdbcTemplate jdbc;
 
     private final StorageRecordRepository storageRecords;
+
+    private final StorageLocationService storageLocations;
 
     private final SummerLeaveLookup summerLeaves;
 
@@ -90,6 +94,7 @@ public class StorageServiceImpl implements StorageService {
     public StorageServiceImpl(
             JdbcTemplate jdbc,
             StorageRecordRepository storageRecords,
+            StorageLocationService storageLocations,
             SummerLeaveLookup summerLeaves,
             OccupancyQuery occupancyQuery,
             BedOccupancyService occupancy,
@@ -99,6 +104,7 @@ public class StorageServiceImpl implements StorageService {
             CurrentUser current) {
         this.jdbc = jdbc;
         this.storageRecords = storageRecords;
+        this.storageLocations = storageLocations;
         this.summerLeaves = summerLeaves;
         this.occupancyQuery = occupancyQuery;
         this.occupancy = occupancy;
@@ -137,6 +143,7 @@ public class StorageServiceImpl implements StorageService {
         SummerLeave lockedLeave = requireSummerLeave(contractId);
         requireExtended(locked, lockedLeave);
         requireNoStorage(contractId, lockedLeave.summerChoiceId());
+        var location = storageLocations.requireActiveForUnit(input.locationId(), lockedBed.managementUnitId());
 
         Actor actor = current.get();
         StorageRecord record = new StorageRecord();
@@ -145,7 +152,7 @@ public class StorageServiceImpl implements StorageService {
         record.setPreviousBedId(lockedBed.bedId());
         record.setPackageCount(input.packageCount());
         record.setDescription(input.description().strip());
-        record.setLocation(input.location().strip());
+        record.setLocationId(location.id());
         record.setDepositedAt(input.depositedAt());
         record.setReceivedBy(actor.id());
         record = storageRecords.saveAndFlush(record);
@@ -169,7 +176,7 @@ public class StorageServiceImpl implements StorageService {
                         contractId,
                         locked.studentId(),
                         BusinessAction.CREATE_STORAGE_RECORD));
-        return toRecord(record, locked.studentId());
+        return toRecord(record, locked.studentId(), location.name());
     }
 
     @Override
@@ -243,6 +250,7 @@ public class StorageServiceImpl implements StorageService {
                 row.previousBedId(),
                 row.packageCount(),
                 row.description(),
+                row.locationId(),
                 row.location(),
                 row.depositedAt(),
                 row.receivedBy(),
@@ -312,6 +320,7 @@ public class StorageServiceImpl implements StorageService {
                 rs.getLong("previous_bed_id"),
                 rs.getShort("package_count"),
                 rs.getString("description"),
+                rs.getLong("location_id"),
                 rs.getString("location"),
                 rs.getObject("deposited_at", LocalDate.class),
                 rs.getLong("received_by"),
@@ -379,9 +388,9 @@ public class StorageServiceImpl implements StorageService {
             throw BusinessException.invalid(
                     ApiField.DESCRIPTION, ValidationMessage.STORAGE_DESCRIPTION_REQUIRED);
         }
-        if (input.location() == null || input.location().isBlank()) {
+        if (input.locationId() == null || input.locationId() <= 0) {
             throw BusinessException.invalid(
-                    ApiField.LOCATION, ValidationMessage.STORAGE_LOCATION_REQUIRED);
+                    StorageDtos.LOCATION_ID, ValidationMessage.STORAGE_LOCATION_REQUIRED);
         }
         if (input.depositedAt() == null) {
             throw BusinessException.invalid(
@@ -406,12 +415,12 @@ public class StorageServiceImpl implements StorageService {
         value.put(ApiField.BED_ID, record.getPreviousBedId());
         value.put(ApiField.PACKAGE_COUNT, record.getPackageCount());
         value.put(ApiField.DESCRIPTION, record.getDescription());
-        value.put(ApiField.LOCATION, record.getLocation());
+        value.put(StorageDtos.LOCATION_ID, record.getLocationId());
         value.put(ApiField.DEPOSITED_AT, record.getDepositedAt().toString());
         return value;
     }
 
-    private static StorageDtos.Record toRecord(StorageRecord record, Long studentId) {
+    private static StorageDtos.Record toRecord(StorageRecord record, Long studentId, String location) {
         return new StorageDtos.Record(
                 record.getId(),
                 record.getContractId(),
@@ -420,7 +429,8 @@ public class StorageServiceImpl implements StorageService {
                 record.getPreviousBedId(),
                 record.getPackageCount(),
                 record.getDescription(),
-                record.getLocation(),
+                record.getLocationId(),
+                location,
                 record.getDepositedAt(),
                 record.getReceivedBy(),
                 record.getReturnedAt(),
@@ -445,6 +455,7 @@ public class StorageServiceImpl implements StorageService {
             Long previousBedId,
             Short packageCount,
             String description,
+            Long locationId,
             String location,
             LocalDate depositedAt,
             Long receivedBy,

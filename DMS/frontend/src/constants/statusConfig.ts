@@ -17,6 +17,9 @@ import {
   WarningOutlined,
 } from '@ant-design/icons'
 import type { ComponentType } from 'react'
+import type { AssetCondition } from '../services/api/checkout'
+import type { PendingItemType } from '../services/api/contract'
+import type { MaintenanceCause } from '../services/api/maintenance'
 
 /** Mã kết quả import dùng chung với API, nhãn nằm trong registry resources. */
 export const StudentImportResult = { ERROR: 'ERROR', EXISTS: 'EXISTS' } as const
@@ -50,7 +53,7 @@ export interface StatusStyle {
 }
 
 export type StatusEntity =
-  'application' | 'contract' | 'ticket' | 'invoice' | 'request'
+  'application' | 'contract' | 'ticket' | 'invoice' | 'request' | 'storage'
 
 const s = (label: string, color: StatusColor, icon: IconType): StatusStyle => ({
   label,
@@ -94,7 +97,15 @@ export const statusConfig: Record<StatusEntity, Record<string, StatusStyle>> = {
     REJECTED: s('Bị từ chối', 'red', CloseCircleOutlined),
     CANCELLED: s('Đã hủy', 'gray', StopOutlined),
   },
+  // Phiếu gửi đồ: suy từ returned_at (null = đang gửi), khóa theo StorageState
+  storage: {
+    STORED: s('Đang gửi', 'orange', ClockCircleOutlined),
+    RETURNED: s('Đã nhận', 'green', CheckCircleOutlined),
+  },
 }
+
+/** Trạng thái hiển thị của phiếu gửi đồ; CSDL chỉ lưu returned_at. */
+export const StorageState = { STORED: 'STORED', RETURNED: 'RETURNED' } as const
 
 const unknownStatus = (status: string): StatusStyle => ({
   label: status,
@@ -167,6 +178,11 @@ export const roomOperation: Record<
 export const roomGender: Record<string, string> = {
   M: 'Nam',
   F: 'Nữ',
+  MIXED: 'Nam và nữ',
+  SINGLE: 'Giường đơn',
+  BUNK: 'Giường tầng',
+  UPPER: 'Tầng trên',
+  LOWER: 'Tầng dưới',
 }
 
 export const bedOperation: Record<string, { label: string }> = {
@@ -182,9 +198,9 @@ export const bedOccupancy: Record<
   BedOccupancy,
   { label: string; background: string; border: string }
 > = {
-  FREE: { label: 'Trống', background: '#FFFFFF', border: '#D1D5DB' },
-  HELD: { label: 'Đang giữ', background: '#FEF3C7', border: '#B45309' },
-  OCCUPIED: { label: 'Đang ở', background: '#DCFCE7', border: '#15803D' },
+  FREE: { label: 'Trống', background: 'var(--color-surface)', border: 'var(--color-border)' },
+  HELD: { label: 'Đang giữ', background: 'var(--color-warning-bg)', border: 'var(--color-warning-border)' },
+  OCCUPIED: { label: 'Đang ở', background: 'var(--color-success-bg)', border: 'var(--color-success-border)' },
 }
 
 /** Loại phân phòng mở → chiếm dụng giường: giữ chỗ (HOLD) hoặc đang ở (STAY). */
@@ -248,6 +264,99 @@ export const crudValueLabels: Record<string, string> = {
   LEAVE: 'Rời KTX',
 }
 
+/** Đối tượng giới tính của tòa (khớp CHECK `building.gender_policy`). */
+export const buildingGenderLabels: Record<string, string> = { M: 'Nam', F: 'Nữ', MIXED: 'Nam và nữ' }
+
+/** Kiểu giường của loại phòng (khớp CHECK `room_type.bed_style`). */
+export const bedStyleLabels: Record<string, string> = { BUNK: 'Giường tầng', SINGLE: 'Giường đơn' }
+
+/** Vị trí giường (khớp CHECK `bed.position`). */
+export const bedPositionLabels: Record<string, string> = { LOWER: 'Tầng dưới', UPPER: 'Tầng trên', SINGLE: 'Giường đơn' }
+
+/** Hướng phòng (khớp CHECK `room.orientation`). */
+export const orientationLabels: Record<string, string> = {
+  N: 'Bắc', S: 'Nam', E: 'Đông', W: 'Tây', NE: 'Đông Bắc', NW: 'Tây Bắc', SE: 'Đông Nam', SW: 'Tây Nam',
+}
+
+/** Loại học kỳ hiển thị trên form/danh sách (khớp CHECK `semester.type`). */
+export const semesterTypeLabels: Record<string, string> = { HK1: 'Học kỳ 1', HK2: 'Học kỳ 2', SUMMER: 'Học kỳ hè' }
+
+/** Cấp hành chính của quê quán theo mô hình hai cấp (khớp CHECK `hometown.admin_level`). */
+export const adminLevelLabels: Record<string, string> = { PROVINCE: 'Tỉnh/Thành phố', COMMUNE: 'Xã/Phường/Đặc khu' }
+
+/** Khu vực ưu tiên tuyển sinh (khớp CHECK `hometown.priority_area`). */
+export const priorityAreaLabels: Record<string, string> = {
+  KV1: 'Khu vực 1', KV2NT: 'Khu vực 2 nông thôn', KV2: 'Khu vực 2', KV3: 'Khu vực 3',
+}
+
+/** Phạm vi áp dụng tiện nghi (khớp CHECK `amenity.applies_to`). */
+export const amenityScopeLabels: Record<string, string> = { ROOM: 'Phòng', BUILDING: 'Tòa nhà', BOTH: 'Phòng và tòa nhà' }
+
+/** Mức độ mặc định của hạng mục sửa chữa (khớp CHECK `maintenance_category.default_severity`). */
+export const severityLabels: Record<string, string> = { LOW: 'Thấp', MEDIUM: 'Trung bình', HIGH: 'Cao' }
+
+/** Kỹ năng xử lý của hạng mục sửa chữa (khớp CHECK `maintenance_category.skill`). */
+export const repairSkillLabels: Record<string, string> = {
+  ELECTRIC: 'Điện', PLUMBING: 'Cấp thoát nước', CARPENTRY: 'Mộc/nội thất',
+  HVAC: 'Điều hòa/thông gió', NETWORK: 'Mạng', GENERAL: 'Tổng hợp',
+}
+
+/** Quy tắc tự nhận diện diện ưu tiên (khớp CHECK `priority_category.auto_rule`). */
+export const priorityAutoRuleLabels: Record<string, string> = {
+  NONE: 'Không tự động', ETHNIC_MINORITY: 'Dân tộc thiểu số', HARDSHIP_AREA: 'Vùng đặc biệt khó khăn',
+}
+
+/** Mã hành động ticket sửa chữa, khớp DmsConstants.BusinessAction và allowedActions (API Spec 4.11). */
+export const MaintenanceAction = {
+  ASSIGN: 'assign',
+  REJECT: 'reject',
+  ACCEPT: 'accept',
+  REOPEN: 'reopen',
+  CANCEL: 'cancel',
+  START: 'start',
+  ADD_NOTE: 'add-note',
+  RESOLVE: 'resolve',
+  CONCLUDE: 'conclude',
+} as const
+
+export type MaintenanceAction =
+  (typeof MaintenanceAction)[keyof typeof MaintenanceAction]
+
+export const maintenanceActionLabels: Record<MaintenanceAction, string> = {
+  [MaintenanceAction.ASSIGN]: 'Giao kỹ thuật viên',
+  [MaintenanceAction.REJECT]: 'Từ chối',
+  [MaintenanceAction.ACCEPT]: 'Nghiệm thu',
+  [MaintenanceAction.REOPEN]: 'Mở lại',
+  [MaintenanceAction.CANCEL]: 'Hủy ticket',
+  [MaintenanceAction.START]: 'Bắt đầu sửa chữa',
+  [MaintenanceAction.ADD_NOTE]: 'Ghi chú tiến độ',
+  [MaintenanceAction.RESOLVE]: 'Hoàn thành sửa chữa',
+  [MaintenanceAction.CONCLUDE]: 'Kết luận xử lý',
+}
+
+/** Nguyên nhân kết luận ticket. */
+export const maintenanceCauseLabels: Record<MaintenanceCause, string> = {
+  WEAR: 'Hao mòn tự nhiên',
+  MISUSE: 'Do sử dụng sai',
+}
+
+/** Tình trạng tài sản khi trả phòng. */
+export const assetConditionLabels: Record<AssetCondition, string> = {
+  OK: 'Bình thường',
+  DAMAGED: 'Có hư hỏng',
+}
+
+type PendingItemTypeCode = (typeof PendingItemType)[keyof typeof PendingItemType]
+
+/** Nhãn loại việc trong hộp yêu cầu chờ xử lý; thứ tự khai báo là thứ tự bộ lọc. */
+export const pendingItemTypeLabels: Partial<Record<PendingItemTypeCode, string>> = {
+  APPLICATION: 'Đơn đăng ký',
+  EXTENSION: 'Gia hạn',
+  TRANSFER: 'Chuyển phòng',
+  SUMMER_CHOICE: 'Lựa chọn hè',
+  CONTRACT: 'Hợp đồng chờ kích hoạt',
+}
+
 /** Mã nghiệp vụ billing giữ nguyên hợp đồng API. */
 export const InvoiceType = { ROOM_FEE: 'ROOM_FEE', UTILITY: 'UTILITY' } as const
 export const PaymentMethod = { CASH: 'CASH', TRANSFER: 'TRANSFER' } as const
@@ -265,10 +374,14 @@ export const RoomGender = { M: 'M', F: 'F' } as const
 export const StayRequestStatus = {
   PENDING: 'PENDING', APPROVED: 'APPROVED', REJECTED: 'REJECTED', CANCELLED: 'CANCELLED',
 } as const
-/** Trạng thái lựa chọn hè khớp `DmsConstants.SummerStatus`. */
+/** Trạng thái lựa chọn hè khớp `DmsConstants.SummerStatus`; CANCELLED là sinh viên tự rút. */
 export const SummerStatus = {
-  PENDING: 'PENDING', APPROVED: 'APPROVED', REJECTED: 'REJECTED',
+  PENDING: 'PENDING', APPROVED: 'APPROVED', REJECTED: 'REJECTED', CANCELLED: 'CANCELLED',
 } as const
+/** Loại đợt đăng ký khớp `DmsConstants.RegistrationKind`. */
+export const RegistrationKind = { REGULAR: 'REGULAR', SUMMER: 'SUMMER' } as const
+/** Loại học kỳ khớp `DmsConstants.SemesterType`. */
+export const SemesterType = { HK1: 'HK1', HK2: 'HK2', SUMMER: 'SUMMER' } as const
 /** Trạng thái phiếu bảo trì khớp `DmsConstants.MaintenanceStatus`. */
 export const MaintenanceStatus = {
   OPEN: 'OPEN', ASSIGNED: 'ASSIGNED', IN_PROGRESS: 'IN_PROGRESS', RESOLVED: 'RESOLVED',
@@ -283,4 +396,7 @@ export const depositTransactionLabels: Record<string, string> = {
 }
 
 export const InvoiceStatus = { UNPAID: 'UNPAID', PAID: 'PAID' } as const
-export const BillingAction = { CONFIRM_PAYMENT: 'confirm-payment', DEPOSIT_TOPUP: 'deposit-topup', DEPOSIT_REFUND: 'deposit-refund' } as const
+export const BillingAction = {
+  EDIT: 'edit', DELETE: 'delete',
+  CONFIRM_PAYMENT: 'confirm-payment', DEPOSIT_TOPUP: 'deposit-topup', DEPOSIT_REFUND: 'deposit-refund',
+} as const

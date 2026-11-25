@@ -34,10 +34,18 @@ export {
   Badge,
   Tabs,
   Descriptions,
+  DetailLayout,
+  DetailSection,
+  FormSection,
+  type FormSectionProps,
+  type FormSectionHandle,
+  type ModalProps,
   Alert,
   Empty,
   Skeleton,
   FilterBar,
+  ListToolbar,
+  StatusFilter,
   FormGrid,
 } from './ui/Surface'
 export { default as StatusBadge } from './ui/StatusBadge'

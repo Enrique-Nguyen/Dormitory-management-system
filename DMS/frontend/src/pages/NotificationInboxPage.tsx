@@ -1,6 +1,6 @@
-import { CheckOutlined, ReloadOutlined } from '@ant-design/icons'
+import { CheckOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons'
 import { App } from 'antd'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import {
   Alert,
@@ -9,6 +9,7 @@ import {
   DataTable,
   EmptyState,
   FilterBar,
+  Input,
   NotificationItem,
   PageHeader,
   SearchInput,
@@ -20,8 +21,14 @@ import {
   useMarkRead,
   useUnreadCount,
 } from '../features/notification'
+import { downloadWorkbook, EXCEL_MAX_EXPORT_ROWS } from '../features/crud/excel'
+import { excelUiLabels, resources } from '../features/crud/resources'
 import { useIsMobile } from '../hooks/useViewport'
-import type { NotificationResponse } from '../services/api/notification'
+import {
+  searchNotifications,
+  type NotificationResponse,
+  type NotificationSearchQuery,
+} from '../services/api/notification'
 import { errorMessage } from '../utils/errorMessages'
 
 type ReadFilter = 'all' | 'unread' | 'read'
@@ -41,8 +48,20 @@ const readFilterOptions: { value: ReadFilter; label: string }[] = [
  */
 export default function NotificationInboxPage() {
   const { message } = App.useApp()
+  const config = resources.notificationInbox
+  const [exporting, setExporting] = useState(false)
   const isMobile = useIsMobile()
   const [searchParams, setSearchParams] = useSearchParams()
+  const from = searchParams.get('from') ?? ''
+  const to = searchParams.get('to') ?? ''
+  const [draftRange, setDraftRange] = useState({
+    sourceFrom: from,
+    sourceTo: to,
+    from,
+    to,
+  })
+  const draftFrom = draftRange.sourceFrom === from ? draftRange.from : from
+  const draftTo = draftRange.sourceTo === to ? draftRange.to : to
 
   const q = searchParams.get('q')?.trim() ?? ''
   const unreadParam = searchParams.get('unread')
@@ -55,13 +74,54 @@ export default function NotificationInboxPage() {
   const pageParam = Number(searchParams.get('page') ?? '1')
   const page = Number.isSafeInteger(pageParam) && pageParam > 0 ? pageParam : 1
 
-  const inbox = useInbox({
+  const query: NotificationSearchQuery = {
     page: page - 1,
     size: PAGE_SIZE,
     q: q || undefined,
     sort: ['createdAt,desc'],
     unread: readFilter === 'all' ? undefined : readFilter === 'unread',
-  })
+    from: from && !Number.isNaN(Date.parse(from)) ? new Date(from).toISOString() : undefined,
+    to: to && !Number.isNaN(Date.parse(to)) ? new Date(to).toISOString() : undefined,
+  }
+  const inbox = useInbox(query)
+
+  async function exportNotifications() {
+    setExporting(true)
+    try {
+      const rows: NotificationResponse[] = []
+      // Giữ cả unread=false và thứ tự của hộp thư trên mọi trang xuất.
+      for (let exportPage = 0; ; exportPage++) {
+        const result = await searchNotifications({
+          ...query,
+          page: exportPage,
+          size: 100,
+        })
+        if (
+          result.totalElements > EXCEL_MAX_EXPORT_ROWS ||
+          rows.length + result.content.length > EXCEL_MAX_EXPORT_ROWS
+        ) {
+          void message.warning(excelUiLabels.tooManyExportRows)
+          return
+        }
+        rows.push(...result.content)
+        if (!result.content.length || rows.length >= result.totalElements) break
+      }
+      if (!rows.length) {
+        void message.info(excelUiLabels.exportEmpty)
+        return
+      }
+      await downloadWorkbook(
+        config.title,
+        config.columns,
+        rows.map((row) => ({ ...row })),
+      )
+      void message.success(excelUiLabels.exportSuccess)
+    } catch (error) {
+      void message.error(errorMessage(error))
+    } finally {
+      setExporting(false)
+    }
+  }
   const unreadCount = useUnreadCount()
   const unread = unreadCount.data ?? 0
   const markRead = useMarkRead()
@@ -90,6 +150,8 @@ export default function NotificationInboxPage() {
     q?: string
     unread?: ReadFilter
     page?: number
+    from?: string
+    to?: string
   }) {
     const next = new URLSearchParams(searchParams)
     if (patch.q !== undefined) {
@@ -100,6 +162,12 @@ export default function NotificationInboxPage() {
     if (patch.unread !== undefined) {
       if (patch.unread === 'all') next.delete('unread')
       else next.set('unread', patch.unread === 'unread' ? 'true' : 'false')
+    }
+    for (const key of ['from', 'to'] as const) {
+      if (patch[key] !== undefined) {
+        if (patch[key]) next.set(key, patch[key])
+        else next.delete(key)
+      }
     }
     if ((patch.page ?? 1) > 1) next.set('page', String(patch.page))
     else next.delete('page')
@@ -156,7 +224,7 @@ export default function NotificationInboxPage() {
           </Button>
         }
       />
-      <Card>
+      <Card className="dms-crud-frame">
         <div className="dms-toolbar">
           <FilterBar>
             <SearchInput
@@ -176,8 +244,59 @@ export default function NotificationInboxPage() {
               options={readFilterOptions}
               onChange={(value) => updateQuery({ unread: value })}
             />
+            <Input
+              type="datetime-local"
+              aria-label="Thời gian tạo từ"
+              value={draftFrom}
+              onChange={(event) =>
+                setDraftRange({
+                  sourceFrom: from,
+                  sourceTo: to,
+                  from: event.target.value,
+                  to: draftTo,
+                })
+              }
+            />
+            <Input
+              type="datetime-local"
+              aria-label="Thời gian tạo đến"
+              value={draftTo}
+              onChange={(event) =>
+                setDraftRange({
+                  sourceFrom: from,
+                  sourceTo: to,
+                  from: draftFrom,
+                  to: event.target.value,
+                })
+              }
+            />
+            <Button onClick={() => {
+              if (draftFrom && draftTo && new Date(draftFrom).getTime() > new Date(draftTo).getTime()) {
+                void message.error('Thời gian bắt đầu phải trước hoặc bằng thời gian kết thúc.')
+                return
+              }
+              updateQuery({ from: draftFrom, to: draftTo })
+            }}>Áp dụng thời gian</Button>
+            <Button onClick={() => {
+              setDraftRange({ sourceFrom: '', sourceTo: '', from: '', to: '' })
+              updateQuery({ from: '', to: '' })
+            }}>Xóa thời gian</Button>
+            <Button
+              icon={<DownloadOutlined />}
+              loading={exporting}
+              onClick={() => void exportNotifications()}
+            >
+              {excelUiLabels.export}
+            </Button>
           </FilterBar>
         </div>
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 12 }}
+          title={excelUiLabels.readonlyHint}
+          description={config.note}
+        />
         {inbox.error ? (
           <Alert
             type="error"

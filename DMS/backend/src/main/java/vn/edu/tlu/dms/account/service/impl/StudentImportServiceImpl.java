@@ -14,11 +14,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import vn.edu.tlu.dms.account.api.AccountDtos.TemporaryPassword;
 import vn.edu.tlu.dms.account.api.StudentManagementController.Save;
+import vn.edu.tlu.dms.account.service.CatalogService;
 import vn.edu.tlu.dms.account.service.StudentImportService;
 import vn.edu.tlu.dms.account.service.StudentManagementService;
 import vn.edu.tlu.dms.common.constants.DmsConstants;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Catalog;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
@@ -31,6 +33,8 @@ import vn.edu.tlu.dms.common.service.AuditService;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -43,10 +47,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.zip.ZipInputStream;
 
-/** Đọc/validate trước khi mở transaction; không ghi mật khẩu vào CSDL, audit hoặc log. */
+/** Validate toàn bộ file trước khi cấp danh tính; không ghi mật khẩu vào CSDL, audit hoặc log. */
 @Service
 public class StudentImportServiceImpl implements StudentImportService {
 
@@ -55,6 +60,7 @@ public class StudentImportServiceImpl implements StudentImportService {
 
     private final JdbcTemplate jdbc;
     private final StudentManagementService students;
+    private final CatalogService catalogs;
     private final ScopeGuard guard;
     private final CurrentUser current;
     private final AuditService audit;
@@ -66,9 +72,11 @@ public class StudentImportServiceImpl implements StudentImportService {
             ScopeGuard guard,
             CurrentUser current,
             AuditService audit,
-            PlatformTransactionManager manager) {
+            PlatformTransactionManager manager,
+            CatalogService catalogs) {
         this.jdbc = jdbc;
         this.students = students;
+        this.catalogs = catalogs;
         this.guard = guard;
         this.current = current;
         this.audit = audit;
@@ -78,12 +86,13 @@ public class StudentImportServiceImpl implements StudentImportService {
     @Override
     public Result importStudents(MultipartFile file, boolean dryRun) {
         requireAdmin();
-        List<ParsedRow> rows = parse(file);
-        if (dryRun) {
-            return summarize(rows, existingCodes(rows), true);
-        }
         return transaction.execute(
                 status -> {
+                    // Giữ khóa danh mục đến hết lô, tránh ngừng hoạt động giữa validate và cấp danh tính.
+                    List<ParsedRow> rows = parse(file);
+                    if (dryRun) {
+                        return summarize(rows, existingCodes(rows), true);
+                    }
                     // Hai lô import không cùng nhận một mã là mới. Unique index vẫn bảo vệ với CRUD
                     // đơn lẻ.
                     jdbc.execute("SELECT pg_advisory_xact_lock(hashtext('dms.student-import'))");
@@ -136,19 +145,24 @@ public class StudentImportServiceImpl implements StudentImportService {
                 }
                 var sheet = workbook.getSheetAt(0);
                 var header = sheet.getRow(0);
-                if (header == null
-                        || header.getLastCellNum() > 100
-                        || sheet.getLastRowNum() > StudentImport.MAX_ROWS) {
+                if (header == null) {
                     throw invalidFile(List.of());
                 }
                 var formatter = new DataFormatter(Locale.ROOT);
                 Map<String, Integer> columns = new HashMap<>();
                 for (Cell cell : header) {
-                    String title = text(cell, formatter).trim().toLowerCase(Locale.ROOT);
+                    String title =
+                            normalizeText(text(cell, formatter))
+                                    .replaceFirst("^\\uFEFF+", "")
+                                    .strip()
+                                    .toLowerCase(Locale.ROOT);
                     if (!title.isBlank()
                             && columns.putIfAbsent(title, cell.getColumnIndex()) != null) {
                         throw invalidFile(List.of());
                     }
+                }
+                if (columns.size() > StudentImport.MAX_HEADER_COLUMNS) {
+                    throw invalidFile(List.of());
                 }
                 List<String> missing =
                         StudentImport.HEADERS.subList(0, 6).stream()
@@ -161,10 +175,13 @@ public class StudentImportServiceImpl implements StudentImportService {
                     throw invalidFile(missing);
                 }
                 List<ParsedRow> result = new ArrayList<>();
+                Map<String, Map<String, Long>> resolved = new HashMap<>();
+                Map<Long, Map<String, Object>> faculties = new HashMap<>();
                 LocalDate today = LocalDate.now(ZoneId.of(DmsConstants.APPLICATION_TIME_ZONE));
-                for (int index = 1; index <= sheet.getLastRowNum(); index++) {
-                    var row = sheet.getRow(index);
-                    if (row == null) {
+                // Excel thường giữ dòng/ô trống đã định dạng sau vùng dữ liệu. Chỉ đếm dòng có dữ
+                // liệu.
+                for (var row : sheet) {
+                    if (row.getRowNum() == 0) {
                         continue;
                     }
                     var values = new LinkedHashMap<String, String>();
@@ -175,7 +192,24 @@ public class StudentImportServiceImpl implements StudentImportService {
                                 columns.get(
                                         StudentImport.HEADERS.get(col).toLowerCase(Locale.ROOT));
                         Cell cell = position == null ? null : row.getCell(position);
-                        values.put(field, text(cell, formatter).trim());
+                        String value =
+                                ApiField.STUDENT_CODE.equals(field)
+                                        ? studentCode(cell, formatter)
+                                        : text(cell, formatter);
+                        values.put(field, normalizeText(value));
+                        if (ApiField.STUDENT_CODE.equals(field)
+                                && cell != null
+                                && cell.getCellType() == CellType.NUMERIC) {
+                            BigDecimal numeric =
+                                    BigDecimal.valueOf(cell.getNumericCellValue())
+                                            .stripTrailingZeros();
+                            // Không đoán lại mã đã bị Excel làm tròn hoặc bỏ phần thập phân.
+                            if (numeric.scale() > 0
+                                    || numeric.toBigInteger().abs().toString().length()
+                                            > StudentImport.MAX_NUMERIC_CODE_DIGITS) {
+                                errors.add(new CellError(field, StudentImport.INVALID));
+                            }
+                        }
                         if (cell != null
                                 && (cell.getCellType() == CellType.FORMULA
                                         || cell.getCellType() == CellType.ERROR
@@ -204,21 +238,43 @@ public class StudentImportServiceImpl implements StudentImportService {
                     if (gender == null && !values.get(ApiField.GENDER).isBlank()) {
                         errors.add(new CellError(ApiField.GENDER, StudentImport.INVALID));
                     }
+                    Long schoolId = resolveReference(
+                            Catalog.SCHOOLS, ApiField.SCHOOL_NAME,
+                            values.getOrDefault(ApiField.SCHOOL_NAME, ""), errors, resolved);
+                    Long facultyId = resolveReference(
+                            Catalog.FACULTIES, ApiField.FACULTY, values.get(ApiField.FACULTY), errors, resolved);
+                    Long cohortId = resolveReference(
+                            Catalog.COHORTS, ApiField.COHORT, values.get(ApiField.COHORT), errors, resolved);
+                    Long hometownId = resolveReference(
+                            Catalog.HOMETOWNS, ApiField.HOMETOWN,
+                            values.getOrDefault(ApiField.HOMETOWN, ""), errors, resolved);
+                    if (facultyId != null) {
+                        var faculty = faculties.computeIfAbsent(facultyId,
+                                id -> catalogs.requireActive(Catalog.FACULTIES, id));
+                        if (faculty.get(ApiField.SCHOOL_ID) instanceof Number parent
+                                && !Objects.equals(parent.longValue(), schoolId)) {
+                            errors.add(new CellError(ApiField.FACULTY, StudentImport.INVALID));
+                        }
+                    }
                     result.add(
                             new ParsedRow(
-                                    index + 1,
+                                    row.getRowNum() + 1,
                                     new Save(
                                             null,
                                             values.get(ApiField.STUDENT_CODE),
                                             values.get(ApiField.FULL_NAME),
                                             gender,
                                             date,
-                                            values.get(ApiField.FACULTY),
-                                            values.get(ApiField.COHORT),
+                                            schoolId,
+                                            facultyId,
+                                            cohortId,
                                             values.get(ApiField.PHONE),
-                                            null,
+                                            hometownId,
                                             null),
                                     errors));
+                    if (result.size() > StudentImport.MAX_ROWS) {
+                        throw invalidFile(List.of());
+                    }
                 }
                 if (result.isEmpty()) {
                     throw invalidFile(List.of());
@@ -247,10 +303,62 @@ public class StudentImportServiceImpl implements StudentImportService {
         }
     }
 
+    private Long resolveReference(
+            String kind, String field, String value, List<CellError> errors,
+            Map<String, Map<String, Long>> resolved) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        var entries = resolved.computeIfAbsent(kind, key -> new HashMap<>());
+        if (!entries.containsKey(value)) {
+            try {
+                entries.put(value, catalogs.resolveImport(kind, value));
+            } catch (BusinessException error) {
+                if (error.getStatus() != HttpStatus.BAD_REQUEST.value()
+                        && error.getStatus() != HttpStatus.NOT_FOUND.value()) {
+                    throw error;
+                }
+                entries.put(value, null);
+            }
+        }
+        Long id = entries.get(value);
+        if (id == null) {
+            errors.add(new CellError(field, StudentImport.INVALID));
+        }
+        return id;
+    }
+
     private static String text(Cell cell, DataFormatter formatter) {
         return cell == null || cell.getCellType() == CellType.FORMULA
                 ? ""
                 : formatter.formatCellValue(cell);
+    }
+
+    /**
+     * Chuẩn hóa chữ tiếng Việt và khoảng trắng do sao chép, không xóa ký tự điều khiển giữa dữ
+     * liệu.
+     */
+    private static String normalizeText(String value) {
+        StringBuilder normalized = new StringBuilder();
+        value.codePoints()
+                .forEach(
+                        code ->
+                                normalized.appendCodePoint(
+                                        Character.isSpaceChar(code) ? ' ' : code));
+        return Normalizer.normalize(normalized, Normalizer.Form.NFC).strip();
+    }
+
+    /** Không dùng số mũ/dấu phân nhóm của ô số làm mã; giữ format đệm 0 tường minh. */
+    private static String studentCode(Cell cell, DataFormatter formatter) {
+        String formatted = text(cell, formatter);
+        if (cell != null
+                && cell.getCellType() == CellType.NUMERIC
+                && !formatted.matches("[0-9]+")) {
+            return BigDecimal.valueOf(cell.getNumericCellValue())
+                    .stripTrailingZeros()
+                    .toPlainString();
+        }
+        return formatted;
     }
 
     /** Giới hạn giải nén trước khi POI dựng object, chặn file ZIP nhỏ nhưng bung ra quá lớn. */
@@ -317,7 +425,6 @@ public class StudentImportServiceImpl implements StudentImportService {
             }
         }
         checkPattern(values, errors, ApiField.STUDENT_CODE, StudentImport.CODE_PATTERN);
-        checkPattern(values, errors, ApiField.COHORT, StudentImport.COHORT_PATTERN);
         checkPattern(values, errors, ApiField.PHONE, StudentImport.PHONE_PATTERN);
         if (!values.get(ApiField.FULL_NAME).isBlank()
                 && (values.get(ApiField.FULL_NAME).length() < 2
@@ -426,7 +533,11 @@ public class StudentImportServiceImpl implements StudentImportService {
         return new BusinessException(
                 ErrorCode.IMPORT_FILE_INVALID,
                 HttpStatus.BAD_REQUEST,
-                Map.of("missingColumns", missing, "maxRows", StudentImport.MAX_ROWS));
+                Map.of(
+                        ApiField.MISSING_COLUMNS,
+                        missing,
+                        ApiField.MAX_ROWS,
+                        StudentImport.MAX_ROWS));
     }
 
     private record ParsedRow(int number, Save data, List<CellError> errors) {}

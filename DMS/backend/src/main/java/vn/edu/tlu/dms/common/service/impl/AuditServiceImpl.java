@@ -8,7 +8,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.tlu.dms.common.constants.DmsConstants.ApiField;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 import vn.edu.tlu.dms.common.domain.AuditLog;
 import vn.edu.tlu.dms.common.dto.PageResponse;
 import vn.edu.tlu.dms.common.dto.SearchRequest;
@@ -63,10 +65,10 @@ public class AuditServiceImpl implements AuditService {
         OffsetDateTime to = input.to();
         guard.requirePermission(Permission.AUDIT_READ);
         if (actorId != null && actorId <= 0) {
-            throw BusinessException.invalid("actorId", "ID người thực hiện phải lớn hơn 0");
+            throw BusinessException.invalid(ApiField.ACTOR_ID, ValidationMessage.ACTOR_ID_POSITIVE);
         }
         if (from != null && to != null && from.isAfter(to)) {
-            throw BusinessException.invalid("to", "Mốc kết thúc phải bằng hoặc sau mốc bắt đầu");
+            throw BusinessException.invalid(ApiField.TO, ValidationMessage.TIME_RANGE_INVALID);
         }
         String keyword = q == null ? "" : q.trim();
         var args = new ArrayList<Object>();
@@ -114,6 +116,25 @@ public class AuditServiceImpl implements AuditService {
                         "requestId",
                         "createdAt"),
                 "id,desc");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<Map<String, Object>> searchActionsByPage(SearchRequest input) {
+        return searchFilterValues(input, "action");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<Map<String, Object>> searchEntityTypesByPage(SearchRequest input) {
+        return searchFilterValues(input, "entity_type");
+    }
+
+    private PageResponse<Map<String, Object>> searchFilterValues(SearchRequest input, String column) {
+        guard.requirePermission(Permission.AUDIT_READ);
+        return queries.search("SELECT DISTINCT " + column + " AS code," + column
+                        + " AS name FROM audit_log WHERE " + column + " ILIKE ?",
+                List.of(LikePattern.contains(input.q().trim())), input, Set.of("code", "name"), "code,asc");
     }
 
     @Transactional(readOnly = true)

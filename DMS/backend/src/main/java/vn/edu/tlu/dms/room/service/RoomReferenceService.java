@@ -3,6 +3,7 @@ package vn.edu.tlu.dms.room.service;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public interface RoomReferenceService {
 
@@ -14,6 +15,9 @@ public interface RoomReferenceService {
     /** Lấy ID đơn vị sở hữu tòa để nơi gọi kiểm tra phạm vi quyền. */
     Long getBuildingManagementUnitId(Long id);
 
+    /** Đọc tên tòa theo ID để hiển thị ở module khác; ID không tồn tại bị bỏ qua. */
+    Map<Long, String> getBuildingNames(Set<Long> ids);
+
     /** Đọc mức cọc của tòa để kích hoạt hợp đồng, không trả entity ra ngoài module. */
     Long getBuildingDepositAmount(Long id);
 
@@ -24,6 +28,9 @@ public interface RoomReferenceService {
      * Đọc thông tin học kỳ gồm loại, ngày bắt đầu và kết thúc; không trả entity ra ngoài module.
      */
     SemesterRef getSemesterReference(Long id);
+
+    /** Đọc nhãn của các học kỳ đã được nghiệp vụ gọi lọc quyền, gộp trong một lần tra cứu. */
+    Map<Long, SemesterLabel> getSemesterLabels(Set<Long> ids);
 
     /**
      * Tìm phòng sinh viên đang ở dựa trên phân phòng hiệu lực; trả Optional rỗng khi chưa có phòng.
@@ -43,6 +50,9 @@ public interface RoomReferenceService {
             Long roomId, Long buildingId, Long unitId, String gender, String status) {}
 
     public record SemesterRef(Long id, String type, LocalDate startDate, LocalDate endDate) {}
+
+    /** Thông tin học kỳ phục vụ hiển thị, không trả entity sang module khác. */
+    record SemesterLabel(String name, String type, String academicYear) {}
 
     /** Tổng hợp giường khai thác và phòng thiếu trưởng phòng theo đơn vị cho Dashboard. */
     DashboardCapacity getDashboardCapacity(Long managementUnitId);

@@ -1,4 +1,6 @@
-param()
+param(
+    [switch] $Rebuild
+)
 
 # Chạy toàn bộ DMS trên máy dùng Docker Desktop: PostgreSQL + Keycloak trong container,
 # backend (JAR) và frontend (Vite) chạy trên máy. Một lệnh duy nhất, chạy lại nhiều lần an toàn.
@@ -147,9 +149,20 @@ foreach ($required in 'DB_NAME', 'DB_USERNAME', 'DB_PASSWORD', 'DB_PORT', 'DMS_K
     }
 }
 
-# 3. Build backend/frontend nếu chưa có.
-if (-not (Test-Path -LiteralPath $backendJar)) {
-    Write-Host 'Building backend JAR (first run, a few minutes)...'
+# 3. Build backend/frontend nếu chưa có hoặc có thay đổi mã nguồn backend.
+$needsBackendBuild = $Rebuild -or (-not (Test-Path -LiteralPath $backendJar))
+if (-not $needsBackendBuild) {
+    $jarTime = (Get-Item -LiteralPath $backendJar).LastWriteTime
+    $latestSource = Get-ChildItem -Path (Join-Path $backendDirectory 'src'), (Join-Path $backendDirectory 'pom.xml') -Recurse -File -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+    if ($latestSource -and ($latestSource.LastWriteTime -gt $jarTime)) {
+        $needsBackendBuild = $true
+        Write-Host 'Detected backend source changes. Rebuilding backend JAR...'
+    }
+}
+if ($needsBackendBuild) {
+    Write-Host 'Building backend JAR (a few minutes)...'
     Push-Location $backendDirectory
     try {
         & .\mvnw.cmd -DskipTests clean package

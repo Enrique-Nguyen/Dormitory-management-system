@@ -1,7 +1,11 @@
 import { Button } from '../ui/Surface'
-import { KeyOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
-import { App, Avatar, Dropdown, type MenuProps } from 'antd'
-import { Link } from 'react-router'
+import ActionMenu, { type ActionMenuItem } from '../ui/ActionMenu'
+import {
+  KeyOutlined,
+  LogoutOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
+import { App, Avatar, Tooltip } from 'antd'
 import { useState } from 'react'
 import { Permission } from '../../constants/authorization'
 import {
@@ -22,23 +26,14 @@ import { errorMessage } from '../../utils/errorMessages'
 interface Props {
   /** Mục riêng của cổng (cổng sinh viên đặt Hồ sơ, Hợp đồng, Tiền cọc, Kỳ hè... ở đây trên mobile). */
   extraItems?: NavItem[]
+  /** Hiện nút Đăng xuất cạnh avatar; cổng có sidebar đặt nút này ở góc dưới trái nên tắt. */
+  showLogout?: boolean
 }
 
-/** Avatar + menu chung cho mọi vai trò: Hồ sơ, mục riêng của cổng, Đổi mật khẩu, Đăng xuất. */
-export default function UserMenu({ extraItems = [] }: Props) {
-  const { data: me } = useMe()
+/** Đăng xuất dùng chung: thu hồi token rồi chuyển sang Keycloak; lỗi hiện thông báo. */
+function useLogout() {
   const { message } = App.useApp()
-  const showName = useViewport() !== 'mobile'
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-
-  if (!me) return null
-  const profilePath = roleProfile[me.role]
-  // Hồ sơ đã nằm trong menu sinh viên trên mobile; lọc mục đó để chỉ hiện một lần ở avatar.
-  const visibleExtraItems = extraItems.filter(
-    (item) =>
-      item.path !== profilePath && hasAnyPermission(me, item.permissions),
-  )
-
   const onLogout = async () => {
     if (isLoggingOut) return
     setIsLoggingOut(true)
@@ -50,11 +45,53 @@ export default function UserMenu({ extraItems = [] }: Props) {
       setIsLoggingOut(false)
     }
   }
+  return { isLoggingOut, onLogout }
+}
 
-  const items: MenuProps['items'] = [
+interface LogoutButtonProps {
+  /** Chỉ hiện biểu tượng (sidebar thu gọn). */
+  compact?: boolean
+  className?: string
+}
+
+/** Nút Đăng xuất độc lập, đặt ở bất kỳ vị trí nào trong khung. */
+export function LogoutButton({ compact = false, className = '' }: LogoutButtonProps) {
+  const { isLoggingOut, onLogout } = useLogout()
+  const label = isLoggingOut ? 'Đang đăng xuất…' : 'Đăng xuất'
+  return (
+    <Tooltip title={compact ? label : ''} placement="right">
+      <Button
+        type="text"
+        icon={<LogoutOutlined />}
+        loading={isLoggingOut}
+        onClick={() => void onLogout()}
+        aria-label="Đăng xuất"
+        className={`dms-logout-btn ${className}`}
+      >
+        {!compact && label}
+      </Button>
+    </Tooltip>
+  )
+}
+
+/** Avatar + menu chung cho mọi vai trò: Hồ sơ, Tùy chỉnh màu sắc/giao diện theo người dùng (chuẩn V5), Đổi mật khẩu, Đăng xuất. */
+export default function UserMenu({ extraItems = [], showLogout = true }: Props) {
+  const { data: me } = useMe()
+  const showName = useViewport() !== 'mobile'
+  const { isLoggingOut, onLogout } = useLogout()
+
+  if (!me) return null
+  const profilePath = roleProfile[me.role]
+  // Hồ sơ đã nằm trong menu sinh viên trên mobile; lọc mục đó để chỉ hiện một lần ở avatar.
+  const visibleExtraItems = extraItems.filter(
+    (item) =>
+      item.path !== profilePath && hasAnyPermission(me, item.permissions),
+  )
+
+  const items: ActionMenuItem[] = [
     {
       key: 'who',
-      type: 'group',
+      group: true,
       label: `${me.fullName} · ${roleLabel[me.role]}`,
     },
     ...(hasPermission(me, Permission.PROFILE_READ)
@@ -62,33 +99,37 @@ export default function UserMenu({ extraItems = [] }: Props) {
           {
             key: profilePath,
             icon: <UserOutlined />,
-            label: <Link to={profilePath}>Hồ sơ của tôi</Link>,
+            label: 'Hồ sơ của tôi',
+            to: profilePath,
           },
         ]
       : []),
     ...visibleExtraItems.map((item) => ({
       key: item.path,
       icon: item.icon && <item.icon />,
-      label: <Link to={item.path}>{item.label}</Link>,
+      label: item.label,
+      to: item.path,
     })),
-    ...(visibleExtraItems.length > 0 ? [{ type: 'divider' as const }] : []),
+    { key: 'divider', divider: true },
     {
       key: 'password',
       icon: <KeyOutlined />,
-      label: <Link to={CHANGE_PASSWORD_PATH}>Đổi mật khẩu</Link>,
+      label: 'Đổi mật khẩu',
+      to: CHANGE_PASSWORD_PATH,
     },
     {
       key: 'logout',
       icon: <LogoutOutlined />,
       label: isLoggingOut ? 'Đang đăng xuất…' : 'Đăng xuất',
       disabled: isLoggingOut,
-      onClick: onLogout,
+      onClick: () => void onLogout(),
     },
   ]
 
   return (
-    <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
-      <Button
+    <>
+      <ActionMenu
+        items={items}
         type="text"
         aria-label={`Menu tài khoản của ${me.fullName}`}
         style={{
@@ -122,7 +163,8 @@ export default function UserMenu({ extraItems = [] }: Props) {
             {me.fullName}
           </span>
         )}
-      </Button>
-    </Dropdown>
+      </ActionMenu>
+      {showLogout && <LogoutButton compact={!showName} />}
+    </>
   )
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Form, message } from 'antd'
+import { App, Form } from 'antd'
 import { FileAddOutlined, HomeOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -22,6 +22,7 @@ interface IssueForm { semesterId: number; billingMonth: Dayjs }
 
 export default function IssueInvoicesModal({ open, onClose, currentUnitId }: Props) {
   const [issueType, setIssueType] = useState<string>(InvoiceType.ROOM_FEE)
+  const { message } = App.useApp()
   const [form] = Form.useForm<IssueForm>()
   const { data: me } = useMe()
   const roomFee = useIssueRoomFeeInvoices()
@@ -49,9 +50,11 @@ export default function IssueInvoicesModal({ open, onClose, currentUnitId }: Pro
             billingMonth: values.billingMonth.startOf('month').format('YYYY-MM-DD'),
           })
       message.success(
-        'Đã tạo ' + formatNumber(result.totalCreated) + ' hóa đơn, bỏ qua '
-        + formatNumber(result.totalSkipped) + '; tổng tiền '
-        + formatMoney(result.totalAmount) + '.',
+        billingUiLabels.issueSucceeded(
+          formatNumber(result.totalCreated),
+          formatNumber(result.totalSkipped),
+          formatMoney(result.totalAmount),
+        ),
       )
       form.resetFields()
       onClose()
@@ -119,7 +122,7 @@ export default function IssueInvoicesModal({ open, onClose, currentUnitId }: Pro
               name="semesterId"
               label={billingUiLabels.issueSemester}
               extra={semesterHint}
-              rules={[{ required: true, message: 'Vui lòng chọn học kỳ' }]}
+              rules={[{ required: true, message: billingUiLabels.issueSemesterRequired }]}
             >
               <Select
                 loading={loadingSemesters}
@@ -132,7 +135,7 @@ export default function IssueInvoicesModal({ open, onClose, currentUnitId }: Pro
             <Form.Item
               name="billingMonth"
               label={billingUiLabels.issueMonth}
-              rules={[{ required: true, message: 'Vui lòng chọn tháng' }]}
+              rules={[{ required: true, message: billingUiLabels.issueMonthRequired }]}
             >
               <DatePicker
                 picker="month"

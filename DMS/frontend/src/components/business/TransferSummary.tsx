@@ -1,6 +1,6 @@
 import { stepsFromFlow } from '../ui/timelineSteps'
 import StatusTimeline from '../ui/StatusTimeline'
-import { Card, Descriptions } from '../ui/Surface'
+import { DetailLayout, DetailSection as Card, Descriptions } from '../ui/Surface'
 import { assignmentLabel } from '../../constants/statusConfig'
 import type { TransferDetail } from '../../services/api/contract'
 import { formatBedCode, formatDateTime } from '../../utils/format'
@@ -32,9 +32,10 @@ export default function TransferSummary({
     last?.fromStatus ?? undefined,
   )
   return (
-    <Card title="Yêu cầu">
+    <DetailLayout>
+      <Card title="Yêu cầu">
       <Descriptions
-        column={1}
+        column={{ xs: 1, sm: 2 }}
         size="small"
         items={[
           {
@@ -69,9 +70,10 @@ export default function TransferSummary({
             : []),
         ]}
       />
-      <div style={{ marginTop: 16 }}>
+      </Card>
+      <Card title="Tiến trình xử lý">
         <StatusTimeline steps={steps} />
-      </div>
-    </Card>
+      </Card>
+    </DetailLayout>
   )
 }

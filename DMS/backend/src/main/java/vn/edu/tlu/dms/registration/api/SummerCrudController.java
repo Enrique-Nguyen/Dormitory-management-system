@@ -66,13 +66,13 @@ public class SummerCrudController {
 
     @RequirePrivilege(Permission.SUMMER_REGISTRATION_READ)
     @GetMapping("/api/summer-choices/{id}")
-    public Object getChoice(@PathVariable Long id) {
+    public Map<String, Object> getChoice(@PathVariable Long id) {
         return service.getChoice(id);
     }
 
     @RequirePrivilege(Permission.SUMMER_REGISTRATION_READ)
     @GetMapping("/api/me/summer-choice")
-    public Object getMyCurrentChoice() {
+    public Map<String, Object> getMyCurrentChoice() {
         // Luôn lấy sinh viên hiện tại từ server, không nhận chủ sở hữu do client khai báo.
         return service.getMyCurrentChoice();
     }

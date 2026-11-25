@@ -1,0 +1,794 @@
+{
+  "runId": "202611241707353a80",
+  "coverage": "API_ONLY",
+  "startedAt": "202611241707353a80",
+  "checks": [
+    {
+      "id": "E2E-AUTH-13",
+      "subcase": "role-filter-retarget",
+      "title": "Accepted role filter cannot change current student ownership",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "sameScope": true,
+        "total": 1,
+        "classification": "Original 400 oracle invalid for known shared SearchRequest field"
+      },
+      "expected": "200 and same own application IDs as baseline; shared DTO role is known",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/me/applications/search-by-page",
+            "status": 200,
+            "requestId": "795dd5c2-5b2b-4934-8eb0-c3b9e8b5c373"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/me/applications/search-by-page",
+            "status": 200,
+            "requestId": "93bc3a3b-a36d-4aca-bdc9-4b02b49435d7"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/me/applications/search-by-page",
+      "requestId": "93bc3a3b-a36d-4aca-bdc9-4b02b49435d7",
+      "durationMs": 93
+    },
+    {
+      "id": "E2E-RBAC-04",
+      "subcase": "approve-n23-scope",
+      "title": "Supported Staff action denied outside own unit",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404,
+        "unchanged": true
+      },
+      "expected": "404 and application state unchanged",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/8/approve",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "1c0a6608-552e-4cb6-a180-831de36d82a3"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/8/approve",
+      "requestId": "1c0a6608-552e-4cb6-a180-831de36d82a3",
+      "durationMs": 655
+    },
+    {
+      "id": "E2E-RBAC-15",
+      "subcase": "approve-n23-scope",
+      "title": "Supported Staff action denied outside own unit",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404,
+        "unchanged": true
+      },
+      "expected": "404 and application state unchanged",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/8/approve",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "af563046-e13e-4abe-80bb-1325af05a4d6"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/8/approve",
+      "requestId": "af563046-e13e-4abe-80bb-1325af05a4d6",
+      "durationMs": 631
+    },
+    {
+      "id": "E2E-REG-15",
+      "subcase": "fresh-fixture",
+      "title": "Fresh free-student flow restores intended activation preconditions",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "applicationId": 11,
+        "contractId": 12,
+        "assignmentId": 9,
+        "bedId": 5
+      },
+      "expected": "ASSIGNED/PENDING/unexpired/openHOLD/noDEPOSIT",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 200,
+            "requestId": "b3a7dbcd-fce5-4479-b96d-31a38fbaf279"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/11/submit",
+            "status": 200,
+            "requestId": "cfbc83a3-a6ef-492c-9389-d3890ccb27ca"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/11/approve",
+            "status": 200,
+            "requestId": "2b0d4688-aa87-4c97-ac73-c7940e0998e7"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/11/assign",
+            "status": 200,
+            "requestId": "b3ca5f14-183d-4bd8-8ebf-745c9afb5713"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/11/assign",
+      "requestId": "b3ca5f14-183d-4bd8-8ebf-745c9afb5713",
+      "durationMs": 969
+    },
+    {
+      "id": "E2E-CON-02",
+      "subcase": "deposit-mismatch-fresh",
+      "title": "Underpayment on valid pending contract",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "400 DEPOSIT_AMOUNT_MISMATCH, stillPENDING noDEPOSIT",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/12/activate",
+            "status": 400,
+            "errorCode": "DEPOSIT_AMOUNT_MISMATCH",
+            "requestId": "3ae76c82-4761-4cfe-9b27-5819d467ad5f"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/12/activate",
+      "requestId": "3ae76c82-4761-4cfe-9b27-5819d467ad5f",
+      "durationMs": 625
+    },
+    {
+      "id": "E2E-CON-04",
+      "subcase": "concurrent-activate-fresh",
+      "title": "Concurrent activation on correct fixture",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "applicationId": 11,
+        "contractId": 12,
+        "assignmentId": 9,
+        "bedId": 5,
+        "status": "ACTIVE"
+      },
+      "expected": "one200 one409, oneDEPOSIT, sameHOLD becomesSTAY",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/12/activate",
+            "status": 200,
+            "requestId": "7a142310-0641-4a1f-87e7-5974ca135c55"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/12/activate",
+            "status": 409,
+            "errorCode": "INVALID_STATE_TRANSITION",
+            "requestId": "229e0b82-e3e2-4487-a156-2953b7de22eb"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/12/activate",
+      "requestId": "229e0b82-e3e2-4487-a156-2953b7de22eb",
+      "durationMs": 686
+    },
+    {
+      "id": "E2E-CON-01",
+      "subcase": "activated-readback-fresh",
+      "title": "Active contract and ledger readback",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "status": "ACTIVE",
+        "balance": 1000000
+      },
+      "expected": "ACTIVE and1000000 in bothAPI/SQL",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/contracts/12",
+            "status": 200,
+            "requestId": "107374f7-f180-41e2-8aa2-5d88e50fa84c"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/contracts/12",
+      "requestId": "107374f7-f180-41e2-8aa2-5d88e50fa84c",
+      "durationMs": 52
+    },
+    {
+      "id": "E2E-RBAC-06",
+      "subcase": "female-transfer-ownership",
+      "title": "Unassigned student cannot transfer another student contract",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "notOwned": true
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/transfer-requests/save-or-update",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "d78f59fa-a51c-4848-a87d-56bf9268616d"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/transfer-requests/save-or-update",
+      "requestId": "d78f59fa-a51c-4848-a87d-56bf9268616d",
+      "durationMs": 40
+    },
+    {
+      "id": "E2E-CON-11",
+      "subcase": "api-transfer-request",
+      "title": "Student requests transfer",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 1
+      },
+      "expected": "PENDING owned by own active contract",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/transfer-requests/save-or-update",
+            "status": 200,
+            "requestId": "00be6eeb-38e7-43b5-b7e7-39ad75a0f9cf"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/transfer-requests/save-or-update",
+      "requestId": "00be6eeb-38e7-43b5-b7e7-39ad75a0f9cf",
+      "durationMs": 11
+    },
+    {
+      "id": "E2E-CON-12",
+      "subcase": "cross-unit-transfer",
+      "title": "Cannot transfer into another unit",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409 and original assignment remains open",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/transfer-requests/1/approve",
+            "status": 409,
+            "errorCode": "TRANSFER_CROSS_UNIT",
+            "requestId": "58863894-c125-43ad-9c42-ca3a3b2cc708"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/transfer-requests/1/approve",
+      "requestId": "58863894-c125-43ad-9c42-ca3a3b2cc708",
+      "durationMs": 310
+    },
+    {
+      "id": "E2E-CON-13",
+      "subcase": "occupied-target",
+      "title": "Occupied target does not release original bed",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "rollback": true
+      },
+      "expected": "409 BED_TAKEN; one original open assignment",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/transfer-requests/1/approve",
+            "status": 409,
+            "errorCode": "BED_TAKEN",
+            "requestId": "381f6633-d181-440f-8321-03abdd69afc6"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/transfer-requests/1/approve",
+      "requestId": "381f6633-d181-440f-8321-03abdd69afc6",
+      "durationMs": 320
+    },
+    {
+      "id": "E2E-CON-11",
+      "subcase": "approve-transfer",
+      "title": "Approve same-unit transfer atomically",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "rows": 2,
+        "adjacent": true
+      },
+      "expected": "Old assignment closed, new STAY opens at exact same instant",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/transfer-requests/1/approve",
+            "status": 200,
+            "requestId": "d64bb466-3824-453a-8d6f-8300354d36e9"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/transfer-requests/1/approve",
+      "requestId": "d64bb466-3824-453a-8d6f-8300354d36e9",
+      "durationMs": 340
+    },
+    {
+      "id": "E2E-CON-08",
+      "subcase": "api-extension",
+      "title": "Request and approve extension",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 1,
+        "end": "2027-03-25"
+      },
+      "expected": "New end date and old/new extension history retained",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/extension-requests/save-or-update",
+            "status": 200,
+            "requestId": "60042df1-d4e2-426a-8da5-ad2a95b41d33"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/extension-requests/1/approve",
+            "status": 200,
+            "requestId": "e86e87b0-55e3-4f97-9331-65f2f4ae5941"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/extension-requests/1/approve",
+      "requestId": "e86e87b0-55e3-4f97-9331-65f2f4ae5941",
+      "durationMs": 360
+    },
+    {
+      "id": "E2E-CON-17",
+      "subcase": "early-moveout-and-refund",
+      "title": "Early move-out closes stay and refunds deposit",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "status": "TERMINATED",
+        "refund": 1000000
+      },
+      "expected": "TERMINATED, one refund and record, zero open assignment",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/contracts/12/move-out/preview?moveOutDate=2026-11-25",
+            "status": 200,
+            "requestId": "bc6125e4-5e38-4d52-800c-988831599a6a"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/12/move-out",
+            "status": 200,
+            "requestId": "e2a40742-5aff-460e-918e-75415a9c4695"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/12/move-out",
+      "requestId": "e2a40742-5aff-460e-918e-75415a9c4695",
+      "durationMs": 911
+    },
+    {
+      "id": "E2E-CON-21",
+      "subcase": "refund-repeat",
+      "title": "Second refund/move-out cannot create a duplicate refund",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "refunds": 1
+      },
+      "expected": "409 and one REFUND only",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/12/deposit-refund",
+            "status": 409,
+            "errorCode": "DUPLICATE_REFUND",
+            "requestId": "ba2cc5e5-a186-443b-8712-80a91aa518e4"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/12/move-out",
+            "status": 409,
+            "errorCode": "INVALID_STATE_TRANSITION",
+            "requestId": "4fd84706-618f-42e6-baf1-ce09aa4ea4b9"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/12/move-out",
+      "requestId": "4fd84706-618f-42e6-baf1-ce09aa4ea4b9",
+      "durationMs": 284
+    },
+    {
+      "id": "E2E-REG-10",
+      "subcase": "approved-with-contract-defensive",
+      "title": "APPROVED with linked live contract cannot cancel",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "guarded": true,
+        "syntheticDefensiveFixture": true
+      },
+      "expected": "409 APPLICATION_HAS_CONTRACT; lowercase cancel absent",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 200,
+            "requestId": "07d244d7-1b12-44a8-ad57-f771158fe06b"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/12/submit",
+            "status": 200,
+            "requestId": "d9e15f10-3712-4281-bfb6-cda9d31ac0b4"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/12/approve",
+            "status": 200,
+            "requestId": "9497e04d-156d-43be-8776-362d2a6b13a9"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/12/assign",
+            "status": 200,
+            "requestId": "c022f17e-95d2-4b9d-8406-628a738045c4"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/applications/12",
+            "status": 200,
+            "requestId": "0acdf851-db6f-432f-8314-d0378495852a"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/12/cancel",
+            "status": 409,
+            "errorCode": "APPLICATION_HAS_CONTRACT",
+            "requestId": "b7fbf948-e4e0-49c6-bdcb-3a121cc6d369"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/12/cancel",
+      "requestId": "b7fbf948-e4e0-49c6-bdcb-3a121cc6d369",
+      "durationMs": 615
+    },
+    {
+      "id": "E2E-SUM-02",
+      "subcase": "closed-period",
+      "title": "Summer choice rejected before summer period opens",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "notCreated": true
+      },
+      "expected": "409; no choice written",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/summer-choices/save-or-update",
+            "status": 409,
+            "errorCode": "PERIOD_NOT_OPEN",
+            "requestId": "32784f1a-f70c-4d25-99d3-e25b0988b5f0"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/summer-choices/save-or-update",
+      "requestId": "32784f1a-f70c-4d25-99d3-e25b0988b5f0",
+      "durationMs": 9
+    },
+    {
+      "id": "E2E-SUM-01",
+      "subcase": "api-open-period",
+      "title": "Staff creates open summer period for K1",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 7
+      },
+      "expected": "Period is discoverable in open-only lookup",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/registration-periods/save-or-update",
+            "status": 200,
+            "requestId": "e3c197bf-bdfa-4fda-a794-f36f3be67569"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/me/registration-periods/open/search-by-page",
+            "status": 200,
+            "requestId": "33a5f874-5923-4051-bdc8-9bd3359660da"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/me/registration-periods/open/search-by-page",
+      "requestId": "33a5f874-5923-4051-bdc8-9bd3359660da",
+      "durationMs": 27
+    },
+    {
+      "id": "E2E-SUM-02",
+      "subcase": "student-stay",
+      "title": "Student saves STAY summer choice",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 1
+      },
+      "expected": "PENDING owned by current active contract",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/summer-choices/save-or-update",
+            "status": 200,
+            "requestId": "25cf0ebf-d803-42be-beaf-be5172652fbd"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/summer-choices/save-or-update",
+      "requestId": "25cf0ebf-d803-42be-beaf-be5172652fbd",
+      "durationMs": 12
+    },
+    {
+      "id": "E2E-SUM-03",
+      "subcase": "withdraw-and-resubmit",
+      "title": "Withdraw and resubmit summer choice keeps original ID",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 1,
+        "status": "PENDING"
+      },
+      "expected": "CANCELLED retained; same ID returns to PENDING",
+      "evidence": {
+        "calls": [
+          {
+            "method": "DELETE",
+            "endpoint": "/api/summer-choices/1",
+            "status": 204,
+            "requestId": "f3c861e2-780d-4f8a-b2da-f986ad363bc7"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/summer-choices/save-or-update",
+            "status": 200,
+            "requestId": "933dc0a2-968e-48a4-8362-53c39a98bf03"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/summer-choices/save-or-update",
+      "requestId": "933dc0a2-968e-48a4-8362-53c39a98bf03",
+      "durationMs": 316
+    },
+    {
+      "id": "E2E-SUM-04",
+      "subcase": "staff-approve-stay",
+      "title": "Staff approves STAY summer extension",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "end": "2027-03-25"
+      },
+      "expected": "APPROVED, contract end summer end, one SUMMER_STAY extension",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/summer-choices/1/approve",
+            "status": 200,
+            "requestId": "b9c6b505-94a4-4131-b07a-b51094625194"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/summer-choices/1/approve",
+      "requestId": "b9c6b505-94a4-4131-b07a-b51094625194",
+      "durationMs": 607
+    },
+    {
+      "id": "E2E-SUM-06",
+      "subcase": "temp-leave-choice",
+      "title": "Save and approve TEMP_LEAVE choice",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 2
+      },
+      "expected": "APPROVED",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/summer-choices/save-or-update",
+            "status": 200,
+            "requestId": "dfe0fdbf-c47e-4b6c-9317-a7af6b87148a"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/summer-choices/2/approve",
+            "status": 200,
+            "requestId": "4d5af9a8-5d73-4b02-b364-d2280c3315ec"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/summer-choices/2/approve",
+      "requestId": "4d5af9a8-5d73-4b02-b364-d2280c3315ec",
+      "durationMs": 56
+    },
+    {
+      "id": "E2E-SUM-07",
+      "subcase": "not-extended",
+      "title": "Storage requires contract extended beyond summer",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409, stay remains open",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/2/storage-records",
+            "status": 409,
+            "errorCode": "TEMP_LEAVE_NOT_EXTENDED",
+            "requestId": "0077c99d-819c-4c0a-9c57-d421dfcd21fb"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/2/storage-records",
+      "requestId": "0077c99d-819c-4c0a-9c57-d421dfcd21fb",
+      "durationMs": 288
+    },
+    {
+      "id": "E2E-SUM-06",
+      "subcase": "storage-create",
+      "title": "Extended TEMP_LEAVE frees bed but preserves contract and deposit",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 1,
+        "oldBedId": 2,
+        "balance": 966667
+      },
+      "expected": "ACTIVE, zero open stays, unchanged ledger, one storage record",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/extension-requests/save-or-update",
+            "status": 200,
+            "requestId": "d6eb11bf-9942-45c8-bff0-3b0002f35249"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/extension-requests/3/approve",
+            "status": 200,
+            "requestId": "2089d159-60d5-4a64-9e9c-ec55c97826a5"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/2/storage-records",
+            "status": 200,
+            "requestId": "f19381e0-94a1-4a6b-9293-530b26655564"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/2/storage-records",
+      "requestId": "f19381e0-94a1-4a6b-9293-530b26655564",
+      "durationMs": 1218
+    },
+    {
+      "id": "E2E-SUM-08",
+      "subcase": "storage-return",
+      "title": "Return stored packages and assign previous free bed without new application",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "returned": true,
+        "newApplication": false
+      },
+      "expected": "One new STAY, returnedAt persisted, no new application",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/storage-records/1/return",
+            "status": 200,
+            "requestId": "37dc0af0-a992-46f3-aeac-5ba0c75f4845"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/storage-records/1/return",
+      "requestId": "37dc0af0-a992-46f3-aeac-5ba0c75f4845",
+      "durationMs": 1000
+    },
+    {
+      "id": "E2E-BIL-13",
+      "subcase": "summer-fee-not-current",
+      "title": "Summer invoice timing contract needs clarification",
+      "status": "BLOCKED",
+      "coverage": "API_ONLY",
+      "actual": "NEEDS_SPEC: fixture summer is a future semester; issue-room-fee requires CURRENT_DATE within selected semester. Summer fee inclusion/exclusion needs a dedicated time-controlled environment.",
+      "expected": "NEEDS_SPEC: issuing future summer period rejected by current-semester guard; do not claim fee inclusion coverage",
+      "evidence": {
+        "detail": "Dependency or specification prerequisite not met",
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 0
+    }
+  ],
+  "totals": {
+    "PASS": 25,
+    "BLOCKED": 1
+  },
+  "note": "API subcases do not constitute full PASS for UI or UI+API plan cases. BLOCKED NEEDS_SPEC is never counted as PASS."
+}

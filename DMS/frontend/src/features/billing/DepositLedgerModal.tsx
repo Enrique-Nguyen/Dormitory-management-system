@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Form, message, type TableColumnsType } from 'antd'
+import { App, Form, type TableColumnsType } from 'antd'
 import { PlusOutlined, ReloadOutlined, RollbackOutlined } from '@ant-design/icons'
 import {
   Alert,
@@ -34,6 +34,7 @@ interface Props {
 interface LedgerForm { amount: number; note?: string }
 
 export default function DepositLedgerModal({ contractId, contractCode, studentName, open, onClose, readOnly = false }: Props) {
+  const { message } = App.useApp()
   const { data: me } = useMe()
   const { data: balance, isLoading: loadingBalance, error: balanceError, refetch: refetchBalance } = useDepositBalance(open ? contractId : undefined)
   const { data: transactions, isLoading: loadingTxs, error: transactionError, refetch: refetchTransactions } = useDepositTransactions(open ? contractId : undefined)
@@ -76,7 +77,7 @@ export default function DepositLedgerModal({ contractId, contractCode, studentNa
     {
       title: billingUiLabels.depositTransactionAmount,
       dataIndex: 'amount',
-      align: 'right',
+      align: 'left',
       className: 'dms-table-col-number',
       render: (value: number) => (
         <span className={value > 0 ? 'dms-amount-credit' : 'dms-amount-debit'}>
@@ -177,7 +178,7 @@ export default function DepositLedgerModal({ contractId, contractCode, studentNa
 
           {balance.topupOverdue && (
             <Alert
-              style={{ marginTop: 16 }}
+              style={{ marginTop: 12 }}
               type="warning"
               showIcon
               title={billingUiLabels.depositTopupOverdue}
@@ -284,8 +285,8 @@ export default function DepositLedgerModal({ contractId, contractCode, studentNa
             label={billingUiLabels.depositAmount}
             extra={action === 'topup' ? billingUiLabels.depositTopupHelp : billingUiLabels.depositRefundHelp}
             rules={[
-              { required: true, message: 'Vui lòng nhập số tiền' },
-              { type: 'number', min: 1, message: 'Số tiền phải lớn hơn 0' },
+              { required: true, message: billingUiLabels.depositAmountRequired },
+              { type: 'number', min: 1, message: billingUiLabels.depositAmountPositive },
             ]}
           >
             <InputNumber
@@ -296,7 +297,7 @@ export default function DepositLedgerModal({ contractId, contractCode, studentNa
               style={{ width: '100%' }}
             />
           </Form.Item>
-          <Form.Item name="note" label={billingUiLabels.note} rules={[{ max: 500, message: 'Tối đa 500 ký tự' }]}>
+          <Form.Item name="note" label={billingUiLabels.note} rules={[{ max: 500, message: billingUiLabels.maxCharacters(500) }]}>
             <TextArea rows={3} />
           </Form.Item>
         </FormGrid>

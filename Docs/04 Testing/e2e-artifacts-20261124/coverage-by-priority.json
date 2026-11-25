@@ -1,0 +1,19 @@
+{
+  "P0": {
+    "PASS": 17,
+    "CHUA_CHAY": 49,
+    "MOT_PHAN": 75,
+    "BLOCKED": 1,
+    "FAIL": 1
+  },
+  "P1": {
+    "PASS": 4,
+    "CHUA_CHAY": 44,
+    "FAIL": 3,
+    "MOT_PHAN": 13
+  },
+  "P2": {
+    "CHUA_CHAY": 12,
+    "PASS": 1
+  }
+}

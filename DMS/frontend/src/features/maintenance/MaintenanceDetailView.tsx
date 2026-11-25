@@ -17,9 +17,10 @@ import { useNavigate, useParams } from 'react-router'
 import {
   ActionBar,
   Button,
-  Card,
+  DetailSection as Card,
   DataTable,
   Descriptions,
+  DetailLayout,
   EmptyState,
   PageHeader,
   PageSkeleton,
@@ -32,6 +33,7 @@ import { Permission, Role } from '../../constants/authorization'
 import { STUDENT_MAINTENANCE_PATH } from '../../constants/navigation'
 import { getStatus } from '../../constants/statusConfig'
 import { useMe } from '../account/useMe'
+import { ReferenceLabel } from '../crud/ReferenceSelect'
 import { hasPermission } from '../../services/api/auth'
 import type {
   MaintenanceDeduction,
@@ -118,13 +120,26 @@ const deductionColumns: TableColumnsType<MaintenanceDeduction> = [
   },
 ]
 
+export interface MaintenanceDetailViewProps {
+  role?: Role
+  ticketId?: number
+  embedded?: boolean
+  readOnly?: boolean
+}
+
 /**
  * Trang chi tiết ticket dùng chung cho Sinh viên, Quản lý và Kỹ thuật viên.
  * Chỉ hiện hành động backend trả trong allowedActions; quyền cập nhật/xóa được kiểm tra
  * thêm từ /auth/me. Không tự dựng lại bảng chuyển trạng thái.
  */
-export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
-  const id = Number(useParams().id)
+export default function MaintenanceDetailView({
+  role,
+  ticketId,
+  embedded = false,
+  readOnly = false,
+}: MaintenanceDetailViewProps = {}) {
+  const params = useParams()
+  const id = ticketId ?? Number(params.id)
   const ticket = useMaintenanceDetail(id)
   const { data: me } = useMe()
   const actorRole = role ?? me?.role
@@ -153,8 +168,9 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
     return (
       <>
         <PageHeader
+        showHeading
           title="Không tìm thấy ticket"
-          breadcrumb={[{ label: list.label, to: list.path }]}
+          breadcrumb={embedded ? undefined : [{ label: list.label, to: list.path }]}
         />
         <EmptyState
           title="Không tìm thấy yêu cầu sửa chữa"
@@ -164,9 +180,11 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
               : errorMessage(ticket.error)
           }
           action={
-            <Button type="primary" onClick={() => navigate(list.path)}>
-              Quay lại danh sách
-            </Button>
+            !embedded && (
+              <Button type="primary" onClick={() => navigate(list.path)}>
+                Quay lại danh sách
+              </Button>
+            )
           }
         />
       </>
@@ -178,8 +196,8 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
   const timeline = detail.timeline ?? []
   const deductions = detail.deductions ?? []
   const concluded = detail.concluded ?? detail.cause != null
-  const canUpdate = hasPermission(me, Permission.MAINTENANCE_UPDATE)
-  const canDelete = hasPermission(me, Permission.MAINTENANCE_DELETE)
+  const canUpdate = !readOnly && hasPermission(me, Permission.MAINTENANCE_UPDATE)
+  const canDelete = !readOnly && hasPermission(me, Permission.MAINTENANCE_DELETE)
   const canConclude =
     canUpdate &&
     (actorRole === Role.STAFF || actorRole === Role.ADMIN) &&
@@ -407,18 +425,15 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
   return (
     <>
       <PageHeader
+        showHeading
         title={`Yêu cầu sửa chữa ${detail.code || `#${detail.id}`}`}
         status={<StatusBadge entity="ticket" status={detail.status} />}
-        subtitle={[
-          maintenanceValueLabel(detail.category),
-          maintenanceValueLabel(detail.severity),
-          locationLabel(detail),
-        ].join(' · ')}
-        breadcrumb={[
+        subtitle={<><ReferenceLabel endpoint="/catalogs/maintenance-categories" value={detail.category} />{' · '}{maintenanceValueLabel(detail.severity)}{' · '}{locationLabel(detail)}</>}
+        breadcrumb={embedded ? undefined : [
           { label: list.label, to: list.path },
           { label: detail.code || `#${detail.id}` },
         ]}
-        extra={
+        extra={(!embedded || !readOnly) && (
           <div
             style={{
               display: 'flex',
@@ -428,131 +443,136 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
               gap: 'var(--space-2)',
             }}
           >
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate(list.path)}
-            >
-              Quay lại danh sách
-            </Button>
-            <ActionBar allowedActions={allowedActions} actions={actions} />
+            {!embedded && (
+              <Button
+                icon={<ArrowLeftOutlined />}
+                onClick={() => navigate(list.path)}
+              >
+                Quay lại danh sách
+              </Button>
+            )}
+            {!readOnly && (
+              <ActionBar allowedActions={allowedActions} actions={actions} />
+            )}
           </div>
-        }
+        )}
       />
 
-      <div className="dms-split-view">
-        <div>
-          <Card title="Thông tin ticket">
-            <Descriptions
-              column={{ xs: 1, sm: 2 }}
-              items={[
-                {
-                  key: 'code',
-                  label: 'Mã ticket',
-                  children: detail.code || `#${detail.id}`,
-                },
-                {
-                  key: 'category',
-                  label: 'Hạng mục',
-                  children: maintenanceValueLabel(detail.category),
-                },
-                {
-                  key: 'severity',
-                  label: 'Mức độ',
-                  children: maintenanceValueLabel(detail.severity),
-                },
-                {
-                  key: 'location',
-                  label: 'Vị trí',
-                  children: locationLabel(detail),
-                },
-                {
-                  key: 'requester',
-                  label: 'Người báo',
-                  children:
-                    detail.requesterId === me?.id
+      <DetailLayout>
+        <Card title="Thông tin ticket">
+          <Descriptions
+            column={{ xs: 1, sm: 2 }}
+            items={[
+              {
+                key: 'code',
+                label: 'Mã ticket',
+                children: detail.code || `#${detail.id}`,
+              },
+              {
+                key: 'category',
+                label: 'Hạng mục',
+                children: <ReferenceLabel endpoint="/catalogs/maintenance-categories" value={detail.category} />,
+              },
+              {
+                key: 'severity',
+                label: 'Mức độ',
+                children: maintenanceValueLabel(detail.severity),
+              },
+              {
+                key: 'location',
+                label: 'Vị trí',
+                children: locationLabel(detail),
+              },
+              {
+                key: 'requester',
+                label: 'Người báo',
+                children:
+                  detail.requesterId === me?.id
+                    ? 'Bạn'
+                    : `Người dùng #${detail.requesterId}`,
+              },
+              {
+                key: 'assignedTo',
+                label: 'KTV phụ trách',
+                children:
+                  detail.assignedTo == null
+                    ? 'Chưa phân công'
+                    : detail.assignedTo === me?.id
                       ? 'Bạn'
-                      : `Người dùng #${detail.requesterId}`,
-                },
-                {
-                  key: 'assignedTo',
-                  label: 'KTV phụ trách',
-                  children:
-                    detail.assignedTo == null
-                      ? 'Chưa phân công'
-                      : detail.assignedTo === me?.id
-                        ? 'Bạn'
-                        : `KTV #${detail.assignedTo}`,
-                },
-                {
-                  key: 'createdAt',
-                  label: 'Thời điểm tạo',
-                  children: formatDateTime(detail.createdAt),
-                },
-              ]}
-            />
-          </Card>
-          <Card title="Mô tả sự cố">
-            <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-              {detail.description || '—'}
-            </p>
-          </Card>
-          <Card title="Ảnh hiện trường">
-            <MaintenancePhotoGallery photos={photos} />
-          </Card>
-        </div>
+                      : `KTV #${detail.assignedTo}`,
+              },
+              {
+                key: 'createdAt',
+                label: 'Thời điểm tạo',
+                children: formatDateTime(detail.createdAt),
+              },
+            ]}
+          />
+        </Card>
+        <Card title="Mô tả sự cố">
+          <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+            {detail.description || '—'}
+          </p>
+        </Card>
+        <Card title="Ảnh hiện trường">
+          <MaintenancePhotoGallery photos={photos} />
+        </Card>
 
-        <div>
-          <Card title="Tiến trình xử lý">
-            <StatusTimeline steps={steps} />
-          </Card>
-          <Card title="Lịch sử xử lý">
-            <DataTable<MaintenanceTimelineEntry>
-              dataSource={timeline}
-              columns={timelineColumns}
-              rowKey={(row) =>
-                `${row.at}-${row.toStatus}-${row.actorId ?? ''}-${row.reason ?? ''}`
-              }
-              pagination={false}
-              size="small"
-            />
-          </Card>
-          {concluded ? (
-            <Card title="Kết luận xử lý">
-              <Descriptions column={1} size="small" items={conclusionItems} />
-              <div style={{ marginTop: 'var(--space-4)' }}>
-                <div
-                  style={{
-                    fontWeight: 600,
-                    marginBottom: 'var(--space-2)',
-                  }}
-                >
-                  Khoản trừ cọc
-                </div>
-                {deductions.length > 0 ? (
-                  <DataTable<MaintenanceDeduction>
-                    dataSource={deductions}
-                    columns={deductionColumns}
-                    rowKey={(row) => row.contractId}
-                    pagination={false}
-                    size="small"
-                  />
-                ) : (
-                  <p className="dms-page-subtitle" style={{ margin: 0 }}>
-                    Không trừ cọc.
-                  </p>
-                )}
+        {concluded ? (
+          <Card title="Kết luận xử lý">
+            <Descriptions column={1} size="small" items={conclusionItems} />
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <div
+                style={{
+                  fontWeight: 600,
+                  marginBottom: 'var(--space-2)',
+                }}
+              >
+                Khoản trừ cọc
               </div>
-            </Card>
-          ) : null}
-        </div>
-      </div>
+              {deductions.length > 0 ? (
+                <DataTable<MaintenanceDeduction>
+            scroll={{ x: 720 }}
+                  dataSource={deductions}
+                  columns={deductionColumns}
+                  rowKey={(row) => row.contractId}
+                  pagination={false}
+                  size="small"
+                />
+              ) : (
+                <p className="dms-page-subtitle" style={{ margin: 0 }}>
+                  Không trừ cọc.
+                </p>
+              )}
+            </div>
+          </Card>
+        ) : null}
+        <Card title="Tiến trình xử lý">
+          <StatusTimeline steps={steps} />
+        </Card>
+        <Card title="Lịch sử xử lý">
+          <DataTable<MaintenanceTimelineEntry>
+            scroll={{ x: 720 }}
+            dataSource={timeline}
+            columns={timelineColumns}
+            rowKey={(row) =>
+              `${row.at}-${row.toStatus}-${row.actorId ?? ''}-${row.reason ?? ''}`
+            }
+            pagination={false}
+            size="small"
+          />
+        </Card>
 
-      <AssignTechnicianModal
-        ticketId={id}
-        open={assignOpen}
-        onClose={() => setAssignOpen(false)}
-      />
-      {noteAction ? (
+      </DetailLayout>
+
+      {canUpdate && allowedActions.includes(MaintenanceAction.ASSIGN) && assignOpen && (
+        <AssignTechnicianModal
+          ticketId={id}
+          open
+          onClose={() => setAssignOpen(false)}
+        />
+      )}
+      {canUpdate && noteAction && allowedActions.includes(noteAction) ? (
         <TicketNoteModal
           open
           title={noteTitle}
@@ -568,11 +588,13 @@ export default function MaintenanceDetailView({ role }: { role?: Role } = {}) {
           onClose={() => setNoteAction(null)}
         />
       ) : null}
-      <ConcludeTicketModal
-        ticketId={id}
-        open={concludeOpen}
-        onClose={() => setConcludeOpen(false)}
-      />
+      {canConclude && concludeOpen && (
+        <ConcludeTicketModal
+          ticketId={id}
+          open
+          onClose={() => setConcludeOpen(false)}
+        />
+      )}
     </>
   )
 }

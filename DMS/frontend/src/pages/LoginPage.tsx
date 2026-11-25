@@ -50,12 +50,12 @@ export default function LoginPage() {
         <p className="dms-auth-note">
           Bấm đăng nhập để tiếp tục tới trang xác thực của hệ thống.
         </p>
-        {isPending && <Spin style={{ display: 'block', marginBottom: 16 }} />}
+        {isPending && <Spin style={{ display: 'block', marginBottom: 12 }} />}
         {(loginError || (error && keycloak.authenticated)) && (
           <Alert
             showIcon
             type="error"
-            style={{ marginBottom: 16 }}
+            style={{ marginBottom: 12 }}
             title={loginError || errorMessage(error)}
           />
         )}
@@ -64,7 +64,7 @@ export default function LoginPage() {
             showIcon
             type="warning"
             title="Phiên đã hết hạn. Vui lòng đăng nhập lại."
-            style={{ marginBottom: 16 }}
+            style={{ marginBottom: 12 }}
           />
         )}
         <Button
@@ -80,7 +80,7 @@ export default function LoginPage() {
             Đăng xuất để dùng tài khoản khác
           </Button>
         )}
-        <div style={{ marginTop: 16, textAlign: 'center' }}>
+        <div style={{ marginTop: 12, textAlign: 'center' }}>
           <Link to="/forgot-password">Quên mật khẩu?</Link>
         </div>
         <div className="dms-auth-footer">
@@ -117,7 +117,7 @@ export function ForgotPasswordPage() {
           style={{
             color: 'var(--color-text-secondary)',
             fontSize: 13,
-            marginBottom: 16,
+            marginBottom: 12,
           }}
         >
           Sinh viên vui lòng cung cấp mã sinh viên cho cán bộ quản lý tòa
