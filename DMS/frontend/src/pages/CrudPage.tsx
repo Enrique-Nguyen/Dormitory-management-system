@@ -1430,6 +1430,16 @@ export default function CrudPage({
                       },
                     ]
                   : []),
+                ...(field.pattern
+                  ? [
+                      {
+                        pattern: field.pattern,
+                        message:
+                          field.patternMessage ??
+                          `${field.label} không đúng định dạng`,
+                      },
+                    ]
+                  : []),
               ]
         }
       >

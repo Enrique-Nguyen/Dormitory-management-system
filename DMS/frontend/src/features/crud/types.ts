@@ -8,6 +8,8 @@ export interface CrudField {
     'text' | 'number' | 'date' | 'datetime' | 'time' | 'textarea' | 'select' | 'boolean'
   required?: boolean
   maxLength?: number
+  pattern?: RegExp
+  patternMessage?: string
   min?: number
   max?: number
   createOnly?: boolean

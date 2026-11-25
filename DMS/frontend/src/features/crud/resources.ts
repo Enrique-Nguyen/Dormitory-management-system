@@ -99,6 +99,20 @@ const note = (name = 'note', label = 'Ghi chú', maxLength = 1000): CrudField =>
   name, label, kind: 'textarea', required: false, maxLength,
 })
 const flag = (name: string, label: string): CrudField => ({ name, label, kind: 'boolean' })
+const PHONE_PATTERN = /^$|^(\+84|0)[0-9]{9,10}$/
+const PHONE_PATTERN_MESSAGE =
+  'Số điện thoại phải bắt đầu bằng 0 hoặc +84 và gồm 10–11 chữ số'
+const phoneField = (
+  name = 'phone',
+  label = 'Điện thoại',
+  maxLength = 20,
+  hint?: string,
+): CrudField => ({
+  ...text(name, label, false, maxLength),
+  pattern: PHONE_PATTERN,
+  patternMessage: PHONE_PATTERN_MESSAGE,
+  ...(hint ? { hint } : {}),
+})
 const optionalNumber = (name: string, label: string, min = 0, max?: number): CrudField => ({
   ...number(name, label, min), required: false, max,
 })
@@ -185,7 +199,7 @@ const studentFields: CrudField[] = [
   { ...ref('schoolId', 'Trường', '/catalogs/schools', 'name', false), lookupFilters: { active: true } },
   { ...facultyRef(), lookupFilters: { active: true } },
   { ...ref('cohortId', 'Khóa', '/catalogs/cohorts', 'name', false), lookupFilters: { active: true } },
-  text('phone', 'Điện thoại', false, 20),
+  phoneField(),
   { ...ref('hometownId', 'Quê quán', '/catalogs/hometowns', 'name', false), lookupFilters: { active: true } },
   text('emergencyContact', 'Liên hệ khẩn cấp', false, 200),
 ]
@@ -535,7 +549,7 @@ export const resources: Record<string, CrudResource> = {
     fields: [
       { ...ref('schoolId', 'Trường', '/catalogs/schools', 'name', false), lookupFilters: { active: true } },
       text('shortName', 'Tên viết tắt', false, 30),
-      { ...text('phone', 'Điện thoại văn phòng khoa', false, 15), hint: 'Số Việt Nam bắt đầu bằng 0 hoặc +84.' },
+      phoneField('phone', 'Điện thoại văn phòng khoa', 15, 'Số Việt Nam bắt đầu bằng 0 hoặc +84.'),
       text('email', 'Email văn phòng khoa', false, 200),
       note(),
     ],
@@ -748,7 +762,7 @@ export const resources: Record<string, CrudResource> = {
       text('shortName', 'Tên viết tắt', false, 30),
       flag('active', 'Đang hoạt động'),
       { ...text('address', 'Địa chỉ', false, 300), kind: 'textarea' },
-      { ...text('hotline', 'Đường dây nóng', false, 15), hint: 'Số Việt Nam bắt đầu bằng 0 hoặc +84.' },
+      phoneField('hotline', 'Đường dây nóng', 15, 'Số Việt Nam bắt đầu bằng 0 hoặc +84.'),
       text('email', 'Email liên hệ', false, 200),
       { ...text('workingHours', 'Giờ làm việc', false, 100), hint: 'Ví dụ: Thứ 2–Thứ 6, 7:30–17:00' },
       {
@@ -804,7 +818,7 @@ export const resources: Record<string, CrudResource> = {
         ...staffRef('managerUserId', 'Cán bộ quản lý tòa'),
         lookupDependsOn: { field: 'managementUnitId', required: true },
       },
-      { ...text('hotline', 'Đường dây nóng', false, 15), hint: 'Số Việt Nam bắt đầu bằng 0 hoặc +84.' },
+      phoneField('hotline', 'Đường dây nóng', 15, 'Số Việt Nam bắt đầu bằng 0 hoặc +84.'),
       { name: 'openTime', label: 'Giờ mở cửa', kind: 'time' },
       { name: 'closeTime', label: 'Giờ đóng cửa', kind: 'time' },
       note(),
@@ -983,7 +997,7 @@ export const resources: Record<string, CrudResource> = {
     fields: [
       { ...text('username', 'Tên đăng nhập', true, 50), createOnly: true },
       text('fullName', 'Họ tên'),
-      text('phone', 'Điện thoại', false, 20),
+      phoneField(),
       {
         ...select('role', 'Vai trò', [Role.STAFF, Role.TECHNICIAN, Role.ADMIN]),
       },
@@ -1826,7 +1840,7 @@ export const resources: Record<string, CrudResource> = {
     title: 'Hồ sơ của tôi',
     endpoint: '/me/profile',
     fields: [
-      text('phone', 'Điện thoại', false, 20),
+      phoneField(),
       { ...ref('hometownId', 'Quê quán', '/catalogs/hometowns', 'name', false), lookupFilters: { active: true } },
       text('emergencyContact', 'Liên hệ khẩn cấp', false, 200),
     ],
