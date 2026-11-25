@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: vn.edu.tlu.dms.KeycloakAccountIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 33, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.851 s -- in vn.edu.tlu.dms.KeycloakAccountIntegrationTest

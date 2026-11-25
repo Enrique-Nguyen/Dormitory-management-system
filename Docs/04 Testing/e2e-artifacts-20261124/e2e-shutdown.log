@@ -1,0 +1,6 @@
+[rtk] /!\ No hook installed — run `rtk init -g` for automatic token savings
+Stopped session-owned E2E backend
+Stopped session-owned isolated E2E Keycloak
+waiting for server to shut down.... done
+server stopped
+Stopped isolated PostgreSQL cluster 55432; retained all E2E databases

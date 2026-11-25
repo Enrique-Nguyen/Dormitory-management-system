@@ -1,0 +1,78 @@
+[rtk] /!\ No hook installed — run `rtk init -g` for automatic token savings
+
+> dms-frontend@0.0.0 build
+> tsc -b && vite build
+
+[36mvite v8.3.4 [32mbuilding client environment for production...[36m[39m
+transforming...
+✓ 3500 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                   0.96 kB │ gzip:   0.49 kB
+dist/assets/index-Fqkyuzcx.css                   84.42 kB │ gzip:  13.24 kB
+dist/assets/ContractDetailPage-DBxV1J3I.js        0.16 kB │ gzip:   0.15 kB
+dist/assets/SummerChoiceDetailPage-DTArHvYj.js    0.16 kB │ gzip:   0.15 kB
+dist/assets/StudentImportPage-BzvOywya.js         0.17 kB │ gzip:   0.16 kB
+dist/assets/ExtensionDetailPage-Ts_UUrvv.js       0.19 kB │ gzip:   0.17 kB
+dist/assets/TaskDetailPage-BNNRzzgs.js            0.21 kB │ gzip:   0.19 kB
+dist/assets/ApplicationDetailPage-la1ewUqf.js     0.22 kB │ gzip:   0.18 kB
+dist/assets/MaintenanceDetailPage-D0ffC5H9.js     0.22 kB │ gzip:   0.19 kB
+dist/assets/ContractDetailPage-bIUAIgQh.js        0.24 kB │ gzip:   0.19 kB
+dist/assets/SummerChoiceDetailPage-CVk8Sor6.js    0.24 kB │ gzip:   0.20 kB
+dist/assets/usePortalRole-BSBSx7xG.js             0.25 kB │ gzip:   0.21 kB
+dist/assets/ApplicationDetailPage-COFupvWU.js     0.25 kB │ gzip:   0.19 kB
+dist/assets/MaintenanceDetailPage-C50pRdM7.js     0.25 kB │ gzip:   0.20 kB
+dist/assets/useMe-CvtKCrAf.js                     0.26 kB │ gzip:   0.22 kB
+dist/assets/PageSkeleton-BZaLl37N.js              0.29 kB │ gzip:   0.24 kB
+dist/assets/CrudTabsPage-DZcGFZsC.js              0.51 kB │ gzip:   0.34 kB
+dist/assets/RollbackOutlined-BMkTEDHn.js          0.77 kB │ gzip:   0.54 kB
+dist/assets/ArrowLeftOutlined-DA4LQ7Ur.js         0.79 kB │ gzip:   0.56 kB
+dist/assets/ArrowRightOutlined-BfRb-uVQ.js        0.86 kB │ gzip:   0.59 kB
+dist/assets/DeleteOutlined-ClK-s5X4.js            0.91 kB │ gzip:   0.61 kB
+dist/assets/rolldown-runtime-Dd_uD5pT.js          1.10 kB │ gzip:   0.62 kB
+dist/assets/TransferRequestPage-B77MzAsh.js       1.11 kB │ gzip:   0.68 kB
+dist/assets/summer-CHaqizm-.js                    1.16 kB │ gzip:   0.52 kB
+dist/assets/ReloadOutlined-BKuby2xh.js            1.26 kB │ gzip:   0.77 kB
+dist/assets/RecordDetailContent-C5aBm5mV.js       1.27 kB │ gzip:   0.57 kB
+dist/assets/LogoutOutlined-DpqD6uzn.js            1.33 kB │ gzip:   0.81 kB
+dist/assets/registration-CBzzVMuX.js              1.42 kB │ gzip:   0.59 kB
+dist/assets/useContract-DpKTmkPP.js               1.84 kB │ gzip:   0.78 kB
+dist/assets/row-DnJBqVAH.js                       2.41 kB │ gzip:   1.25 kB
+dist/assets/StudentHomePage-Bnkvv_9X.js           2.94 kB │ gzip:   1.30 kB
+dist/assets/MoveOutPage-BNpxJPne.js               3.06 kB │ gzip:   1.50 kB
+dist/assets/ReferenceSelect-5DfCzJqc.js           3.73 kB │ gzip:   1.79 kB
+dist/assets/TransferReviewPage-iC0ucpU9.js        4.29 kB │ gzip:   2.08 kB
+dist/assets/api-DEpetiBf.js                       4.32 kB │ gzip:   1.81 kB
+dist/assets/PendingItemsPage-CrecLP4N.js          4.92 kB │ gzip:   2.32 kB
+dist/assets/contract-pyhx9tzk.js                  5.00 kB │ gzip:   1.71 kB
+dist/assets/ExtensionDetailPage-DQJndOU8.js       5.36 kB │ gzip:   2.45 kB
+dist/assets/NotificationInboxPage-Mjzgx-bk.js     5.39 kB │ gzip:   2.52 kB
+dist/assets/StoragePage-zJqd-q2D.js               5.87 kB │ gzip:   2.38 kB
+dist/assets/RoomDetailPage-2_iC-q3Z.js            6.19 kB │ gzip:   3.07 kB
+dist/assets/SummerChoiceDetailView-D0JX_Sb9.js    7.67 kB │ gzip:   3.28 kB
+dist/assets/billing-BP2NYJu1.js                   8.09 kB │ gzip:   3.13 kB
+dist/assets/DepositLedgerModal-SJNOakUH.js        8.62 kB │ gzip:   2.82 kB
+dist/assets/excel-CXxdw5I2.js                     8.70 kB │ gzip:   3.51 kB
+dist/assets/RolePermissionsPage-Fxg6Hdgf.js      15.21 kB │ gzip:   5.94 kB
+dist/assets/StaffHomePage-D9Kl6oWT.js            15.24 kB │ gzip:   4.63 kB
+dist/assets/ApplicationDetailView-Dx0GsIew.js    15.72 kB │ gzip:   5.83 kB
+dist/assets/index-6tWBGdld.js                    16.49 kB │ gzip:   6.44 kB
+dist/assets/ContractDetailView-DRGiFVy0.js       17.54 kB │ gzip:   6.60 kB
+dist/assets/form-D8LRCEis.js                     20.95 kB │ gzip:   7.87 kB
+dist/assets/MaintenanceDetailView-K3S6bX3q.js    22.89 kB │ gzip:   7.88 kB
+dist/assets/SaveOutlined-DPZjh77J.js             45.46 kB │ gzip:  16.04 kB
+dist/assets/resources-DSnq-tmA.js                63.86 kB │ gzip:  17.16 kB
+dist/assets/CrudPage-WS58yJn-.js                 75.82 kB │ gzip:  24.89 kB
+dist/assets/App-C6GrYiGX.js                     118.85 kB │ gzip:  36.38 kB
+dist/assets/components-CdQl3Xwh.js              168.24 kB │ gzip:  51.47 kB
+dist/assets/preload-helper-Cw-9fO9w.js          419.39 kB │ gzip: 137.63 kB
+dist/assets/PageHeader-oMfFMoic.js              511.53 kB │ gzip: 163.64 kB
+dist/assets/DataTable-DIU1GG0c.js               519.97 kB │ gzip: 163.80 kB
+dist/assets/exceljs.min-HIhuZ-Tc.js             929.48 kB │ gzip: 256.40 kB
+
+[33m[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 579ms[39m

@@ -1,0 +1,16 @@
+-------------------------------------------------------------------------------
+Test set: vn.edu.tlu.dms.CrudApiIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 66, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 5.509 s <<< FAILURE! -- in vn.edu.tlu.dms.CrudApiIntegrationTest
+vn.edu.tlu.dms.CrudApiIntegrationTest.technicianReadsOwnUnitPeriodsAndPeriodWritesAreAudited -- Time elapsed: 0.035 s <<< FAILURE!
+java.lang.AssertionError: No value at JSON path "$.content[0].id"
+	at org.springframework.test.util.JsonPathExpectationsHelper.evaluateJsonPath(JsonPathExpectationsHelper.java:351)
+	at org.springframework.test.util.JsonPathExpectationsHelper.assertValue(JsonPathExpectationsHelper.java:148)
+	at org.springframework.test.web.servlet.result.JsonPathResultMatchers.lambda$value$2(JsonPathResultMatchers.java:112)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at vn.edu.tlu.dms.CrudApiIntegrationTest.technicianReadsOwnUnitPeriodsAndPeriodWritesAreAudited(CrudApiIntegrationTest.java:1339)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: com.jayway.jsonpath.PathNotFoundException: No results for path: $['content'][0]['id']
+

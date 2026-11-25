@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: vn.edu.tlu.dms.CrudOperationalFilterTest
+-------------------------------------------------------------------------------
+Tests run: 30, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.074 s -- in vn.edu.tlu.dms.CrudOperationalFilterTest

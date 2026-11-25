@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: vn.edu.tlu.dms.common.api.GlobalExceptionHandlerTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.474 s -- in vn.edu.tlu.dms.common.api.GlobalExceptionHandlerTest

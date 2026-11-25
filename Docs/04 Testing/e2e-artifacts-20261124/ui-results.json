@@ -1,0 +1,625 @@
+{
+  "executedAt": "2026-11-24T17:04:40.840Z",
+  "results": [
+    {
+      "id": "E2E-AUTH-18",
+      "subcase": "forgot-password",
+      "title": "Quên mật khẩu chỉ hướng dẫn liên hệ",
+      "status": "PASS",
+      "expected": "Có hướng dẫn liên hệ, không có form email",
+      "actual": "DMS\nQuên mật khẩu\n\nHệ thống Quản lý Ký túc xá · Đại học Thủy Lợi\n\nLiên hệ Ban quản lý ký túc xá hoặc quản trị viên để xác minh tài khoản và nhận mật khẩu tạm thời.\nSinh viên vui lòng cung cấp mã sinh viên cho cán bộ quản lý tòa nhà/đơn vị. Tài khoản cán bộ, kỹ thuật viên và quản trị viên liên hệ ban quản trị.\nQuy trình cấp lại mật khẩu\nMật khẩu tạm sẽ được cấp sau khi xác minh nhân thân. Khi đăng nhập bằng mật khẩu tạm, hệ thống sẽ yêu cầu bạn đổi mật khẩu mới.\nQuay lại đăng nhập\nKý túc xá Đại học Thủy Lợi · Hỗ trợ kỹ thuật",
+      "coverage": "UI",
+      "durationMs": 815
+    },
+    {
+      "id": "E2E-AUTH-09",
+      "subcase": "/admin/users",
+      "title": "Cổng yêu cầu đăng nhập: /admin/users",
+      "status": "PASS",
+      "expected": "Chuyển về login, có nút Đăng nhập",
+      "actual": "{\"finalPath\":\"/login\",\"requestedRedirect\":\"/admin/users\"}",
+      "coverage": "UI",
+      "durationMs": 729
+    },
+    {
+      "id": "E2E-AUTH-09",
+      "subcase": "/staff/dashboard",
+      "title": "Cổng yêu cầu đăng nhập: /staff/dashboard",
+      "status": "PASS",
+      "expected": "Chuyển về login, có nút Đăng nhập",
+      "actual": "{\"finalPath\":\"/login\",\"requestedRedirect\":\"/staff/dashboard\"}",
+      "coverage": "UI",
+      "durationMs": 712
+    },
+    {
+      "id": "E2E-AUTH-09",
+      "subcase": "/technician/tasks",
+      "title": "Cổng yêu cầu đăng nhập: /technician/tasks",
+      "status": "PASS",
+      "expected": "Chuyển về login, có nút Đăng nhập",
+      "actual": "{\"finalPath\":\"/login\",\"requestedRedirect\":\"/technician/tasks\"}",
+      "coverage": "UI",
+      "durationMs": 705
+    },
+    {
+      "id": "E2E-AUTH-09",
+      "subcase": "/student",
+      "title": "Cổng yêu cầu đăng nhập: /student",
+      "status": "PASS",
+      "expected": "Chuyển về login, có nút Đăng nhập",
+      "actual": "{\"finalPath\":\"/login\",\"requestedRedirect\":\"/student\"}",
+      "coverage": "UI",
+      "durationMs": 715
+    },
+    {
+      "id": "E2E-AUTH-02",
+      "subcase": "invalid-credentials",
+      "title": "Keycloak từ chối thông tin không hợp lệ",
+      "status": "FAIL",
+      "expected": "Ở lại Keycloak, lỗi không phân biệt sai tên hoặc mật khẩu",
+      "actual": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#input-error') to be visible\u001b[22m\n",
+      "coverage": "UI",
+      "durationMs": 16903
+    },
+    {
+      "id": "E2E-AUTH-03",
+      "subcase": "invalid-credentials",
+      "title": "Keycloak từ chối thông tin không hợp lệ",
+      "status": "FAIL",
+      "expected": "Ở lại Keycloak, lỗi không phân biệt sai tên hoặc mật khẩu",
+      "actual": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#input-error') to be visible\u001b[22m\n",
+      "coverage": "UI",
+      "durationMs": 16411
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "admin",
+      "title": "Đăng nhập OIDC thật admin",
+      "status": "PASS",
+      "expected": "Đúng cổng, role/quyền từ /me, tên hiển thị, code flow PKCE S256",
+      "actual": "{\"path\":\"/admin/users\",\"role\":\"ADMIN\",\"permissionCount\":110,\"pkce\":{\"flow\":\"code\",\"method\":\"S256\",\"challenge\":true},\"screenshot\":\"admin-home.png\"}",
+      "coverage": "UI+API",
+      "durationMs": 3101
+    },
+    {
+      "id": "E2E-AUTH-07",
+      "subcase": "admin",
+      "title": "Tải lại giữ đăng nhập admin",
+      "status": "PASS",
+      "expected": "SSO giữ phiên sau tải lại",
+      "actual": "Vẫn ở /admin/users",
+      "coverage": "UI",
+      "durationMs": 1395
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "subcase": "admin:/staff/dashboard",
+      "title": "Kiểm guard cổng admin → /staff/dashboard",
+      "status": "PASS",
+      "expected": "Vai trò về cổng chính mình; Admin được phép vào cổng Staff/Technician theo guard hiện hành",
+      "actual": "{\"finalPath\":\"/staff/dashboard\",\"specificationMismatch\":\"Kế hoạch đòi redirect Admin nhưng guard hiện cho phép Admin dùng cổng nghiệp vụ\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1290
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "subcase": "admin:/technician/tasks",
+      "title": "Kiểm guard cổng admin → /technician/tasks",
+      "status": "PASS",
+      "expected": "Vai trò về cổng chính mình; Admin được phép vào cổng Staff/Technician theo guard hiện hành",
+      "actual": "{\"finalPath\":\"/technician/tasks\",\"specificationMismatch\":\"Kế hoạch đòi redirect Admin nhưng guard hiện cho phép Admin dùng cổng nghiệp vụ\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1430
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "subcase": "admin:/student",
+      "title": "Kiểm guard cổng admin → /student",
+      "status": "PASS",
+      "expected": "Vai trò về cổng chính mình; Admin được phép vào cổng Staff/Technician theo guard hiện hành",
+      "actual": "{\"finalPath\":\"/admin/users\",\"specificationMismatch\":null}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1335
+    },
+    {
+      "id": "E2E-ACC-04",
+      "subcase": "admin",
+      "title": "Trường hồ sơ theo vai trò admin",
+      "status": "PASS",
+      "expected": "Student có quê quán/liên hệ khẩn cấp; vai trò khác chỉ điện thoại",
+      "actual": "{\"profileFields\":\"Điện thoại\",\"screenshot\":\"admin-profile.png\"}",
+      "coverage": "UI",
+      "durationMs": 1865
+    },
+    {
+      "id": "E2E-UI-11",
+      "subcase": "/admin/users",
+      "title": "Render /admin/users",
+      "status": "PASS",
+      "expected": "Render đúng màn, API không lỗi ở 1280x800",
+      "actual": "{\"route\":\"/admin/users\",\"dimensions\":{\"viewport\":1280,\"body\":1274},\"screenshot\":\"admin-users-desktop.png\",\"limitation\":\"Đã kiểm 1280x800, chưa kiểm Drawer 900px\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1519
+    },
+    {
+      "id": "E2E-UI-11",
+      "subcase": "/admin/role-permissions",
+      "title": "Render /admin/role-permissions",
+      "status": "PASS",
+      "expected": "Render đúng màn, API không lỗi ở 1280x800",
+      "actual": "{\"route\":\"/admin/role-permissions\",\"dimensions\":{\"viewport\":1280,\"body\":1274},\"screenshot\":\"admin-role-permissions-desktop.png\",\"limitation\":\"Đã kiểm 1280x800, chưa kiểm Drawer 900px\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1464
+    },
+    {
+      "id": "E2E-UI-11",
+      "subcase": "/admin/audit-logs",
+      "title": "Render /admin/audit-logs",
+      "status": "FAIL",
+      "expected": "Render đúng màn, API không lỗi ở 1280x800",
+      "actual": "API lỗi [{\"endpoint\":\"/api/admin/audit-logs/entity-types/search-by-page\",\"status\":500},{\"endpoint\":\"/api/admin/audit-logs/actions/search-by-page\",\"status\":500}]\n\n2 !== 0\n",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1268
+    },
+    {
+      "id": "E2E-UI-11",
+      "subcase": "/admin/configs",
+      "title": "Render /admin/configs",
+      "status": "PASS",
+      "expected": "Render đúng màn, API không lỗi ở 1280x800",
+      "actual": "{\"route\":\"/admin/configs\",\"dimensions\":{\"viewport\":1280,\"body\":1274},\"screenshot\":\"admin-configs-desktop.png\",\"limitation\":\"Đã kiểm 1280x800, chưa kiểm Drawer 900px\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1298
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "staff",
+      "title": "Đăng nhập OIDC thật staff",
+      "status": "PASS",
+      "expected": "Đúng cổng, role/quyền từ /me, tên hiển thị, code flow PKCE S256",
+      "actual": "{\"path\":\"/staff/dashboard\",\"role\":\"STAFF\",\"permissionCount\":75,\"pkce\":{\"flow\":\"code\",\"method\":\"S256\",\"challenge\":true},\"screenshot\":\"staff-home.png\"}",
+      "coverage": "UI+API",
+      "durationMs": 2909
+    },
+    {
+      "id": "E2E-AUTH-07",
+      "subcase": "staff",
+      "title": "Tải lại giữ đăng nhập staff",
+      "status": "PASS",
+      "expected": "SSO giữ phiên sau tải lại",
+      "actual": "Vẫn ở /staff/dashboard",
+      "coverage": "UI",
+      "durationMs": 1213
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "subcase": "staff:/admin/users",
+      "title": "Kiểm guard cổng staff → /admin/users",
+      "status": "PASS",
+      "expected": "Vai trò về cổng chính mình; Admin được phép vào cổng Staff/Technician theo guard hiện hành",
+      "actual": "{\"finalPath\":\"/staff/dashboard\",\"specificationMismatch\":null}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1151
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "subcase": "staff:/technician/tasks",
+      "title": "Kiểm guard cổng staff → /technician/tasks",
+      "status": "PASS",
+      "expected": "Vai trò về cổng chính mình; Admin được phép vào cổng Staff/Technician theo guard hiện hành",
+      "actual": "{\"finalPath\":\"/staff/dashboard\",\"specificationMismatch\":null}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1158
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "subcase": "staff:/student",
+      "title": "Kiểm guard cổng staff → /student",
+      "status": "PASS",
+      "expected": "Vai trò về cổng chính mình; Admin được phép vào cổng Staff/Technician theo guard hiện hành",
+      "actual": "{\"finalPath\":\"/staff/dashboard\",\"specificationMismatch\":null}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1133
+    },
+    {
+      "id": "E2E-ACC-04",
+      "subcase": "staff",
+      "title": "Trường hồ sơ theo vai trò staff",
+      "status": "PASS",
+      "expected": "Student có quê quán/liên hệ khẩn cấp; vai trò khác chỉ điện thoại",
+      "actual": "{\"profileFields\":\"Điện thoại\",\"screenshot\":\"staff-profile.png\"}",
+      "coverage": "UI",
+      "durationMs": 1827
+    },
+    {
+      "id": "E2E-UI-11",
+      "subcase": "/staff/dashboard",
+      "title": "Render /staff/dashboard",
+      "status": "PASS",
+      "expected": "Render đúng màn, API không lỗi ở 1280x800",
+      "actual": "{\"route\":\"/staff/dashboard\",\"dimensions\":{\"viewport\":1280,\"body\":1274},\"screenshot\":\"staff-dashboard-desktop.png\",\"limitation\":\"Đã kiểm 1280x800, chưa kiểm Drawer 900px\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1280
+    },
+    {
+      "id": "E2E-UI-11",
+      "subcase": "/staff/rooms",
+      "title": "Render /staff/rooms",
+      "status": "PASS",
+      "expected": "Render đúng màn, API không lỗi ở 1280x800",
+      "actual": "{\"route\":\"/staff/rooms\",\"dimensions\":{\"viewport\":1280,\"body\":1274},\"screenshot\":\"staff-rooms-desktop.png\",\"limitation\":\"Đã kiểm 1280x800, chưa kiểm Drawer 900px\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1374
+    },
+    {
+      "id": "E2E-UI-11",
+      "subcase": "/staff/applications",
+      "title": "Render /staff/applications",
+      "status": "PASS",
+      "expected": "Render đúng màn, API không lỗi ở 1280x800",
+      "actual": "{\"route\":\"/staff/applications\",\"dimensions\":{\"viewport\":1280,\"body\":1274},\"screenshot\":\"staff-applications-desktop.png\",\"limitation\":\"Đã kiểm 1280x800, chưa kiểm Drawer 900px\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1372
+    },
+    {
+      "id": "E2E-UI-11",
+      "subcase": "/staff/contracts",
+      "title": "Render /staff/contracts",
+      "status": "PASS",
+      "expected": "Render đúng màn, API không lỗi ở 1280x800",
+      "actual": "{\"route\":\"/staff/contracts\",\"dimensions\":{\"viewport\":1280,\"body\":1274},\"screenshot\":\"staff-contracts-desktop.png\",\"limitation\":\"Đã kiểm 1280x800, chưa kiểm Drawer 900px\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1367
+    },
+    {
+      "id": "E2E-UI-11",
+      "subcase": "/staff/maintenance",
+      "title": "Render /staff/maintenance",
+      "status": "PASS",
+      "expected": "Render đúng màn, API không lỗi ở 1280x800",
+      "actual": "{\"route\":\"/staff/maintenance\",\"dimensions\":{\"viewport\":1280,\"body\":1274},\"screenshot\":\"staff-maintenance-desktop.png\",\"limitation\":\"Đã kiểm 1280x800, chưa kiểm Drawer 900px\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1493
+    },
+    {
+      "id": "E2E-UI-11",
+      "subcase": "/staff/invoices",
+      "title": "Render /staff/invoices",
+      "status": "PASS",
+      "expected": "Render đúng màn, API không lỗi ở 1280x800",
+      "actual": "{\"route\":\"/staff/invoices\",\"dimensions\":{\"viewport\":1280,\"body\":1274},\"screenshot\":\"staff-invoices-desktop.png\",\"limitation\":\"Đã kiểm 1280x800, chưa kiểm Drawer 900px\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1418
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "technician",
+      "title": "Đăng nhập OIDC thật technician",
+      "status": "PASS",
+      "expected": "Đúng cổng, role/quyền từ /me, tên hiển thị, code flow PKCE S256",
+      "actual": "{\"path\":\"/technician/tasks\",\"role\":\"TECHNICIAN\",\"permissionCount\":12,\"pkce\":{\"flow\":\"code\",\"method\":\"S256\",\"challenge\":true},\"screenshot\":\"technician-home.png\"}",
+      "coverage": "UI+API",
+      "durationMs": 2974
+    },
+    {
+      "id": "E2E-AUTH-07",
+      "subcase": "technician",
+      "title": "Tải lại giữ đăng nhập technician",
+      "status": "PASS",
+      "expected": "SSO giữ phiên sau tải lại",
+      "actual": "Vẫn ở /technician/tasks",
+      "coverage": "UI",
+      "durationMs": 1358
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "subcase": "technician:/admin/users",
+      "title": "Kiểm guard cổng technician → /admin/users",
+      "status": "PASS",
+      "expected": "Vai trò về cổng chính mình; Admin được phép vào cổng Staff/Technician theo guard hiện hành",
+      "actual": "{\"finalPath\":\"/technician/tasks\",\"specificationMismatch\":null}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1596
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "subcase": "technician:/staff/dashboard",
+      "title": "Kiểm guard cổng technician → /staff/dashboard",
+      "status": "PASS",
+      "expected": "Vai trò về cổng chính mình; Admin được phép vào cổng Staff/Technician theo guard hiện hành",
+      "actual": "{\"finalPath\":\"/technician/tasks\",\"specificationMismatch\":null}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1392
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "subcase": "technician:/student",
+      "title": "Kiểm guard cổng technician → /student",
+      "status": "PASS",
+      "expected": "Vai trò về cổng chính mình; Admin được phép vào cổng Staff/Technician theo guard hiện hành",
+      "actual": "{\"finalPath\":\"/technician/tasks\",\"specificationMismatch\":null}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1330
+    },
+    {
+      "id": "E2E-ACC-04",
+      "subcase": "technician",
+      "title": "Trường hồ sơ theo vai trò technician",
+      "status": "PASS",
+      "expected": "Student có quê quán/liên hệ khẩn cấp; vai trò khác chỉ điện thoại",
+      "actual": "{\"profileFields\":\"Điện thoại\",\"screenshot\":\"technician-profile.png\"}",
+      "coverage": "UI",
+      "durationMs": 1738
+    },
+    {
+      "id": "E2E-UI-10",
+      "subcase": "/technician/tasks",
+      "title": "Render /technician/tasks",
+      "status": "PASS",
+      "expected": "Đúng màn, API không lỗi, không cuộn ngang ở 360px; chưa thay thế trọn testcase mobile",
+      "actual": "{\"route\":\"/technician/tasks\",\"dimensions\":{\"viewport\":360,\"body\":354},\"screenshot\":\"technician-tasks-360.png\",\"limitation\":\"Chỉ render/responsive, chưa hoàn tất mọi thao tác nghiệp vụ trên mobile\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1540
+    },
+    {
+      "id": "E2E-UI-10",
+      "subcase": "/technician/profile",
+      "title": "Render /technician/profile",
+      "status": "PASS",
+      "expected": "Đúng màn, API không lỗi, không cuộn ngang ở 360px; chưa thay thế trọn testcase mobile",
+      "actual": "{\"route\":\"/technician/profile\",\"dimensions\":{\"viewport\":360,\"body\":354},\"screenshot\":\"technician-profile-360.png\",\"limitation\":\"Chỉ render/responsive, chưa hoàn tất mọi thao tác nghiệp vụ trên mobile\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1277
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "student",
+      "title": "Đăng nhập OIDC thật student",
+      "status": "PASS",
+      "expected": "Đúng cổng, role/quyền từ /me, tên hiển thị, code flow PKCE S256",
+      "actual": "{\"path\":\"/student\",\"role\":\"STUDENT\",\"permissionCount\":36,\"pkce\":{\"flow\":\"code\",\"method\":\"S256\",\"challenge\":true},\"screenshot\":\"student-home.png\"}",
+      "coverage": "UI+API",
+      "durationMs": 2403
+    },
+    {
+      "id": "E2E-AUTH-07",
+      "subcase": "student",
+      "title": "Tải lại giữ đăng nhập student",
+      "status": "PASS",
+      "expected": "SSO giữ phiên sau tải lại",
+      "actual": "Vẫn ở /student",
+      "coverage": "UI",
+      "durationMs": 809
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "subcase": "student:/admin/users",
+      "title": "Kiểm guard cổng student → /admin/users",
+      "status": "PASS",
+      "expected": "Vai trò về cổng chính mình; Admin được phép vào cổng Staff/Technician theo guard hiện hành",
+      "actual": "{\"finalPath\":\"/student\",\"specificationMismatch\":null}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 830
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "subcase": "student:/staff/dashboard",
+      "title": "Kiểm guard cổng student → /staff/dashboard",
+      "status": "PASS",
+      "expected": "Vai trò về cổng chính mình; Admin được phép vào cổng Staff/Technician theo guard hiện hành",
+      "actual": "{\"finalPath\":\"/student\",\"specificationMismatch\":null}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 847
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "subcase": "student:/technician/tasks",
+      "title": "Kiểm guard cổng student → /technician/tasks",
+      "status": "PASS",
+      "expected": "Vai trò về cổng chính mình; Admin được phép vào cổng Staff/Technician theo guard hiện hành",
+      "actual": "{\"finalPath\":\"/student\",\"specificationMismatch\":null}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 851
+    },
+    {
+      "id": "E2E-ACC-04",
+      "subcase": "student",
+      "title": "Trường hồ sơ theo vai trò student",
+      "status": "PASS",
+      "expected": "Student có quê quán/liên hệ khẩn cấp; vai trò khác chỉ điện thoại",
+      "actual": "{\"profileFields\":\"Điện thoại | Quê quán | Liên hệ khẩn cấp\",\"screenshot\":\"student-profile.png\"}",
+      "coverage": "UI",
+      "durationMs": 1984
+    },
+    {
+      "id": "E2E-ACC-01",
+      "subcase": "profile-save-reload",
+      "title": "Sinh viên sửa điện thoại/liên hệ và tải lại",
+      "status": "PASS",
+      "expected": "Điện thoại/liên hệ lưu thật và giữ sau reload; quê quán chưa đổi",
+      "actual": "{\"phonePersisted\":true,\"emergencyPersisted\":true,\"limitation\":\"Chưa đổi quê quán; đã kiểm form nạp giá trị đã lưu\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 2948
+    },
+    {
+      "id": "E2E-UI-09",
+      "subcase": "/student",
+      "title": "Render /student",
+      "status": "PASS",
+      "expected": "Đúng màn, API không lỗi, không cuộn ngang ở 360px; chưa thay thế trọn testcase mobile",
+      "actual": "{\"route\":\"/student\",\"dimensions\":{\"viewport\":360,\"body\":354},\"screenshot\":\"student-360.png\",\"limitation\":\"Chỉ render/responsive, chưa hoàn tất mọi thao tác nghiệp vụ trên mobile\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 907
+    },
+    {
+      "id": "E2E-UI-09",
+      "subcase": "/student/applications",
+      "title": "Render /student/applications",
+      "status": "PASS",
+      "expected": "Đúng màn, API không lỗi, không cuộn ngang ở 360px; chưa thay thế trọn testcase mobile",
+      "actual": "{\"route\":\"/student/applications\",\"dimensions\":{\"viewport\":360,\"body\":354},\"screenshot\":\"student-applications-360.png\",\"limitation\":\"Chỉ render/responsive, chưa hoàn tất mọi thao tác nghiệp vụ trên mobile\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1275
+    },
+    {
+      "id": "E2E-UI-09",
+      "subcase": "/student/contracts",
+      "title": "Render /student/contracts",
+      "status": "PASS",
+      "expected": "Đúng màn, API không lỗi, không cuộn ngang ở 360px; chưa thay thế trọn testcase mobile",
+      "actual": "{\"route\":\"/student/contracts\",\"dimensions\":{\"viewport\":360,\"body\":354},\"screenshot\":\"student-contracts-360.png\",\"limitation\":\"Chỉ render/responsive, chưa hoàn tất mọi thao tác nghiệp vụ trên mobile\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1271
+    },
+    {
+      "id": "E2E-UI-09",
+      "subcase": "/student/invoices",
+      "title": "Render /student/invoices",
+      "status": "PASS",
+      "expected": "Đúng màn, API không lỗi, không cuộn ngang ở 360px; chưa thay thế trọn testcase mobile",
+      "actual": "{\"route\":\"/student/invoices\",\"dimensions\":{\"viewport\":360,\"body\":354},\"screenshot\":\"student-invoices-360.png\",\"limitation\":\"Chỉ render/responsive, chưa hoàn tất mọi thao tác nghiệp vụ trên mobile\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1268
+    },
+    {
+      "id": "E2E-UI-09",
+      "subcase": "/student/maintenance",
+      "title": "Render /student/maintenance",
+      "status": "PASS",
+      "expected": "Đúng màn, API không lỗi, không cuộn ngang ở 360px; chưa thay thế trọn testcase mobile",
+      "actual": "{\"route\":\"/student/maintenance\",\"dimensions\":{\"viewport\":360,\"body\":354},\"screenshot\":\"student-maintenance-360.png\",\"limitation\":\"Chỉ render/responsive, chưa hoàn tất mọi thao tác nghiệp vụ trên mobile\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1327
+    },
+    {
+      "id": "E2E-UI-09",
+      "subcase": "/student/notifications",
+      "title": "Render /student/notifications",
+      "status": "PASS",
+      "expected": "Đúng màn, API không lỗi, không cuộn ngang ở 360px; chưa thay thế trọn testcase mobile",
+      "actual": "{\"route\":\"/student/notifications\",\"dimensions\":{\"viewport\":360,\"body\":354},\"screenshot\":\"student-notifications-360.png\",\"limitation\":\"Chỉ render/responsive, chưa hoàn tất mọi thao tác nghiệp vụ trên mobile\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1212
+    },
+    {
+      "id": "E2E-SEC-04",
+      "subcase": "browser-storage",
+      "title": "Token không lưu bền ở trình duyệt E2E",
+      "status": "PASS",
+      "expected": "Không có JWT/mật khẩu ở localStorage/sessionStorage/cookie đọc được; không IndexedDB",
+      "actual": "{\"badKeys\":[],\"readableCookieContainsJwt\":false,\"indexedDatabaseCount\":0}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 3
+    },
+    {
+      "id": "E2E-ACC-02",
+      "subcase": "student-phone",
+      "title": "Hồ sơ: số điện thoại sai giữ form mở",
+      "status": "FAIL",
+      "expected": "Lỗi theo trường, form giữ mở; chưa kiểm đầy đủ trạng thái loading",
+      "actual": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.ant-form-item-explain-error').first() to be visible\u001b[22m\n",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 16913
+    },
+    {
+      "id": "E2E-UI-01",
+      "subcase": "/staff/room-types",
+      "title": "Form sửa nạp dữ liệu và lưu nguyên trạng /staff/room-types",
+      "status": "PASS",
+      "expected": "Form có dữ liệu cũ, lưu không đổi thành công, chỉ đóng sau thành công",
+      "actual": "{\"initialInputs\":[{\"id\":\"code\",\"value\":\"E2E-4G\",\"type\":\"text\"},{\"id\":\"name\",\"value\":\"E2E-4G\",\"type\":\"text\"},{\"id\":\"bedCount\",\"value\":\"4\",\"type\":\"text\"},{\"id\":\"bedStyle\",\"value\":\"\",\"type\":\"text\"},{\"id\":\"areaM2\",\"value\":\"24\",\"type\":\"text\"},{\"id\":\"amenityIds\",\"value\":\"\",\"type\":\"text\"},{\"id\":\"priceMain\",\"value\":\"3000000\",\"type\":\"text\"},{\"id\":\"priceSummer\",\"value\":\"1500000\",\"type\":\"text\"}],\"saveHttp\":200,\"screenshot\":\"staff-room-types-save-unchanged.png\",\"limitation\":\"Đã lưu nguyên trạng; chưa đối chiếu toàn bộ khóa ngoại/false/0 với CSDL\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 2658
+    },
+    {
+      "id": "E2E-UI-01",
+      "subcase": "/staff/rooms",
+      "title": "Form sửa nạp dữ liệu và lưu nguyên trạng /staff/rooms",
+      "status": "PASS",
+      "expected": "Form có dữ liệu cũ, lưu không đổi thành công, chỉ đóng sau thành công",
+      "actual": "{\"initialInputs\":[{\"id\":\"floor\",\"value\":\"\",\"type\":\"text\"},{\"id\":\"code\",\"value\":\"E2E-A101\",\"type\":\"text\"},{\"id\":\"displayName\",\"value\":\"\",\"type\":\"text\"},{\"id\":\"roomTypeId\",\"value\":\"\",\"type\":\"text\"},{\"id\":\"gender\",\"value\":\"\",\"type\":\"text\"},{\"id\":\"areaM2\",\"value\":\"\",\"type\":\"text\"},{\"id\":\"orientation\",\"value\":\"\",\"type\":\"text\"},{\"id\":\"commissionedOn\",\"value\":\"\",\"type\":\"date\"},{\"id\":\"electricMeterNo\",\"value\":\"\",\"type\":\"text\"},{\"id\":\"waterMeterNo\",\"value\":\"\",\"type\":\"text\"}],\"saveHttp\":200,\"screenshot\":\"staff-rooms-save-unchanged.png\",\"limitation\":\"Đã lưu nguyên trạng; chưa đối chiếu toàn bộ khóa ngoại/false/0 với CSDL\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 2158
+    },
+    {
+      "id": "E2E-UI-01",
+      "subcase": "/staff/semesters",
+      "title": "Form sửa nạp dữ liệu và lưu nguyên trạng /staff/semesters",
+      "status": "PASS",
+      "expected": "Form có dữ liệu cũ, lưu không đổi thành công, chỉ đóng sau thành công",
+      "actual": "{\"initialInputs\":[{\"id\":\"name\",\"value\":\"E2E-QA Current\",\"type\":\"text\"},{\"id\":\"academicYear\",\"value\":\"\",\"type\":\"text\"},{\"id\":\"type\",\"value\":\"\",\"type\":\"text\"},{\"id\":\"startDate\",\"value\":\"2026-09-26\",\"type\":\"date\"},{\"id\":\"endDate\",\"value\":\"2027-01-24\",\"type\":\"date\"},{\"id\":\"roomFeeDueDate\",\"value\":\"\",\"type\":\"date\"}],\"saveHttp\":200,\"screenshot\":\"staff-semesters-save-unchanged.png\",\"limitation\":\"Đã lưu nguyên trạng; chưa đối chiếu toàn bộ khóa ngoại/false/0 với CSDL\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 2554
+    },
+    {
+      "id": "E2E-RBAC-09",
+      "subcase": "admin-matrix-ui",
+      "title": "ADMIN ma trận bất biến trên UI",
+      "status": "PASS",
+      "expected": "Trang ma trận tải được; phần API được đối chiếu riêng",
+      "actual": "{\"checkboxCount\":114,\"text\":\"TLU\\nKTX Thủy Lợi\\nDashboard\\nYêu cầu chờ xử lý\\n1\\nQUẢN LÝ\\nĐơn đăng ký\\nPhòng & Giường\\nSinh viên\\nHợp đồng\\nKỳ hè\\nKho gửi đồ\\nTÀI CHÍNH\\nĐiện nước\\nĐơn giá điện nước\\nHóa đơn\\nTiền cọc\\nVẬN HÀNH\\nSửa chữa\\nThông báo\\nDANH MỤC DÙNG CHUNG\\nĐơn vị\\nTòa nhà & mức cọc\\nDiện ưu tiên\\nTrường\\nKhoa\\nKhóa\\nQuê quán\\nNăm học\\nTiện nghi\\nHạng mục sửa chữa\\nTầng\\nVị trí kho\\nLoại phòng\\nKỳ học\\nĐợt đăng ký\\nQUẢN TRỊ HỆ THỐNG\\nTài khoản\\nQuyền tổng hợp\\nPhân quyền theo vai trò\\nCấu hình\\nNhật ký hệ thống\\nĐăng xuất\\nTrang chủ\\n/\\nQuản trị hệ thống\\n/\\nPhân quyền theo vai trò\\n38\\nA\\nE2E QA admin\\nPhân quyền theo vai trò\\n\\nChọn vai trò và tick quyền xem, tìm kiếm, thêm, sửa, xóa theo từng màn hình.\\n\\nADMIN luôn có toàn quyền. Ô không phù hợp với vai trò sẽ được khóa.\\nQuyền đã lưu áp dụng ngay cho API, kể cả phiên đang đăng nhập; menu và nút được làm mới trong tối đa 30 giây. Phạm vi đơn vị, chủ sở hữu và trạng thái nghiệp vụ vẫn được kiểm tra.\\nVai trò đang phân quyền:\\nQuản trị viên\\nTất cả nhóm nghiệp vụ\\nTất cả thao tác CRUD\\nTất cả trạng thái cấp q\",\"limitation\":\"Chỉ tải trang ma trận; cần chọn ADMIN và đối chiếu từng ô trước khi kết luận bất biến UI\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 1225
+    },
+    {
+      "id": "E2E-AUTH-08",
+      "subcase": "staff-logout",
+      "title": "Đăng xuất thật thu hồi token và chặn cổng",
+      "status": "PASS",
+      "expected": "Về login, token cũ401, không vào lại cổng khi chưa đăng nhập",
+      "actual": "{\"oldTokenHttp\":401,\"finalPath\":\"/login\",\"limitation\":\"Đã mở trực tiếp cổng sau logout, chưa kiểm nút Back cache\"}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 2331
+    },
+    {
+      "id": "E2E-AUTH-17",
+      "subcase": "staff-two-tabs",
+      "title": "Đăng xuất đồng bộ tab thứ hai",
+      "status": "PASS",
+      "expected": "Tab hai tự về đăng nhập, không reload thủ công",
+      "actual": "{\"secondTab\":\"/login\"}",
+      "coverage": "UI",
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-UI-13",
+      "subcase": "admin",
+      "title": "Không có pageerror admin",
+      "status": "PASS",
+      "expected": "Không có lỗi JavaScript không xử lý; chưa thu console.error",
+      "actual": "{\"pageerrorCount\":0}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-UI-13",
+      "subcase": "staff",
+      "title": "Không có pageerror staff",
+      "status": "PASS",
+      "expected": "Không có lỗi JavaScript không xử lý; chưa thu console.error",
+      "actual": "{\"pageerrorCount\":0}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-UI-13",
+      "subcase": "technician",
+      "title": "Không có pageerror technician",
+      "status": "PASS",
+      "expected": "Không có lỗi JavaScript không xử lý; chưa thu console.error",
+      "actual": "{\"pageerrorCount\":0}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-UI-13",
+      "subcase": "student",
+      "title": "Không có pageerror student",
+      "status": "PASS",
+      "expected": "Không có lỗi JavaScript không xử lý; chưa thu console.error",
+      "actual": "{\"pageerrorCount\":0}",
+      "coverage": "UI_PARTIAL",
+      "durationMs": 0
+    }
+  ]
+}

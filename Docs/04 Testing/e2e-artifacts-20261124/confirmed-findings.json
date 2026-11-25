@@ -1,0 +1,51 @@
+{
+  "runDates": "2026-11-24/2026-11-25",
+  "businessCodeChanged": false,
+  "findings": [
+    {
+      "id": "DEF-01",
+      "severity": "P2",
+      "testcases": ["E2E-ACC-18", "E2E-UI-11"],
+      "title": "Hai danh mục bộ lọc nhật ký trả HTTP 500",
+      "reproduction": "Admin mở Nhật ký hệ thống hoặc POST /api/admin/audit-logs/actions/search-by-page và /api/admin/audit-logs/entity-types/search-by-page với {page:0,size:20}.",
+      "actual": "500 INTERNAL_ERROR; SQL ORDER BY code ASC, id ASC nhưng subquery chỉ có code/name, không có id.",
+      "expected": "200 và danh mục tùy chọn hợp lệ; danh sách nhật ký chính vẫn đọc được.",
+      "requestIds": ["975abce8-ab01-4e2c-946d-e761f1be716f", "2858db2c-ee84-428f-88b5-96efec57de77"],
+      "source": ["AuditServiceImpl.java:123-137", "PageQuery.java:38-40", "SqlPage.java:51-74"],
+      "evidence": ["ui-retest-results.json", "backend-e2e.log", "screenshots/audit-filter-http500.png"]
+    },
+    {
+      "id": "DEF-02",
+      "severity": "P2",
+      "testcases": ["E2E-ACC-02"],
+      "title": "Điện thoại sai định dạng vẫn lưu",
+      "reproduction": "Student mở Hồ sơ, chuyển sang sửa, nhập điện thoại abc rồi Lưu.",
+      "actual": "POST trả 200; GET hồ sơ trả phone=abc; không hiển thị lỗi định dạng. Sau tái hiện đã đổi lại số thử hợp lệ.",
+      "expected": "Thông báo lỗi tại trường điện thoại; không lưu abc; form giữ mở.",
+      "source": ["AccountDtos.java:82-85", "UserServiceImpl.java:400-424", "resources.ts:1824-1831", "CrudPage.tsx:1399-1437"],
+      "evidence": ["ui-retest-results.json", "screenshots/profile-abc-accepted.png"]
+    },
+    {
+      "id": "DEF-03",
+      "severity": "P1",
+      "testcases": ["E2E-SEC-03"],
+      "title": "DTO ép chuỗi số thành số thay vì từ chối sai kiểu JSON",
+      "actual": ["POST /api/rooms/search-by-page với page=\"1\": HTTP200", "POST /api/rooms/search-by-page với size=\"2\": HTTP200", "POST /api/applications/save-or-update với id=\"123\": HTTP404 NOT_FOUND, đã đi vào lookup thay vì từ chối kiểu dữ liệu"],
+      "expected": "HTTP400 tại ranh giới DTO theo quy tắc kiểu ID/phân trang của CLAUDE.md:26; không phải bằng chứng nâng quyền.",
+      "source": ["SearchRequest.java:27-32", "ApplicationDtos.java:20-27", "CLAUDE.md:26"],
+      "evidence": ["api-results.json", "api-http.jsonl"]
+    }
+  ],
+  "correctedHarness": [
+    "Keycloak phiên bản hiện tại không dùng selector #input-error; tái kiểm thông báo thực tế và API anonymous401 đã PASS AUTH02/AUTH03.",
+    "REG10 lần đầu dùng ASSIGNED+PENDING, là trạng thái được phép hủy giữ chỗ; sau đó làm sai tiền điều kiện activation. Fixture mới đã PASS underpayment và concurrent activation.",
+    "REG10 phòng vệ APPROVED có hợp đồng sống được tái kiểm đúng trạng thái:409 APPLICATION_HAS_CONTRACT; điều kiện synthetic E2E đã được khôi phục sau kiểm.",
+    "Staff không được sửa nội dung đơn sinh viên nên403 là đúng; hành động approve N23 được tái kiểm404 và dữ liệu không đổi.",
+    "Đợt SUMMER không có quotas; bỏ quotas đã chạy thành công vòng chọn hè, rút/gửi lại, duyệt, tạm rời/gửi đồ/phân lại giường.",
+    "role là field đã khai trong SearchRequest chung; role=ADMIN không mở rộng danh sách /me của Student; tái kiểm ownership không đổi.",
+    "DB locale C không lowercase ký tự Đ như Java: code272 so với273. Test tìm kiếm đã PASS trên database ICU vi-VN mới; không quy thành lỗi sản phẩm đã xác nhận.",
+    "Test preference concurrency bị hết connection ở lượt318ca; chạy riêng với pool2/cache1 PASS. Không sửa quyền hay cấp superuser cho tài khoản ứng dụng."
+  ],
+  "coverage": {"totalPlanCases":220,"fullyPassed":22,"failedCases":4,"partialCases":88,"blockedCases":1,"notRunCases":105,"normalizedCheckpoints":276},
+  "limitations": ["Chưa chạy trọn220testcase; không coi API-only hoặc unit test là hoàn thành UI end-to-end.","Chưa thực hiện toàn bộ XF bằng UI từ đầu đến cuối, tải100người/1500hóa đơn, axe và tất cả thao tác nghiệp vụ ở360px.","BIL13 bị chặn vì kỳ hè ngoài ngày hiện tại; AUTH11 chưa có bộ token âm được ký hợp lệ độc lập ở issuer/audience khác.","Chưa xác minh đủ3lần xanh trên môi trường sạch và chưa tạo pipelineE2E duy trì."]
+}

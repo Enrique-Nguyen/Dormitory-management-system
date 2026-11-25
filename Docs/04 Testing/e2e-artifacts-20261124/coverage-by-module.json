@@ -1,0 +1,114 @@
+{
+  "AUTH": {
+    "total": 18,
+    "PASS": 6,
+    "FAIL": 0,
+    "MOT_PHAN": 5,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 7
+  },
+  "ACC": {
+    "total": 19,
+    "PASS": 1,
+    "FAIL": 2,
+    "MOT_PHAN": 3,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 13
+  },
+  "RBAC": {
+    "total": 16,
+    "PASS": 2,
+    "FAIL": 0,
+    "MOT_PHAN": 9,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 5
+  },
+  "ROOM": {
+    "total": 18,
+    "PASS": 0,
+    "FAIL": 0,
+    "MOT_PHAN": 8,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 10
+  },
+  "REG": {
+    "total": 24,
+    "PASS": 4,
+    "FAIL": 0,
+    "MOT_PHAN": 9,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 11
+  },
+  "CON": {
+    "total": 25,
+    "PASS": 3,
+    "FAIL": 0,
+    "MOT_PHAN": 8,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 14
+  },
+  "MNT": {
+    "total": 20,
+    "PASS": 1,
+    "FAIL": 0,
+    "MOT_PHAN": 12,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 7
+  },
+  "BIL": {
+    "total": 27,
+    "PASS": 1,
+    "FAIL": 0,
+    "MOT_PHAN": 13,
+    "BLOCKED": 1,
+    "CHUA_CHAY": 12
+  },
+  "SUM": {
+    "total": 9,
+    "PASS": 0,
+    "FAIL": 0,
+    "MOT_PHAN": 7,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 2
+  },
+  "NOT": {
+    "total": 9,
+    "PASS": 0,
+    "FAIL": 0,
+    "MOT_PHAN": 4,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 5
+  },
+  "JOB": {
+    "total": 7,
+    "PASS": 3,
+    "FAIL": 0,
+    "MOT_PHAN": 1,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 3
+  },
+  "UI": {
+    "total": 14,
+    "PASS": 1,
+    "FAIL": 1,
+    "MOT_PHAN": 4,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 8
+  },
+  "SEC": {
+    "total": 8,
+    "PASS": 0,
+    "FAIL": 1,
+    "MOT_PHAN": 5,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 2
+  },
+  "XF": {
+    "total": 6,
+    "PASS": 0,
+    "FAIL": 0,
+    "MOT_PHAN": 0,
+    "BLOCKED": 0,
+    "CHUA_CHAY": 6
+  }
+}

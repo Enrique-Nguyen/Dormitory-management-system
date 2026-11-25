@@ -1,0 +1,189 @@
+Picked up JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Ho_Chi_Minh
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------< vn.edu.tlu:dms-backend >-----------------------
+[INFO] Building DMS backend 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- jacoco:0.8.15:prepare-agent (default) @ dms-backend ---
+[INFO] argLine set to -javaagent:C:\\Users\\Admin\\.m2\\repository\\org\\jacoco\\org.jacoco.agent\\0.8.15\\org.jacoco.agent-0.8.15-runtime.jar=destfile=D:\\Dormitory-management-system\\DMS\\backend\\target\\jacoco.exec
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ dms-backend ---
+[INFO] Copying 3 resources from src\main\resources to target\classes
+[INFO] Copying 19 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ dms-backend ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ dms-backend ---
+[INFO] Copying 1 resource from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ dms-backend ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ dms-backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+Picked up JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Ho_Chi_Minh
+[INFO] Running vn.edu.tlu.dms.CrudApiIntegrationTest
+00:03:42.381 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [vn.edu.tlu.dms.CrudApiIntegrationTest]: CrudApiIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+00:03:43.000 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration vn.edu.tlu.dms.DmsApplication for test class vn.edu.tlu.dms.CrudApiIntegrationTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.5.16)
+
+2026-11-25T00:03:44.057+07:00  INFO 22236 --- [dms] [           main] vn.edu.tlu.dms.CrudApiIntegrationTest    : Starting CrudApiIntegrationTest using Java 17.0.17 with PID 22236 (started by Admin in D:\Dormitory-management-system\DMS\backend)
+2026-11-25T00:03:44.064+07:00 DEBUG 22236 --- [dms] [           main] vn.edu.tlu.dms.CrudApiIntegrationTest    : Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-11-25T00:03:44.067+07:00  INFO 22236 --- [dms] [           main] vn.edu.tlu.dms.CrudApiIntegrationTest    : No active profile set, falling back to 1 default profile: "dev"
+2026-11-25T00:03:46.723+07:00  INFO 22236 --- [dms] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-11-25T00:03:46.948+07:00  INFO 22236 --- [dms] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 208 ms. Found 33 JPA repository interfaces.
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+2026-11-25T00:03:50.580+07:00  INFO 22236 --- [dms] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-11-25T00:03:50.956+07:00  INFO 22236 --- [dms] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-11-25T00:03:51.119+07:00  INFO 22236 --- [dms] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:55432/dms_e2e_integration (PostgreSQL 16.4)
+2026-11-25T00:03:51.459+07:00  INFO 22236 --- [dms] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 19 migrations (execution time 00:00.217s)
+2026-11-25T00:03:51.563+07:00  INFO 22236 --- [dms] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 19
+2026-11-25T00:03:51.584+07:00  INFO 22236 --- [dms] [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-11-25T00:03:52.123+07:00  INFO 22236 --- [dms] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-11-25T00:03:52.360+07:00  INFO 22236 --- [dms] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.53.Final
+2026-11-25T00:03:52.496+07:00  INFO 22236 --- [dms] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-11-25T00:03:52.949+07:00  INFO 22236 --- [dms] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-11-25T00:03:53.286+07:00  INFO 22236 --- [dms] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 16.4
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-11-25T00:03:56.106+07:00  INFO 22236 --- [dms] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-11-25T00:03:56.176+07:00  INFO 22236 --- [dms] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-11-25T00:03:56.722+07:00  INFO 22236 --- [dms] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-11-25T00:04:00.258+07:00  INFO 22236 --- [dms] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-11-25T00:04:01.971+07:00 DEBUG 22236 --- [dms] [           main] v.e.t.d.common.security.RequestIdFilter  : Filter 'requestIdFilter' configured for use
+2026-11-25T00:04:01.974+07:00  INFO 22236 --- [dms] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-25T00:04:01.975+07:00  INFO 22236 --- [dms] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-25T00:04:01.978+07:00  INFO 22236 --- [dms] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 3 ms
+2026-11-25T00:04:02.160+07:00  INFO 22236 --- [dms] [           main] vn.edu.tlu.dms.CrudApiIntegrationTest    : Started CrudApiIntegrationTest in 18.853 seconds (process running for 21.919)
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 20.56 s <<< FAILURE! -- in vn.edu.tlu.dms.CrudApiIntegrationTest
+[ERROR] vn.edu.tlu.dms.CrudApiIntegrationTest.technicianReadsOwnUnitPeriodsAndPeriodWritesAreAudited -- Time elapsed: 0.271 s <<< ERROR!
+org.springframework.dao.DuplicateKeyException: 
+StatementCallback; SQL [INSERT INTO semester(academic_year,type,name,start_date,end_date)
+VALUES('2040-2041','HK1','HK1','2040-09-01','2041-01-31')RETURNING id
+]; ERROR: duplicate key value violates unique constraint "semester_academic_year_type_key"
+  Detail: Key (academic_year, type)=(2040-2041, HK1) already exists.
+	at org.springframework.jdbc.support.SQLStateSQLExceptionTranslator.doTranslate(SQLStateSQLExceptionTranslator.java:138)
+	at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:107)
+	at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:116)
+	at org.springframework.jdbc.core.JdbcTemplate.translateException(JdbcTemplate.java:1556)
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:408)
+	at org.springframework.jdbc.core.JdbcTemplate.query(JdbcTemplate.java:476)
+	at org.springframework.jdbc.core.JdbcTemplate.query(JdbcTemplate.java:486)
+	at org.springframework.jdbc.core.JdbcTemplate.queryForObject(JdbcTemplate.java:519)
+	at org.springframework.jdbc.core.JdbcTemplate.queryForObject(JdbcTemplate.java:526)
+	at vn.edu.tlu.dms.CrudApiIntegrationTest.createSemester(CrudApiIntegrationTest.java:2981)
+	at vn.edu.tlu.dms.CrudApiIntegrationTest.technicianReadsOwnUnitPeriodsAndPeriodWritesAreAudited(CrudApiIntegrationTest.java:1313)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: org.postgresql.util.PSQLException: ERROR: duplicate key value violates unique constraint "semester_academic_year_type_key"
+  Detail: Key (academic_year, type)=(2040-2041, HK1) already exists.
+	at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2904)
+	at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2589)
+	at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:431)
+	at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:534)
+	at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:437)
+	at org.postgresql.jdbc.PgStatement.executeWithFlags(PgStatement.java:359)
+	at org.postgresql.jdbc.PgStatement.executeCachedSql(PgStatement.java:344)
+	at org.postgresql.jdbc.PgStatement.executeWithFlags(PgStatement.java:320)
+	at org.postgresql.jdbc.PgStatement.executeQuery(PgStatement.java:270)
+	at com.zaxxer.hikari.pool.ProxyStatement.executeQuery(ProxyStatement.java:111)
+	at com.zaxxer.hikari.pool.HikariProxyStatement.executeQuery(HikariProxyStatement.java)
+	at org.springframework.jdbc.core.JdbcTemplate$1QueryStatementCallback.doInStatement(JdbcTemplate.java:463)
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:393)
+	... 9 more
+
+[INFO] Running vn.edu.tlu.dms.UserPreferenceConcurrencyIntegrationTest
+2026-11-25T00:04:02.613+07:00  INFO 22236 --- [dms] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [vn.edu.tlu.dms.UserPreferenceConcurrencyIntegrationTest]: UserPreferenceConcurrencyIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-25T00:04:02.634+07:00  INFO 22236 --- [dms] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration vn.edu.tlu.dms.DmsApplication for test class vn.edu.tlu.dms.UserPreferenceConcurrencyIntegrationTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.5.16)
+
+2026-11-25T00:04:02.739+07:00  INFO 22236 --- [dms] [           main] UserPreferenceConcurrencyIntegrationTest : Starting UserPreferenceConcurrencyIntegrationTest using Java 17.0.17 with PID 22236 (started by Admin in D:\Dormitory-management-system\DMS\backend)
+2026-11-25T00:04:02.740+07:00 DEBUG 22236 --- [dms] [           main] UserPreferenceConcurrencyIntegrationTest : Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-11-25T00:04:02.740+07:00  INFO 22236 --- [dms] [           main] UserPreferenceConcurrencyIntegrationTest : No active profile set, falling back to 1 default profile: "dev"
+2026-11-25T00:04:03.482+07:00  INFO 22236 --- [dms] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-11-25T00:04:03.596+07:00  INFO 22236 --- [dms] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 111 ms. Found 33 JPA repository interfaces.
+2026-11-25T00:04:03.866+07:00  INFO 22236 --- [dms] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Starting...
+2026-11-25T00:04:03.902+07:00  INFO 22236 --- [dms] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Start completed.
+2026-11-25T00:04:03.934+07:00  INFO 22236 --- [dms] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:55432/dms_e2e_integration (PostgreSQL 16.4)
+2026-11-25T00:04:03.957+07:00  INFO 22236 --- [dms] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 19 migrations (execution time 00:00.016s)
+2026-11-25T00:04:04.011+07:00  INFO 22236 --- [dms] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 19
+2026-11-25T00:04:04.012+07:00  INFO 22236 --- [dms] [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-11-25T00:04:04.053+07:00  INFO 22236 --- [dms] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-11-25T00:04:04.057+07:00  INFO 22236 --- [dms] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-11-25T00:04:04.077+07:00  INFO 22236 --- [dms] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-11-25T00:04:04.094+07:00  INFO 22236 --- [dms] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-2)']
+	Database driver: undefined/unknown
+	Database version: 16.4
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-11-25T00:04:04.363+07:00  INFO 22236 --- [dms] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-11-25T00:04:04.386+07:00  INFO 22236 --- [dms] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-11-25T00:04:05.590+07:00  INFO 22236 --- [dms] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-11-25T00:04:05.721+07:00  INFO 22236 --- [dms] [           main] UserPreferenceConcurrencyIntegrationTest : Started UserPreferenceConcurrencyIntegrationTest in 3.076 seconds (process running for 25.482)
+2026-11-25T00:04:05.739+07:00  INFO 22236 --- [dms] [           main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-11-25T00:04:05.744+07:00  INFO 22236 --- [dms] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-11-25T00:04:05.748+07:00  INFO 22236 --- [dms] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-11-25T00:04:05.979+07:00  WARN 22236 --- [dms] [pool-3-thread-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 23505
+2026-11-25T00:04:05.980+07:00 ERROR 22236 --- [dms] [pool-3-thread-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: duplicate key value violates unique constraint "user_preference_pkey"
+  Detail: Key (user_id)=(904) already exists.
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.473 s -- in vn.edu.tlu.dms.UserPreferenceConcurrencyIntegrationTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Errors: 
+[ERROR]   CrudApiIntegrationTest.technicianReadsOwnUnitPeriodsAndPeriodWritesAreAudited:1313->createSemester:2981 » DuplicateKey StatementCallback; SQL [INSERT INTO semester(academic_year,type,name,start_date,end_date)
+VALUES('2040-2041','HK1','HK1','2040-09-01','2041-01-31')RETURNING id
+]; ERROR: duplicate key value violates unique constraint "semester_academic_year_type_key"
+  Detail: Key (academic_year, type)=(2040-2041, HK1) already exists.
+[INFO] 
+[ERROR] Tests run: 2, Failures: 0, Errors: 1, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  28.675 s
+[INFO] Finished at: 2026-11-25T00:04:06+07:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.6:test (default-test) on project dms-backend: 
+[ERROR] 
+[ERROR] See D:\Dormitory-management-system\DMS\backend\target\surefire-reports for the individual test results.
+[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

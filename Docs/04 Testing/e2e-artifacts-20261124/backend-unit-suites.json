@@ -1,0 +1,170 @@
+[
+  {
+    "name": "vn.edu.tlu.dms.account.service.impl.StudentCatalogReferencesTest",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:10:59.131Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.account.service.impl.StudentImportServiceTest",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:04.605Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.billing.service.impl.DepositTopupGuardTest",
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:05.071Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.CatalogServiceTest",
+    "tests": 25,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:06.404Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.common.api.GlobalExceptionHandlerTest",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:43:20.048Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.contract.api.ContractDetailResponseTest",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:43:20.116Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.contract.service.impl.ContractActivationValidationTest",
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:06.863Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.contract.service.impl.ContractExtensionRuleTest",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:07.071Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.CrudOperationalFilterTest",
+    "tests": 30,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:09.159Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.CrudSearchFilterTest",
+    "tests": 37,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:10.853Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.KeycloakJwtDecoderTest",
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:43:21.860Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.MaintenanceRequestPolicyTest",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:10.902Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.ModuleDependencyTest",
+    "tests": 8,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:18.363Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.notification.service.impl.ContractNotificationListenerTest",
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:11.052Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.notification.service.impl.MaintenanceNotificationListenerTest",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:11.138Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.notification.service.impl.NotificationServiceImplTest",
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:11.151Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.registration.service.impl.SummerChoiceApprovalTest",
+    "tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:11.217Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.RoomApplicationPolicyTest",
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:11.266Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.RoomCatalogServiceTest",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:11.399Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.RoomTransferPolicyTest",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:11:11.415Z"
+  },
+  {
+    "name": "vn.edu.tlu.dms.SensitiveValuesTest",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modified": "2026-11-24T16:43:21.969Z"
+  }
+]

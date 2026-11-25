@@ -1,0 +1,13 @@
+{
+  "reviewedBy": "Main agent using image Read",
+  "images": [
+    "initial-keycloak-unavailable.png",
+    "screenshots/student-home.png",
+    "screenshots/student-360.png",
+    "screenshots/technician-tasks-360.png",
+    "screenshots/audit-filter-http500.png",
+    "screenshots/profile-abc-accepted.png",
+    "screenshots/staff-rooms-save-unchanged.png"
+  ],
+  "scope": "Visual spot-check only; not every screenshot or video frame reviewed"
+}
