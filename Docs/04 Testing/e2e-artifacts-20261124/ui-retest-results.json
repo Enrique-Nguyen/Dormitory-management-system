@@ -1,0 +1,49 @@
+{
+  "executedAt": "2026-11-24T17:09:22.871Z",
+  "results": [
+    {
+      "id": "E2E-AUTH-02",
+      "subcase": "retest-invalid-message",
+      "title": "Keycloak thông báo sai thông tin",
+      "expected": "Ở lại Keycloak; thông báo không phân biệt sai tên/sai mật khẩu",
+      "status": "PASS",
+      "coverage": "UI",
+      "actual": {
+        "message": "Invalid username or password.",
+        "anonymousApiHttp": 401,
+        "screenshot": "e2e-auth-02-retest.png"
+      }
+    },
+    {
+      "id": "E2E-AUTH-03",
+      "subcase": "retest-invalid-message",
+      "title": "Keycloak thông báo sai thông tin",
+      "expected": "Ở lại Keycloak; thông báo không phân biệt sai tên/sai mật khẩu",
+      "status": "PASS",
+      "coverage": "UI",
+      "actual": {
+        "message": "Invalid username or password.",
+        "anonymousApiHttp": 401,
+        "screenshot": "e2e-auth-03-retest.png"
+      }
+    },
+    {
+      "id": "E2E-ACC-02",
+      "subcase": "phone-format-network",
+      "title": "Số điện thoại sai định dạng phải bị từ chối",
+      "expected": "Lỗi trường; không lưu abc; form còn mở",
+      "status": "FAIL",
+      "coverage": "UI",
+      "actual": "Lỗi thật: {\"saveHttp\":200,\"storedPhone\":\"abc\"}; backend đã lưu abc; đã khôi phục số thử hợp lệ sau tái hiện"
+    },
+    {
+      "id": "E2E-ACC-18",
+      "subcase": "audit-filter-endpoints",
+      "title": "Bộ lọc nhật ký tải danh mục thao tác/đối tượng",
+      "expected": "HaiAPI lookup200, không500",
+      "status": "FAIL",
+      "coverage": "UI",
+      "actual": "Lỗi thật: [{\"name\":\"actions\",\"status\":500,\"errorCode\":\"INTERNAL_ERROR\",\"requestId\":\"975abce8-ab01-4e2c-946d-e761f1be716f\"},{\"name\":\"entity-types\",\"status\":500,\"errorCode\":\"INTERNAL_ERROR\",\"requestId\":\"2858db2c-ee84-428f-88b5-96efec57de77\"}]"
+    }
+  ]
+}

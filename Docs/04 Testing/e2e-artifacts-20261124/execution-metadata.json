@@ -1,0 +1,68 @@
+{
+  "executedAt": "2026-11-24T16:42:36.468Z",
+  "revision": "a0526d4bf244a4952e8d72f5721641dcb38220fb",
+  "branch": "develop-quyennnv",
+  "node": "v24.11.1",
+  "scope": "Local authorized E2E; no business-code edits; initial environment unavailable then user approved isolated setup",
+  "initialPlaywright": {
+    "total": 14,
+    "passed": 0,
+    "failed": 2,
+    "skipped": 12
+  },
+  "unit": {
+    "suites": 21,
+    "tests": 215,
+    "passed": 215
+  },
+  "frontend": {
+    "build": "PASS",
+    "lintErrors": 0,
+    "lintWarnings": 4
+  },
+  "integration": {
+    "database": "dms_e2e_integration",
+    "suites": 22,
+    "tests": 318,
+    "passed": 316,
+    "failures": 1,
+    "errors": 1,
+    "retests": {
+      "preferenceConcurrency": "PASS with pool2/cache1",
+      "unicodeSearch": "PASS on fresh dms_e2e_unicode ICU vi-VN"
+    },
+    "notFullRerun": true
+  },
+  "playwrightFinal": {
+    "startTime": "2026-11-24T17:03:06.390Z",
+    "duration": 19990.23,
+    "expected": 14,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "finalCoverage": {
+    "PASS": 22,
+    "FAIL": 4,
+    "MOT_PHAN": 88,
+    "BLOCKED": 1,
+    "CHUA_CHAY": 105
+  },
+  "noBusinessCodeChanges": true,
+  "startedDate": "2026-11-24",
+  "finishedDate": "2026-11-25",
+  "servicesStopped": true,
+  "portsVerifiedClosed": [
+    8080,
+    8180,
+    5174,
+    55432
+  ],
+  "retainedDatabases": [
+    "dms_e2e",
+    "keycloak_e2e",
+    "dms_e2e_integration",
+    "dms_e2e_unicode"
+  ],
+  "artifactZip": "Bang-chung-kiem-thu-E2E-2026-11-24.zip"
+}

@@ -1,0 +1,14 @@
+{
+  "businessCodeChanged": false,
+  "existingUserChangesPreserved": true,
+  "destructiveSecurityPayloadsExecuted": false,
+  "loadTestingExecuted": false,
+  "unitTestsDoNotProveE2E": true,
+  "coverageRules": {
+    "PASS": "Toàn bộ kỳ vọng testcase đã kiểm chứng trong đúng layer yêu cầu",
+    "MOT_PHAN": "Có checkpoint thật nhưng còn kỳ vọng/layer chưa kiểm",
+    "FAIL": "Assertion thực tế không đạt; cần phân loại lỗi sản phẩm/test/spec/môi trường",
+    "BLOCKED": "Không thể thực thi vì thiếu tiền điều kiện",
+    "CHUA_CHAY": "Không có bằng chứng thực thi"
+  }
+}

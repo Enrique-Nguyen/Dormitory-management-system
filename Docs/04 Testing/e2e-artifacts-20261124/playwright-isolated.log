@@ -1,0 +1,19 @@
+
+Running 14 tests using 1 worker
+
+  ok  1 [setup] › e2e\auth.setup.ts:10:3 › đăng nhập student (1.7s)
+  ok  2 [setup] › e2e\auth.setup.ts:10:3 › đăng nhập staff (1.7s)
+  ok  3 [setup] › e2e\auth.setup.ts:10:3 › đăng nhập technician (1.5s)
+  ok  4 [setup] › e2e\auth.setup.ts:10:3 › đăng nhập admin (1.5s)
+  ok  5 [anonymous] › e2e\anonymous\login.spec.ts:3:1 › trang đăng nhập hiển thị nút đăng nhập (927ms)
+  ok  6 [anonymous] › e2e\anonymous\login.spec.ts:9:1 › chưa đăng nhập vào cổng quản trị thì bị chuyển về trang đăng nhập (891ms)
+  ok  7 [student] › e2e\student\portal.spec.ts:8:1 › vào đúng cổng student sau khi đăng nhập (793ms)
+  ok  8 [student] › e2e\student\portal.spec.ts:13:1 › vào cổng của vai trò khác thì bị chuyển về cổng của mình (1.1s)
+  ok  9 [staff] › e2e\staff\portal.spec.ts:8:1 › vào đúng cổng staff sau khi đăng nhập (737ms)
+  ok 10 [staff] › e2e\staff\portal.spec.ts:13:1 › vào cổng của vai trò khác thì bị chuyển về cổng của mình (1.1s)
+  ok 11 [technician] › e2e\technician\portal.spec.ts:8:1 › vào đúng cổng technician sau khi đăng nhập (786ms)
+  ok 12 [technician] › e2e\technician\portal.spec.ts:13:1 › vào cổng của vai trò khác thì bị chuyển về cổng của mình (1.1s)
+  ok 13 [admin] › e2e\admin\portal.spec.ts:8:1 › vào đúng cổng admin sau khi đăng nhập (1.1s)
+  ok 14 [admin] › e2e\admin\portal.spec.ts:13:1 › vào cổng của vai trò khác thì bị chuyển về cổng của mình (981ms)
+
+  14 passed (20.0s)

@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: vn.edu.tlu.dms.BillingConcurrencyIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.664 s -- in vn.edu.tlu.dms.BillingConcurrencyIntegrationTest

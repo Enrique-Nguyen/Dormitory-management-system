@@ -1,0 +1,6371 @@
+{
+  "runId": "20261124170041bf5e",
+  "coverage": "API_ONLY",
+  "startedAt": "20261124170041bf5e",
+  "checks": [
+    {
+      "id": "E2E-SETUP",
+      "subcase": "token-admin",
+      "title": "Acquire real isolated Keycloak token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "persona": "admin",
+        "acquired": true
+      },
+      "expected": "Direct grant from E2E realm; never saved to disk",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 65
+    },
+    {
+      "id": "E2E-SETUP",
+      "subcase": "token-staff",
+      "title": "Acquire real isolated Keycloak token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "persona": "staff",
+        "acquired": true
+      },
+      "expected": "Direct grant from E2E realm; never saved to disk",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 34
+    },
+    {
+      "id": "E2E-SETUP",
+      "subcase": "token-staffN23",
+      "title": "Acquire real isolated Keycloak token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "persona": "staffN23",
+        "acquired": true
+      },
+      "expected": "Direct grant from E2E realm; never saved to disk",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 32
+    },
+    {
+      "id": "E2E-SETUP",
+      "subcase": "token-technician",
+      "title": "Acquire real isolated Keycloak token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "persona": "technician",
+        "acquired": true
+      },
+      "expected": "Direct grant from E2E realm; never saved to disk",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 36
+    },
+    {
+      "id": "E2E-SETUP",
+      "subcase": "token-student",
+      "title": "Acquire real isolated Keycloak token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "persona": "student",
+        "acquired": true
+      },
+      "expected": "Direct grant from E2E realm; never saved to disk",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 34
+    },
+    {
+      "id": "E2E-SETUP",
+      "subcase": "token-student2",
+      "title": "Acquire real isolated Keycloak token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "persona": "student2",
+        "acquired": true
+      },
+      "expected": "Direct grant from E2E realm; never saved to disk",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 37
+    },
+    {
+      "id": "E2E-SETUP",
+      "subcase": "token-cross",
+      "title": "Acquire real isolated Keycloak token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "persona": "cross",
+        "acquired": true
+      },
+      "expected": "Direct grant from E2E realm; never saved to disk",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 33
+    },
+    {
+      "id": "E2E-SETUP",
+      "subcase": "token-technicianN23",
+      "title": "Acquire real isolated Keycloak token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "persona": "technicianN23",
+        "acquired": true
+      },
+      "expected": "Direct grant from E2E realm; never saved to disk",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 31
+    },
+    {
+      "id": "E2E-SETUP",
+      "subcase": "token-free",
+      "title": "Acquire real isolated Keycloak token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "persona": "free",
+        "acquired": true
+      },
+      "expected": "Direct grant from E2E realm; never saved to disk",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 31
+    },
+    {
+      "id": "E2E-SETUP",
+      "subcase": "token-female",
+      "title": "Acquire real isolated Keycloak token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "persona": "female",
+        "acquired": true
+      },
+      "expected": "Direct grant from E2E realm; never saved to disk",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 33
+    },
+    {
+      "id": "E2E-SETUP",
+      "subcase": "golden-seed",
+      "title": "Guarded JDBC golden fixture seed",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "seeded": true,
+        "studentCount": 16,
+        "caveats": []
+      },
+      "expected": "Isolated dms_e2e only; no cleanup, truncate, deletes or schema changes",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 9156
+    },
+    {
+      "id": "E2E-SETUP",
+      "subcase": "backend-link",
+      "title": "Backend identity links match isolated JDBC fixture",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "linked": true
+      },
+      "expected": "Every supplied persona /me ID equals its isolated app_user ID",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "d76fad36-fb70-42db-8a9b-4f4cfcadef34"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "0368f547-9f1f-470f-87b5-9438aeaa92cd"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "2553a10b-782e-47fb-8fae-79d34a5e74ec"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "8af56f86-d48e-4354-95fe-51976f17ec8c"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "ee34dd72-72c1-4b83-a28c-3f0bac274de9"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "16c5bf42-b42b-416d-b81d-587e5a057d85"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "4c5ee4f0-1efb-4906-b8f8-a849cd5acfc1"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "c4134c15-2c4c-4979-93a3-1058faf78e36"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "2bd5754e-3119-4115-9216-8367fb96a3f0"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "1e88ea17-aa82-4401-bd49-d1f67442fe19"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "1e88ea17-aa82-4401-bd49-d1f67442fe19",
+      "durationMs": 252
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "api-admin",
+      "title": "Real token and /me role for admin",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "role": "ADMIN",
+        "permissionCount": 110
+      },
+      "expected": "Manifest role, linked identity, dynamic permissions (not a UI login assertion)",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "15cfeb96-2ec9-42d5-a2df-ae2a567eca97"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "15cfeb96-2ec9-42d5-a2df-ae2a567eca97",
+      "durationMs": 8
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "api-staff",
+      "title": "Real token and /me role for staff",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "role": "STAFF",
+        "permissionCount": 75
+      },
+      "expected": "Manifest role, linked identity, dynamic permissions (not a UI login assertion)",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "9f5b983c-b3bc-4b95-b9bf-313fad127ae4"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "9f5b983c-b3bc-4b95-b9bf-313fad127ae4",
+      "durationMs": 9
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "api-staffN23",
+      "title": "Real token and /me role for staffN23",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "role": "STAFF",
+        "permissionCount": 75
+      },
+      "expected": "Manifest role, linked identity, dynamic permissions (not a UI login assertion)",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "9bfc0716-604b-4a94-9f33-bc33c7264a6b"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "9bfc0716-604b-4a94-9f33-bc33c7264a6b",
+      "durationMs": 9
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "api-technician",
+      "title": "Real token and /me role for technician",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "role": "TECHNICIAN",
+        "permissionCount": 12
+      },
+      "expected": "Manifest role, linked identity, dynamic permissions (not a UI login assertion)",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "e12ab5b6-4679-4a50-8e93-b00d8425c45c"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "e12ab5b6-4679-4a50-8e93-b00d8425c45c",
+      "durationMs": 8
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "api-student",
+      "title": "Real token and /me role for student",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "role": "STUDENT",
+        "permissionCount": 36
+      },
+      "expected": "Manifest role, linked identity, dynamic permissions (not a UI login assertion)",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "6d8ada93-84b7-4a4d-a94e-749cd864fb7a"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "6d8ada93-84b7-4a4d-a94e-749cd864fb7a",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "api-student2",
+      "title": "Real token and /me role for student2",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "role": "STUDENT",
+        "permissionCount": 36
+      },
+      "expected": "Manifest role, linked identity, dynamic permissions (not a UI login assertion)",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "29b39cbf-c237-4bf2-80ae-582cf8a705d8"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "29b39cbf-c237-4bf2-80ae-582cf8a705d8",
+      "durationMs": 11
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "api-cross",
+      "title": "Real token and /me role for cross",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "role": "STAFF",
+        "permissionCount": 75
+      },
+      "expected": "Manifest role, linked identity, dynamic permissions (not a UI login assertion)",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "c3b188b2-863d-4c94-8598-8312f7aff25d"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "c3b188b2-863d-4c94-8598-8312f7aff25d",
+      "durationMs": 9
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "api-technicianN23",
+      "title": "Real token and /me role for technicianN23",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "role": "TECHNICIAN",
+        "permissionCount": 12
+      },
+      "expected": "Manifest role, linked identity, dynamic permissions (not a UI login assertion)",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "e406d3fb-0a9b-4744-9400-5970db523f14"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "e406d3fb-0a9b-4744-9400-5970db523f14",
+      "durationMs": 9
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "api-free",
+      "title": "Real token and /me role for free",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "role": "STUDENT",
+        "permissionCount": 36
+      },
+      "expected": "Manifest role, linked identity, dynamic permissions (not a UI login assertion)",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "0ac564da-eba0-4637-94ac-5ccbd05557bb"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "0ac564da-eba0-4637-94ac-5ccbd05557bb",
+      "durationMs": 9
+    },
+    {
+      "id": "E2E-AUTH-01",
+      "subcase": "api-female",
+      "title": "Real token and /me role for female",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "role": "STUDENT",
+        "permissionCount": 36
+      },
+      "expected": "Manifest role, linked identity, dynamic permissions (not a UI login assertion)",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "4da7bbe8-bc18-4a39-8f6a-9c8ecad283d3"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "4da7bbe8-bc18-4a39-8f6a-9c8ecad283d3",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-AUTH-11",
+      "subcase": "no-bearer",
+      "title": "Missing token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 401,
+        "errorCode": "UNAUTHENTICATED"
+      },
+      "expected": "401 with requestId",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 401,
+            "errorCode": "UNAUTHENTICATED",
+            "requestId": "0ced12ec-5650-4dab-ba0f-9b74f4f9e935"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "0ced12ec-5650-4dab-ba0f-9b74f4f9e935",
+      "durationMs": 4
+    },
+    {
+      "id": "E2E-AUTH-11",
+      "subcase": "tampered-signature",
+      "title": "Reject signature-tampered token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 401,
+        "limitation": "Altered claims invalidate the signature; genuine separately signed token variants require additional realm fixtures"
+      },
+      "expected": "401; tampered token only, not proof of independently signed wrong-issuer/audience validation",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 401,
+            "errorCode": "UNAUTHENTICATED",
+            "requestId": "8caf392c-ff93-4154-af48-33687ed568d5"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "8caf392c-ff93-4154-af48-33687ed568d5",
+      "durationMs": 6
+    },
+    {
+      "id": "E2E-AUTH-11",
+      "subcase": "tampered-issuer",
+      "title": "Reject issuer-tampered token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 401,
+        "limitation": "Altered claims invalidate the signature; genuine separately signed token variants require additional realm fixtures"
+      },
+      "expected": "401; tampered token only, not proof of independently signed wrong-issuer/audience validation",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 401,
+            "errorCode": "UNAUTHENTICATED",
+            "requestId": "88a3fea9-3b23-4488-b5a1-fa536c30b164"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "88a3fea9-3b23-4488-b5a1-fa536c30b164",
+      "durationMs": 4
+    },
+    {
+      "id": "E2E-AUTH-11",
+      "subcase": "tampered-audience",
+      "title": "Reject audience-tampered token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 401,
+        "limitation": "Altered claims invalidate the signature; genuine separately signed token variants require additional realm fixtures"
+      },
+      "expected": "401; tampered token only, not proof of independently signed wrong-issuer/audience validation",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 401,
+            "errorCode": "UNAUTHENTICATED",
+            "requestId": "7e481acc-e83c-4238-bb9b-13d961627424"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "7e481acc-e83c-4238-bb9b-13d961627424",
+      "durationMs": 4
+    },
+    {
+      "id": "E2E-AUTH-11",
+      "subcase": "tampered-expired",
+      "title": "Reject expired-tampered token",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 401,
+        "limitation": "Altered claims invalidate the signature; genuine separately signed token variants require additional realm fixtures"
+      },
+      "expected": "401; tampered token only, not proof of independently signed wrong-issuer/audience validation",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 401,
+            "errorCode": "UNAUTHENTICATED",
+            "requestId": "7830e567-960d-4e2b-aa71-dcbc3f6ee21f"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/auth/me",
+      "requestId": "7830e567-960d-4e2b-aa71-dcbc3f6ee21f",
+      "durationMs": 3
+    },
+    {
+      "id": "E2E-AUTH-11",
+      "subcase": "genuine-signed-variants",
+      "title": "Genuine wrong-issuer, wrong-audience and expired token fixtures",
+      "status": "BLOCKED",
+      "coverage": "API_ONLY",
+      "actual": "Additional independently signed wrong-realm/wrong-audience and expired token fixtures are not supplied; tampered-token checks establish rejection only, not separate claim-validation branches.",
+      "expected": "Cryptographically valid negative token fixtures required for independent claim validation",
+      "evidence": {
+        "detail": "Dependency or specification prerequisite not met",
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-AUTH-13",
+      "subcase": "mine",
+      "title": "Reject client identity override",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 for out-of-contract identity field",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/me/applications/search-by-page",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "826ab14a-a62f-4629-9ecc-92d821ecc703"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/me/applications/search-by-page",
+      "requestId": "826ab14a-a62f-4629-9ecc-92d821ecc703",
+      "durationMs": 31
+    },
+    {
+      "id": "E2E-AUTH-13",
+      "subcase": "userId",
+      "title": "Reject client identity override",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 for out-of-contract identity field",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/me/applications/search-by-page",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "009be094-4d8a-49e4-8466-5c66ebfa90d2"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/me/applications/search-by-page",
+      "requestId": "009be094-4d8a-49e4-8466-5c66ebfa90d2",
+      "durationMs": 7
+    },
+    {
+      "id": "E2E-AUTH-13",
+      "subcase": "role",
+      "title": "Reject client identity override",
+      "status": "FAIL",
+      "coverage": "API_ONLY",
+      "actual": "HTTP POST /api/me/applications/search-by-page: expected 400, received 200\n\n200 !== 400\n",
+      "expected": "400 for out-of-contract identity field",
+      "evidence": {
+        "detail": "AssertionError [ERR_ASSERTION]: HTTP POST /api/me/applications/search-by-page: expected 400, received 200\n\n200 !== 400",
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/me/applications/search-by-page",
+            "status": 200,
+            "requestId": "9adaf4bf-1808-48f4-b252-6dd1a7d99554"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/me/applications/search-by-page",
+      "requestId": "9adaf4bf-1808-48f4-b252-6dd1a7d99554",
+      "durationMs": 212
+    },
+    {
+      "id": "E2E-UI-04",
+      "subcase": "negative-page",
+      "title": "Paging/DTO validation: negative-page",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 stable errorCode; no 500",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "9be08560-1e69-48e3-9745-96e34ce076f4"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "9be08560-1e69-48e3-9745-96e34ce076f4",
+      "durationMs": 38
+    },
+    {
+      "id": "E2E-UI-04",
+      "subcase": "zero-size",
+      "title": "Paging/DTO validation: zero-size",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 stable errorCode; no 500",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "ee11f947-0cee-4f5a-bc67-96ed92e7f7f0"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "ee11f947-0cee-4f5a-bc67-96ed92e7f7f0",
+      "durationMs": 9
+    },
+    {
+      "id": "E2E-UI-04",
+      "subcase": "large-size",
+      "title": "Paging/DTO validation: large-size",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 stable errorCode; no 500",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "480d1e30-ab24-4d4f-add5-69c7b7119dfa"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "480d1e30-ab24-4d4f-add5-69c7b7119dfa",
+      "durationMs": 8
+    },
+    {
+      "id": "E2E-UI-04",
+      "subcase": "text-page",
+      "title": "Paging/DTO validation: text-page",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 stable errorCode; no 500",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "22c2b402-60a0-443e-b5d2-014ea09e202e"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "22c2b402-60a0-443e-b5d2-014ea09e202e",
+      "durationMs": 9
+    },
+    {
+      "id": "E2E-SEC-03",
+      "subcase": "numeric-string-page",
+      "title": "Paging/DTO validation: numeric-string-page",
+      "status": "FAIL",
+      "coverage": "API_ONLY",
+      "actual": "HTTP POST /api/rooms/search-by-page: expected 400, received 200\n\n200 !== 400\n",
+      "expected": "400 stable errorCode; no 500",
+      "evidence": {
+        "detail": "AssertionError [ERR_ASSERTION]: HTTP POST /api/rooms/search-by-page: expected 400, received 200\n\n200 !== 400",
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 200,
+            "requestId": "a6fb409b-f39f-4fd4-bb8f-19a12b9f1386"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "a6fb409b-f39f-4fd4-bb8f-19a12b9f1386",
+      "durationMs": 37
+    },
+    {
+      "id": "E2E-SEC-03",
+      "subcase": "numeric-string-size",
+      "title": "Paging/DTO validation: numeric-string-size",
+      "status": "FAIL",
+      "coverage": "API_ONLY",
+      "actual": "HTTP POST /api/rooms/search-by-page: expected 400, received 200\n\n200 !== 400\n",
+      "expected": "400 stable errorCode; no 500",
+      "evidence": {
+        "detail": "AssertionError [ERR_ASSERTION]: HTTP POST /api/rooms/search-by-page: expected 400, received 200\n\n200 !== 400",
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 200,
+            "requestId": "eeb750ad-78f4-448a-a692-25c10b726739"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "eeb750ad-78f4-448a-a692-25c10b726739",
+      "durationMs": 28
+    },
+    {
+      "id": "E2E-SEC-03",
+      "subcase": "unknown-field",
+      "title": "Paging/DTO validation: unknown-field",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 stable errorCode; no 500",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "4716dbb5-eec3-4fe3-aa05-6684649ee076"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "4716dbb5-eec3-4fe3-aa05-6684649ee076",
+      "durationMs": 8
+    },
+    {
+      "id": "E2E-SEC-03",
+      "subcase": "fraction-page",
+      "title": "Paging/DTO validation: fraction-page",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 stable errorCode; no 500",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "8cd7c878-e3a5-4ebf-852d-46cb7b521155"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "8cd7c878-e3a5-4ebf-852d-46cb7b521155",
+      "durationMs": 8
+    },
+    {
+      "id": "E2E-SEC-03",
+      "subcase": "null-sort",
+      "title": "Paging/DTO validation: null-sort",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 stable errorCode; no 500",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "5cbfe2a9-92b9-49df-b853-8cbb1862ee8c"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "5cbfe2a9-92b9-49df-b853-8cbb1862ee8c",
+      "durationMs": 12
+    },
+    {
+      "id": "E2E-SEC-03",
+      "subcase": "bad-sort",
+      "title": "Paging/DTO validation: bad-sort",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 stable errorCode; no 500",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "764a8dce-aab8-47de-a700-7ce84eba35a4"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "764a8dce-aab8-47de-a700-7ce84eba35a4",
+      "durationMs": 20
+    },
+    {
+      "id": "E2E-SEC-02",
+      "subcase": "q-single",
+      "title": "Controlled non-destructive SQL-like search input",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "total": 0
+      },
+      "expected": "200 empty match, no data expansion and no 500",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 200,
+            "requestId": "c57ae3b8-2552-4f5f-91b4-ab11c75bb9d6"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "c57ae3b8-2552-4f5f-91b4-ab11c75bb9d6",
+      "durationMs": 20
+    },
+    {
+      "id": "E2E-SEC-02",
+      "subcase": "q-double",
+      "title": "Controlled non-destructive SQL-like search input",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "total": 0
+      },
+      "expected": "200 empty match, no data expansion and no 500",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 200,
+            "requestId": "e9437b28-44d5-4d3b-b68a-aa68ccd9e617"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "e9437b28-44d5-4d3b-b68a-aa68ccd9e617",
+      "durationMs": 15
+    },
+    {
+      "id": "E2E-REG-08",
+      "subcase": "status",
+      "title": "Application rejects status",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 before persistence",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "7027b84c-d839-452f-9fca-35a808caa4fc"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/save-or-update",
+      "requestId": "7027b84c-d839-452f-9fca-35a808caa4fc",
+      "durationMs": 626
+    },
+    {
+      "id": "E2E-REG-08",
+      "subcase": "score",
+      "title": "Application rejects score",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 before persistence",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "982d85f8-819b-4cd3-972e-1c2968e17820"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/save-or-update",
+      "requestId": "982d85f8-819b-4cd3-972e-1c2968e17820",
+      "durationMs": 629
+    },
+    {
+      "id": "E2E-SEC-03",
+      "subcase": "null-relation",
+      "title": "Application rejects null-relation",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 before persistence",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "840005a6-4a61-4d6b-af84-7c1f45468113"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/save-or-update",
+      "requestId": "840005a6-4a61-4d6b-af84-7c1f45468113",
+      "durationMs": 606
+    },
+    {
+      "id": "E2E-SEC-03",
+      "subcase": "string-id",
+      "title": "Application rejects string-id",
+      "status": "FAIL",
+      "coverage": "API_ONLY",
+      "actual": "HTTP POST /api/applications/save-or-update [NOT_FOUND]: expected 400, received 404\n\n404 !== 400\n",
+      "expected": "400 before persistence",
+      "evidence": {
+        "detail": "AssertionError [ERR_ASSERTION]: HTTP POST /api/applications/save-or-update [NOT_FOUND]: expected 400, received 404\n\n404 !== 400",
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "43776ec4-59a7-4cbc-8685-f8878323c4ec"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/save-or-update",
+      "requestId": "43776ec4-59a7-4cbc-8685-f8878323c4ec",
+      "durationMs": 277
+    },
+    {
+      "id": "E2E-RBAC-05",
+      "subcase": "read-rooms",
+      "title": "Technician business resource denied",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 403
+      },
+      "expected": "403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "50515f88-6e45-460f-a7de-140e54699dac"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "50515f88-6e45-460f-a7de-140e54699dac",
+      "durationMs": 20
+    },
+    {
+      "id": "E2E-RBAC-05",
+      "subcase": "write-rooms",
+      "title": "Technician business resource denied",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 403
+      },
+      "expected": "403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/save-or-update",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "818d3335-b058-4121-8ff9-f46ae41d2aec"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/save-or-update",
+      "requestId": "818d3335-b058-4121-8ff9-f46ae41d2aec",
+      "durationMs": 22
+    },
+    {
+      "id": "E2E-RBAC-05",
+      "subcase": "read-contracts",
+      "title": "Technician business resource denied",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 403
+      },
+      "expected": "403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/search-by-page",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "7f127f75-512c-4fd4-8033-77ec54ec475d"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/search-by-page",
+      "requestId": "7f127f75-512c-4fd4-8033-77ec54ec475d",
+      "durationMs": 8
+    },
+    {
+      "id": "E2E-RBAC-05",
+      "subcase": "write-contracts",
+      "title": "Technician business resource denied",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 403
+      },
+      "expected": "403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/save-or-update",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "1bdedcc5-b858-4cfd-b86d-94afaea8261e"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/save-or-update",
+      "requestId": "1bdedcc5-b858-4cfd-b86d-94afaea8261e",
+      "durationMs": 12
+    },
+    {
+      "id": "E2E-RBAC-05",
+      "subcase": "read-invoices",
+      "title": "Technician business resource denied",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 403
+      },
+      "expected": "403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/search-by-page",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "512030bb-3cbf-48bb-b548-796a290f0bee"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/invoices/search-by-page",
+      "requestId": "512030bb-3cbf-48bb-b548-796a290f0bee",
+      "durationMs": 7
+    },
+    {
+      "id": "E2E-RBAC-05",
+      "subcase": "write-invoices",
+      "title": "Technician business resource denied",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 403
+      },
+      "expected": "403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/save-or-update",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "453dd5a1-2654-4f86-ab08-f64cd5f60036"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/invoices/save-or-update",
+      "requestId": "453dd5a1-2654-4f86-ab08-f64cd5f60036",
+      "durationMs": 11
+    },
+    {
+      "id": "E2E-RBAC-05",
+      "subcase": "read-applications",
+      "title": "Technician business resource denied",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 403
+      },
+      "expected": "403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/search-by-page",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "9cbfa2bc-f722-4edb-86a2-ae86a5701fb4"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/search-by-page",
+      "requestId": "9cbfa2bc-f722-4edb-86a2-ae86a5701fb4",
+      "durationMs": 8
+    },
+    {
+      "id": "E2E-RBAC-05",
+      "subcase": "write-applications",
+      "title": "Technician business resource denied",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 403
+      },
+      "expected": "403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "f35414cc-e7b8-4f97-87fb-282b10c650e2"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/save-or-update",
+      "requestId": "f35414cc-e7b8-4f97-87fb-282b10c650e2",
+      "durationMs": 9
+    },
+    {
+      "id": "E2E-SEC-07",
+      "subcase": "anonymous-write",
+      "title": "Anonymous write denied",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 401
+      },
+      "expected": "401 before controller",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/save-or-update",
+            "status": 401,
+            "errorCode": "UNAUTHENTICATED",
+            "requestId": "89db4d7b-01f5-4d43-aefd-d61ee219195c"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/save-or-update",
+      "requestId": "89db4d7b-01f5-4d43-aefd-d61ee219195c",
+      "durationMs": 4
+    },
+    {
+      "id": "E2E-ACC-16",
+      "subcase": "staff-create-student",
+      "title": "Staff cannot create student",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 403
+      },
+      "expected": "403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/students/save-or-update",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "945a5cb0-a848-4ceb-9de5-f1fc087efe4a"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/students/save-or-update",
+      "requestId": "945a5cb0-a848-4ceb-9de5-f1fc087efe4a",
+      "durationMs": 13
+    },
+    {
+      "id": "E2E-ROOM-12",
+      "subcase": "golden-occupancy",
+      "title": "Golden A101 3/4 occupants",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "active": 4,
+        "occupied": 3,
+        "free": 1
+      },
+      "expected": "4 active, 3 occupied, 0 holds, 1 free",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/rooms/1",
+            "status": 200,
+            "requestId": "ac7890fc-e9a9-45f8-9702-60762595be2d"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/rooms/1",
+      "requestId": "ac7890fc-e9a9-45f8-9702-60762595be2d",
+      "durationMs": 31
+    },
+    {
+      "id": "E2E-ROOM-13",
+      "subcase": "scope-and-count",
+      "title": "Staff K1 room list count is scoped",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "total": 4
+      },
+      "expected": "Only four K1 golden rooms, no N23",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 200,
+            "requestId": "c6b69716-ab5b-4dae-a2a4-bd88046a5046"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "c6b69716-ab5b-4dae-a2a4-bd88046a5046",
+      "durationMs": 14
+    },
+    {
+      "id": "E2E-ROOM-12",
+      "subcase": "paging",
+      "title": "Room paging counts before slicing",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "pages": [
+          0,
+          1
+        ],
+        "total": 4
+      },
+      "expected": "Two pages, total 4, no overlap",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 200,
+            "requestId": "bd9047e2-9f8c-49a3-8dc0-661d7518dfb7"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 200,
+            "requestId": "d978182a-0cbc-4750-a86c-679ccc021831"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "d978182a-0cbc-4750-a86c-679ccc021831",
+      "durationMs": 30
+    },
+    {
+      "id": "E2E-ROOM-12",
+      "subcase": "filters",
+      "title": "Room filtering preserves correct total",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "total": 1
+      },
+      "expected": "One female free room in K1",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 200,
+            "requestId": "225ae648-119b-4d9a-84f2-3c75bc8beae7"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "225ae648-119b-4d9a-84f2-3c75bc8beae7",
+      "durationMs": 15
+    },
+    {
+      "id": "E2E-ROOM-07",
+      "subcase": "building",
+      "title": "Cannot invalidate occupied room",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "400 and original room unchanged",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/save-or-update",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "44a2caa5-f020-4da7-a395-5da62814e976"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/save-or-update",
+      "requestId": "44a2caa5-f020-4da7-a395-5da62814e976",
+      "durationMs": 313
+    },
+    {
+      "id": "E2E-ROOM-07",
+      "subcase": "gender",
+      "title": "Cannot invalidate occupied room",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409 and original room unchanged",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/save-or-update",
+            "status": 409,
+            "errorCode": "ROOM_OCCUPIED",
+            "requestId": "6f0318a6-ab64-4c4b-b92b-65fe68096363"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/save-or-update",
+      "requestId": "6f0318a6-ab64-4c4b-b92b-65fe68096363",
+      "durationMs": 350
+    },
+    {
+      "id": "E2E-ROOM-09",
+      "subcase": "occupied-status",
+      "title": "Cannot mark occupied room maintenance",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409; status ACTIVE",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/1/status",
+            "status": 409,
+            "errorCode": "ROOM_OCCUPIED",
+            "requestId": "76964056-c8d2-4e85-8866-5bce0cef302b"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/1/status",
+      "requestId": "76964056-c8d2-4e85-8866-5bce0cef302b",
+      "durationMs": 322
+    },
+    {
+      "id": "E2E-ROOM-11",
+      "subcase": "rooms",
+      "title": "Cannot delete room/bed with history",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409",
+      "evidence": {
+        "calls": [
+          {
+            "method": "DELETE",
+            "endpoint": "/api/rooms/1",
+            "status": 409,
+            "errorCode": "ROOM_OCCUPIED",
+            "requestId": "ca1286c8-cd1a-40db-9f10-5db93872a105"
+          }
+        ]
+      },
+      "method": "DELETE",
+      "endpoint": "/api/rooms/1",
+      "requestId": "ca1286c8-cd1a-40db-9f10-5db93872a105",
+      "durationMs": 13
+    },
+    {
+      "id": "E2E-ROOM-11",
+      "subcase": "beds",
+      "title": "Cannot delete room/bed with history",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409",
+      "evidence": {
+        "calls": [
+          {
+            "method": "DELETE",
+            "endpoint": "/api/beds/1",
+            "status": 409,
+            "errorCode": "BED_OCCUPIED",
+            "requestId": "1d3f9853-a34b-46f0-b565-1a6298c50cb1"
+          }
+        ]
+      },
+      "method": "DELETE",
+      "endpoint": "/api/beds/1",
+      "requestId": "1d3f9853-a34b-46f0-b565-1a6298c50cb1",
+      "durationMs": 16
+    },
+    {
+      "id": "E2E-ROOM-05",
+      "subcase": "type-in-use",
+      "title": "Used room type bed count is immutable",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "RESOURCE_IN_USE"
+      },
+      "expected": "409 RESOURCE_IN_USE",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/room-types/save-or-update",
+            "status": 409,
+            "errorCode": "RESOURCE_IN_USE",
+            "requestId": "3f2c005d-d8ff-45d9-a318-c5a3583ddea0"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/room-types/save-or-update",
+      "requestId": "3f2c005d-d8ff-45d9-a318-c5a3583ddea0",
+      "durationMs": 349
+    },
+    {
+      "id": "E2E-ROOM-15",
+      "subcase": "outsider-leader",
+      "title": "Room leader must stay in this room",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409 LEADER_NOT_STAYING, no leader change",
+      "evidence": {
+        "calls": [
+          {
+            "method": "PUT",
+            "endpoint": "/api/rooms/1/leader",
+            "status": 409,
+            "errorCode": "LEADER_NOT_STAYING",
+            "requestId": "d071ff5f-9942-43f6-8532-df3d4658b30a"
+          }
+        ]
+      },
+      "method": "PUT",
+      "endpoint": "/api/rooms/1/leader",
+      "requestId": "d071ff5f-9942-43f6-8532-df3d4658b30a",
+      "durationMs": 329
+    },
+    {
+      "id": "E2E-ROOM-06",
+      "subcase": "api-create",
+      "title": "Create room auto-generates four beds",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 6,
+        "bedIds": [
+          23,
+          24,
+          25,
+          26
+        ],
+        "code": "E2E-T0041bf5e"
+      },
+      "expected": "200; four beds",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/save-or-update",
+            "status": 200,
+            "requestId": "f00df920-c0fd-4aa2-8afa-7bb59d9ea2ac"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/rooms/6",
+            "status": 200,
+            "requestId": "0ddfbbb6-6184-49b8-af46-3df855f7b2a0"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/rooms/6",
+      "requestId": "0ddfbbb6-6184-49b8-af46-3df855f7b2a0",
+      "durationMs": 83
+    },
+    {
+      "id": "E2E-ROOM-06",
+      "subcase": "duplicate",
+      "title": "Duplicate room code rejected",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "ROOM_CODE_EXISTS"
+      },
+      "expected": "409; room count unchanged",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/save-or-update",
+            "status": 409,
+            "errorCode": "ROOM_CODE_EXISTS",
+            "requestId": "4f3f8e89-cc2a-4882-9643-38df1dc0482f"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/save-or-update",
+      "requestId": "4f3f8e89-cc2a-4882-9643-38df1dc0482f",
+      "durationMs": 25
+    },
+    {
+      "id": "E2E-SEC-03",
+      "subcase": "missing-update-id",
+      "title": "Missing update ID does not create",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/save-or-update",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "a2c34697-6902-466d-a84c-06e79aed084c"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/save-or-update",
+      "requestId": "a2c34697-6902-466d-a84c-06e79aed084c",
+      "durationMs": 285
+    },
+    {
+      "id": "E2E-UI-01",
+      "subcase": "api-partial-preservation",
+      "title": "Partial room edit preserves fields not supplied",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 6,
+        "preserved": true
+      },
+      "expected": "200; foreign keys, gender and floor unchanged (API portion only)",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/rooms/6",
+            "status": 200,
+            "requestId": "b4405fff-3fc5-4484-b73d-d9d33a75b0be"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/save-or-update",
+            "status": 200,
+            "requestId": "1ea5d1ad-3e3e-47bd-944d-7b3a132bcab1"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/save-or-update",
+      "requestId": "1ea5d1ad-3e3e-47bd-944d-7b3a132bcab1",
+      "durationMs": 45
+    },
+    {
+      "id": "E2E-MNT-02",
+      "subcase": "fake-magic",
+      "title": "Reject invalid upload atomically",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "rollbackDatabase": true,
+        "filesystem": "Not asserted by JDBC/API runner"
+      },
+      "expected": "400; no ticket/photo DB growth; physical filesystem cleanup requires main inspection",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/save-or-update",
+            "status": 400,
+            "errorCode": "PHOTO_INVALID",
+            "requestId": "109dd632-6490-4a67-90e0-2a5c150191e5"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/save-or-update",
+      "requestId": "109dd632-6490-4a67-90e0-2a5c150191e5",
+      "durationMs": 1357
+    },
+    {
+      "id": "E2E-MNT-02",
+      "subcase": "too-many",
+      "title": "Reject invalid upload atomically",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "rollbackDatabase": true,
+        "filesystem": "Not asserted by JDBC/API runner"
+      },
+      "expected": "400; no ticket/photo DB growth; physical filesystem cleanup requires main inspection",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/save-or-update",
+            "status": 400,
+            "errorCode": "PHOTO_INVALID",
+            "requestId": "6da679a6-24b6-47fe-a1b1-616fb9dc6262"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/save-or-update",
+      "requestId": "6da679a6-24b6-47fe-a1b1-616fb9dc6262",
+      "durationMs": 1192
+    },
+    {
+      "id": "E2E-MNT-03",
+      "subcase": "no-room",
+      "title": "Student without a room cannot create ticket",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409; no ticket added",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/save-or-update",
+            "status": 409,
+            "errorCode": "NOT_STAYING",
+            "requestId": "995c5b3f-6299-4b22-be8e-de2dced1f163"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/save-or-update",
+      "requestId": "995c5b3f-6299-4b22-be8e-de2dced1f163",
+      "durationMs": 638
+    },
+    {
+      "id": "E2E-MNT-01",
+      "subcase": "api-photo",
+      "title": "Student creates multipart ticket with PNG",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 3,
+        "photoId": 1
+      },
+      "expected": "OPEN; current room server-selected; one authorized photo",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/save-or-update",
+            "status": 200,
+            "requestId": "11917dfc-03ea-41eb-8630-14b2aa1622f4"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/save-or-update",
+      "requestId": "11917dfc-03ea-41eb-8630-14b2aa1622f4",
+      "durationMs": 71
+    },
+    {
+      "id": "E2E-MNT-04",
+      "subcase": "open-edit",
+      "title": "Owner edits OPEN ticket",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 3,
+        "preserved": true
+      },
+      "expected": "Description changes, photo IDs and location preserved",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/save-or-update",
+            "status": 200,
+            "requestId": "53ed0cbe-cc12-4474-8fb7-d019f8f22f00"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/save-or-update",
+      "requestId": "53ed0cbe-cc12-4474-8fb7-d019f8f22f00",
+      "durationMs": 30
+    },
+    {
+      "id": "E2E-MNT-04",
+      "subcase": "edit-photo-not-supported",
+      "title": "Adding a photo while editing is rejected",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "photoCount": 1
+      },
+      "expected": "400; existing photo retained",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/save-or-update",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "f0e81f63-a1fc-4150-95b2-7200e896d8d8"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/save-or-update",
+      "requestId": "f0e81f63-a1fc-4150-95b2-7200e896d8d8",
+      "durationMs": 341
+    },
+    {
+      "id": "E2E-MNT-19",
+      "subcase": "anonymous",
+      "title": "Photo access enforces token and scope",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 401
+      },
+      "expected": "401",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/maintenance-requests/3/photos/1",
+            "status": 401,
+            "errorCode": "UNAUTHENTICATED",
+            "requestId": "b14971a2-31bc-4ea7-890a-2ddf52754d61"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/maintenance-requests/3/photos/1",
+      "requestId": "b14971a2-31bc-4ea7-890a-2ddf52754d61",
+      "durationMs": 5
+    },
+    {
+      "id": "E2E-MNT-19",
+      "subcase": "other-student",
+      "title": "Photo access enforces token and scope",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/maintenance-requests/3/photos/1",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "e2658615-3110-46f5-bcd7-5644681f43a1"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/maintenance-requests/3/photos/1",
+      "requestId": "e2658615-3110-46f5-bcd7-5644681f43a1",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-MNT-19",
+      "subcase": "other-unit",
+      "title": "Photo access enforces token and scope",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/maintenance-requests/3/photos/1",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "28d9a73b-9aa1-4898-ad4b-352dee42ed4b"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/maintenance-requests/3/photos/1",
+      "requestId": "28d9a73b-9aa1-4898-ad4b-352dee42ed4b",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-MNT-06",
+      "subcase": "wrong-unit-technician",
+      "title": "Cannot assign other-unit technician",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "400; ticket OPEN",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/assign",
+            "status": 409,
+            "errorCode": "TECHNICIAN_OUT_OF_UNIT",
+            "requestId": "a7692ac3-5d75-43c5-b024-43ce2168a76e"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/3/assign",
+      "requestId": "a7692ac3-5d75-43c5-b024-43ce2168a76e",
+      "durationMs": 307
+    },
+    {
+      "id": "E2E-MNT-06",
+      "subcase": "assign",
+      "title": "Assign technician from K1",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "status": "ASSIGNED"
+      },
+      "expected": "ASSIGNED",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/assign",
+            "status": 200,
+            "requestId": "7122514e-39f8-4834-a898-9d0cea22d9c4"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/3/assign",
+      "requestId": "7122514e-39f8-4834-a898-9d0cea22d9c4",
+      "durationMs": 54
+    },
+    {
+      "id": "E2E-MNT-04",
+      "subcase": "assigned-not-editable",
+      "title": "Student cannot edit ASSIGNED ticket",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/save-or-update",
+            "status": 409,
+            "errorCode": "INVALID_STATE_TRANSITION",
+            "requestId": "5c3daebd-33e8-4eab-8013-1eb3dc163ae5"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/save-or-update",
+      "requestId": "5c3daebd-33e8-4eab-8013-1eb3dc163ae5",
+      "durationMs": 21
+    },
+    {
+      "id": "E2E-MNT-09",
+      "subcase": "skip-start",
+      "title": "Cannot skip ASSIGNED to RESOLVED",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/resolve",
+            "status": 409,
+            "errorCode": "INVALID_STATE_TRANSITION",
+            "requestId": "9252a0c1-4bf8-4122-b0d8-87610e858ddb"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/3/resolve",
+      "requestId": "9252a0c1-4bf8-4122-b0d8-87610e858ddb",
+      "durationMs": 13
+    },
+    {
+      "id": "E2E-MNT-08",
+      "subcase": "start-note-resolve",
+      "title": "Assigned technician starts, adds progress and resolves",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "status": "RESOLVED",
+        "timelineCount": 5
+      },
+      "expected": "IN_PROGRESS then RESOLVED; timeline persisted",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/start",
+            "status": 200,
+            "requestId": "3276fe13-3da0-4417-b801-d9b510a97b14"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/notes",
+            "status": 201,
+            "requestId": "fdf9bc1f-cae3-4dc8-af81-a2d5a99b6ffa"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/resolve",
+            "status": 200,
+            "requestId": "0f213ccf-c0fa-4e59-bfe2-0af899795fdd"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/3/resolve",
+      "requestId": "0f213ccf-c0fa-4e59-bfe2-0af899795fdd",
+      "durationMs": 62
+    },
+    {
+      "id": "E2E-MNT-09",
+      "subcase": "technician-cannot-close",
+      "title": "Technician cannot accept own work",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409 INVALID_STATE_TRANSITION and still RESOLVED",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/accept",
+            "status": 409,
+            "errorCode": "INVALID_STATE_TRANSITION",
+            "requestId": "fabeb0bc-1dcd-4cb2-9f75-db1d83c5ecb1"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/3/accept",
+      "requestId": "fabeb0bc-1dcd-4cb2-9f75-db1d83c5ecb1",
+      "durationMs": 313
+    },
+    {
+      "id": "E2E-MNT-10",
+      "subcase": "api-accept",
+      "title": "Requester accepts resolved work",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "status": "CLOSED"
+      },
+      "expected": "CLOSED",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/accept",
+            "status": 200,
+            "requestId": "697e81c9-e23b-4cb6-aa64-962bf922931c"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/3/accept",
+      "requestId": "697e81c9-e23b-4cb6-aa64-962bf922931c",
+      "durationMs": 20
+    },
+    {
+      "id": "E2E-MNT-16",
+      "subcase": "zero",
+      "title": "Invalid cost conclusion rolls back all deductions",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "rollback": true
+      },
+      "expected": "400; no cause/repairCost/deduction/history change",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/conclude",
+            "status": 400,
+            "errorCode": "COST_INVALID",
+            "requestId": "278f5fb2-a014-4a8c-b00d-366d2904f538"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/3/conclude",
+      "requestId": "278f5fb2-a014-4a8c-b00d-366d2904f538",
+      "durationMs": 1247
+    },
+    {
+      "id": "E2E-MNT-16",
+      "subcase": "negative",
+      "title": "Invalid cost conclusion rolls back all deductions",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "rollback": true
+      },
+      "expected": "400; no cause/repairCost/deduction/history change",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/conclude",
+            "status": 400,
+            "errorCode": "COST_INVALID",
+            "requestId": "b5981b97-e83f-4aee-876d-379c4fb072b4"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/3/conclude",
+      "requestId": "b5981b97-e83f-4aee-876d-379c4fb072b4",
+      "durationMs": 1198
+    },
+    {
+      "id": "E2E-MNT-16",
+      "subcase": "omit-student-no-reason",
+      "title": "Invalid cost conclusion rolls back all deductions",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "rollback": true
+      },
+      "expected": "400; no cause/repairCost/deduction/history change",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/conclude",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "475e7a00-cb4f-4ec7-9143-e82e0171eaec"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/3/conclude",
+      "requestId": "475e7a00-cb4f-4ec7-9143-e82e0171eaec",
+      "durationMs": 1227
+    },
+    {
+      "id": "E2E-MNT-15",
+      "subcase": "exact-split",
+      "title": "MISUSE cost split over three original occupants",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "ticketId": 3,
+        "amounts": [
+          -33333,
+          -33333,
+          -33334
+        ],
+        "due": "2026-12-02"
+      },
+      "expected": "33333 / 33333 / 33334; integer ledger sum -100000",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/maintenance-requests/3/chargeable-students",
+            "status": 200,
+            "requestId": "d2ecc95a-3752-4f61-a078-333f2fa9b28c"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/conclude",
+            "status": 200,
+            "requestId": "365cf7ad-5c3f-4165-941e-2f4e48f4da05"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/3/conclude",
+      "requestId": "365cf7ad-5c3f-4165-941e-2f4e48f4da05",
+      "durationMs": 391
+    },
+    {
+      "id": "E2E-MNT-18",
+      "subcase": "duplicate-conclude",
+      "title": "Repeated conclusion cannot deduct twice",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "count": 3,
+        "total": -100000
+      },
+      "expected": "409; three deductions, total -100000",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/3/conclude",
+            "status": 409,
+            "errorCode": "TICKET_ALREADY_CONCLUDED",
+            "requestId": "acabee5f-90ae-4b9d-b1ee-d34a279eb831"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/3/conclude",
+      "requestId": "acabee5f-90ae-4b9d-b1ee-d34a279eb831",
+      "durationMs": 281
+    },
+    {
+      "id": "E2E-REG-03",
+      "subcase": "open-only-lookup",
+      "title": "Client open=false cannot widen open-period lookup",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "openPeriodCount": 2
+      },
+      "expected": "Contains both open regular periods; excludes closed and future summer periods",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/me/registration-periods/open/search-by-page",
+            "status": 200,
+            "requestId": "3d5d1b80-fe52-4fa8-9f10-d34b6c750cfc"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/me/registration-periods/open/search-by-page",
+      "requestId": "3d5d1b80-fe52-4fa8-9f10-d34b6c750cfc",
+      "durationMs": 31
+    },
+    {
+      "id": "E2E-REG-06",
+      "subcase": "active-contract-new-period",
+      "title": "Student with ACTIVE contract cannot draft new-period registration",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409 CONTRACT_EXISTS; no next-period application",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 409,
+            "errorCode": "CONTRACT_EXISTS",
+            "requestId": "b7c4ff67-1af7-4bfa-8a02-4da4312561c2"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/save-or-update",
+      "requestId": "b7c4ff67-1af7-4bfa-8a02-4da4312561c2",
+      "durationMs": 316
+    },
+    {
+      "id": "E2E-REG-05",
+      "subcase": "api-draft",
+      "title": "Free student drafts an application",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 4,
+        "studentId": 10
+      },
+      "expected": "DRAFT owned by current student",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 200,
+            "requestId": "30c3bcd4-cde2-43a9-8839-f2f42635b318"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/save-or-update",
+      "requestId": "30c3bcd4-cde2-43a9-8839-f2f42635b318",
+      "durationMs": 51
+    },
+    {
+      "id": "E2E-REG-05",
+      "subcase": "duplicate-per-period",
+      "title": "Duplicate student/period rejected",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "count": 1
+      },
+      "expected": "409; only one application",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 409,
+            "errorCode": "APPLICATION_EXISTS",
+            "requestId": "a2b7034c-b8c0-4dc5-8678-1d9fb2ccaa16"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/save-or-update",
+      "requestId": "a2b7034c-b8c0-4dc5-8678-1d9fb2ccaa16",
+      "durationMs": 323
+    },
+    {
+      "id": "E2E-REG-13",
+      "subcase": "draft-not-approvable",
+      "title": "Cannot approve DRAFT",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "status": "DRAFT"
+      },
+      "expected": "409 and still DRAFT",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/4/approve",
+            "status": 409,
+            "errorCode": "INVALID_STATE_TRANSITION",
+            "requestId": "28253bc7-9216-46cb-9e0a-1a6437ac3afc"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/4/approve",
+      "requestId": "28253bc7-9216-46cb-9e0a-1a6437ac3afc",
+      "durationMs": 308
+    },
+    {
+      "id": "E2E-REG-07",
+      "subcase": "submit",
+      "title": "Student submits DRAFT",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "status": "SUBMITTED",
+        "timelineCount": 2
+      },
+      "expected": "SUBMITTED, timeline and immutable input",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/4/submit",
+            "status": 200,
+            "requestId": "7dc1e9d0-9164-4dc1-919e-701e5772e698"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/4/submit",
+      "requestId": "7dc1e9d0-9164-4dc1-919e-701e5772e698",
+      "durationMs": 26
+    },
+    {
+      "id": "E2E-REG-07",
+      "subcase": "submitted-not-editable",
+      "title": "Submitted application cannot be edited",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "status": "SUBMITTED"
+      },
+      "expected": "409 and note unchanged",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 409,
+            "errorCode": "INVALID_STATE_TRANSITION",
+            "requestId": "0ba2768b-559a-4384-b052-e16cff981da5"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/save-or-update",
+      "requestId": "0ba2768b-559a-4384-b052-e16cff981da5",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-REG-13",
+      "subcase": "approve",
+      "title": "Staff approves submitted application",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 4,
+        "status": "APPROVED"
+      },
+      "expected": "APPROVED; one approval history",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/4/approve",
+            "status": 200,
+            "requestId": "8994ae19-c21c-4df6-bd28-2ff390241218"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/4/approve",
+      "requestId": "8994ae19-c21c-4df6-bd28-2ff390241218",
+      "durationMs": 316
+    },
+    {
+      "id": "E2E-REG-17",
+      "subcase": "maintenance",
+      "title": "Reject maintenance bed assignment",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409; application APPROVED, no contract",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/4/assign",
+            "status": 409,
+            "errorCode": "BED_NOT_AVAILABLE",
+            "requestId": "f1154fed-8a0e-4e84-bb37-fa807b95f23b"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/4/assign",
+      "requestId": "f1154fed-8a0e-4e84-bb37-fa807b95f23b",
+      "durationMs": 629
+    },
+    {
+      "id": "E2E-REG-17",
+      "subcase": "gender",
+      "title": "Reject gender bed assignment",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409; application APPROVED, no contract",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/4/assign",
+            "status": 409,
+            "errorCode": "GENDER_MISMATCH",
+            "requestId": "342a6d7c-855b-47a6-880e-3ff693e106b2"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/4/assign",
+      "requestId": "342a6d7c-855b-47a6-880e-3ff693e106b2",
+      "durationMs": 637
+    },
+    {
+      "id": "E2E-REG-15",
+      "subcase": "assign",
+      "title": "Assign bed and snapshot HOLD pricing",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "applicationId": 4,
+        "contractId": 6,
+        "assignmentId": 4,
+        "bedId": 5
+      },
+      "expected": "ASSIGNED; PENDING contract and HOLD, snapshotted price",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/4/assign",
+            "status": 200,
+            "requestId": "a972de32-a390-485d-9048-f5ad85b8c7ce"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/4/assign",
+      "requestId": "a972de32-a390-485d-9048-f5ad85b8c7ce",
+      "durationMs": 657
+    },
+    {
+      "id": "E2E-REG-19",
+      "subcase": "duplicate-assign",
+      "title": "Duplicate assignment rejected",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "count": 1
+      },
+      "expected": "409 and one contract/assignment only",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/4/assign",
+            "status": 409,
+            "errorCode": "INVALID_STATE_TRANSITION",
+            "requestId": "075492a8-da9c-41ae-8ef6-cbee7d9295b6"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/4/assign",
+      "requestId": "075492a8-da9c-41ae-8ef6-cbee7d9295b6",
+      "durationMs": 574
+    },
+    {
+      "id": "E2E-REG-10",
+      "subcase": "cancel-with-contract",
+      "title": "Application with contract cannot be canceled via cancel",
+      "status": "FAIL",
+      "coverage": "API_ONLY",
+      "actual": "HTTP POST /api/applications/4/cancel: expected 409, received 200\n\n200 !== 409\n",
+      "expected": "409 APPLICATION_HAS_CONTRACT; allowedActions excludes CANCEL",
+      "evidence": {
+        "detail": "AssertionError [ERR_ASSERTION]: HTTP POST /api/applications/4/cancel: expected 409, received 200\n\n200 !== 409",
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/applications/4",
+            "status": 200,
+            "requestId": "22ce6cb4-d49f-43ed-89f2-39c256c6ac9b"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/4/cancel",
+            "status": 200,
+            "requestId": "b136a7a0-d4d7-4f2b-9198-60271247ec41"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/4/cancel",
+      "requestId": "b136a7a0-d4d7-4f2b-9198-60271247ec41",
+      "durationMs": 46
+    },
+    {
+      "id": "E2E-CON-02",
+      "subcase": "deposit-mismatch",
+      "title": "Underpayment leaves pending state and ledger untouched",
+      "status": "FAIL",
+      "coverage": "API_ONLY",
+      "actual": "HTTP POST /api/contracts/6/activate [CONTRACT_AUTO_CANCELLED]: expected 400, received 409\n\n409 !== 400\n",
+      "expected": "400 DEPOSIT_AMOUNT_MISMATCH; no deposit",
+      "evidence": {
+        "detail": "AssertionError [ERR_ASSERTION]: HTTP POST /api/contracts/6/activate [CONTRACT_AUTO_CANCELLED]: expected 400, received 409\n\n409 !== 400",
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/6/activate",
+            "status": 409,
+            "errorCode": "CONTRACT_AUTO_CANCELLED",
+            "requestId": "488e95a6-4b39-423c-942b-af9e65564300"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/6/activate",
+      "requestId": "488e95a6-4b39-423c-942b-af9e65564300",
+      "durationMs": 15
+    },
+    {
+      "id": "E2E-CON-04",
+      "subcase": "concurrent-activate",
+      "title": "Activate same pending contract concurrently",
+      "status": "FAIL",
+      "coverage": "API_ONLY",
+      "actual": "value: expected [200,409], received [409,409]\n+ actual - expected\n\n  [\n-   200,\n    409,\n+   409\n  ]\n",
+      "expected": "One 200, one 409; one deposit and original HOLD becomes STAY",
+      "evidence": {
+        "detail": "AssertionError [ERR_ASSERTION]: value: expected [200,409], received [409,409]\n+ actual - expected\n",
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/6/activate",
+            "status": 409,
+            "errorCode": "CONTRACT_AUTO_CANCELLED",
+            "requestId": "83a18945-fb07-4ddf-9276-74921753066d"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/6/activate",
+            "status": 409,
+            "errorCode": "CONTRACT_AUTO_CANCELLED",
+            "requestId": "c177ebdb-ff34-44f7-99e6-6bf99b3332f7"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/6/activate",
+      "requestId": "c177ebdb-ff34-44f7-99e6-6bf99b3332f7",
+      "durationMs": 13
+    },
+    {
+      "id": "E2E-CON-01",
+      "subcase": "api-active-readback",
+      "title": "Read active contract and own deposit balance",
+      "status": "BLOCKED",
+      "coverage": "API_ONLY",
+      "actual": "Dependency unavailable: activated contract",
+      "expected": "ACTIVE and same assignment/deposit in API and SQL",
+      "evidence": {
+        "detail": "Dependency or specification prerequisite not met",
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-REG-18",
+      "subcase": "single-free-bed-race",
+      "title": "Two approved students race for A101 last bed",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "winnerAppId": 7,
+        "contractId": 7,
+        "loserAppId": 6,
+        "bedId": 4
+      },
+      "expected": "One 200, one 409 BED_TAKEN; loser stays APPROVED",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 200,
+            "requestId": "008bca28-8dd7-4982-9e59-6f026f957e0c"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/6/submit",
+            "status": 200,
+            "requestId": "d4a5e067-cb36-4e9b-af62-fb32d8b51e54"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/6/approve",
+            "status": 200,
+            "requestId": "10e885bc-29b8-42ca-8c6a-f52647f2ed14"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 200,
+            "requestId": "6b422ba1-aec6-4e69-bd97-0d212a94138f"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/7/submit",
+            "status": 200,
+            "requestId": "49e33485-368e-4cd0-b096-a99b83aa0dd6"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/7/approve",
+            "status": 200,
+            "requestId": "0ccafa5e-9601-4fb0-93f8-169935db5d1c"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/7/assign",
+            "status": 200,
+            "requestId": "c9861a5d-2b28-4125-afac-ff722e956024"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/6/assign",
+            "status": 409,
+            "errorCode": "BED_TAKEN",
+            "requestId": "ecbe0ebe-8ac1-4e10-b0be-ba91ef0fd066"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/6/assign",
+      "requestId": "ecbe0ebe-8ac1-4e10-b0be-ba91ef0fd066",
+      "durationMs": 755
+    },
+    {
+      "id": "E2E-REG-20",
+      "subcase": "release-requires-reason",
+      "title": "Release hold reason is mandatory",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "400 and HOLD still open",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/7/release-hold",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "d2826f1a-4f59-4168-bf10-de6ce1277a2e"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/7/release-hold",
+      "requestId": "d2826f1a-4f59-4168-bf10-de6ce1277a2e",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-REG-20",
+      "subcase": "release-atomic",
+      "title": "Staff releases hold atomically",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "released": true
+      },
+      "expected": "APPROVED application, CANCELLED contract, closed HOLD",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/7/release-hold",
+            "status": 200,
+            "requestId": "cac95bd8-ce29-4db9-bef1-caccf52a10f6"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/7/release-hold",
+      "requestId": "cac95bd8-ce29-4db9-bef1-caccf52a10f6",
+      "durationMs": 696
+    },
+    {
+      "id": "E2E-RBAC-16",
+      "subcase": "admin-n23-approve",
+      "title": "Admin can approve N23 application",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 8
+      },
+      "expected": "APPROVED in N23",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 200,
+            "requestId": "6421162a-5c5e-4085-9bee-c88eebbf4459"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/8/submit",
+            "status": 200,
+            "requestId": "b78774d4-5553-40f7-92e9-f3a785fe5d05"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/8/approve",
+            "status": 200,
+            "requestId": "772da394-c567-4b8d-b34f-8eceb85dad98"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/8/approve",
+      "requestId": "772da394-c567-4b8d-b34f-8eceb85dad98",
+      "durationMs": 54
+    },
+    {
+      "id": "E2E-REG-16",
+      "subcase": "wrong-unit",
+      "title": "Admin still cannot assign K1 bed to N23 application",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409 BED_UNIT_MISMATCH; no assignment",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/8/assign",
+            "status": 409,
+            "errorCode": "BED_UNIT_MISMATCH",
+            "requestId": "c2da5b61-0930-40a9-a749-fc080598107c"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/8/assign",
+      "requestId": "c2da5b61-0930-40a9-a749-fc080598107c",
+      "durationMs": 307
+    },
+    {
+      "id": "E2E-REG-15",
+      "subcase": "n23-hold",
+      "title": "Admin assigns N23 bed",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 9
+      },
+      "expected": "PENDING with N23 bed",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/8/assign",
+            "status": 200,
+            "requestId": "f540bf9f-c47c-4ccc-93e3-3482c2aabcd9"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/8/assign",
+      "requestId": "f540bf9f-c47c-4ccc-93e3-3482c2aabcd9",
+      "durationMs": 30
+    },
+    {
+      "id": "E2E-MNT-05",
+      "subcase": "admin-n23-ticket",
+      "title": "Admin creates N23 room ticket",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 4
+      },
+      "expected": "OPEN",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/save-or-update",
+            "status": 200,
+            "requestId": "e10cd291-d5d1-4126-b852-9f68f408d95e"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/save-or-update",
+      "requestId": "e10cd291-d5d1-4126-b852-9f68f408d95e",
+      "durationMs": 23
+    },
+    {
+      "id": "E2E-BIL-19",
+      "subcase": "n23-manual",
+      "title": "Admin creates manual N23 utility invoice",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 1
+      },
+      "expected": "UNPAID manual invoice",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/save-or-update",
+            "status": 200,
+            "requestId": "560df4a7-81a5-45f6-9c52-a8a65ab4af79"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/invoices/save-or-update",
+      "requestId": "560df4a7-81a5-45f6-9c52-a8a65ab4af79",
+      "durationMs": 18
+    },
+    {
+      "id": "E2E-RBAC-03",
+      "subcase": "detail-rooms",
+      "title": "Staff K1 cannot read N23 detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404, not existence-revealing 403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/rooms/5",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "2316cba8-b3bc-47a4-8dea-818eea27380f"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/rooms/5",
+      "requestId": "2316cba8-b3bc-47a4-8dea-818eea27380f",
+      "durationMs": 9
+    },
+    {
+      "id": "E2E-RBAC-04",
+      "subcase": "write-rooms",
+      "title": "Staff K1 cannot update N23 resource",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/save-or-update",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "1bef1807-7915-434f-8ae0-4ea3ab0774dc"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/save-or-update",
+      "requestId": "1bef1807-7915-434f-8ae0-4ea3ab0774dc",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-RBAC-15",
+      "subcase": "cross-write-rooms",
+      "title": "Cross-unit read permission does not grant write",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/save-or-update",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "80a3bb18-2d38-4057-850e-b9871aaf844d"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/save-or-update",
+      "requestId": "80a3bb18-2d38-4057-850e-b9871aaf844d",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-ACC-17",
+      "subcase": "cross-read-rooms",
+      "title": "Cross-unit staff can read N23 detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 200
+      },
+      "expected": "200 read only",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/rooms/5",
+            "status": 200,
+            "requestId": "e8be0e91-6ee5-419a-ae64-3db34727af51"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/rooms/5",
+      "requestId": "e8be0e91-6ee5-419a-ae64-3db34727af51",
+      "durationMs": 13
+    },
+    {
+      "id": "E2E-RBAC-03",
+      "subcase": "aggregate-rooms",
+      "title": "Cross-unit filtering applies to count and rows",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "total": 5,
+        "excludedN23": true
+      },
+      "expected": "N23 fixture excluded from scoped list",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/search-by-page",
+            "status": 200,
+            "requestId": "7fc67f91-fb10-4193-90ab-ea0e48a3f7d4"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/rooms/search-by-page",
+      "requestId": "7fc67f91-fb10-4193-90ab-ea0e48a3f7d4",
+      "durationMs": 306
+    },
+    {
+      "id": "E2E-RBAC-03",
+      "subcase": "detail-applications",
+      "title": "Staff K1 cannot read N23 detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404, not existence-revealing 403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/applications/8",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "60b903de-095e-4633-946d-6873ed390763"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/applications/8",
+      "requestId": "60b903de-095e-4633-946d-6873ed390763",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-RBAC-04",
+      "subcase": "write-applications",
+      "title": "Staff K1 cannot update N23 resource",
+      "status": "FAIL",
+      "coverage": "API_ONLY",
+      "actual": "HTTP POST /api/applications/save-or-update [FORBIDDEN]: expected 404, received 403\n\n403 !== 404\n",
+      "expected": "404",
+      "evidence": {
+        "detail": "AssertionError [ERR_ASSERTION]: HTTP POST /api/applications/save-or-update [FORBIDDEN]: expected 404, received 403\n\n403 !== 404",
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "f9a2eeff-cd5e-46f3-ac6c-9096aa3489a4"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/save-or-update",
+      "requestId": "f9a2eeff-cd5e-46f3-ac6c-9096aa3489a4",
+      "durationMs": 8
+    },
+    {
+      "id": "E2E-RBAC-15",
+      "subcase": "cross-write-applications",
+      "title": "Cross-unit read permission does not grant write",
+      "status": "FAIL",
+      "coverage": "API_ONLY",
+      "actual": "HTTP POST /api/applications/save-or-update [FORBIDDEN]: expected 404, received 403\n\n403 !== 404\n",
+      "expected": "404",
+      "evidence": {
+        "detail": "AssertionError [ERR_ASSERTION]: HTTP POST /api/applications/save-or-update [FORBIDDEN]: expected 404, received 403\n\n403 !== 404",
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "1a14015f-e9ab-4586-8d37-d6b1c4eae1d9"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/save-or-update",
+      "requestId": "1a14015f-e9ab-4586-8d37-d6b1c4eae1d9",
+      "durationMs": 7
+    },
+    {
+      "id": "E2E-ACC-17",
+      "subcase": "cross-read-applications",
+      "title": "Cross-unit staff can read N23 detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 200
+      },
+      "expected": "200 read only",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/applications/8",
+            "status": 200,
+            "requestId": "2ffa414a-bc9f-436b-b95d-071615a09153"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/applications/8",
+      "requestId": "2ffa414a-bc9f-436b-b95d-071615a09153",
+      "durationMs": 13
+    },
+    {
+      "id": "E2E-RBAC-03",
+      "subcase": "aggregate-applications",
+      "title": "Cross-unit filtering applies to count and rows",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "total": 6,
+        "excludedN23": true
+      },
+      "expected": "N23 fixture excluded from scoped list",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/search-by-page",
+            "status": 200,
+            "requestId": "4427bd78-f458-4c0b-80fc-8e4f88e1d15c"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/search-by-page",
+      "requestId": "4427bd78-f458-4c0b-80fc-8e4f88e1d15c",
+      "durationMs": 316
+    },
+    {
+      "id": "E2E-RBAC-03",
+      "subcase": "detail-contracts",
+      "title": "Staff K1 cannot read N23 detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404, not existence-revealing 403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/contracts/9",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "edd436df-fb69-40f4-ae38-e1e5e5de2939"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/contracts/9",
+      "requestId": "edd436df-fb69-40f4-ae38-e1e5e5de2939",
+      "durationMs": 41
+    },
+    {
+      "id": "E2E-RBAC-04",
+      "subcase": "write-contracts",
+      "title": "Staff K1 cannot update N23 resource",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/save-or-update",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "0e782c21-2352-47ac-a3a7-1d04954ae14f"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/save-or-update",
+      "requestId": "0e782c21-2352-47ac-a3a7-1d04954ae14f",
+      "durationMs": 13
+    },
+    {
+      "id": "E2E-RBAC-15",
+      "subcase": "cross-write-contracts",
+      "title": "Cross-unit read permission does not grant write",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/save-or-update",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "ab7bb3af-6926-4c79-8209-c5327069ac52"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/save-or-update",
+      "requestId": "ab7bb3af-6926-4c79-8209-c5327069ac52",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-ACC-17",
+      "subcase": "cross-read-contracts",
+      "title": "Cross-unit staff can read N23 detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 200
+      },
+      "expected": "200 read only",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/contracts/9",
+            "status": 200,
+            "requestId": "3556dc1f-c479-416e-827f-0bc768728193"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/contracts/9",
+      "requestId": "3556dc1f-c479-416e-827f-0bc768728193",
+      "durationMs": 34
+    },
+    {
+      "id": "E2E-RBAC-03",
+      "subcase": "aggregate-contracts",
+      "title": "Cross-unit filtering applies to count and rows",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "total": 5,
+        "excludedN23": true
+      },
+      "expected": "N23 fixture excluded from scoped list",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/search-by-page",
+            "status": 200,
+            "requestId": "c14f023e-7057-4551-919e-2755ab5b49c9"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/search-by-page",
+      "requestId": "c14f023e-7057-4551-919e-2755ab5b49c9",
+      "durationMs": 294
+    },
+    {
+      "id": "E2E-RBAC-03",
+      "subcase": "detail-invoices",
+      "title": "Staff K1 cannot read N23 detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404, not existence-revealing 403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/invoices/1",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "9b53d3eb-1a48-4db6-855f-359c05b475a0"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/invoices/1",
+      "requestId": "9b53d3eb-1a48-4db6-855f-359c05b475a0",
+      "durationMs": 14
+    },
+    {
+      "id": "E2E-RBAC-04",
+      "subcase": "write-invoices",
+      "title": "Staff K1 cannot update N23 resource",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/save-or-update",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "0228ea0e-e316-4529-ba85-2a80e218625c"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/invoices/save-or-update",
+      "requestId": "0228ea0e-e316-4529-ba85-2a80e218625c",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-RBAC-15",
+      "subcase": "cross-write-invoices",
+      "title": "Cross-unit read permission does not grant write",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/save-or-update",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "bcf20e51-4ac8-41c2-9a70-030a61ed630c"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/invoices/save-or-update",
+      "requestId": "bcf20e51-4ac8-41c2-9a70-030a61ed630c",
+      "durationMs": 11
+    },
+    {
+      "id": "E2E-ACC-17",
+      "subcase": "cross-read-invoices",
+      "title": "Cross-unit staff can read N23 detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 200
+      },
+      "expected": "200 read only",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/invoices/1",
+            "status": 200,
+            "requestId": "cce468bb-a9a5-42be-a5ce-dc7e6970be27"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/invoices/1",
+      "requestId": "cce468bb-a9a5-42be-a5ce-dc7e6970be27",
+      "durationMs": 22
+    },
+    {
+      "id": "E2E-RBAC-03",
+      "subcase": "aggregate-invoices",
+      "title": "Cross-unit filtering applies to count and rows",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "total": 0,
+        "excludedN23": true
+      },
+      "expected": "N23 fixture excluded from scoped list",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/search-by-page",
+            "status": 200,
+            "requestId": "7e819b6a-ace3-410a-ad7d-ba39d31efdaf"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/invoices/search-by-page",
+      "requestId": "7e819b6a-ace3-410a-ad7d-ba39d31efdaf",
+      "durationMs": 308
+    },
+    {
+      "id": "E2E-RBAC-03",
+      "subcase": "detail-maintenance-requests",
+      "title": "Staff K1 cannot read N23 detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404, not existence-revealing 403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/maintenance-requests/4",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "72ef5d0a-3c60-458f-b438-e48d602f6ed2"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/maintenance-requests/4",
+      "requestId": "72ef5d0a-3c60-458f-b438-e48d602f6ed2",
+      "durationMs": 9
+    },
+    {
+      "id": "E2E-RBAC-04",
+      "subcase": "write-maintenance-requests",
+      "title": "Staff K1 cannot update N23 resource",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/save-or-update",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "9175264a-3e70-4e29-b0e0-315e4c064180"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/save-or-update",
+      "requestId": "9175264a-3e70-4e29-b0e0-315e4c064180",
+      "durationMs": 19
+    },
+    {
+      "id": "E2E-RBAC-15",
+      "subcase": "cross-write-maintenance-requests",
+      "title": "Cross-unit read permission does not grant write",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/save-or-update",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "b67859b2-f6b6-4b5e-806a-2aae1a0e82f8"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/save-or-update",
+      "requestId": "b67859b2-f6b6-4b5e-806a-2aae1a0e82f8",
+      "durationMs": 12
+    },
+    {
+      "id": "E2E-ACC-17",
+      "subcase": "cross-read-maintenance-requests",
+      "title": "Cross-unit staff can read N23 detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 200
+      },
+      "expected": "200 read only",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/maintenance-requests/4",
+            "status": 200,
+            "requestId": "972d67df-67e9-475e-9fc0-ca01272e8983"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/maintenance-requests/4",
+      "requestId": "972d67df-67e9-475e-9fc0-ca01272e8983",
+      "durationMs": 11
+    },
+    {
+      "id": "E2E-RBAC-03",
+      "subcase": "aggregate-maintenance-requests",
+      "title": "Cross-unit filtering applies to count and rows",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "total": 1,
+        "excludedN23": true
+      },
+      "expected": "N23 fixture excluded from scoped list",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/search-by-page",
+            "status": 200,
+            "requestId": "5670b8c0-151e-45d2-a868-4b2796971d97"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/search-by-page",
+      "requestId": "5670b8c0-151e-45d2-a868-4b2796971d97",
+      "durationMs": 284
+    },
+    {
+      "id": "E2E-CON-25",
+      "subcase": "cross-activate",
+      "title": "K1 cannot activate N23 contract",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "deposits": 0
+      },
+      "expected": "404 and no deposit",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/9/activate",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "c2900981-60b5-49aa-b33c-dcb6e6f38f82"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/9/activate",
+      "requestId": "c2900981-60b5-49aa-b33c-dcb6e6f38f82",
+      "durationMs": 319
+    },
+    {
+      "id": "E2E-CON-02",
+      "subcase": "n23-underdeposit",
+      "title": "N23 contract requires 2 million",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "400 mismatch, PENDING and empty ledger",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/9/activate",
+            "status": 400,
+            "errorCode": "DEPOSIT_AMOUNT_MISMATCH",
+            "requestId": "302f9a8f-570d-4840-acee-fdd98248494e"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/9/activate",
+      "requestId": "302f9a8f-570d-4840-acee-fdd98248494e",
+      "durationMs": 606
+    },
+    {
+      "id": "E2E-RBAC-06",
+      "subcase": "applications",
+      "title": "Student cannot read another owner detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/applications/2",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "cb056bb7-cec5-4d91-abec-f7944bc9d738"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/applications/2",
+      "requestId": "cb056bb7-cec5-4d91-abec-f7944bc9d738",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-RBAC-06",
+      "subcase": "contracts",
+      "title": "Student cannot read another owner detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/contracts/2",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "bdbe69c2-970d-4d21-a685-6f13e2781fa8"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/contracts/2",
+      "requestId": "bdbe69c2-970d-4d21-a685-6f13e2781fa8",
+      "durationMs": 10
+    },
+    {
+      "id": "E2E-RBAC-06",
+      "subcase": "maintenance-requests",
+      "title": "Student cannot read another owner detail",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 404
+      },
+      "expected": "404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/maintenance-requests/4",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "c9cc0c88-4264-4f16-b2b9-51b0473dfcf6"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/maintenance-requests/4",
+      "requestId": "c9cc0c88-4264-4f16-b2b9-51b0473dfcf6",
+      "durationMs": 8
+    },
+    {
+      "id": "E2E-RBAC-12",
+      "subcase": "api-noop",
+      "title": "No-op role matrix save changes neither version nor audit",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "role": "STAFF",
+        "roleLabel": "Cán bộ quản lý",
+        "version": 1,
+        "readOnly": false,
+        "screens": [
+          {
+            "code": "USER",
+            "label": "Tài khoản nhân sự",
+            "group": "Tài khoản và hệ thống",
+            "privileges": [
+              {
+                "code": "USER_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "USER_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "USER_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "USER_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "USER_LOCK",
+                "action": "LOCK",
+                "label": "Khóa tài khoản",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "USER_UNLOCK",
+                "action": "UNLOCK",
+                "label": "Mở khóa tài khoản",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "USER_RESET_PASSWORD",
+                "action": "RESET_PASSWORD",
+                "label": "Đặt lại mật khẩu",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "USER_CROSS_UNIT_ACCESS",
+                "action": "CROSS_UNIT_ACCESS",
+                "label": "Cấp quyền tổng hợp",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "STUDENT",
+            "label": "Sinh viên",
+            "group": "Tài khoản và hệ thống",
+            "privileges": [
+              {
+                "code": "STUDENT_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "STUDENT_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "STUDENT_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "STUDENT_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "STUDENT_RESET_PASSWORD",
+                "action": "RESET_PASSWORD",
+                "label": "Đặt lại mật khẩu",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "ROLE_PERMISSION",
+            "label": "Phân quyền theo vai trò",
+            "group": "Tài khoản và hệ thống",
+            "privileges": [
+              {
+                "code": "ROLE_PERMISSION_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "ROLE_PERMISSION_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "CONFIG",
+            "label": "Cấu hình hệ thống",
+            "group": "Tài khoản và hệ thống",
+            "privileges": [
+              {
+                "code": "CONFIG_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "CONFIG_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "AUDIT",
+            "label": "Nhật ký thao tác",
+            "group": "Tài khoản và hệ thống",
+            "privileges": [
+              {
+                "code": "AUDIT_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "DASHBOARD",
+            "label": "Tổng quan",
+            "group": "Tài khoản và hệ thống",
+            "privileges": [
+              {
+                "code": "DASHBOARD_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "PROFILE",
+            "label": "Hồ sơ cá nhân",
+            "group": "Cá nhân",
+            "privileges": [
+              {
+                "code": "PROFILE_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": true
+              },
+              {
+                "code": "PROFILE_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "MANAGEMENT_UNIT",
+            "label": "Đơn vị quản lý",
+            "group": "Danh mục",
+            "privileges": [
+              {
+                "code": "MANAGEMENT_UNIT_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "MANAGEMENT_UNIT_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "MANAGEMENT_UNIT_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "MANAGEMENT_UNIT_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "CATALOG",
+            "label": "Danh mục dùng chung",
+            "group": "Danh mục",
+            "privileges": [
+              {
+                "code": "CATALOG_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "CATALOG_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": false,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "CATALOG_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": false,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "CATALOG_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": false,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "BUILDING",
+            "label": "Tòa nhà",
+            "group": "Danh mục",
+            "privileges": [
+              {
+                "code": "BUILDING_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "BUILDING_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "BUILDING_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "BUILDING_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "PRIORITY_CATEGORY",
+            "label": "Diện ưu tiên",
+            "group": "Danh mục",
+            "privileges": [
+              {
+                "code": "PRIORITY_CATEGORY_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "PRIORITY_CATEGORY_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "PRIORITY_CATEGORY_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "PRIORITY_CATEGORY_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "ROOM_TYPE",
+            "label": "Loại phòng",
+            "group": "Danh mục",
+            "privileges": [
+              {
+                "code": "ROOM_TYPE_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "ROOM_TYPE_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "ROOM_TYPE_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "ROOM_TYPE_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "SEMESTER",
+            "label": "Học kỳ",
+            "group": "Danh mục",
+            "privileges": [
+              {
+                "code": "SEMESTER_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "SEMESTER_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "SEMESTER_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "SEMESTER_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "ROOM",
+            "label": "Phòng",
+            "group": "Phòng và lưu trú",
+            "privileges": [
+              {
+                "code": "ROOM_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "ROOM_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "ROOM_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "ROOM_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "BED",
+            "label": "Giường",
+            "group": "Phòng và lưu trú",
+            "privileges": [
+              {
+                "code": "BED_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "BED_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "BED_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "BED_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "CONTRACT",
+            "label": "Hợp đồng",
+            "group": "Phòng và lưu trú",
+            "privileges": [
+              {
+                "code": "CONTRACT_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "CONTRACT_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "CONTRACT_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "CONTRACT_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "CONTRACT_EXTENSION",
+            "label": "Gia hạn hợp đồng",
+            "group": "Phòng và lưu trú",
+            "privileges": [
+              {
+                "code": "CONTRACT_EXTENSION_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "CONTRACT_EXTENSION_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "CONTRACT_EXTENSION_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "CONTRACT_EXTENSION_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "ROOM_TRANSFER",
+            "label": "Chuyển phòng",
+            "group": "Phòng và lưu trú",
+            "privileges": [
+              {
+                "code": "ROOM_TRANSFER_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "ROOM_TRANSFER_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "ROOM_TRANSFER_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "ROOM_TRANSFER_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "ROOM_TRANSFER_APPROVE",
+                "action": "APPROVE",
+                "label": "Duyệt / từ chối",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "MOVE_OUT",
+            "label": "Trả phòng",
+            "group": "Phòng và lưu trú",
+            "privileges": [
+              {
+                "code": "MOVE_OUT_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "MOVE_OUT_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "MOVE_OUT_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "MOVE_OUT_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "STORAGE",
+            "label": "Gửi đồ",
+            "group": "Phòng và lưu trú",
+            "privileges": [
+              {
+                "code": "STORAGE_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "STORAGE_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "STORAGE_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "STORAGE_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "REGISTRATION_PERIOD",
+            "label": "Đợt đăng ký",
+            "group": "Đăng ký",
+            "privileges": [
+              {
+                "code": "REGISTRATION_PERIOD_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "REGISTRATION_PERIOD_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "REGISTRATION_PERIOD_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "REGISTRATION_PERIOD_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "ROOM_APPLICATION",
+            "label": "Đơn đăng ký phòng",
+            "group": "Đăng ký",
+            "privileges": [
+              {
+                "code": "ROOM_APPLICATION_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "ROOM_APPLICATION_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "ROOM_APPLICATION_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "ROOM_APPLICATION_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "SUMMER_REGISTRATION",
+            "label": "Đăng ký hè",
+            "group": "Đăng ký",
+            "privileges": [
+              {
+                "code": "SUMMER_REGISTRATION_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "SUMMER_REGISTRATION_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              },
+              {
+                "code": "SUMMER_REGISTRATION_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "SUMMER_REGISTRATION_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": false,
+                "defaultGranted": false,
+                "assignable": false,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "UTILITY_RATE",
+            "label": "Đơn giá điện nước",
+            "group": "Tài chính",
+            "privileges": [
+              {
+                "code": "UTILITY_RATE_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "UTILITY_RATE_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "UTILITY_RATE_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "UTILITY_RATE_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "UTILITY_READING",
+            "label": "Chỉ số điện nước",
+            "group": "Tài chính",
+            "privileges": [
+              {
+                "code": "UTILITY_READING_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "UTILITY_READING_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "UTILITY_READING_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "UTILITY_READING_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "INVOICE",
+            "label": "Hóa đơn",
+            "group": "Tài chính",
+            "privileges": [
+              {
+                "code": "INVOICE_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "INVOICE_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "INVOICE_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "INVOICE_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "DEPOSIT",
+            "label": "Tiền cọc",
+            "group": "Tài chính",
+            "privileges": [
+              {
+                "code": "DEPOSIT_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "DEPOSIT_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "DEPOSIT_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "DEPOSIT_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "MAINTENANCE",
+            "label": "Bảo trì",
+            "group": "Bảo trì và thông báo",
+            "privileges": [
+              {
+                "code": "MAINTENANCE_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "MAINTENANCE_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "MAINTENANCE_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "MAINTENANCE_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          },
+          {
+            "code": "NOTIFICATION",
+            "label": "Thông báo",
+            "group": "Bảo trì và thông báo",
+            "privileges": [
+              {
+                "code": "NOTIFICATION_READ",
+                "action": "READ",
+                "label": "Tìm kiếm / xem",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "NOTIFICATION_CREATE",
+                "action": "CREATE",
+                "label": "Thêm",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "NOTIFICATION_UPDATE",
+                "action": "UPDATE",
+                "label": "Sửa / xử lý",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              },
+              {
+                "code": "NOTIFICATION_DELETE",
+                "action": "DELETE",
+                "label": "Xóa",
+                "granted": true,
+                "defaultGranted": true,
+                "assignable": true,
+                "required": false
+              }
+            ]
+          }
+        ]
+      },
+      "expected": "Same version and audit count",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/admin/role-permissions/STAFF",
+            "status": 200,
+            "requestId": "d45b2c78-5536-46ca-9adb-251d0a853480"
+          },
+          {
+            "method": "PUT",
+            "endpoint": "/api/admin/role-permissions/STAFF",
+            "status": 200,
+            "requestId": "c245f339-2b5a-4fad-8b85-0ef801fa031b"
+          }
+        ]
+      },
+      "method": "PUT",
+      "endpoint": "/api/admin/role-permissions/STAFF",
+      "requestId": "c245f339-2b5a-4fad-8b85-0ef801fa031b",
+      "durationMs": 626
+    },
+    {
+      "id": "E2E-RBAC-09",
+      "subcase": "admin-immutable",
+      "title": "ADMIN role matrix is immutable",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "readOnly": true
+      },
+      "expected": "403 ADMIN_PERMISSIONS_IMMUTABLE",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/admin/role-permissions/ADMIN",
+            "status": 200,
+            "requestId": "f2b7bf5e-c106-44d0-8bab-2c544dcfa0fd"
+          },
+          {
+            "method": "PUT",
+            "endpoint": "/api/admin/role-permissions/ADMIN",
+            "status": 403,
+            "errorCode": "ADMIN_PERMISSIONS_IMMUTABLE",
+            "requestId": "024efe1e-cd68-47a3-ad6d-edf199847932"
+          }
+        ]
+      },
+      "method": "PUT",
+      "endpoint": "/api/admin/role-permissions/ADMIN",
+      "requestId": "024efe1e-cd68-47a3-ad6d-edf199847932",
+      "durationMs": 16
+    },
+    {
+      "id": "E2E-RBAC-14",
+      "subcase": "staff-denied",
+      "title": "Staff cannot change role matrix",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 403
+      },
+      "expected": "403",
+      "evidence": {
+        "calls": [
+          {
+            "method": "PUT",
+            "endpoint": "/api/admin/role-permissions/STAFF",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "a1d63401-ee7b-4e7b-ad77-37fb46484438"
+          }
+        ]
+      },
+      "method": "PUT",
+      "endpoint": "/api/admin/role-permissions/STAFF",
+      "requestId": "a1d63401-ee7b-4e7b-ad77-37fb46484438",
+      "durationMs": 5
+    },
+    {
+      "id": "E2E-RBAC-10",
+      "subcase": "profile-read-required",
+      "title": "Cannot revoke required PROFILE_READ",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorCode": "VALIDATION_FAILED"
+      },
+      "expected": "400 and original matrix intact",
+      "evidence": {
+        "calls": [
+          {
+            "method": "PUT",
+            "endpoint": "/api/admin/role-permissions/STAFF",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "d4ce7503-ef4d-4452-8011-ea0a32503dcf"
+          }
+        ]
+      },
+      "method": "PUT",
+      "endpoint": "/api/admin/role-permissions/STAFF",
+      "requestId": "d4ce7503-ef4d-4452-8011-ea0a32503dcf",
+      "durationMs": 7
+    },
+    {
+      "id": "E2E-RBAC-07",
+      "subcase": "live-revoke-and-restore",
+      "title": "Revoke ROOM_UPDATE affects existing staff token immediately",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "revokedImmediately": true,
+        "staleWriteRejected": true
+      },
+      "expected": "403 on next write, read still works; restore in finally",
+      "evidence": {
+        "calls": [
+          {
+            "method": "PUT",
+            "endpoint": "/api/admin/role-permissions/STAFF",
+            "status": 200,
+            "requestId": "a7421c32-afd4-44bc-8dad-419c85eb403c"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/save-or-update",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "5c20882b-c2be-48c3-9db5-5dcff0d834bc"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/rooms/2",
+            "status": 200,
+            "requestId": "f9302a12-2f90-4338-9e17-90e92f46971d"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/auth/me",
+            "status": 200,
+            "requestId": "0723e9d5-52ed-462c-929f-e275777269d2"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/rooms/save-or-update",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "34ac6f96-ae81-484d-b308-88b902bc8e3d"
+          },
+          {
+            "method": "PUT",
+            "endpoint": "/api/admin/role-permissions/STAFF",
+            "status": 409,
+            "errorCode": "PERMISSION_MATRIX_STALE",
+            "requestId": "a009229b-3a24-4812-8e0f-da945588fbbf"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/admin/role-permissions/STAFF",
+            "status": 200,
+            "requestId": "346a1ba7-ca91-46e3-88c4-1faa12452369"
+          },
+          {
+            "method": "PUT",
+            "endpoint": "/api/admin/role-permissions/STAFF",
+            "status": 200,
+            "requestId": "5b811c8f-2062-40d5-838c-37ead20c233d"
+          }
+        ]
+      },
+      "method": "PUT",
+      "endpoint": "/api/admin/role-permissions/STAFF",
+      "requestId": "5b811c8f-2062-40d5-838c-37ead20c233d",
+      "durationMs": 82
+    },
+    {
+      "id": "E2E-BIL-03",
+      "subcase": "end-before-start",
+      "title": "End reading below start is rejected",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409 READING_INVALID; no reading inserted",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/utility-readings/save-or-update",
+            "status": 409,
+            "errorCode": "READING_INVALID",
+            "requestId": "2bc64df6-c611-4941-b7e1-1cd49b82f3a3"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/utility-readings/save-or-update",
+      "requestId": "2bc64df6-c611-4941-b7e1-1cd49b82f3a3",
+      "durationMs": 287
+    },
+    {
+      "id": "E2E-BIL-04",
+      "subcase": "first-month",
+      "title": "First-month readings accept explicit starting values",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "electricId": 1,
+        "waterId": 2
+      },
+      "expected": "Electric consumption 30, water 10",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/utility-readings/save-or-update",
+            "status": 200,
+            "requestId": "5c25486b-742e-46c6-a29d-f67842323097"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/utility-readings/save-or-update",
+            "status": 200,
+            "requestId": "d6dfc7f7-d5d3-41e1-89b5-c037a1ad1eff"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/utility-readings/save-or-update",
+      "requestId": "d6dfc7f7-d5d3-41e1-89b5-c037a1ad1eff",
+      "durationMs": 315
+    },
+    {
+      "id": "E2E-BIL-05",
+      "subcase": "duplicate-reading",
+      "title": "One reading per room/type/month",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "count": 1
+      },
+      "expected": "409; only one electric reading",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/utility-readings/save-or-update",
+            "status": 409,
+            "errorCode": "READING_INVALID",
+            "requestId": "3262f2c0-c14f-4990-8ff9-07f089152aeb"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/utility-readings/save-or-update",
+      "requestId": "3262f2c0-c14f-4990-8ff9-07f089152aeb",
+      "durationMs": 290
+    },
+    {
+      "id": "E2E-BIL-08",
+      "subcase": "issue-and-snapshot",
+      "title": "Issue a room utility invoice from both readings",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 2,
+        "total": 240000,
+        "batch": {
+          "totalCreated": 1,
+          "totalSkipped": 0,
+          "totalAmount": 240000
+        }
+      },
+      "expected": "One invoice, total 240000; per-room rate snapshots and configured due date",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/issue-utility",
+            "status": 200,
+            "requestId": "0545705b-9a49-46cd-902e-7834b762ff81"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/invoices/2",
+            "status": 200,
+            "requestId": "aa8beae4-8ca6-4491-8b3e-47cfcf64b371"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/invoices/2",
+      "requestId": "aa8beae4-8ca6-4491-8b3e-47cfcf64b371",
+      "durationMs": 615
+    },
+    {
+      "id": "E2E-BIL-11",
+      "subcase": "no-duplicate-utility",
+      "title": "Reissue utility batch does not duplicate invoice",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "totalCreated": 0,
+        "totalSkipped": 1,
+        "totalAmount": 0
+      },
+      "expected": "Zero newly created, unchanged original invoice",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/issue-utility",
+            "status": 200,
+            "requestId": "8862a56a-4c04-4ca7-8e3f-c139a75e95d3"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/invoices/issue-utility",
+      "requestId": "8862a56a-4c04-4ca7-8e3f-c139a75e95d3",
+      "durationMs": 278
+    },
+    {
+      "id": "E2E-BIL-06",
+      "subcase": "locked-after-issue",
+      "title": "Issued reading cannot be edited",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409 READING_LOCKED and end reading 150",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/utility-readings/save-or-update",
+            "status": 409,
+            "errorCode": "READING_LOCKED",
+            "requestId": "51b3eae0-73ae-48d3-8c7f-c82591b5e53f"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/utility-readings/save-or-update",
+      "requestId": "51b3eae0-73ae-48d3-8c7f-c82591b5e53f",
+      "durationMs": 316
+    },
+    {
+      "id": "E2E-BIL-09",
+      "subcase": "member-versus-outsider",
+      "title": "Utility invoice readable by members only",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "member": true,
+        "outsider": false
+      },
+      "expected": "A101 student 200, A102 free student 404",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/invoices/2",
+            "status": 200,
+            "requestId": "ba4a7e12-0211-44d1-aab5-d25e24b98081"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/invoices/2",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "0f9fb921-08b8-4503-a69a-cbf8e49bb7a8"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/invoices/2",
+      "requestId": "0f9fb921-08b8-4503-a69a-cbf8e49bb7a8",
+      "durationMs": 21
+    },
+    {
+      "id": "E2E-BIL-15",
+      "subcase": "payment",
+      "title": "Confirm utility payment",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "status": "PAID"
+      },
+      "expected": "PAID, one payment history, actor persisted",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/2/confirm-payment",
+            "status": 200,
+            "requestId": "d638efaf-8ffc-4b9d-b4bf-d7ada8945ae6"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/invoices/2/confirm-payment",
+      "requestId": "d638efaf-8ffc-4b9d-b4bf-d7ada8945ae6",
+      "durationMs": 315
+    },
+    {
+      "id": "E2E-BIL-16",
+      "subcase": "edit",
+      "title": "PAID invoice is immutable",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409; total unchanged",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/save-or-update",
+            "status": 409,
+            "errorCode": "RESOURCE_IN_USE",
+            "requestId": "c2c41f45-4a7f-41d6-ba0b-d008f03eddda"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/invoices/save-or-update",
+      "requestId": "c2c41f45-4a7f-41d6-ba0b-d008f03eddda",
+      "durationMs": 308
+    },
+    {
+      "id": "E2E-BIL-16",
+      "subcase": "delete",
+      "title": "PAID invoice is immutable",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409; total unchanged",
+      "evidence": {
+        "calls": [
+          {
+            "method": "DELETE",
+            "endpoint": "/api/invoices/2",
+            "status": 409,
+            "errorCode": "RESOURCE_IN_USE",
+            "requestId": "96352b30-da0b-410d-ac94-9ed0b8074f85"
+          }
+        ]
+      },
+      "method": "DELETE",
+      "endpoint": "/api/invoices/2",
+      "requestId": "96352b30-da0b-410d-ac94-9ed0b8074f85",
+      "durationMs": 297
+    },
+    {
+      "id": "E2E-BIL-16",
+      "subcase": "repay",
+      "title": "PAID invoice is immutable",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409; total unchanged",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/2/confirm-payment",
+            "status": 409,
+            "errorCode": "INVOICE_ALREADY_PAID",
+            "requestId": "a7c78989-e9c6-4c17-a597-8ce792d534e6"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/invoices/2/confirm-payment",
+      "requestId": "a7c78989-e9c6-4c17-a597-8ce792d534e6",
+      "durationMs": 321
+    },
+    {
+      "id": "E2E-BIL-12",
+      "subcase": "current-semester-fees",
+      "title": "Issue full-semester room fees from live assignment snapshot",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "batch": {
+          "totalCreated": 3,
+          "totalSkipped": 0,
+          "totalAmount": 9000000
+        },
+        "ids": [
+          3,
+          4,
+          5
+        ]
+      },
+      "expected": "One invoice per staying student; exact assignment price",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/issue-room-fee",
+            "status": 200,
+            "requestId": "a22ac213-8c87-436d-887d-14bff710783d"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/invoices/issue-room-fee",
+      "requestId": "a22ac213-8c87-436d-887d-14bff710783d",
+      "durationMs": 290
+    },
+    {
+      "id": "E2E-BIL-14",
+      "subcase": "room-fee-reissue",
+      "title": "Room fee batch skips duplicates",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "totalCreated": 0,
+        "totalSkipped": 3,
+        "totalAmount": 0
+      },
+      "expected": "No new invoices",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/invoices/issue-room-fee",
+            "status": 200,
+            "requestId": "8bb8c7a5-e931-4605-a58c-2cdf7e38086c"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/invoices/issue-room-fee",
+      "requestId": "8bb8c7a5-e931-4605-a58c-2cdf7e38086c",
+      "durationMs": 14
+    },
+    {
+      "id": "E2E-BIL-21",
+      "subcase": "ledger-balance",
+      "title": "Deposit balance equals signed ledger sum",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "balance": 966667,
+        "topupNeeded": 33333
+      },
+      "expected": "Deposit minus assigned damage share",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/contracts/1/deposit-balance",
+            "status": 200,
+            "requestId": "fb8326af-0be3-4ad4-b980-a3fcd3678594"
+          }
+        ]
+      },
+      "method": "GET",
+      "endpoint": "/api/contracts/1/deposit-balance",
+      "requestId": "fb8326af-0be3-4ad4-b980-a3fcd3678594",
+      "durationMs": 326
+    },
+    {
+      "id": "E2E-BIL-22",
+      "subcase": "topup-once",
+      "title": "Staff confirms exact outstanding top-up",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "balance": 1000000,
+        "topups": 1
+      },
+      "expected": "Balance restored; duplicate rejected",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/1/deposit-topup",
+            "status": 200,
+            "requestId": "ea8eb3dd-be7a-4685-820d-9c7a5b62c370"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/1/deposit-topup",
+            "status": 409,
+            "errorCode": "NO_TOPUP_REQUIRED",
+            "requestId": "3336a4f4-d96e-425f-a305-160761c842fb"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/1/deposit-topup",
+      "requestId": "3336a4f4-d96e-425f-a305-160761c842fb",
+      "durationMs": 595
+    },
+    {
+      "id": "E2E-NOT-01",
+      "subcase": "staff-cannot-global",
+      "title": "Ordinary staff cannot publish ALL notification",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "http": 403
+      },
+      "expected": "403; no matching notification added",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/notifications/save-or-update",
+            "status": 403,
+            "errorCode": "FORBIDDEN",
+            "requestId": "35146b39-d8cd-41aa-b94e-7fb30ae0d5f9"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/notifications/save-or-update",
+      "requestId": "35146b39-d8cd-41aa-b94e-7fb30ae0d5f9",
+      "durationMs": 12
+    },
+    {
+      "id": "E2E-NOT-03",
+      "subcase": "room-recipients",
+      "title": "Room-scoped notification reaches only A101 residents",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 19,
+        "title": "E2E-QA room 20261124170041bf5e"
+      },
+      "expected": "Student sees one; free student sees none",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/notifications/save-or-update",
+            "status": 200,
+            "requestId": "6432591f-e7f0-4415-88ac-95da792b33a6"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/notifications/search-by-page",
+            "status": 200,
+            "requestId": "89f0d09a-aafe-497f-b2aa-9283bffb4160"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/notifications/search-by-page",
+            "status": 200,
+            "requestId": "45e20d2a-4de5-4bcd-a5c1-969cce450c0b"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/notifications/search-by-page",
+      "requestId": "45e20d2a-4de5-4bcd-a5c1-969cce450c0b",
+      "durationMs": 336
+    },
+    {
+      "id": "E2E-NOT-04",
+      "subcase": "read-counter",
+      "title": "Marking own unread notification is per-user and idempotent",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "before": 6,
+        "after": 5,
+        "rows": 1
+      },
+      "expected": "Unread count falls once, one notification_read row",
+      "evidence": {
+        "calls": [
+          {
+            "method": "GET",
+            "endpoint": "/api/notifications/unread-count",
+            "status": 200,
+            "requestId": "61d2af31-e92f-49e0-aef7-80e85e576fb1"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/notifications/19/read",
+            "status": 204,
+            "requestId": "3a856f03-68da-4b22-b4f3-0465050ddc5f"
+          },
+          {
+            "method": "GET",
+            "endpoint": "/api/notifications/unread-count",
+            "status": 200,
+            "requestId": "dfae7772-6311-4f93-88bc-8295719ae4b3"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/notifications/19/read",
+            "status": 204,
+            "requestId": "6341cf88-9f18-4a17-923a-3210984073cf"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/notifications/19/read",
+            "status": 404,
+            "errorCode": "NOT_FOUND",
+            "requestId": "cf29186a-5296-4a85-aaee-f0613b22a45e"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/notifications/19/read",
+      "requestId": "cf29186a-5296-4a85-aaee-f0613b22a45e",
+      "durationMs": 313
+    },
+    {
+      "id": "E2E-NOT-06",
+      "subcase": "manual-content-only",
+      "title": "Manual notification edit preserves room and recipient scope",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "preserved": true
+      },
+      "expected": "Edited body; room/scope unchanged",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/notifications/save-or-update",
+            "status": 200,
+            "requestId": "76cd106b-d806-4946-8394-c3b38c177e90"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/notifications/save-or-update",
+      "requestId": "76cd106b-d806-4946-8394-c3b38c177e90",
+      "durationMs": 323
+    },
+    {
+      "id": "E2E-SETUP",
+      "subcase": "CON",
+      "title": "CON suite prerequisite",
+      "status": "BLOCKED",
+      "coverage": "API_ONLY",
+      "actual": "Dependency unavailable: new active free-student contract",
+      "expected": "Suite can initialize",
+      "evidence": {
+        "detail": "Dependency or specification prerequisite not met",
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-SUM-02",
+      "subcase": "closed-period",
+      "title": "Summer choice rejected before summer period opens",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "notCreated": true
+      },
+      "expected": "409; no choice written",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/summer-choices/save-or-update",
+            "status": 409,
+            "errorCode": "PERIOD_NOT_OPEN",
+            "requestId": "147a0135-a245-42fd-a9df-3a892b6f753c"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/summer-choices/save-or-update",
+      "requestId": "147a0135-a245-42fd-a9df-3a892b6f753c",
+      "durationMs": 16
+    },
+    {
+      "id": "E2E-SUM-01",
+      "subcase": "api-open-period",
+      "title": "Staff creates open summer period for K1",
+      "status": "FAIL",
+      "coverage": "API_ONLY",
+      "actual": "HTTP POST /api/registration-periods/save-or-update [VALIDATION_FAILED]: expected 200, received 400\n\n400 !== 200\n",
+      "expected": "Period is discoverable in open-only lookup",
+      "evidence": {
+        "detail": "AssertionError [ERR_ASSERTION]: HTTP POST /api/registration-periods/save-or-update [VALIDATION_FAILED]: expected 200, received 400\n\n400 !== 200",
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/registration-periods/save-or-update",
+            "status": 400,
+            "errorCode": "VALIDATION_FAILED",
+            "requestId": "e164efc3-1c5f-4b5f-8ed9-295444d01548"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/registration-periods/save-or-update",
+      "requestId": "e164efc3-1c5f-4b5f-8ed9-295444d01548",
+      "durationMs": 26
+    },
+    {
+      "id": "E2E-SUM-02",
+      "subcase": "student-stay",
+      "title": "Student saves STAY summer choice",
+      "status": "BLOCKED",
+      "coverage": "API_ONLY",
+      "actual": "Dependency unavailable: summer period",
+      "expected": "PENDING owned by current active contract",
+      "evidence": {
+        "detail": "Dependency or specification prerequisite not met",
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-SUM-03",
+      "subcase": "withdraw-and-resubmit",
+      "title": "Withdraw and resubmit summer choice keeps original ID",
+      "status": "BLOCKED",
+      "coverage": "API_ONLY",
+      "actual": "Dependency unavailable: summer choice",
+      "expected": "CANCELLED retained; same ID returns to PENDING",
+      "evidence": {
+        "detail": "Dependency or specification prerequisite not met",
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-SUM-04",
+      "subcase": "staff-approve-stay",
+      "title": "Staff approves STAY summer extension",
+      "status": "BLOCKED",
+      "coverage": "API_ONLY",
+      "actual": "Dependency unavailable: summer choice",
+      "expected": "APPROVED, contract end summer end, one SUMMER_STAY extension",
+      "evidence": {
+        "detail": "Dependency or specification prerequisite not met",
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-SUM-06",
+      "subcase": "temp-leave-choice",
+      "title": "Save and approve TEMP_LEAVE choice",
+      "status": "BLOCKED",
+      "coverage": "API_ONLY",
+      "actual": "Dependency unavailable: summer period",
+      "expected": "APPROVED",
+      "evidence": {
+        "detail": "Dependency or specification prerequisite not met",
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-SUM-07",
+      "subcase": "not-extended",
+      "title": "Storage requires contract extended beyond summer",
+      "status": "BLOCKED",
+      "coverage": "API_ONLY",
+      "actual": "Dependency unavailable: TEMP_LEAVE choice",
+      "expected": "409, stay remains open",
+      "evidence": {
+        "detail": "Dependency or specification prerequisite not met",
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-SUM-06",
+      "subcase": "storage-create",
+      "title": "Extended TEMP_LEAVE frees bed but preserves contract and deposit",
+      "status": "BLOCKED",
+      "coverage": "API_ONLY",
+      "actual": "Dependency unavailable: TEMP_LEAVE choice",
+      "expected": "ACTIVE, zero open stays, unchanged ledger, one storage record",
+      "evidence": {
+        "detail": "Dependency or specification prerequisite not met",
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-SUM-08",
+      "subcase": "storage-return",
+      "title": "Return stored packages and assign previous free bed without new application",
+      "status": "BLOCKED",
+      "coverage": "API_ONLY",
+      "actual": "Dependency unavailable: storage record",
+      "expected": "One new STAY, returnedAt persisted, no new application",
+      "evidence": {
+        "detail": "Dependency or specification prerequisite not met",
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-BIL-13",
+      "subcase": "summer-fee-not-current",
+      "title": "Summer invoice timing contract needs clarification",
+      "status": "BLOCKED",
+      "coverage": "API_ONLY",
+      "actual": "NEEDS_SPEC: fixture summer is a future semester; issue-room-fee requires CURRENT_DATE within selected semester. Summer fee inclusion/exclusion needs a dedicated time-controlled environment.",
+      "expected": "NEEDS_SPEC: issuing future summer period rejected by current-semester guard; do not claim fee inclusion coverage",
+      "evidence": {
+        "detail": "Dependency or specification prerequisite not met",
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 0
+    },
+    {
+      "id": "E2E-JOB-01",
+      "subcase": "prepare-expired-hold",
+      "title": "Prepare scoped overdue HOLD via normal registration workflow",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 10,
+        "applicationId": 9
+      },
+      "expected": "PENDING fixture, only its E2E deadline backdated",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 200,
+            "requestId": "cdef07ce-2a34-4d3f-9b3b-96d563707f8f"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/9/submit",
+            "status": 200,
+            "requestId": "f3f0cd9a-54e7-4b7b-9f81-4e9d1f6ff472"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/9/approve",
+            "status": 200,
+            "requestId": "f6ee8b15-2958-4f19-8e6d-2147044ad33d"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/9/assign",
+            "status": 200,
+            "requestId": "e7d52c84-fb50-4bb5-8890-47c9e27dce68"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/9/assign",
+      "requestId": "e7d52c84-fb50-4bb5-8890-47c9e27dce68",
+      "durationMs": 352
+    },
+    {
+      "id": "E2E-JOB-04",
+      "subcase": "prepare-resolved",
+      "title": "Prepare one overdue resolved ticket and one young control",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "old": 5,
+        "young": 6
+      },
+      "expected": "Only E2E description-scoped resolved_at timestamp changed",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/save-or-update",
+            "status": 200,
+            "requestId": "b3fb38f6-d56c-4f03-a865-a70bb7fad083"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/5/assign",
+            "status": 200,
+            "requestId": "9078415c-02f7-4553-adb5-4c7e1ad5509f"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/5/start",
+            "status": 200,
+            "requestId": "dd0cccd0-218e-4ca7-9556-c0cb72c4254d"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/5/resolve",
+            "status": 200,
+            "requestId": "1cee158d-2980-4844-94fe-d06e60f158e0"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/save-or-update",
+            "status": 200,
+            "requestId": "5840e8f0-d6d2-4c3e-a70b-aeb263270366"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/6/assign",
+            "status": 200,
+            "requestId": "e45aef82-daca-4293-a42a-71a65a861698"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/6/start",
+            "status": 200,
+            "requestId": "2f589db2-04e1-4745-80cf-1712f5f89931"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/maintenance-requests/6/resolve",
+            "status": 200,
+            "requestId": "8fbd2e04-712e-4aac-965a-55adbd86495e"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/maintenance-requests/6/resolve",
+      "requestId": "8fbd2e04-712e-4aac-965a-55adbd86495e",
+      "durationMs": 531
+    },
+    {
+      "id": "E2E-JOB-05",
+      "subcase": "prepare-overdue",
+      "title": "Prepare overdue unreplenished deduction",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 6,
+        "contractId": 3
+      },
+      "expected": "Backdate only E2E ticket deduction, not payment state",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 280
+    },
+    {
+      "id": "E2E-JOB-01",
+      "subcase": "scheduler-cancel",
+      "title": "Scheduler auto-cancels overdue PENDING",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "id": 10,
+        "applicationId": 9,
+        "audits": 1,
+        "history": 2
+      },
+      "expected": "CANCELLED app+contract, closed HOLD, one SYSTEM audit",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 10937
+    },
+    {
+      "id": "E2E-CON-03",
+      "subcase": "activate-after-auto-cancel",
+      "title": "Auto-canceled contract cannot be activated",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "unchanged": true
+      },
+      "expected": "409 CONTRACT_AUTO_CANCELLED",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/contracts/10/activate",
+            "status": 409,
+            "errorCode": "CONTRACT_AUTO_CANCELLED",
+            "requestId": "07fc4dd1-5309-4ad2-ad4f-9297067dafcd"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/contracts/10/activate",
+      "requestId": "07fc4dd1-5309-4ad2-ad4f-9297067dafcd",
+      "durationMs": 11
+    },
+    {
+      "id": "E2E-JOB-04",
+      "subcase": "scheduler-close",
+      "title": "Scheduler closes only overdue resolved ticket",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "old": "CLOSED",
+        "young": "RESOLVED"
+      },
+      "expected": "Old CLOSED, young RESOLVED; no cause or deduction, SYSTEM audit",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 1214
+    },
+    {
+      "id": "E2E-JOB-05",
+      "subcase": "scheduler-reminder",
+      "title": "Scheduler emits one overdue-deposit reminder",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "notifications": 1
+      },
+      "expected": "One DEPOSIT_OVERDUE notification for unpaid deduction",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 295
+    },
+    {
+      "id": "E2E-JOB-03",
+      "subcase": "observed-second-cycle",
+      "title": "Second observed cancellation cycle leaves first record unchanged",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "observedSecondCycle": true,
+        "firstCancellationUnchanged": true
+      },
+      "expected": "First cancellation history/audit unchanged after second job processing",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/save-or-update",
+            "status": 200,
+            "requestId": "182cb1e5-1d56-47aa-97b0-8f7cfbf6e0c1"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/10/submit",
+            "status": 200,
+            "requestId": "f661a307-efea-4666-a8b6-2857f18284e6"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/10/approve",
+            "status": 200,
+            "requestId": "be213a12-bbeb-4a5c-a4a7-45ceb8566cf4"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/applications/10/assign",
+            "status": 200,
+            "requestId": "8dd86577-c0d7-4aaf-bdae-e2cdbaf692e4"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/applications/10/assign",
+      "requestId": "8dd86577-c0d7-4aaf-bdae-e2cdbaf692e4",
+      "durationMs": 8492
+    },
+    {
+      "id": "E2E-SEC-06",
+      "subcase": "error-envelope-evidence",
+      "title": "Error envelope and server request correlation",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "errorResponses": 105,
+        "statuses": [
+          401,
+          400,
+          404,
+          403,
+          409
+        ]
+      },
+      "expected": "Each observed 401/403 has real server requestId; no stack trace in errors",
+      "evidence": {
+        "calls": []
+      },
+      "method": "SQL",
+      "endpoint": "jdbc:postgresql://127.0.0.1:55432/dms_e2e",
+      "requestId": null,
+      "durationMs": 1
+    },
+    {
+      "id": "E2E-SEC-05",
+      "subcase": "sensitive-field-scan",
+      "title": "Read-only user/audit responses contain no password fields",
+      "status": "PASS",
+      "coverage": "API_ONLY",
+      "actual": {
+        "usersChecked": 23,
+        "auditChecked": 48,
+        "limitation": "Read scan only; no create/reset temporary-password scenario executed"
+      },
+      "expected": "No password/token/secret keys or known manifest passwords in responses",
+      "evidence": {
+        "calls": [
+          {
+            "method": "POST",
+            "endpoint": "/api/admin/users/search-by-page",
+            "status": 200,
+            "requestId": "92d1956d-75c3-4e9b-99f5-698e656e32f7"
+          },
+          {
+            "method": "POST",
+            "endpoint": "/api/admin/audit-logs/search-by-page",
+            "status": 200,
+            "requestId": "a96ba74a-990b-455a-91d6-e8d9c632eee4"
+          }
+        ]
+      },
+      "method": "POST",
+      "endpoint": "/api/admin/audit-logs/search-by-page",
+      "requestId": "a96ba74a-990b-455a-91d6-e8d9c632eee4",
+      "durationMs": 30
+    }
+  ],
+  "totals": {
+    "PASS": 171,
+    "BLOCKED": 11,
+    "FAIL": 10
+  },
+  "note": "API subcases do not constitute full PASS for UI or UI+API plan cases. BLOCKED NEEDS_SPEC is never counted as PASS."
+}

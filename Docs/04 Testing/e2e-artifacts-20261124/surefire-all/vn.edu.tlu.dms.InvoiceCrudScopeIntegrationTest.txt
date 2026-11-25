@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: vn.edu.tlu.dms.InvoiceCrudScopeIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 31, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.007 s -- in vn.edu.tlu.dms.InvoiceCrudScopeIntegrationTest

@@ -1,0 +1,65 @@
+{
+  "testWindow": "24–25/11/2026 (Asia/Ho_Chi_Minh)",
+  "codeRevision": "a0526d4bf244a4952e8d72f5721641dcb38220fb",
+  "businessCodeChanged": false,
+  "userWorkingTreeChangesPreserved": true,
+  "committed": false,
+  "pushed": false,
+  "localE2EServices": "Stopped after collecting evidence; ports8080/8180/5174/55432 verified closed",
+  "databasesRetained": [
+    "dms_e2e",
+    "keycloak_e2e",
+    "dms_e2e_integration",
+    "dms_e2e_unicode"
+  ],
+  "productionOrDemoDatabaseTouched": false,
+  "maintainedPlaywrightSuite": {
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0
+  },
+  "backendUnit": {
+    "passed": 215,
+    "failed": 0,
+    "suites": 21
+  },
+  "backendIntegrationInitialRun": {
+    "tests": 318,
+    "passed": 316,
+    "failed": 1,
+    "errors": 1,
+    "suites": 22
+  },
+  "backendIntegrationTargetedRetests": {
+    "preferenceConcurrency": "PASS after constraining test connection pools",
+    "vietnameseSearch": "PASS on a fresh ICU vi-VN database; initial C locale produced incompatible case folding",
+    "full318SuiteRerun": false
+  },
+  "e2ePlan": {
+    "total": 220,
+    "passedFully": 22,
+    "failed": 4,
+    "partial": 88,
+    "blocked": 1,
+    "notRun": 105
+  },
+  "reportRows": {
+    "actualCheckpoints": 254,
+    "fullCaseAggregationRows": 22,
+    "total": 276
+  },
+  "confirmedProductDefectGroups": 3,
+  "evidence": {
+    "screenshots": 34,
+    "visuallyReviewedSamples": 7,
+    "textFilesSecretScanned": 132,
+    "knownSecretHits": 0
+  },
+  "notClaimed": [
+    "All220cases complete",
+    "All318integrationtests passed in a single green run",
+    "AllUIworkflows completed",
+    "JaCoCo service coverage at least60percent",
+    "Load/accessibility compliance"
+  ]
+}

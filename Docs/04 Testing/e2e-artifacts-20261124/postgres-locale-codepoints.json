@@ -1,0 +1,14 @@
+{
+  "locale": [
+    {
+      "datcollate": "C",
+      "datctype": "C"
+    }
+  ],
+  "postgresLowerCode": [
+    {
+      "lowercase_code": 272
+    }
+  ],
+  "javaScriptLowerCode": 273
+}

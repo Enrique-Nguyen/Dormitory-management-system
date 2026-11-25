@@ -1,0 +1,3074 @@
+{
+  "source": "Docs/04 Testing/E2E-ke-hoach-va-testcase.md",
+  "total": 220,
+  "cases": [
+    {
+      "id": "E2E-AUTH-01",
+      "group": "AUTH",
+      "title": "Đăng nhập thành công từng vai trò",
+      "columns": [
+        "4 tài khoản đã đổi mật khẩu",
+        "Mở `/login` → bấm Đăng nhập → nhập tài khoản/mật khẩu tại Keycloak → xác nhận",
+        "Chuyển về đúng trang chủ vai trò: Student `/student`, Staff `/staff/dashboard`, Technician `/technician/tasks`, Admin `/admin/users`; có tên người dùng trên giao diện; `GET /api/auth/me` trả đúng `role` và `permissions`",
+        "UI",
+        "P0",
+        "FR-ACC-01, AT-27"
+      ],
+      "sourceLine": 189
+    },
+    {
+      "id": "E2E-AUTH-02",
+      "group": "AUTH",
+      "title": "Sai mật khẩu",
+      "columns": [
+        "Tài khoản hợp lệ",
+        "Đăng nhập với mật khẩu sai",
+        "Ở lại trang Keycloak, báo sai thông tin; không vào được cổng; không có token",
+        "UI",
+        "P0",
+        "FR-ACC-01"
+      ],
+      "sourceLine": 190
+    },
+    {
+      "id": "E2E-AUTH-03",
+      "group": "AUTH",
+      "title": "Tài khoản không tồn tại",
+      "columns": [
+        "—",
+        "Đăng nhập với tên lạ",
+        "Báo sai thông tin, thông báo không phân biệt \"sai tên\" hay \"sai mật khẩu\"",
+        "UI",
+        "P1",
+        "FR-ACC-01"
+      ],
+      "sourceLine": 191
+    },
+    {
+      "id": "E2E-AUTH-04",
+      "group": "AUTH",
+      "title": "Khóa tạm sau 5 lần sai",
+      "columns": [
+        "Tài khoản riêng dùng một lần",
+        "Nhập sai liên tiếp 5 lần → nhập đúng mật khẩu",
+        "Lần thứ 6 (đúng mật khẩu) vẫn bị từ chối vì khóa tạm; không kiểm việc chờ 15 phút",
+        "UI",
+        "P2 `@slow`",
+        "FR-ACC-02"
+      ],
+      "sourceLine": 192
+    },
+    {
+      "id": "E2E-AUTH-05",
+      "group": "AUTH",
+      "title": "Mật khẩu tạm buộc đổi lần đầu",
+      "columns": [
+        "Tài khoản vừa tạo/reset (mật khẩu tạm)",
+        "Đăng nhập bằng mật khẩu tạm",
+        "Bị đưa tới bước cập nhật mật khẩu của Keycloak; chưa vào được cổng cho tới khi hoàn tất",
+        "UI",
+        "P0",
+        "FR-ACC-03"
+      ],
+      "sourceLine": 193
+    },
+    {
+      "id": "E2E-AUTH-06",
+      "group": "AUTH",
+      "title": "Chính sách mật khẩu mới",
+      "columns": [
+        "Như AUTH-05",
+        "Thử lần lượt: 7 ký tự; 8 ký tự chỉ chữ; 65 ký tự; trùng mật khẩu hiện tại; rồi mật khẩu hợp lệ (8–64, có chữ và số)",
+        "Bốn trường hợp đầu bị từ chối kèm thông báo; trường hợp hợp lệ vào được cổng đúng vai trò",
+        "UI",
+        "P1",
+        "FR-ACC-03"
+      ],
+      "sourceLine": 194
+    },
+    {
+      "id": "E2E-AUTH-07",
+      "group": "AUTH",
+      "title": "Giữ phiên khi tải lại trang",
+      "columns": [
+        "Đã đăng nhập",
+        "F5 ở trang bất kỳ",
+        "Vẫn đăng nhập (SSO), không bị đưa ra `/login`; dữ liệu trang tải lại",
+        "UI",
+        "P0",
+        "NFR-SEC-04"
+      ],
+      "sourceLine": 195
+    },
+    {
+      "id": "E2E-AUTH-08",
+      "group": "AUTH",
+      "title": "Đăng xuất",
+      "columns": [
+        "Đã đăng nhập",
+        "Bấm Đăng xuất",
+        "Về `/login` qua logout Keycloak; Back của trình duyệt vào `/admin/users` bị chuyển về đăng nhập; gọi API bằng token cũ nhận 401",
+        "UI+API",
+        "P0",
+        "FR-ACC-01, AT-30"
+      ],
+      "sourceLine": 196
+    },
+    {
+      "id": "E2E-AUTH-09",
+      "group": "AUTH",
+      "title": "Truy cập khi chưa đăng nhập",
+      "columns": [
+        "Phiên trống",
+        "Mở trực tiếp từng cổng `/student`, `/staff/dashboard`, `/technician/tasks`, `/admin/users`",
+        "Cả bốn chuyển về đăng nhập; sau khi đăng nhập quay về đúng đích đã yêu cầu",
+        "UI",
+        "P0",
+        "FR-ACC-01"
+      ],
+      "sourceLine": 197
+    },
+    {
+      "id": "E2E-AUTH-10",
+      "group": "AUTH",
+      "title": "Sai cổng theo vai trò",
+      "columns": [
+        "Đăng nhập Student",
+        "Mở `/admin/users`, `/staff/dashboard`, `/technician/tasks`; lặp lại cho Staff, Technician, Admin với cổng khác",
+        "Chuyển về **trang chủ của chính vai trò**, không hiện trang 403",
+        "UI",
+        "P0",
+        "FR-ACC-01, UI 27"
+      ],
+      "sourceLine": 198
+    },
+    {
+      "id": "E2E-AUTH-11",
+      "group": "AUTH",
+      "title": "Token sai issuer/audience/chữ ký/hết hạn",
+      "columns": [
+        "Có token hợp lệ làm mẫu",
+        "Gọi `GET /api/auth/me` với: token sửa chữ ký; token của realm khác; token hết hạn; không có header",
+        "401 cho cả bốn; có `requestId`",
+        "API",
+        "P0",
+        "AT-30, NFR-SEC-04"
+      ],
+      "sourceLine": 199
+    },
+    {
+      "id": "E2E-AUTH-12",
+      "group": "AUTH",
+      "title": "Subject chưa liên kết tài khoản DMS",
+      "columns": [
+        "Người dùng Keycloak tồn tại nhưng không có `app_user` liên kết, trùng `username` với một tài khoản DMS",
+        "Đăng nhập",
+        "Báo `IDENTITY_NOT_LINKED`, không tự nhận hồ sơ/quyền theo `username`",
+        "UI+API",
+        "P0",
+        "AT-31, NFR-SEC-01"
+      ],
+      "sourceLine": 200
+    },
+    {
+      "id": "E2E-AUTH-13",
+      "group": "AUTH",
+      "title": "Giả vai trò/trường lạ từ client",
+      "columns": [
+        "Đăng nhập Student",
+        "Gọi API với body có `role: \"ADMIN\"`, `userId` của người khác, `mine=false`; gọi `/api/.../me` kèm owner khác",
+        "Trường lạ bị từ chối (400); quyền lấy từ CSDL; không nâng được quyền; `/me` luôn ép người hiện tại",
+        "API",
+        "P0",
+        "AT-27"
+      ],
+      "sourceLine": 201
+    },
+    {
+      "id": "E2E-AUTH-14",
+      "group": "AUTH",
+      "title": "Khóa tài khoản làm mất hiệu lực phiên cũ",
+      "columns": [
+        "Student đang đăng nhập ở context A",
+        "Admin khóa tài khoản đó → Student thao tác ở A → Admin mở khóa → Student thao tác tiếp ở A → Student đăng nhập mới",
+        "Sau khóa: lần gọi API kế tiếp bị chặn, UI đưa về đăng nhập; sau mở khóa: phiên cũ **vẫn** vô hiệu; chỉ đăng nhập mới dùng được",
+        "UI+API",
+        "P0",
+        "AT-28, FR-ACC-06"
+      ],
+      "sourceLine": 202
+    },
+    {
+      "id": "E2E-AUTH-15",
+      "group": "AUTH",
+      "title": "Reset mật khẩu thu hồi mọi phiên",
+      "columns": [
+        "Student có hai phiên (hai context)",
+        "Admin reset mật khẩu → cả hai phiên gọi API",
+        "Cả hai bị từ chối; đăng nhập bằng mật khẩu tạm buộc đổi (AUTH-05)",
+        "UI+API",
+        "P0",
+        "AT-28, FR-ACC-07"
+      ],
+      "sourceLine": 203
+    },
+    {
+      "id": "E2E-AUTH-16",
+      "group": "AUTH",
+      "title": "Phiên hết hạn hiển thị cảnh báo",
+      "columns": [
+        "Đăng nhập",
+        "Giả lập API trả 401 (route mock) hoặc thu hồi phiên → thao tác",
+        "Về `/login?reason=expired`, có cảnh báo \"Phiên đã hết hạn...\"",
+        "UI",
+        "P1",
+        "UI 27.2"
+      ],
+      "sourceLine": 204
+    },
+    {
+      "id": "E2E-AUTH-17",
+      "group": "AUTH",
+      "title": "Đăng xuất đồng bộ nhiều tab",
+      "columns": [
+        "Hai tab cùng đăng nhập",
+        "Đăng xuất ở tab 1",
+        "Tab 2 tự chuyển về đăng nhập (tín hiệu nhiều tab)",
+        "UI",
+        "P1",
+        "FR-ACC-01"
+      ],
+      "sourceLine": 205
+    },
+    {
+      "id": "E2E-AUTH-18",
+      "group": "AUTH",
+      "title": "Trang Quên mật khẩu",
+      "columns": [
+        "—",
+        "Mở `/forgot-password`",
+        "Hiển thị hướng dẫn liên hệ người quản lý; **không có** ô nhập email gửi liên kết",
+        "UI",
+        "P2",
+        "SRS 3.1 (quy tắc phiên)"
+      ],
+      "sourceLine": 206
+    },
+    {
+      "id": "E2E-ACC-01",
+      "group": "ACC",
+      "title": "Student xem và sửa hồ sơ",
+      "columns": [
+        "Student đăng nhập",
+        "Vào Hồ sơ → sửa số điện thoại, quê quán, liên hệ khẩn cấp → Lưu → tải lại",
+        "Lưu thành công, giá trị còn sau tải lại; **form Sửa nạp đúng dữ liệu cũ trước khi chỉnh**",
+        "UI",
+        "P0",
+        "FR-ACC-04"
+      ],
+      "sourceLine": 212
+    },
+    {
+      "id": "E2E-ACC-02",
+      "group": "ACC",
+      "title": "Hồ sơ: lỗi validate hiển thị theo trường",
+      "columns": [
+        "Như trên",
+        "Nhập số điện thoại sai định dạng → Lưu",
+        "Lỗi hiện dưới đúng trường; form **không đóng**; nút Lưu có trạng thái đang lưu rồi bật lại",
+        "UI",
+        "P1",
+        "UI 27, CLAUDE.md (form)"
+      ],
+      "sourceLine": 213
+    },
+    {
+      "id": "E2E-ACC-03",
+      "group": "ACC",
+      "title": "Trường định danh không sửa được",
+      "columns": [
+        "Student, và Staff sửa hồ sơ sinh viên",
+        "Mở form hồ sơ → tìm ô mã SV, họ tên, giới tính; gọi API với `studentCode`/`fullName`/`gender` mới",
+        "UI: ba trường không có hoặc chỉ đọc; API: từ chối, dữ liệu không đổi",
+        "UI+API",
+        "P0",
+        "FR-ACC-04"
+      ],
+      "sourceLine": 214
+    },
+    {
+      "id": "E2E-ACC-04",
+      "group": "ACC",
+      "title": "Chỉ Student có quê quán/liên hệ khẩn cấp",
+      "columns": [
+        "Lần lượt đăng nhập 4 vai trò",
+        "Mở Hồ sơ",
+        "Student có ô quê quán và liên hệ khẩn cấp; Staff, Technician, Admin chỉ sửa số điện thoại",
+        "UI",
+        "P1",
+        "CLAUDE.md \"Common flows\""
+      ],
+      "sourceLine": 215
+    },
+    {
+      "id": "E2E-ACC-05",
+      "group": "ACC",
+      "title": "Admin tạo tài khoản Staff",
+      "columns": [
+        "Admin",
+        "Người dùng → Thêm → nhập tên đăng nhập, vai trò STAFF, đơn vị K1 → Lưu",
+        "Hộp thoại hiện mật khẩu tạm **một lần**; đóng rồi mở lại/tải lại không còn; mật khẩu tạm không có trong phản hồi GET sau đó, không có trong audit",
+        "UI+API",
+        "P0",
+        "FR-ACC-06, SEC-05"
+      ],
+      "sourceLine": 216
+    },
+    {
+      "id": "E2E-ACC-06",
+      "group": "ACC",
+      "title": "Tạo Staff thiếu đơn vị",
+      "columns": [
+        "Admin",
+        "Tạo STAFF, bỏ trống đơn vị",
+        "Lỗi tại trường đơn vị, không tạo tài khoản",
+        "UI",
+        "P1",
+        "FR-ACC-06"
+      ],
+      "sourceLine": 217
+    },
+    {
+      "id": "E2E-ACC-07",
+      "group": "ACC",
+      "title": "Đổi vai trò/đơn vị thu hồi token",
+      "columns": [
+        "Staff đang đăng nhập",
+        "Admin đổi đơn vị của Staff sang N2+N3 → Staff gọi API bằng phiên cũ → đăng nhập lại",
+        "Phiên cũ bị chặn; phiên mới có phạm vi N2+N3; Keycloak đồng bộ vai trò",
+        "UI+API",
+        "P0",
+        "FR-ACC-06"
+      ],
+      "sourceLine": 218
+    },
+    {
+      "id": "E2E-ACC-08",
+      "group": "ACC",
+      "title": "Giới hạn đổi vai trò",
+      "columns": [
+        "Admin",
+        "Đổi vai trò chính tài khoản mình; chuyển hồ sơ STUDENT sang STAFF; chuyển Staff sang ADMIN",
+        "Hai trường hợp đầu bị từ chối; sang ADMIN thành công và xóa đơn vị + cờ tổng hợp",
+        "UI+API",
+        "P1",
+        "SRS phân quyền"
+      ],
+      "sourceLine": 219
+    },
+    {
+      "id": "E2E-ACC-09",
+      "group": "ACC",
+      "title": "Khóa và mở khóa tài khoản",
+      "columns": [
+        "Admin",
+        "Khóa Staff → thử đăng nhập mới → mở khóa → đăng nhập mới",
+        "Khi khóa không đăng nhập được; mở khóa cho phép đăng nhập mới; có bản ghi audit mỗi thao tác",
+        "UI",
+        "P0",
+        "FR-ACC-06"
+      ],
+      "sourceLine": 220
+    },
+    {
+      "id": "E2E-ACC-10",
+      "group": "ACC",
+      "title": "Admin reset mật khẩu",
+      "columns": [
+        "Admin, Student",
+        "Reset → ghi nhận mật khẩu tạm → đăng nhập Student bằng mật khẩu tạm",
+        "Mật khẩu tạm trả một lần; buộc đổi; bộ đếm sai/khóa tạm được xóa (nếu Student đang bị khóa tạm thì đăng nhập được)",
+        "UI",
+        "P0",
+        "FR-ACC-07"
+      ],
+      "sourceLine": 221
+    },
+    {
+      "id": "E2E-ACC-11",
+      "group": "ACC",
+      "title": "Staff reset: trong phạm vi",
+      "columns": [
+        "Sinh viên có đơn trong đợt đang mở tại K1 (hoặc phân phòng hiệu lực tại K1)",
+        "Staff K1 → Sinh viên → Reset mật khẩu",
+        "Thành công",
+        "UI",
+        "P0",
+        "FR-ACC-07, BR-07"
+      ],
+      "sourceLine": 222
+    },
+    {
+      "id": "E2E-ACC-12",
+      "group": "ACC",
+      "title": "Staff reset: ngoài phạm vi",
+      "columns": [
+        "Sinh viên chỉ có đơn đợt đã đóng/phân phòng đã kết thúc; sinh viên của N2; kể cả Staff có quyền đọc liên đơn vị",
+        "Staff K1 (và Staff tổng hợp) thử reset",
+        "Bị từ chối (404/403 theo API-Spec); không đổi mật khẩu",
+        "UI+API",
+        "P0",
+        "AT-29"
+      ],
+      "sourceLine": 223
+    },
+    {
+      "id": "E2E-ACC-13",
+      "group": "ACC",
+      "title": "Import Excel: xem trước (dry-run)",
+      "columns": [
+        "Admin; file mẫu tải từ hệ thống, thêm 5 dòng hợp lệ, 1 dòng sai định dạng, 1 mã trùng có sẵn",
+        "Người dùng/Import → tải mẫu → chọn file → Xem trước",
+        "Báo lỗi **theo từng dòng** (số dòng + lý do); mã đã tồn tại bị đánh dấu bỏ qua; chưa tạo tài khoản nào",
+        "UI",
+        "P0",
+        "FR-ACC-05"
+      ],
+      "sourceLine": 224
+    },
+    {
+      "id": "E2E-ACC-14",
+      "group": "ACC",
+      "title": "Import Excel: thực hiện",
+      "columns": [
+        "Như ACC-13",
+        "Xác nhận import",
+        "Chỉ 5 dòng hợp lệ được tạo; mỗi tài khoản có mật khẩu tạm ngẫu nhiên và required action đổi mật khẩu; có thể đăng nhập bằng mật khẩu tạm → buộc đổi",
+        "UI+API",
+        "P0",
+        "FR-ACC-05"
+      ],
+      "sourceLine": 225
+    },
+    {
+      "id": "E2E-ACC-15",
+      "group": "ACC",
+      "title": "Import Excel: file không hợp lệ",
+      "columns": [
+        "Admin",
+        "Thử: file > 5 MB; đuôi không phải .xlsx; file có công thức; > 5.000 dòng; thiếu cột",
+        "Mỗi trường hợp bị từ chối bằng thông báo rõ; không tạo dữ liệu",
+        "UI+API",
+        "P1",
+        "FR-ACC-05, SRS 5.3"
+      ],
+      "sourceLine": 226
+    },
+    {
+      "id": "E2E-ACC-16",
+      "group": "ACC",
+      "title": "Staff không tạo được sinh viên",
+      "columns": [
+        "Staff",
+        "Mở màn Sinh viên; gọi `POST /api/.../save-or-update` tạo sinh viên",
+        "Không có nút Thêm; API trả 403",
+        "UI+API",
+        "P0",
+        "CLAUDE.md \"Tài khoản/hồ sơ\""
+      ],
+      "sourceLine": 227
+    },
+    {
+      "id": "E2E-ACC-17",
+      "group": "ACC",
+      "title": "Cấp quyền tổng hợp liên đơn vị",
+      "columns": [
+        "Admin, Staff K1",
+        "Admin bật quyền tổng hợp cho Staff K1 → Staff đăng nhập lại",
+        "Staff đọc được dữ liệu N2 (danh sách, dashboard toàn KTX); phiên cũ bị thu hồi; **ghi** vào dữ liệu N2 vẫn 404",
+        "UI+API",
+        "P0",
+        "FR-ACC-08, BR-07"
+      ],
+      "sourceLine": 228
+    },
+    {
+      "id": "E2E-ACC-18",
+      "group": "ACC",
+      "title": "Audit log: xem và lọc",
+      "columns": [
+        "Admin; đã có vài thao tác từ các test trước",
+        "Nhật ký → lọc theo người, loại thao tác, khoảng thời gian (bao gồm ngày cuối)",
+        "Kết quả đúng bộ lọc; phân trang/đếm ở server; chi tiết hiển thị `oldValue`/`newValue`; không có nút sửa/xóa; không có mật khẩu/secret",
+        "UI",
+        "P1",
+        "FR-ACC-09"
+      ],
+      "sourceLine": 229
+    },
+    {
+      "id": "E2E-ACC-19",
+      "group": "ACC",
+      "title": "Audit ghi thao tác nhạy cảm",
+      "columns": [
+        "Admin",
+        "Tạo/khóa tài khoản, đổi ma trận quyền, đổi cấu hình",
+        "Mỗi thao tác sinh đúng một bản ghi audit với actor là Admin thật",
+        "UI+API",
+        "P1",
+        "FR-ACC-09, BR-09"
+      ],
+      "sourceLine": 230
+    },
+    {
+      "id": "E2E-RBAC-01",
+      "group": "RBAC",
+      "title": "Menu theo vai trò và quyền",
+      "columns": [
+        "Bốn vai trò",
+        "Liệt kê menu từng vai trò",
+        "Mỗi vai trò chỉ thấy mục có quyền; không có mục của vai trò khác",
+        "UI",
+        "P0",
+        "SRS phân quyền"
+      ],
+      "sourceLine": 236
+    },
+    {
+      "id": "E2E-RBAC-02",
+      "group": "RBAC",
+      "title": "Vào URL không có quyền",
+      "columns": [
+        "Staff bị thu hồi quyền một màn (RBAC-07)",
+        "Mở thẳng URL màn đó",
+        "Chuyển về trang chủ vai trò, không thấy dữ liệu",
+        "UI",
+        "P0",
+        "FR-ACC-10"
+      ],
+      "sourceLine": 237
+    },
+    {
+      "id": "E2E-RBAC-03",
+      "group": "RBAC",
+      "title": "Staff K1 đọc dữ liệu N2",
+      "columns": [
+        "Có đơn, phòng, hợp đồng, hóa đơn, ticket của N2 với ID đã biết",
+        "Staff K1 gọi `GET` chi tiết từng loại",
+        "**404** cho tất cả (không lộ sự tồn tại); danh sách và tổng số (`total`) không chứa dữ liệu N2",
+        "API",
+        "P0",
+        "AT-06, BR-07, NFR-SEC-02"
+      ],
+      "sourceLine": 238
+    },
+    {
+      "id": "E2E-RBAC-04",
+      "group": "RBAC",
+      "title": "Staff K1 ghi dữ liệu N2",
+      "columns": [
+        "Như trên",
+        "`save-or-update`, `approve`, `assign`, `activate`, `DELETE` lên dữ liệu N2",
+        "404 cho tất cả; dữ liệu không đổi",
+        "API",
+        "P0",
+        "AT-06"
+      ],
+      "sourceLine": 239
+    },
+    {
+      "id": "E2E-RBAC-05",
+      "group": "RBAC",
+      "title": "Technician không vào dữ liệu nghiệp vụ",
+      "columns": [
+        "Technician",
+        "Gọi API phòng, hợp đồng, hóa đơn, đơn đăng ký (ghi và đọc)",
+        "403",
+        "API",
+        "P0",
+        "SRS phân quyền"
+      ],
+      "sourceLine": 240
+    },
+    {
+      "id": "E2E-RBAC-06",
+      "group": "RBAC",
+      "title": "Student không thấy dữ liệu người khác",
+      "columns": [
+        "Hai sinh viên A, B",
+        "A gọi chi tiết hợp đồng, hóa đơn phí phòng, ticket, đơn của B; gọi `/me` kèm ID của B",
+        "404/403; `/me` luôn trả dữ liệu của A",
+        "API",
+        "P0",
+        "NFR-SEC-02"
+      ],
+      "sourceLine": 241
+    },
+    {
+      "id": "E2E-RBAC-07",
+      "group": "RBAC",
+      "title": "Thu hồi quyền có hiệu lực ngay",
+      "columns": [
+        "Admin, Staff đang đăng nhập có quyền `ROOM_UPDATE`",
+        "Admin bỏ `ROOM_UPDATE` của STAFF → Lưu → Staff gọi sửa phòng ở lần tiếp theo",
+        "403 ngay ở lần gọi kế tiếp mà không cần đăng nhập lại; nút Sửa phòng biến mất sau khi `/me` làm mới; với **mọi** tài khoản STAFF",
+        "UI+API",
+        "P0",
+        "FR-ACC-10"
+      ],
+      "sourceLine": 242
+    },
+    {
+      "id": "E2E-RBAC-08",
+      "group": "RBAC",
+      "title": "Ma trận quyền: thao tác trên giao diện",
+      "columns": [
+        "Admin",
+        "`/admin/role-permissions` → chọn STAFF → tìm màn theo tên → bấm \"chọn tất cả quyền phù hợp\" → Khôi phục mặc định vào bản nháp → Hủy",
+        "Bản nháp thay đổi theo thao tác; Hủy bỏ thay đổi, dữ liệu CSDL không đổi; danh mục màn/nhóm/nhãn lấy từ backend",
+        "UI",
+        "P1",
+        "FR-ACC-10"
+      ],
+      "sourceLine": 243
+    },
+    {
+      "id": "E2E-RBAC-09",
+      "group": "RBAC",
+      "title": "ADMIN bất biến",
+      "columns": [
+        "Admin",
+        "Chọn ADMIN trong ma trận; gọi `PUT /api/admin/role-permissions/ADMIN`",
+        "UI: mọi ô bị khóa/không sửa được; API: 403 `ADMIN_PERMISSIONS_IMMUTABLE`; Admin vẫn có đủ 105 quyền đã đăng ký",
+        "UI+API",
+        "P0",
+        "FR-ACC-10"
+      ],
+      "sourceLine": 244
+    },
+    {
+      "id": "E2E-RBAC-10",
+      "group": "RBAC",
+      "title": "Ràng buộc quyền READ",
+      "columns": [
+        "Admin",
+        "Bỏ `PROFILE_READ` của STUDENT; thêm một quyền ghi (CREATE/UPDATE/DELETE) của một màn mà không có READ của màn đó",
+        "Cả hai bị từ chối (UI báo lỗi hoặc khóa, API 400/409)",
+        "UI+API",
+        "P0",
+        "FR-ACC-10"
+      ],
+      "sourceLine": 245
+    },
+    {
+      "id": "E2E-RBAC-11",
+      "group": "RBAC",
+      "title": "Xung đột phiên bản khi lưu",
+      "columns": [
+        "Hai context Admin cùng mở ma trận STAFF",
+        "A lưu thay đổi → B (bản cũ) lưu",
+        "B nhận 409 với thông báo bản đã cũ; **bản nháp của B được giữ**; không tự động gửi lại",
+        "UI",
+        "P0",
+        "FR-ACC-10"
+      ],
+      "sourceLine": 246
+    },
+    {
+      "id": "E2E-RBAC-12",
+      "group": "RBAC",
+      "title": "Lưu không thay đổi",
+      "columns": [
+        "Admin",
+        "Mở ma trận → không đổi → Lưu",
+        "Không tăng version, không ghi audit",
+        "UI+API",
+        "P1",
+        "FR-ACC-10"
+      ],
+      "sourceLine": 247
+    },
+    {
+      "id": "E2E-RBAC-13",
+      "group": "RBAC",
+      "title": "Audit trước/sau của ma trận",
+      "columns": [
+        "Admin",
+        "Đổi một quyền → Lưu → xem nhật ký",
+        "Có bản ghi cùng transaction với dữ liệu trước và sau",
+        "UI",
+        "P1",
+        "FR-ACC-10"
+      ],
+      "sourceLine": 248
+    },
+    {
+      "id": "E2E-RBAC-14",
+      "group": "RBAC",
+      "title": "Staff không đổi được ma trận",
+      "columns": [
+        "Staff",
+        "Mở `/admin/role-permissions`; gọi `PUT`",
+        "Chuyển về trang chủ; API 403",
+        "UI+API",
+        "P0",
+        "UC-29"
+      ],
+      "sourceLine": 249
+    },
+    {
+      "id": "E2E-RBAC-15",
+      "group": "RBAC",
+      "title": "Quyền ghi tách khỏi quyền đọc tổng hợp",
+      "columns": [
+        "Staff có crossUnit",
+        "Gọi ghi lên dữ liệu đơn vị khác",
+        "404; quyền đọc tổng hợp không mở ghi",
+        "API",
+        "P0",
+        "BR-07"
+      ],
+      "sourceLine": 250
+    },
+    {
+      "id": "E2E-RBAC-16",
+      "group": "RBAC",
+      "title": "Admin thao tác mọi đơn vị nhưng vẫn bị ràng buộc",
+      "columns": [
+        "Admin",
+        "Duyệt đơn N2; thử phân giường K1 cho đơn nguyện vọng N2; thử chuyển trạng thái sai sơ đồ",
+        "Duyệt thành công; phân sai đơn vị `BED_UNIT_MISMATCH`; chuyển sai sơ đồ bị từ chối; audit ghi đúng Admin",
+        "API",
+        "P0",
+        "BR-07, FR-REG-08"
+      ],
+      "sourceLine": 251
+    },
+    {
+      "id": "E2E-ROOM-01",
+      "group": "ROOM",
+      "title": "Admin quản lý tòa và mức cọc",
+      "columns": [
+        "Admin",
+        "Tạo tòa thuộc đơn vị với mức cọc 1.500.000",
+        "Lưu được; hiển thị đúng",
+        "UI",
+        "P1",
+        "FR-ROOM-01"
+      ],
+      "sourceLine": 257
+    },
+    {
+      "id": "E2E-ROOM-02",
+      "group": "ROOM",
+      "title": "Đổi mức cọc chỉ áp dụng cho kích hoạt sau đó",
+      "columns": [
+        "Hợp đồng ACTIVE đã thu cọc 1.000.000 (K1); hợp đồng PENDING khác cùng tòa",
+        "Admin đổi cọc tòa K1 lên 1.200.000 → kích hoạt hợp đồng PENDING",
+        "Hợp đồng ACTIVE cũ giữ 1.000.000; hợp đồng mới yêu cầu 1.200.000; sổ cọc cũ không đổi",
+        "UI+API",
+        "P0",
+        "FR-ROOM-01, BR-10"
+      ],
+      "sourceLine": 258
+    },
+    {
+      "id": "E2E-ROOM-03",
+      "group": "ROOM",
+      "title": "Tạo loại phòng với giá theo học kỳ",
+      "columns": [
+        "Staff K1",
+        "Tạo loại phòng 4 giường, giá HK 3.000.000 và giá hè 1.500.000",
+        "Lưu được; hai giá khác nhau hiển thị đúng",
+        "UI",
+        "P1",
+        "FR-ROOM-02"
+      ],
+      "sourceLine": 259
+    },
+    {
+      "id": "E2E-ROOM-04",
+      "group": "ROOM",
+      "title": "Đổi giá không ảnh hưởng phân phòng hiện hành",
+      "columns": [
+        "Hợp đồng ACTIVE với đơn giá 3.000.000",
+        "Staff đổi giá loại phòng lên 3.500.000",
+        "Lịch sử phân phòng của hợp đồng cũ vẫn 3.000.000; phân phòng mới lấy 3.500.000",
+        "UI+API",
+        "P0",
+        "FR-ROOM-02, BR-09"
+      ],
+      "sourceLine": 260
+    },
+    {
+      "id": "E2E-ROOM-05",
+      "group": "ROOM",
+      "title": "Sửa số giường của loại phòng đang dùng",
+      "columns": [
+        "Loại phòng đã gán cho ít nhất một phòng",
+        "Sửa `bed_count`",
+        "409 `RESOURCE_IN_USE`; số giường không đổi; loại phòng **chưa** gán cho phòng nào thì sửa được",
+        "UI+API",
+        "P0",
+        "AT-33, FR-ROOM-02"
+      ],
+      "sourceLine": 261
+    },
+    {
+      "id": "E2E-ROOM-06",
+      "group": "ROOM",
+      "title": "Tạo phòng tự sinh giường",
+      "columns": [
+        "Staff K1",
+        "Tạo phòng với loại 4 giường",
+        "Có đúng 4 giường; mã phòng trùng bị từ chối; thiếu trường bắt buộc báo lỗi theo trường",
+        "UI",
+        "P0",
+        "FR-ROOM-03, 04"
+      ],
+      "sourceLine": 262
+    },
+    {
+      "id": "E2E-ROOM-07",
+      "group": "ROOM",
+      "title": "Sửa phòng không phá chỗ ở hiện có",
+      "columns": [
+        "Phòng A101 đang có người",
+        "Thử đổi tòa; thử đổi loại phòng sang loại ít giường hơn số người đang ở; thử đổi giới tính phòng",
+        "Bị từ chối nếu làm sai chỗ ở hiện có; form Sửa nạp đúng dữ liệu cũ",
+        "UI+API",
+        "P0",
+        "CLAUDE.md \"Phòng và đăng ký\""
+      ],
+      "sourceLine": 263
+    },
+    {
+      "id": "E2E-ROOM-08",
+      "group": "ROOM",
+      "title": "Thêm/bớt giường",
+      "columns": [
+        "Phòng trống",
+        "Thêm một giường; bớt giường chưa từng có người; bớt giường có lịch sử phân phòng; sửa giường đổi phòng nguồn",
+        "Thêm/bớt giường trống được; giường có lịch sử bị từ chối (409); giường chỉ sửa được mã, không đổi phòng",
+        "UI+API",
+        "P1",
+        "FR-ROOM-04, 06"
+      ],
+      "sourceLine": 264
+    },
+    {
+      "id": "E2E-ROOM-09",
+      "group": "ROOM",
+      "title": "Đặt phòng Bảo trì/Ngừng khi còn người ở",
+      "columns": [
+        "Phòng A101 đang có phân phòng hiệu lực",
+        "Đặt Bảo trì không lý do; đặt Bảo trì có lý do",
+        "Bị từ chối do còn phân phòng hiệu lực (BR-01); phòng trống: bắt buộc lý do, thành công thì giường tính vào nhóm \"bảo trì\" riêng",
+        "UI+API",
+        "P0",
+        "FR-ROOM-05, BR-01"
+      ],
+      "sourceLine": 265
+    },
+    {
+      "id": "E2E-ROOM-10",
+      "group": "ROOM",
+      "title": "Đặt giường Hỏng khi còn người",
+      "columns": [
+        "Giường đang ở",
+        "Đặt Hỏng",
+        "Bị từ chối; giường trống đặt được, không phân được cho sinh viên nữa",
+        "UI+API",
+        "P0",
+        "FR-ROOM-05"
+      ],
+      "sourceLine": 266
+    },
+    {
+      "id": "E2E-ROOM-11",
+      "group": "ROOM",
+      "title": "Không xóa phòng/giường đã từng có phân phòng",
+      "columns": [
+        "Phòng có lịch sử",
+        "Bấm Xóa; gọi `DELETE`",
+        "409; chỉ chuyển \"Ngừng sử dụng\"; phòng chưa từng có dữ liệu xóa được",
+        "UI+API",
+        "P0",
+        "FR-ROOM-06"
+      ],
+      "sourceLine": 267
+    },
+    {
+      "id": "E2E-ROOM-12",
+      "group": "ROOM",
+      "title": "Tra cứu phòng: lọc, phân trang, đếm",
+      "columns": [
+        "Dữ liệu nền",
+        "Lọc theo tòa, tầng, loại, giới tính, \"còn chỗ\"; đổi `page`/`size`; sắp xếp theo cột; thử `size=101`",
+        "Số giường trống/đang giữ/đang ở **tính ra** đúng với dữ liệu; `total` khớp số dòng; lọc/đếm áp dụng ở server (kiểm bằng request gửi đi); `size=101` bị từ chối",
+        "UI+API",
+        "P0",
+        "FR-ROOM-07, CLAUDE.md"
+      ],
+      "sourceLine": 268
+    },
+    {
+      "id": "E2E-ROOM-13",
+      "group": "ROOM",
+      "title": "Staff chỉ thấy phòng đơn vị mình",
+      "columns": [
+        "Staff K1",
+        "Tìm kiếm không lọc",
+        "Chỉ có phòng K1; tổng số không tính phòng N2",
+        "UI+API",
+        "P0",
+        "BR-07"
+      ],
+      "sourceLine": 269
+    },
+    {
+      "id": "E2E-ROOM-14",
+      "group": "ROOM",
+      "title": "Student xem phòng của mình",
+      "columns": [
+        "Student ở A101",
+        "Mở \"Phòng của tôi\"",
+        "Thấy phòng, giường, danh sách bạn cùng phòng (chỉ họ tên), trưởng phòng; không thấy thông tin nhạy cảm của bạn cùng phòng",
+        "UI",
+        "P0",
+        "FR-ROOM-08"
+      ],
+      "sourceLine": 270
+    },
+    {
+      "id": "E2E-ROOM-15",
+      "group": "ROOM",
+      "title": "Chỉ định trưởng phòng",
+      "columns": [
+        "Phòng có 3 sinh viên đang ở",
+        "Staff chỉ định A → chỉ định B → thử chỉ định sinh viên ngoài phòng",
+        "Mỗi phòng tối đa một trưởng phòng (B thay A, lịch sử lưu cả hai); sinh viên không ở phòng bị từ chối (BR-11)",
+        "UI+API",
+        "P0",
+        "FR-ROOM-09, BR-11"
+      ],
+      "sourceLine": 271
+    },
+    {
+      "id": "E2E-ROOM-16",
+      "group": "ROOM",
+      "title": "Trưởng phòng chuyển/trả phòng thì tự gỡ",
+      "columns": [
+        "A101 có trưởng phòng",
+        "Chuyển trưởng phòng sang phòng khác; kịch bản khác: trả phòng",
+        "Phòng A101 mất chỉ định, Staff thấy cảnh báo \"chưa có trưởng phòng\" trên danh sách và dashboard",
+        "UI",
+        "P0",
+        "AT-21, FR-ROOM-10"
+      ],
+      "sourceLine": 272
+    },
+    {
+      "id": "E2E-ROOM-17",
+      "group": "ROOM",
+      "title": "Quản lý học kỳ",
+      "columns": [
+        "Staff",
+        "Tạo học kỳ HK1/HK2/Hè với ngày bắt đầu, kết thúc; thử ngày kết thúc trước ngày bắt đầu",
+        "Hợp lệ lưu được; ngày sai báo lỗi theo trường; sửa giữ đúng ngày đã lưu (không lệch múi giờ)",
+        "UI",
+        "P1",
+        "FR-ROOM-11"
+      ],
+      "sourceLine": 273
+    },
+    {
+      "id": "E2E-ROOM-18",
+      "group": "ROOM",
+      "title": "Danh mục dùng chung (CRUD smoke)",
+      "columns": [
+        "Admin/Staff",
+        "Với từng danh mục (khoa, khóa, trường, quê quán, diện ưu tiên, tiện ích, tầng, loại sự cố, vị trí kho...): tạo → tìm → sửa → xóa bản ghi chưa dùng → xóa bản ghi đã dùng",
+        "Tạo/sửa/xóa hoạt động; bản ghi đang được dùng báo 409 xung đột rõ ràng; phân trang ở server",
+        "UI",
+        "P2",
+        "SRS bổ sung danh mục (04/11/2026)"
+      ],
+      "sourceLine": 274
+    },
+    {
+      "id": "E2E-REG-01",
+      "group": "REG",
+      "title": "Tạo đợt đăng ký",
+      "columns": [
+        "Staff K1, học kỳ đã có",
+        "Tạo đợt: học kỳ, ngày mở/đóng, chỉ tiêu theo tòa, áp dụng K1",
+        "Lưu được; ghi audit tạo; ngày đóng trước ngày mở bị từ chối",
+        "UI",
+        "P0",
+        "FR-REG-01"
+      ],
+      "sourceLine": 280
+    },
+    {
+      "id": "E2E-REG-02",
+      "group": "REG",
+      "title": "Sửa đợt đã mở",
+      "columns": [
+        "Đợt đang mở",
+        "Sửa ngày đóng; thử sửa học kỳ/đơn vị",
+        "Chỉ trường nghiệp vụ cho phép sửa được; ghi audit; trường bị cấm bị từ chối",
+        "UI+API",
+        "P1",
+        "CLAUDE.md \"Phòng và đăng ký\""
+      ],
+      "sourceLine": 281
+    },
+    {
+      "id": "E2E-REG-03",
+      "group": "REG",
+      "title": "Lookup đợt: chỉ lấy đợt đang mở",
+      "columns": [
+        "Một đợt mở, một đợt đã đóng, một đợt chưa mở",
+        "Student mở form soạn đơn → xem danh sách đợt",
+        "Chỉ thấy đợt đang mở",
+        "UI+API",
+        "P0",
+        "FR-REG-02"
+      ],
+      "sourceLine": 282
+    },
+    {
+      "id": "E2E-REG-04",
+      "group": "REG",
+      "title": "Technician xem đợt chỉ đọc",
+      "columns": [
+        "Technician K1",
+        "Mở đợt của đơn vị mình; thử sửa",
+        "Xem được đợt đơn vị mình; không sửa được",
+        "UI+API",
+        "P2",
+        "FR-REG-01"
+      ],
+      "sourceLine": 283
+    },
+    {
+      "id": "E2E-REG-05",
+      "group": "REG",
+      "title": "Soạn đơn (DRAFT)",
+      "columns": [
+        "Student chưa có hợp đồng, đợt mở",
+        "Chọn đơn vị nguyện vọng, loại phòng, diện ưu tiên, ghi chú → Lưu nháp",
+        "Có đơn DRAFT; sửa được; mỗi sinh viên tối đa **một đơn mỗi đợt**: tạo đơn thứ hai trong cùng đợt bị từ chối",
+        "UI",
+        "P0",
+        "FR-REG-02"
+      ],
+      "sourceLine": 284
+    },
+    {
+      "id": "E2E-REG-06",
+      "group": "REG",
+      "title": "Chặn nộp khi đang có hợp đồng",
+      "columns": [
+        "Student có hợp đồng ACTIVE (và biến thể PENDING)",
+        "Soạn/nộp đơn đợt mới",
+        "Bị từ chối kèm gợi ý dùng gia hạn; không tạo đơn",
+        "UI+API",
+        "P0",
+        "AT-17, FR-REG-03"
+      ],
+      "sourceLine": 285
+    },
+    {
+      "id": "E2E-REG-07",
+      "group": "REG",
+      "title": "Nộp đơn và tính điểm ưu tiên",
+      "columns": [
+        "Đơn DRAFT có diện ưu tiên",
+        "Nộp",
+        "Trạng thái SUBMITTED; điểm tính theo trọng số cấu hình; Student thấy diện đã khai nhưng **không thấy trọng số/điểm tính**; sau SUBMITTED không sửa được",
+        "UI+API",
+        "P0",
+        "FR-REG-04, 05"
+      ],
+      "sourceLine": 286
+    },
+    {
+      "id": "E2E-REG-08",
+      "group": "REG",
+      "title": "Client không tự gửi điểm/trạng thái",
+      "columns": [
+        "Student",
+        "Gọi API soạn đơn với `status: \"APPROVED\"`, `priorityScore: 999`",
+        "Trường lạ bị từ chối; không đổi điểm/trạng thái",
+        "API",
+        "P0",
+        "CLAUDE.md \"Phòng và đăng ký\""
+      ],
+      "sourceLine": 287
+    },
+    {
+      "id": "E2E-REG-09",
+      "group": "REG",
+      "title": "Hủy đơn theo trạng thái",
+      "columns": [
+        "Các đơn DRAFT, SUBMITTED, APPROVED (chưa có hợp đồng)",
+        "Student hủy từng đơn",
+        "Cả ba hủy được → CANCELLED",
+        "UI",
+        "P0",
+        "FR-REG-04"
+      ],
+      "sourceLine": 288
+    },
+    {
+      "id": "E2E-REG-10",
+      "group": "REG",
+      "title": "Hủy đơn APPROVED đã có hợp đồng",
+      "columns": [
+        "Đơn đã sinh hợp đồng PENDING/ACTIVE",
+        "Mở đơn; gọi `cancel`",
+        "Nút Hủy **không hiện** (không có trong `allowedActions`); API 409 `APPLICATION_HAS_CONTRACT`; dữ liệu không đổi",
+        "UI+API",
+        "P0",
+        "AT-32"
+      ],
+      "sourceLine": 289
+    },
+    {
+      "id": "E2E-REG-11",
+      "group": "REG",
+      "title": "Staff xem danh sách đơn",
+      "columns": [
+        "Nhiều đơn khác điểm và thời điểm nộp",
+        "Mở danh sách mặc định; lọc; đổi trang",
+        "Mặc định sắp theo điểm giảm dần rồi thời điểm nộp tăng dần; chỉ đơn của đơn vị nguyện vọng K1; phân trang/đếm ở server",
+        "UI+API",
+        "P0",
+        "FR-REG-05, BR-07"
+      ],
+      "sourceLine": 290
+    },
+    {
+      "id": "E2E-REG-12",
+      "group": "REG",
+      "title": "Xác nhận diện ưu tiên",
+      "columns": [
+        "Đơn SUBMITTED có diện tự khai",
+        "Staff đánh dấu \"không đúng\"",
+        "Điểm tính lại theo xác nhận; thứ tự danh sách cập nhật",
+        "UI",
+        "P1",
+        "FR-REG-06"
+      ],
+      "sourceLine": 291
+    },
+    {
+      "id": "E2E-REG-13",
+      "group": "REG",
+      "title": "Duyệt đơn",
+      "columns": [
+        "Đơn SUBMITTED K1",
+        "Staff K1 duyệt",
+        "APPROVED; Student nhận thông báo; chỉ duyệt được khi SUBMITTED (đơn DRAFT/đã duyệt gọi `approve` bị từ chối)",
+        "UI+API",
+        "P0",
+        "FR-REG-07"
+      ],
+      "sourceLine": 292
+    },
+    {
+      "id": "E2E-REG-14",
+      "group": "REG",
+      "title": "Từ chối đơn bắt buộc lý do",
+      "columns": [
+        "Đơn SUBMITTED",
+        "Từ chối không nhập lý do → nhập lý do",
+        "Không lý do: lỗi trường lý do, không đổi trạng thái; có lý do: REJECTED; Student thấy lý do",
+        "UI",
+        "P0",
+        "FR-REG-07, 12"
+      ],
+      "sourceLine": 293
+    },
+    {
+      "id": "E2E-REG-15",
+      "group": "REG",
+      "title": "Phân giường thành công",
+      "columns": [
+        "Đơn APPROVED nam K1; A102 trống",
+        "Mở đơn → danh sách gợi ý giường → chọn → xác nhận",
+        "Gợi ý chỉ gồm giường trống đúng đơn vị nguyện vọng, giới tính, loại phòng, phòng Hoạt động; thành công: phân phòng HOLD (đơn giá chụp từ loại phòng), hợp đồng PENDING, đơn ASSIGNED, Student nhận thông báo kèm hạn kích hoạt; Student thấy giường được giữ và hạn",
+        "UI+API",
+        "P0",
+        "AT-01, FR-REG-08, UC-16"
+      ],
+      "sourceLine": 294
+    },
+    {
+      "id": "E2E-REG-16",
+      "group": "REG",
+      "title": "Phân giường sai đơn vị",
+      "columns": [
+        "Đơn nguyện vọng N2; giường K1",
+        "Gọi `assign` (cả bằng Admin)",
+        "`BED_UNIT_MISMATCH`; không có phân phòng nào được tạo",
+        "API",
+        "P0",
+        "FR-REG-08"
+      ],
+      "sourceLine": 295
+    },
+    {
+      "id": "E2E-REG-17",
+      "group": "REG",
+      "title": "Giường không hợp lệ",
+      "columns": [
+        "Giường phòng Bảo trì (A104), giường Hỏng, phòng nữ cho sinh viên nam",
+        "Gọi `assign`",
+        "Mỗi trường hợp bị từ chối, đơn giữ APPROVED, không thay đổi dữ liệu",
+        "API",
+        "P0",
+        "BR-01"
+      ],
+      "sourceLine": 296
+    },
+    {
+      "id": "E2E-REG-18",
+      "group": "REG",
+      "title": "Tranh chấp giường (đồng thời)",
+      "columns": [
+        "A101 còn đúng 1 giường; hai đơn APPROVED khác nhau",
+        "Hai Staff (hai context) gọi `assign` **cùng lúc** vào giường đó",
+        "Một thành công, một nhận 409 `BED_TAKEN` (\"Giường vừa được phân, chọn giường khác\"); phòng 4/4; không phân phòng thừa; đơn thất bại vẫn APPROVED",
+        "API `@concurrency`",
+        "P0",
+        "AT-02, FR-REG-09, NFR-REL-01"
+      ],
+      "sourceLine": 297
+    },
+    {
+      "id": "E2E-REG-19",
+      "group": "REG",
+      "title": "Gửi lặp yêu cầu phân phòng",
+      "columns": [
+        "Đơn đã ASSIGNED",
+        "Gọi `assign` lần hai cho cùng sinh viên/đơn",
+        "409 (Policy hoặc ràng buộc); không có phân phòng/hợp đồng thứ hai",
+        "API",
+        "P0",
+        "AT-04, FR-REG-10"
+      ],
+      "sourceLine": 298
+    },
+    {
+      "id": "E2E-REG-20",
+      "group": "REG",
+      "title": "Staff hủy giữ chỗ",
+      "columns": [
+        "Đơn ASSIGNED, hợp đồng PENDING",
+        "Hủy giữ chỗ không lý do → có lý do",
+        "Không lý do: lỗi; có lý do: đơn → APPROVED, hợp đồng → CANCELLED, phân phòng đóng, giường trống lại, cùng một transaction; Student nhận thông báo",
+        "UI+API",
+        "P0",
+        "FR-REG-11, UC-34"
+      ],
+      "sourceLine": 299
+    },
+    {
+      "id": "E2E-REG-21",
+      "group": "REG",
+      "title": "Student tự hủy giữ chỗ",
+      "columns": [
+        "Đơn ASSIGNED",
+        "Student hủy giữ chỗ",
+        "Đơn → CANCELLED, hợp đồng → CANCELLED, giường trống",
+        "UI",
+        "P0",
+        "FR-REG-11"
+      ],
+      "sourceLine": 300
+    },
+    {
+      "id": "E2E-REG-22",
+      "group": "REG",
+      "title": "Student xem trạng thái đơn",
+      "columns": [
+        "Đơn ở từng trạng thái",
+        "Mở danh sách đơn",
+        "Hiển thị đúng nhãn trạng thái (`statusConfig`), lý do từ chối, giường giữ, hạn kích hoạt; chỉ thấy đơn của mình",
+        "UI",
+        "P1",
+        "FR-REG-12"
+      ],
+      "sourceLine": 301
+    },
+    {
+      "id": "E2E-REG-23",
+      "group": "REG",
+      "title": "Admin tạo đơn hộ sinh viên",
+      "columns": [
+        "Admin",
+        "Tạo đơn kèm `studentId`; Student gửi `studentId` của người khác",
+        "Admin thành công; Student bị từ chối/ID bị bỏ qua, đơn thuộc về chính Student",
+        "API",
+        "P1",
+        "SRS phân quyền"
+      ],
+      "sourceLine": 302
+    },
+    {
+      "id": "E2E-REG-24",
+      "group": "REG",
+      "title": "Đơn của đơn vị khác",
+      "columns": [
+        "Đơn nguyện vọng N2",
+        "Staff K1 mở/duyệt",
+        "404",
+        "API",
+        "P0",
+        "AT-06"
+      ],
+      "sourceLine": 303
+    },
+    {
+      "id": "E2E-CON-01",
+      "group": "CON",
+      "title": "Kích hoạt hợp đồng",
+      "columns": [
+        "Hợp đồng PENDING K1",
+        "Staff mở hợp đồng → thấy mức cọc 1.000.000 điền sẵn → xác nhận thu đủ cọc",
+        "Hợp đồng ACTIVE, ghi `activated_at`; phân phòng HOLD → STAY **trên cùng dòng**; sổ cọc có giao dịch thu cọc +1.000.000 (người xác nhận, thời gian); Student thấy hợp đồng ACTIVE và đúng phòng",
+        "UI+API",
+        "P0",
+        "AT-01, FR-CON-01, UC-32"
+      ],
+      "sourceLine": 309
+    },
+    {
+      "id": "E2E-CON-02",
+      "group": "CON",
+      "title": "Cọc không đủ",
+      "columns": [
+        "Hợp đồng PENDING N2 (cọc 2.000.000)",
+        "Nhập 1.000.000",
+        "Bị từ chối; hợp đồng vẫn PENDING; sổ cọc không có giao dịch",
+        "UI+API",
+        "P0",
+        "AT-18, BR-10"
+      ],
+      "sourceLine": 310
+    },
+    {
+      "id": "E2E-CON-03",
+      "group": "CON",
+      "title": "Kích hoạt hợp đồng đã bị tự hủy",
+      "columns": [
+        "Hợp đồng quá hạn đã CANCELLED (JOB-01)",
+        "Gọi/bấm kích hoạt",
+        "`CONTRACT_AUTO_CANCELLED`; không đổi dữ liệu",
+        "API",
+        "P0",
+        "UC-32 (3a)"
+      ],
+      "sourceLine": 311
+    },
+    {
+      "id": "E2E-CON-04",
+      "group": "CON",
+      "title": "Bấm kích hoạt hai lần",
+      "columns": [
+        "Hợp đồng PENDING",
+        "Gửi hai yêu cầu kích hoạt gần như đồng thời",
+        "Chỉ một giao dịch thu cọc; yêu cầu còn lại 409; số dư cọc đúng bằng 1 lần",
+        "API `@concurrency`",
+        "P0",
+        "NFR-REL-02, BR-10"
+      ],
+      "sourceLine": 312
+    },
+    {
+      "id": "E2E-CON-05",
+      "group": "CON",
+      "title": "Xem hợp đồng",
+      "columns": [
+        "Student có hợp đồng ACTIVE; Staff cùng đơn vị",
+        "Mở chi tiết",
+        "Thời hạn, tiền cọc, trạng thái, lịch sử phân phòng (giường, phòng, từ/đến, đơn giá) hiển thị đủ; Staff thấy cùng dữ liệu",
+        "UI",
+        "P0",
+        "FR-CON-05"
+      ],
+      "sourceLine": 313
+    },
+    {
+      "id": "E2E-CON-06",
+      "group": "CON",
+      "title": "Nhãn \"Sắp hết hạn\"",
+      "columns": [
+        "Hợp đồng ACTIVE kết thúc sau 14, 15, 16 ngày",
+        "Mở danh sách/chi tiết",
+        "14 và 15 ngày: có nhãn; 16 ngày: không nhãn; đổi ngưỡng trong `system_config` thì nhãn đổi theo mà **không có trường lưu sẵn**",
+        "UI+API",
+        "P1",
+        "FR-CON-03, BR-08"
+      ],
+      "sourceLine": 314
+    },
+    {
+      "id": "E2E-CON-07",
+      "group": "CON",
+      "title": "Nhãn \"Quá hạn trả phòng\"",
+      "columns": [
+        "Hợp đồng ACTIVE quá ngày kết thúc, chưa trả phòng",
+        "Mở danh sách",
+        "Nhãn hiển thị; hợp đồng **vẫn ACTIVE**, không tự thành EXPIRED",
+        "UI+API",
+        "P0",
+        "FR-CON-04, BR-02"
+      ],
+      "sourceLine": 315
+    },
+    {
+      "id": "E2E-CON-08",
+      "group": "CON",
+      "title": "Yêu cầu gia hạn và duyệt",
+      "columns": [
+        "Student có hợp đồng ACTIVE",
+        "Student gửi gia hạn: ngày kết thúc mới + lý do → Staff duyệt",
+        "Ngày kết thúc hợp đồng cập nhật; lưu mốc cũ/mới/người xử lý; Student nhận thông báo",
+        "UI",
+        "P0",
+        "FR-CON-06, UC-19"
+      ],
+      "sourceLine": 316
+    },
+    {
+      "id": "E2E-CON-09",
+      "group": "CON",
+      "title": "Gia hạn bị từ chối",
+      "columns": [
+        "Hai tình huống",
+        "Staff từ chối có lý do; ngày mới chồng lên hợp đồng khác",
+        "Từ chối thủ công ghi lý do; chồng ngày bị từ chối tự động",
+        "UI+API",
+        "P0",
+        "AT-09, FR-CON-06"
+      ],
+      "sourceLine": 317
+    },
+    {
+      "id": "E2E-CON-10",
+      "group": "CON",
+      "title": "Gia hạn không hợp lệ",
+      "columns": [
+        "Student",
+        "Ngày mới ≤ ngày hiện tại của hợp đồng; hợp đồng không ACTIVE; Student không có hợp đồng",
+        "Mỗi trường hợp báo lỗi rõ, không tạo yêu cầu",
+        "UI+API",
+        "P1",
+        "FR-CON-06"
+      ],
+      "sourceLine": 318
+    },
+    {
+      "id": "E2E-CON-11",
+      "group": "CON",
+      "title": "Yêu cầu chuyển phòng và duyệt",
+      "columns": [
+        "Student ở A101; giường trống A102 cùng K1",
+        "Student gửi yêu cầu + lý do → Staff chọn giường đích A102 → duyệt",
+        "Phân phòng cũ đóng, mở phân phòng STAY mới với **đơn giá của phòng mới**; hợp đồng không đổi; ghi lý do, người duyệt, thời gian; hai khoảng phân phòng liên tiếp không chồng ngày",
+        "UI+API",
+        "P0",
+        "AT-01, FR-CON-07, 08, UC-18"
+      ],
+      "sourceLine": 319
+    },
+    {
+      "id": "E2E-CON-12",
+      "group": "CON",
+      "title": "Chuyển sang đơn vị khác",
+      "columns": [
+        "Giường trống ở B201 (N2)",
+        "Staff K1 duyệt với giường đích B201",
+        "Bị từ chối (cùng đơn vị mới được chuyển); dữ liệu không đổi",
+        "UI+API",
+        "P0",
+        "AT-08, BR-05"
+      ],
+      "sourceLine": 320
+    },
+    {
+      "id": "E2E-CON-13",
+      "group": "CON",
+      "title": "Giường đích vừa bị chiếm",
+      "columns": [
+        "Hai thao tác trên cùng giường đích",
+        "Staff duyệt chuyển vào giường đích X trong khi thao tác phân giường khác đã chiếm X",
+        "Báo lỗi giường đã bị phân; **dữ liệu không đổi** (phân phòng cũ còn mở, không có dòng mới)",
+        "API `@concurrency`",
+        "P0",
+        "FR-CON-08, UC-18 (2a), AT-07"
+      ],
+      "sourceLine": 321
+    },
+    {
+      "id": "E2E-CON-14",
+      "group": "CON",
+      "title": "Hai yêu cầu chuyển chéo nhau",
+      "columns": [
+        "A ở giường 1, B ở giường 2",
+        "Duyệt đồng thời A → giường 2 và B → giường 1",
+        "Không deadlock; kết quả nhất quán (không giường nào có hai người, không sinh viên nào mất chỗ)",
+        "API `@concurrency`",
+        "P1",
+        "FR-CON-08 (khóa theo `bed_id` tăng dần)"
+      ],
+      "sourceLine": 322
+    },
+    {
+      "id": "E2E-CON-15",
+      "group": "CON",
+      "title": "Từ chối chuyển phòng",
+      "columns": [
+        "Yêu cầu đang chờ",
+        "Từ chối không lý do → có lý do",
+        "Không lý do báo lỗi; có lý do: yêu cầu bị từ chối, phân phòng giữ nguyên",
+        "UI",
+        "P1",
+        "FR-CON-07"
+      ],
+      "sourceLine": 323
+    },
+    {
+      "id": "E2E-CON-16",
+      "group": "CON",
+      "title": "Trả phòng đúng hạn: hoàn cọc đủ",
+      "columns": [
+        "Hợp đồng ACTIVE đến/qua ngày kết thúc; cọc 1.000.000, không trừ",
+        "Staff → Trả phòng → ghi tình trạng tài sản \"đạt\" → xem cảnh báo công nợ → xác nhận hoàn cọc",
+        "Hợp đồng → EXPIRED; phân phòng đóng; giường trống; ghi giao dịch hoàn cọc 1.000.000; có `MoveOutRecord`; chỉ định trưởng phòng gỡ nếu có",
+        "UI+API",
+        "P0",
+        "FR-CON-09, UC-33"
+      ],
+      "sourceLine": 324
+    },
+    {
+      "id": "E2E-CON-17",
+      "group": "CON",
+      "title": "Trả phòng trước hạn",
+      "columns": [
+        "Hợp đồng ACTIVE còn hạn",
+        "Trả phòng",
+        "Hợp đồng → TERMINATED (không phải EXPIRED)",
+        "UI",
+        "P0",
+        "FR-CON-09"
+      ],
+      "sourceLine": 325
+    },
+    {
+      "id": "E2E-CON-18",
+      "group": "CON",
+      "title": "Trả phòng khi còn nợ phí phòng",
+      "columns": [
+        "Sinh viên có hóa đơn phí phòng UNPAID",
+        "Mở màn trả phòng",
+        "**Hiển thị cảnh báo** công nợ nhưng **không chặn**; sau trả phòng công nợ vẫn hiện cho Staff và Student",
+        "UI",
+        "P0",
+        "AT-10, FR-CON-10"
+      ],
+      "sourceLine": 326
+    },
+    {
+      "id": "E2E-CON-19",
+      "group": "CON",
+      "title": "Trả phòng khi bị trừ cọc 200.000 chưa bù",
+      "columns": [
+        "K1, cọc 1.000.000 → số dư 800.000 (có khoản bù chưa nộp)",
+        "Trả phòng",
+        "Hoàn cọc 800.000; ghi chú \"được tất toán bằng số dư\"; sau đó **không còn khoản cần bù**, không phát sinh nợ bù cọc",
+        "UI+API",
+        "P0",
+        "AT-19, BR-10"
+      ],
+      "sourceLine": 327
+    },
+    {
+      "id": "E2E-CON-20",
+      "group": "CON",
+      "title": "Trả phòng khi số dư cọc âm",
+      "columns": [
+        "Số dư cọc âm do trừ nhiều hơn cọc",
+        "Trả phòng",
+        "Không có giao dịch hoàn; số dư âm ghi thành công nợ, hiển thị cho Staff và Student",
+        "UI+API",
+        "P1",
+        "FR-CON-09, 10"
+      ],
+      "sourceLine": 328
+    },
+    {
+      "id": "E2E-CON-21",
+      "group": "CON",
+      "title": "Hoàn cọc tối đa một lần",
+      "columns": [
+        "Hợp đồng đã trả phòng",
+        "Gọi hoàn cọc lần hai",
+        "Bị từ chối (409), không có giao dịch `REFUND` thứ hai",
+        "API",
+        "P0",
+        "BR-10"
+      ],
+      "sourceLine": 329
+    },
+    {
+      "id": "E2E-CON-22",
+      "group": "CON",
+      "title": "Trả phòng khi còn ticket mở",
+      "columns": [
+        "Sinh viên có ticket OPEN/RESOLVED",
+        "Trả phòng",
+        "Ticket chuyển cho Staff nghiệm thu thay",
+        "UI+API",
+        "P1",
+        "UC-33"
+      ],
+      "sourceLine": 330
+    },
+    {
+      "id": "E2E-CON-23",
+      "group": "CON",
+      "title": "Cảnh báo hóa đơn điện nước khi trả phòng",
+      "columns": [
+        "Phòng còn hóa đơn điện nước chưa đóng",
+        "Trả phòng",
+        "Hiển thị cảnh báo nhưng không chặn",
+        "UI",
+        "P2",
+        "Q-21"
+      ],
+      "sourceLine": 331
+    },
+    {
+      "id": "E2E-CON-24",
+      "group": "CON",
+      "title": "Điều kiện gia hạn/chuyển phòng",
+      "columns": [
+        "Student chưa có hợp đồng ACTIVE",
+        "Gửi yêu cầu gia hạn/chuyển phòng",
+        "Bị từ chối",
+        "API",
+        "P1",
+        "FR-CON-06, 07"
+      ],
+      "sourceLine": 332
+    },
+    {
+      "id": "E2E-CON-25",
+      "group": "CON",
+      "title": "Hợp đồng ngoài đơn vị",
+      "columns": [
+        "Hợp đồng N2",
+        "Staff K1 kích hoạt/trả phòng/duyệt gia hạn",
+        "404",
+        "API",
+        "P0",
+        "AT-06"
+      ],
+      "sourceLine": 333
+    },
+    {
+      "id": "E2E-MNT-01",
+      "group": "MNT",
+      "title": "Student tạo ticket có ảnh",
+      "columns": [
+        "Student đang ở A101",
+        "Nhập loại sự cố, mô tả, mức độ, đính 3 ảnh (JPEG/PNG/WebP ≤ 5 MB) → Gửi",
+        "Ticket OPEN gắn **phòng hiện tại do server xác định**; hiển thị 3 ảnh",
+        "UI",
+        "P0",
+        "FR-MNT-01"
+      ],
+      "sourceLine": 339
+    },
+    {
+      "id": "E2E-MNT-02",
+      "group": "MNT",
+      "title": "Giới hạn ảnh",
+      "columns": [
+        "Như trên",
+        "Thử: 4 ảnh; ảnh > 5 MB; file `.txt` đổi đuôi `.jpg` (sai magic bytes); định dạng GIF",
+        "Mỗi trường hợp bị từ chối bằng thông báo rõ; **không tạo ticket và không còn file trên đĩa** (rollback cả dữ liệu và file)",
+        "UI+API",
+        "P0",
+        "FR-MNT-01, SAD upload"
+      ],
+      "sourceLine": 340
+    },
+    {
+      "id": "E2E-MNT-03",
+      "group": "MNT",
+      "title": "Student không có phòng",
+      "columns": [
+        "Student chưa có hợp đồng/đã trả phòng",
+        "Tạo ticket",
+        "Bị từ chối",
+        "UI+API",
+        "P0",
+        "BR-06"
+      ],
+      "sourceLine": 341
+    },
+    {
+      "id": "E2E-MNT-04",
+      "group": "MNT",
+      "title": "Sửa ticket của mình",
+      "columns": [
+        "Ticket OPEN của Student",
+        "Sửa mô tả → Lưu; sau khi Staff giao việc thử sửa lại; thêm ảnh khi sửa",
+        "OPEN sửa được, giữ vị trí và ảnh cũ; sau ASSIGNED không sửa được; thêm ảnh khi sửa báo lỗi \"chưa hỗ trợ\" rõ ràng",
+        "UI+API",
+        "P1",
+        "CLAUDE.md \"Sửa chữa/thông báo\""
+      ],
+      "sourceLine": 342
+    },
+    {
+      "id": "E2E-MNT-05",
+      "group": "MNT",
+      "title": "Staff tạo ticket khu vực chung và ticket phòng",
+      "columns": [
+        "Staff K1",
+        "Tạo ticket chung (tòa, tầng); tạo ticket cho phòng thuộc đơn vị; tạo cho phòng N2",
+        "Hai ticket đầu thành công; phòng N2: 404",
+        "UI+API",
+        "P0",
+        "FR-MNT-02"
+      ],
+      "sourceLine": 343
+    },
+    {
+      "id": "E2E-MNT-06",
+      "group": "MNT",
+      "title": "Giao việc",
+      "columns": [
+        "Ticket OPEN",
+        "Giao cho KTV cùng đơn vị; thử giao cho KTV N2",
+        "ASSIGNED; KTV khác đơn vị bị từ chối",
+        "UI+API",
+        "P0",
+        "FR-MNT-03, Q-08"
+      ],
+      "sourceLine": 344
+    },
+    {
+      "id": "E2E-MNT-07",
+      "group": "MNT",
+      "title": "Từ chối và hủy",
+      "columns": [
+        "Ticket OPEN",
+        "Staff từ chối không lý do → có lý do; Student hủy ticket OPEN của mình",
+        "Cần lý do khi từ chối; REJECTED/CANCELLED đúng; Student không hủy được ticket đã ASSIGNED",
+        "UI",
+        "P0",
+        "FR-MNT-03"
+      ],
+      "sourceLine": 345
+    },
+    {
+      "id": "E2E-MNT-08",
+      "group": "MNT",
+      "title": "KTV xử lý đúng quy trình",
+      "columns": [
+        "KTV được giao ticket",
+        "Xem danh sách việc → ASSIGNED → IN_PROGRESS (ghi chú) → RESOLVED",
+        "Đúng trình tự; ghi chú tiến độ lưu; KTV khác mở ticket này nhận 404 và không cập nhật được",
+        "UI+API",
+        "P0",
+        "FR-MNT-04"
+      ],
+      "sourceLine": 346
+    },
+    {
+      "id": "E2E-MNT-09",
+      "group": "MNT",
+      "title": "Chuyển trạng thái sai sơ đồ",
+      "columns": [
+        "Các ticket ở từng trạng thái",
+        "OPEN → CLOSED; ASSIGNED → RESOLVED; KTV gọi đóng ticket; RESOLVED → ASSIGNED",
+        "Tất cả bị từ chối; KTV **không tự đóng** ticket",
+        "API",
+        "P0",
+        "AT-11, BR-06"
+      ],
+      "sourceLine": 347
+    },
+    {
+      "id": "E2E-MNT-10",
+      "group": "MNT",
+      "title": "Nghiệm thu",
+      "columns": [
+        "Ticket RESOLVED của Student",
+        "Chấp nhận → CLOSED; ở ticket khác: không chấp nhận không lý do rồi có lý do",
+        "CLOSED; không chấp nhận phải có lý do, quay IN_PROGRESS và ghi lịch sử",
+        "UI",
+        "P0",
+        "FR-MNT-05"
+      ],
+      "sourceLine": 348
+    },
+    {
+      "id": "E2E-MNT-11",
+      "group": "MNT",
+      "title": "Nghiệm thu ticket chung/ticket Staff tạo",
+      "columns": [
+        "Ticket chung RESOLVED",
+        "Staff nghiệm thu",
+        "CLOSED; không phát sinh phí cho sinh viên",
+        "UI",
+        "P1",
+        "FR-MNT-05, 09"
+      ],
+      "sourceLine": 349
+    },
+    {
+      "id": "E2E-MNT-12",
+      "group": "MNT",
+      "title": "Người yêu cầu đã trả phòng",
+      "columns": [
+        "Ticket RESOLVED, người yêu cầu đã rời",
+        "Staff nghiệm thu thay không lý do → có lý do",
+        "Bắt buộc lý do; CLOSED",
+        "UI",
+        "P1",
+        "FR-MNT-07"
+      ],
+      "sourceLine": 350
+    },
+    {
+      "id": "E2E-MNT-13",
+      "group": "MNT",
+      "title": "Lịch sử ticket",
+      "columns": [
+        "Ticket đã qua nhiều trạng thái",
+        "Mở chi tiết (Student, Staff, KTV)",
+        "Timeline đủ mọi chuyển trạng thái với người, thời gian, lý do",
+        "UI",
+        "P0",
+        "FR-MNT-08"
+      ],
+      "sourceLine": 351
+    },
+    {
+      "id": "E2E-MNT-14",
+      "group": "MNT",
+      "title": "Nguyên nhân hao mòn tự nhiên",
+      "columns": [
+        "Ticket phòng CLOSED",
+        "Staff chọn \"hao mòn tự nhiên\" + ghi chú",
+        "**Không** phát sinh giao dịch trừ cọc; số dư cọc không đổi",
+        "UI+API",
+        "P0",
+        "AT-22, FR-MNT-09"
+      ],
+      "sourceLine": 352
+    },
+    {
+      "id": "E2E-MNT-15",
+      "group": "MNT",
+      "title": "Hư hỏng do sử dụng: chia cọc",
+      "columns": [
+        "A101 có 3 sinh viên đang ở; ticket CLOSED",
+        "Chọn \"hư hỏng do sử dụng\", chi phí 100.000, giữ cả 3 người",
+        "Ba khoản trừ **33.333 / 33.333 / 33.334**, tổng đúng 100.000; mỗi người có khoản bù cọc tương ứng, hạn nộp 7 ngày; mỗi người nhận thông báo",
+        "UI+API",
+        "P0",
+        "AT-14, FR-MNT-10, UC-22"
+      ],
+      "sourceLine": 353
+    },
+    {
+      "id": "E2E-MNT-16",
+      "group": "MNT",
+      "title": "Chi phí không hợp lệ và bỏ bớt người",
+      "columns": [
+        "Như trên",
+        "Chi phí 0 hoặc âm; bỏ một sinh viên không lý do; bỏ một sinh viên có lý do",
+        "0/âm bị từ chối; bỏ người không lý do bị từ chối; có lý do: chia đều cho 2 người còn lại, tổng khớp chi phí",
+        "UI+API",
+        "P0",
+        "FR-MNT-10, Q-15"
+      ],
+      "sourceLine": 354
+    },
+    {
+      "id": "E2E-MNT-17",
+      "group": "MNT",
+      "title": "Chỉ tính sinh viên đang ở lúc tạo ticket",
+      "columns": [
+        "Sinh viên D vào phòng **sau** khi ticket được tạo",
+        "Mở danh sách chịu trách nhiệm",
+        "D không nằm trong danh sách; sinh viên đã chuyển đi sau đó vẫn nằm",
+        "UI+API",
+        "P1",
+        "FR-MNT-10"
+      ],
+      "sourceLine": 355
+    },
+    {
+      "id": "E2E-MNT-18",
+      "group": "MNT",
+      "title": "Không trừ cọc hai lần",
+      "columns": [
+        "Ticket đã được xác định nguyên nhân",
+        "Gửi lại việc xác định nguyên nhân/trừ cọc",
+        "Bị từ chối hoặc idempotent; tổng trừ vẫn bằng chi phí",
+        "API",
+        "P0",
+        "BR-10"
+      ],
+      "sourceLine": 356
+    },
+    {
+      "id": "E2E-MNT-19",
+      "group": "MNT",
+      "title": "Ảnh chỉ qua endpoint có kiểm quyền",
+      "columns": [
+        "Ticket có ảnh",
+        "Student khác, Staff đơn vị khác, người chưa đăng nhập mở URL ảnh",
+        "404/403/401; chủ ticket, Staff cùng đơn vị, KTV được giao xem được",
+        "API",
+        "P0",
+        "SAD upload"
+      ],
+      "sourceLine": 357
+    },
+    {
+      "id": "E2E-MNT-20",
+      "group": "MNT",
+      "title": "Thông báo theo trạng thái ticket",
+      "columns": [
+        "Ticket đổi trạng thái",
+        "Kiểm hộp thư Student",
+        "Có thông báo cho mỗi lần đổi trạng thái liên quan",
+        "UI",
+        "P2",
+        "FR-NOT-04"
+      ],
+      "sourceLine": 358
+    },
+    {
+      "id": "E2E-BIL-01",
+      "group": "BIL",
+      "title": "Đơn giá điện nước có hiệu lực",
+      "columns": [
+        "Staff K1",
+        "Thêm giá điện/nước với ngày hiệu lực; sửa giá đã có hiệu lực; sửa giá tương lai",
+        "Thêm bản mới được; bản đã hiệu lực **không sửa/xóa**; bản tương lai sửa được",
+        "UI+API",
+        "P1",
+        "FR-BIL-01"
+      ],
+      "sourceLine": 364
+    },
+    {
+      "id": "E2E-BIL-02",
+      "group": "BIL",
+      "title": "Chỉ số đầu kỳ tự lấy",
+      "columns": [
+        "Phòng đã có kỳ trước, cuối kỳ = 120",
+        "Mở nhập chỉ số kỳ mới",
+        "Chỉ số đầu = 120 (chỉ đọc); nhập cuối = 150 → tiêu thụ 30",
+        "UI",
+        "P0",
+        "FR-BIL-02"
+      ],
+      "sourceLine": 365
+    },
+    {
+      "id": "E2E-BIL-03",
+      "group": "BIL",
+      "title": "Chỉ số cuối nhỏ hơn đầu",
+      "columns": [
+        "Như trên",
+        "Nhập cuối = 100",
+        "Bị từ chối, không lưu",
+        "UI+API",
+        "P0",
+        "AT-13, BR-03"
+      ],
+      "sourceLine": 366
+    },
+    {
+      "id": "E2E-BIL-04",
+      "group": "BIL",
+      "title": "Kỳ đầu và thiếu kỳ liền trước",
+      "columns": [
+        "Phòng chưa có lịch sử; phòng có lịch sử",
+        "Kỳ đầu: Staff nhập chỉ số đầu; phòng có lịch sử: nhập kỳ cách hai tháng",
+        "Kỳ đầu cho nhập đầu; nhảy kỳ bị từ chối (phải nhập đủ các kỳ liên tiếp)",
+        "UI+API",
+        "P1",
+        "FR-BIL-02, BR-03"
+      ],
+      "sourceLine": 367
+    },
+    {
+      "id": "E2E-BIL-05",
+      "group": "BIL",
+      "title": "Một chỉ số cho mỗi (phòng, loại, kỳ)",
+      "columns": [
+        "Đã nhập điện kỳ T",
+        "Nhập lại điện kỳ T",
+        "Bị từ chối (hoặc chuyển thành sửa nếu chưa lập hóa đơn); không có hai bản ghi",
+        "API",
+        "P0",
+        "BR-03"
+      ],
+      "sourceLine": 368
+    },
+    {
+      "id": "E2E-BIL-06",
+      "group": "BIL",
+      "title": "Khóa sửa chỉ số khi đã lập hóa đơn",
+      "columns": [
+        "Kỳ T đã có hóa đơn",
+        "Sửa chỉ số kỳ T; sửa chỉ số kỳ có kỳ sau",
+        "Bị từ chối (409)",
+        "UI+API",
+        "P1",
+        "CLAUDE.md \"Điện nước/hóa đơn\""
+      ],
+      "sourceLine": 369
+    },
+    {
+      "id": "E2E-BIL-07",
+      "group": "BIL",
+      "title": "Thay/reset đồng hồ",
+      "columns": [
+        "Chỉ số mới nhỏ hơn cuối kỳ trước",
+        "Ghi nhận thay đồng hồ có lý do → nhập chỉ số",
+        "Cho phép khi có ghi nhận; không có ghi nhận thì bị từ chối",
+        "UI+API",
+        "P2",
+        "FR-BIL-03"
+      ],
+      "sourceLine": 370
+    },
+    {
+      "id": "E2E-BIL-08",
+      "group": "BIL",
+      "title": "Phát hành hóa đơn điện nước",
+      "columns": [
+        "A101 và A102 có chỉ số; A103 thiếu chỉ số",
+        "Staff → chọn kỳ → xem trước → phát hành",
+        "A101, A102: đúng một hóa đơn/phòng, tiền điện = tiêu thụ × giá điện, tiền nước tương tự, **đơn giá chụp vào dòng hóa đơn**; A103 được liệt kê cảnh báo và bỏ qua; hạn đóng = ngày phát hành + 7; không chia theo sinh viên",
+        "UI+API",
+        "P0",
+        "AT-20, FR-BIL-04, 07, UC-21"
+      ],
+      "sourceLine": 371
+    },
+    {
+      "id": "E2E-BIL-09",
+      "group": "BIL",
+      "title": "Thông báo và quyền xem hóa đơn điện nước",
+      "columns": [
+        "A101 có trưởng phòng và 3 thành viên",
+        "Sau phát hành, kiểm từng Student",
+        "Trưởng phòng nhận thông báo; mọi thành viên đang ở xem được hóa đơn; sinh viên phòng khác không xem được",
+        "UI+API",
+        "P0",
+        "AT-20, FR-BIL-04"
+      ],
+      "sourceLine": 372
+    },
+    {
+      "id": "E2E-BIL-10",
+      "group": "BIL",
+      "title": "Phòng chưa có trưởng phòng",
+      "columns": [
+        "Phòng không có trưởng phòng",
+        "Phát hành",
+        "Vẫn phát hành; thông báo gửi mọi thành viên; Staff thấy cảnh báo",
+        "UI",
+        "P1",
+        "UC-21 (3a)"
+      ],
+      "sourceLine": 373
+    },
+    {
+      "id": "E2E-BIL-11",
+      "group": "BIL",
+      "title": "Không phát hành trùng điện nước",
+      "columns": [
+        "Đã phát hành kỳ T cho A101",
+        "Phát hành lại cùng kỳ; phát hành lại sau khi nhập bổ sung phòng thiếu",
+        "Không tạo hóa đơn thứ hai cho A101 (lỗi `DUPLICATE_INVOICE` hoặc bỏ qua); phòng thiếu chỉ số nay được phát hành",
+        "UI+API",
+        "P0",
+        "AT-15, FR-BIL-06"
+      ],
+      "sourceLine": 374
+    },
+    {
+      "id": "E2E-BIL-12",
+      "group": "BIL",
+      "title": "Phát hành phí phòng theo học kỳ",
+      "columns": [
+        "Sinh viên ở A101 (giá 3.000.000), sinh viên vào ở giữa kỳ, sinh viên chuyển phòng giữa kỳ sang phòng giá khác",
+        "Staff → học kỳ → xem trước → phát hành",
+        "Mỗi sinh viên đang ở đúng một hóa đơn; số tiền = đơn giá học kỳ của phân phòng hiệu lực ngày phát hành, **đủ kỳ** kể cả vào giữa kỳ; chuyển phòng giữa kỳ không thu thêm/hoàn chênh lệch; đơn giá chụp vào dòng hóa đơn",
+        "UI+API",
+        "P0",
+        "FR-BIL-05, Q-18, Q-19"
+      ],
+      "sourceLine": 375
+    },
+    {
+      "id": "E2E-BIL-13",
+      "group": "BIL",
+      "title": "Phí phòng học kỳ hè",
+      "columns": [
+        "Sinh viên A chọn ở hè (đã duyệt), sinh viên B tạm rời hè",
+        "Phát hành phí phòng kỳ hè",
+        "Chỉ A có hóa đơn (giá hè); B không có",
+        "UI+API",
+        "P0",
+        "FR-REG-15, AT-24, 26"
+      ],
+      "sourceLine": 376
+    },
+    {
+      "id": "E2E-BIL-14",
+      "group": "BIL",
+      "title": "Không phát hành trùng phí phòng",
+      "columns": [
+        "Đã phát hành kỳ X",
+        "Phát hành lại kỳ X",
+        "Không có hóa đơn thứ hai cho (sinh viên, học kỳ); sinh viên đã có hóa đơn bị bỏ qua",
+        "UI+API",
+        "P0",
+        "AT-15, BR-04"
+      ],
+      "sourceLine": 377
+    },
+    {
+      "id": "E2E-BIL-15",
+      "group": "BIL",
+      "title": "Xác nhận thanh toán",
+      "columns": [
+        "Hóa đơn UNPAID",
+        "Staff xác nhận: người nộp, hình thức",
+        "PAID; lưu người nộp, người xác nhận, thời gian, hình thức; lịch sử trạng thái ghi lại",
+        "UI",
+        "P0",
+        "FR-BIL-08"
+      ],
+      "sourceLine": 378
+    },
+    {
+      "id": "E2E-BIL-16",
+      "group": "BIL",
+      "title": "Hóa đơn PAID bị khóa",
+      "columns": [
+        "Hóa đơn PAID",
+        "Sửa số tiền/hạn; xóa; xác nhận lần hai",
+        "Cả ba bị từ chối (409); dữ liệu không đổi",
+        "UI+API",
+        "P0",
+        "AT-16, BR-04"
+      ],
+      "sourceLine": 379
+    },
+    {
+      "id": "E2E-BIL-17",
+      "group": "BIL",
+      "title": "Phạm vi hóa đơn phí phòng theo học kỳ",
+      "columns": [
+        "Sinh viên S ở K1 kỳ 1, chuyển sang N2 kỳ 2",
+        "Staff K1 và Staff N2 mở hóa đơn kỳ 1 và kỳ 2 của S",
+        "Staff K1 chỉ thấy/xác nhận hóa đơn kỳ 1; Staff N2 chỉ thấy kỳ 2; truy cập chéo là 404; quyền ghi chỉ tính phân phòng đúng đơn vị",
+        "UI+API",
+        "P0",
+        "BR-07, FR-BIL-05, 08"
+      ],
+      "sourceLine": 380
+    },
+    {
+      "id": "E2E-BIL-18",
+      "group": "BIL",
+      "title": "Nhãn \"Quá hạn\"",
+      "columns": [
+        "Hóa đơn UNPAID đã qua hạn (đẩy lùi dữ liệu)",
+        "Mở danh sách Student và Staff",
+        "Nhãn \"Quá hạn\" tính ra, không có cột lưu sẵn; hóa đơn chưa tới hạn không có nhãn",
+        "UI+API",
+        "P1",
+        "FR-BIL-07, BR-08"
+      ],
+      "sourceLine": 381
+    },
+    {
+      "id": "E2E-BIL-19",
+      "group": "BIL",
+      "title": "Hóa đơn thủ công (MANUAL)",
+      "columns": [
+        "Staff có quyền",
+        "Sửa tổng tiền/hạn khi chưa thanh toán; xóa hóa đơn MANUAL chưa thanh toán; sửa/xóa hóa đơn ISSUED",
+        "MANUAL chưa thanh toán sửa/xóa được và lịch sử trạng thái được giữ; ISSUED không sửa/xóa",
+        "API",
+        "P1",
+        "BR-04"
+      ],
+      "sourceLine": 382
+    },
+    {
+      "id": "E2E-BIL-20",
+      "group": "BIL",
+      "title": "Điều chỉnh sau thanh toán",
+      "columns": [
+        "Hóa đơn kỳ X đã PAID",
+        "Thêm dòng \"Điều chỉnh\" (âm/dương) có lý do vào hóa đơn kỳ kế",
+        "Dòng điều chỉnh có trên hóa đơn kỳ sau; thiếu lý do bị từ chối",
+        "UI",
+        "P2",
+        "FR-BIL-12"
+      ],
+      "sourceLine": 383
+    },
+    {
+      "id": "E2E-BIL-21",
+      "group": "BIL",
+      "title": "Sổ cọc",
+      "columns": [
+        "Hợp đồng đã thu cọc, bị trừ, được bù",
+        "Mở sổ cọc (Student và Staff)",
+        "Liệt kê thu/trừ/bù/hoàn với dấu đúng; **số dư tính từ sổ**; không có nút Thêm/Sửa/Xóa; gọi API ghi trực tiếp vào sổ bị từ chối",
+        "UI+API",
+        "P0",
+        "FR-BIL-09, SRS \"Sổ cọc chỉ đọc\""
+      ],
+      "sourceLine": 384
+    },
+    {
+      "id": "E2E-BIL-22",
+      "group": "BIL",
+      "title": "Xác nhận nộp bù cọc",
+      "columns": [
+        "Khoản bù cọc chưa nộp",
+        "Staff xác nhận đã nộp",
+        "Ghi giao dịch bù +số tiền; số dư tăng đúng; khoản bù không còn \"cần bù\"; không xác nhận được hai lần",
+        "UI+API",
+        "P0",
+        "FR-BIL-09"
+      ],
+      "sourceLine": 385
+    },
+    {
+      "id": "E2E-BIL-23",
+      "group": "BIL",
+      "title": "\"Quá hạn bù cọc\"",
+      "columns": [
+        "Khoản bù cọc quá 7 ngày (đẩy lùi dữ liệu), job nhắc đã chạy",
+        "Student và Staff kiểm tra",
+        "Nhãn \"Quá hạn bù cọc\"; Student nhận thông báo nhắc; khoản nằm trong danh sách cần nhắc của Staff; không phạt",
+        "UI+API `@job`",
+        "P0",
+        "AT-23, FR-BIL-13"
+      ],
+      "sourceLine": 386
+    },
+    {
+      "id": "E2E-BIL-24",
+      "group": "BIL",
+      "title": "Student xem tài chính của mình",
+      "columns": [
+        "Student A (phòng A101)",
+        "Mở hóa đơn phí phòng, hóa đơn điện nước phòng, sổ cọc, số tiền cần bù",
+        "Thấy đủ của mình và của phòng mình; không thấy của sinh viên khác",
+        "UI",
+        "P0",
+        "FR-BIL-10"
+      ],
+      "sourceLine": 387
+    },
+    {
+      "id": "E2E-BIL-25",
+      "group": "BIL",
+      "title": "Công nợ và báo cáo",
+      "columns": [
+        "Dữ liệu có hóa đơn UNPAID, bù cọc, số dư âm",
+        "Staff mở công nợ theo sinh viên và theo phòng; xuất báo cáo theo kỳ",
+        "Số liệu khớp dữ liệu nguồn; tệp xuất mở được và có đúng số dòng/tổng",
+        "UI+API",
+        "P1",
+        "FR-BIL-11"
+      ],
+      "sourceLine": 388
+    },
+    {
+      "id": "E2E-BIL-26",
+      "group": "BIL",
+      "title": "Thời gian phát hành phí phòng quy mô lớn",
+      "columns": [
+        "~1.500 sinh viên (dữ liệu sinh)",
+        "Phát hành phí phòng toàn KTX bằng API",
+        "Hoàn tất < 30 giây",
+        "API (đo)",
+        "P2",
+        "NFR-PER-02"
+      ],
+      "sourceLine": 389
+    },
+    {
+      "id": "E2E-BIL-27",
+      "group": "BIL",
+      "title": "Định dạng tiền và ngày",
+      "columns": [
+        "Các màn hóa đơn, cọc",
+        "Xem số tiền, ngày",
+        "Tiền theo định dạng VND dùng chung (`utils/format`), ngày theo múi giờ `Asia/Ho_Chi_Minh`, không lệch ngày khi lưu/hiển thị",
+        "UI",
+        "P1",
+        "UI 27"
+      ],
+      "sourceLine": 390
+    },
+    {
+      "id": "E2E-SUM-01",
+      "group": "SUM",
+      "title": "Mở đợt đăng ký hè",
+      "columns": [
+        "Staff K1; có sinh viên ACTIVE",
+        "Mở đợt hè",
+        "Mọi sinh viên có hợp đồng ACTIVE của đơn vị nhận thông báo; sinh viên đơn vị khác không nhận",
+        "UI+API",
+        "P1",
+        "FR-REG-13"
+      ],
+      "sourceLine": 396
+    },
+    {
+      "id": "E2E-SUM-02",
+      "group": "SUM",
+      "title": "Chọn phương án hè",
+      "columns": [
+        "Student ACTIVE",
+        "Chọn \"ở hè\" / \"tạm rời hè\" / \"rời KTX\"",
+        "Lưu được ở trạng thái chờ duyệt; Student chưa có hợp đồng ACTIVE hoặc đợt hè chưa mở cho đơn vị bị từ chối",
+        "UI+API",
+        "P0",
+        "FR-REG-14"
+      ],
+      "sourceLine": 397
+    },
+    {
+      "id": "E2E-SUM-03",
+      "group": "SUM",
+      "title": "Sửa, rút, gửi lại lựa chọn",
+      "columns": [
+        "Lựa chọn đang chờ; lựa chọn bị từ chối",
+        "Sửa lựa chọn chờ; rút lựa chọn chờ; sửa lựa chọn bị từ chối; gửi lại sau khi rút",
+        "Rút → \"Đã hủy\" (giữ lịch sử); sửa lựa chọn bị từ chối = gửi lại, về chờ duyệt; gửi lại cùng học kỳ mở lại **chính bản ghi cũ**",
+        "UI+API",
+        "P1",
+        "FR-REG-14"
+      ],
+      "sourceLine": 398
+    },
+    {
+      "id": "E2E-SUM-04",
+      "group": "SUM",
+      "title": "Duyệt ở hè",
+      "columns": [
+        "Lựa chọn \"ở hè\" chờ duyệt",
+        "Staff duyệt",
+        "Ngày kết thúc hợp đồng gia hạn qua hè (ghi như một gia hạn, có mốc cũ/mới); Student có hóa đơn phí phòng kỳ hè khi phát hành",
+        "UI+API",
+        "P0",
+        "AT-26, FR-REG-15"
+      ],
+      "sourceLine": 399
+    },
+    {
+      "id": "E2E-SUM-05",
+      "group": "SUM",
+      "title": "Gom phòng ở hè",
+      "columns": [
+        "Sinh viên ở hè",
+        "Staff chuyển sang giường khác cùng đơn vị",
+        "Chuyển thành công theo luồng chuyển phòng (CON-11); khác đơn vị bị từ chối",
+        "UI+API",
+        "P1",
+        "FR-REG-15"
+      ],
+      "sourceLine": 400
+    },
+    {
+      "id": "E2E-SUM-06",
+      "group": "SUM",
+      "title": "Tạm rời hè",
+      "columns": [
+        "Hợp đồng đã gia hạn sang năm học kế tiếp; lựa chọn \"tạm rời\" được duyệt",
+        "Staff ghi phiếu gửi đồ: số kiện, mô tả, vị trí kho, ngày gửi",
+        "Phân phòng đóng, giường trống dùng được trong hè; hợp đồng **vẫn ACTIVE** với nhãn \"Tạm rời hè\"; không có hóa đơn phí hè; cọc giữ nguyên; trưởng phòng (nếu có) tự gỡ",
+        "UI+API",
+        "P0",
+        "AT-24, FR-CON-11, BR-02"
+      ],
+      "sourceLine": 401
+    },
+    {
+      "id": "E2E-SUM-07",
+      "group": "SUM",
+      "title": "Tạm rời khi chưa gia hạn năm sau",
+      "columns": [
+        "Hợp đồng chưa gia hạn sang năm kế",
+        "Ghi phiếu gửi đồ",
+        "Bị từ chối",
+        "UI+API",
+        "P1",
+        "FR-CON-11"
+      ],
+      "sourceLine": 402
+    },
+    {
+      "id": "E2E-SUM-08",
+      "group": "SUM",
+      "title": "Phân lại giường đầu HK1",
+      "columns": [
+        "Sinh viên tạm rời; giường cũ còn trống; biến thể giường cũ đã có người",
+        "Staff phân lại giường",
+        "**Không cần đơn mới**; ưu tiên giường cũ nếu còn trống, nếu đã có người thì phân giường khác; phiếu gửi đồ ghi ngày nhận lại",
+        "UI+API",
+        "P0",
+        "AT-25, FR-CON-12"
+      ],
+      "sourceLine": 403
+    },
+    {
+      "id": "E2E-SUM-09",
+      "group": "SUM",
+      "title": "Chọn rời KTX",
+      "columns": [
+        "Lựa chọn \"rời KTX\" được duyệt",
+        "Staff làm thủ tục trả phòng",
+        "Đi theo CON-16/17",
+        "UI",
+        "P1",
+        "FR-CON-13"
+      ],
+      "sourceLine": 404
+    },
+    {
+      "id": "E2E-NOT-01",
+      "group": "NOT",
+      "title": "Đăng thông báo theo phạm vi",
+      "columns": [
+        "Staff K1",
+        "Đăng cho đơn vị; cho tòa; cho tầng; cho phòng",
+        "Đúng đối tượng nhận; Staff thường không đăng được toàn KTX",
+        "UI",
+        "P1",
+        "FR-NOT-01, 02"
+      ],
+      "sourceLine": 410
+    },
+    {
+      "id": "E2E-NOT-02",
+      "group": "NOT",
+      "title": "Thông báo toàn KTX",
+      "columns": [
+        "Staff có quyền tổng hợp (và Admin)",
+        "Đăng toàn KTX",
+        "Mọi người dùng liên quan nhận được",
+        "UI",
+        "P1",
+        "FR-NOT-01"
+      ],
+      "sourceLine": 411
+    },
+    {
+      "id": "E2E-NOT-03",
+      "group": "NOT",
+      "title": "Phạm vi người nhận",
+      "columns": [
+        "Thông báo cho phòng A101",
+        "Student A101 và Student A102 mở hộp thư",
+        "Chỉ Student A101 thấy",
+        "UI+API",
+        "P0",
+        "FR-NOT-03"
+      ],
+      "sourceLine": 412
+    },
+    {
+      "id": "E2E-NOT-04",
+      "group": "NOT",
+      "title": "Hộp thư và đánh dấu đã đọc",
+      "columns": [
+        "Student có thông báo chưa đọc",
+        "Mở hộp thư → đọc → đánh dấu đã đọc",
+        "Bộ đếm chưa đọc giảm; mỗi người chỉ đánh dấu của chính mình (người khác bị 404/403)",
+        "UI+API",
+        "P0",
+        "FR-NOT-03"
+      ],
+      "sourceLine": 413
+    },
+    {
+      "id": "E2E-NOT-05",
+      "group": "NOT",
+      "title": "Thông báo hệ thống tự sinh",
+      "columns": [
+        "Thực hiện: duyệt/từ chối đơn, giữ chỗ, hóa đơn mới, trừ cọc, ticket đổi trạng thái",
+        "Kiểm hộp thư người liên quan sau mỗi sự kiện",
+        "Có đúng một thông báo cho mỗi sự kiện; thông báo lỗi **không** làm hỏng nghiệp vụ gốc",
+        "UI",
+        "P1",
+        "FR-NOT-04"
+      ],
+      "sourceLine": 414
+    },
+    {
+      "id": "E2E-NOT-06",
+      "group": "NOT",
+      "title": "Sửa/xóa thông báo",
+      "columns": [
+        "Thông báo thủ công và thông báo hệ thống",
+        "Sửa thông báo thủ công; sửa/xóa thông báo hệ thống",
+        "Thủ công chỉ sửa được nội dung, giữ phạm vi/người nhận; thông báo hệ thống không sửa/xóa qua CRUD",
+        "UI+API",
+        "P1",
+        "CLAUDE.md"
+      ],
+      "sourceLine": 415
+    },
+    {
+      "id": "E2E-NOT-07",
+      "group": "NOT",
+      "title": "Dashboard Staff K1",
+      "columns": [
+        "Dữ liệu nền với số liệu đã biết",
+        "Mở `/staff/dashboard`",
+        "Các chỉ số khớp số tính từ dữ liệu nguồn: tỷ lệ giường đang dùng/sức chứa khai thác, số giường trong phòng bảo trì (**riêng**), tổng tiền chưa thanh toán, ticket theo trạng thái, hợp đồng sắp hết hạn/quá hạn trả phòng, phòng chưa có trưởng phòng, tổng bù cọc chưa nộp",
+        "UI+API",
+        "P0",
+        "FR-NOT-05"
+      ],
+      "sourceLine": 416
+    },
+    {
+      "id": "E2E-NOT-08",
+      "group": "NOT",
+      "title": "Dashboard theo phạm vi",
+      "columns": [
+        "Staff K1, Staff N2+N3, Staff tổng hợp",
+        "So sánh số liệu",
+        "K1 chỉ số K1; N2+N3 chỉ số của mình; tổng hợp = toàn KTX",
+        "UI",
+        "P1",
+        "FR-NOT-05, BR-07"
+      ],
+      "sourceLine": 417
+    },
+    {
+      "id": "E2E-NOT-09",
+      "group": "NOT",
+      "title": "Biểu đồ dashboard",
+      "columns": [
+        "Staff",
+        "Mở dashboard",
+        "Biểu đồ hiển thị, không lỗi console, dữ liệu biểu đồ khớp bảng số",
+        "UI",
+        "P2",
+        "FR-NOT-06"
+      ],
+      "sourceLine": 418
+    },
+    {
+      "id": "E2E-JOB-01",
+      "group": "JOB",
+      "title": "Tự hủy hợp đồng PENDING quá hạn",
+      "columns": [
+        "Hợp đồng PENDING có thời điểm phân phòng cách đây N+1 ngày (N=7)",
+        "Đợi job chạy",
+        "Hợp đồng CANCELLED, phân phòng đóng, giường trống, đơn CANCELLED, lý do \"tự động hủy\"; audit có người thao tác `SYSTEM`",
+        "API `@job`",
+        "P0",
+        "AT-05, FR-CON-02"
+      ],
+      "sourceLine": 426
+    },
+    {
+      "id": "E2E-JOB-02",
+      "group": "JOB",
+      "title": "Biên của hạn kích hoạt",
+      "columns": [
+        "Hợp đồng PENDING đúng N ngày; N−1 ngày",
+        "Đợi job chạy",
+        "Hợp đồng chưa quá hạn **không** bị hủy; chỉ quá hạn mới bị hủy",
+        "API `@job`",
+        "P1",
+        "FR-CON-02"
+      ],
+      "sourceLine": 427
+    },
+    {
+      "id": "E2E-JOB-03",
+      "group": "JOB",
+      "title": "Job chạy lại an toàn",
+      "columns": [
+        "Sau JOB-01",
+        "Kích hoạt job thêm một lần nữa",
+        "Không tạo thêm lịch sử/audit; không đổi dữ liệu",
+        "API `@job`",
+        "P0",
+        "NFR-REL-03"
+      ],
+      "sourceLine": 428
+    },
+    {
+      "id": "E2E-JOB-04",
+      "group": "JOB",
+      "title": "Tự đóng ticket RESOLVED quá 3 ngày",
+      "columns": [
+        "Ticket RESOLVED cách đây 3 ngày + 1 phút; ticket 2 ngày",
+        "Đợi job",
+        "Ticket quá hạn CLOSED với lý do \"tự động đóng\", SYSTEM; ticket 2 ngày giữ RESOLVED; **không** tự kết luận nguyên nhân hay trừ cọc",
+        "API `@job`",
+        "P0",
+        "AT-12, FR-MNT-06"
+      ],
+      "sourceLine": 429
+    },
+    {
+      "id": "E2E-JOB-05",
+      "group": "JOB",
+      "title": "Nhắc bù cọc quá hạn",
+      "columns": [
+        "Khoản bù cọc quá 7 ngày",
+        "Đợi job hai lần",
+        "Sinh viên nhận **một** thông báo (không trùng); khoản đã được bù không còn bị nhắc; nằm trong danh sách cần nhắc của Staff",
+        "API `@job`",
+        "P0",
+        "AT-23, FR-BIL-13"
+      ],
+      "sourceLine": 430
+    },
+    {
+      "id": "E2E-JOB-06",
+      "group": "JOB",
+      "title": "Tham số lấy từ cấu hình",
+      "columns": [
+        "Admin",
+        "Đổi hạn kích hoạt từ 7 xuống 3 ngày qua màn Cấu hình → tạo hợp đồng PENDING cách 4 ngày",
+        "Hợp đồng bị hủy theo giá trị mới mà không cần triển khai lại; thử thêm khóa cấu hình mới qua `save-or-update` bị từ chối",
+        "UI+API `@job`",
+        "P1",
+        "CLAUDE.md \"không hardcode\""
+      ],
+      "sourceLine": 431
+    },
+    {
+      "id": "E2E-JOB-07",
+      "group": "JOB",
+      "title": "Cô lập lỗi từng bản ghi",
+      "columns": [
+        "Một bản ghi khiến xử lý lỗi, các bản ghi khác hợp lệ",
+        "Đợi job",
+        "Bản ghi lỗi không chặn các bản ghi còn lại",
+        "API `@job`",
+        "P2",
+        "SAD (job từng ID, từng transaction)"
+      ],
+      "sourceLine": 432
+    },
+    {
+      "id": "E2E-UI-01",
+      "group": "UI",
+      "title": "Bấm Sửa nạp dữ liệu hiện có",
+      "columns": [
+        "Bản ghi có ngày, khóa ngoại, giá trị `false`, giá trị `0`",
+        "Bấm Sửa trên các màn CRUD tiêu biểu (phòng, đợt đăng ký, học kỳ, đơn giá) → **không đổi gì** → Lưu",
+        "Form hiển thị đúng ngày, lựa chọn khóa ngoại, công tắc `false`, số `0`; sau Lưu dữ liệu không mất/đổi (sửa từng phần)",
+        "UI",
+        "P0",
+        "CLAUDE.md"
+      ],
+      "sourceLine": 438
+    },
+    {
+      "id": "E2E-UI-02",
+      "group": "UI",
+      "title": "Lỗi trường và trạng thái đang lưu",
+      "columns": [
+        "Form bất kỳ",
+        "Gửi dữ liệu sai; gửi dữ liệu đúng",
+        "Lỗi hiển thị dưới trường (`aria-describedby`); form mở khi lưu lỗi; nút ở trạng thái đang lưu và chặn bấm đôi; đóng form chỉ khi lưu **thành công**",
+        "UI",
+        "P0",
+        "CLAUDE.md"
+      ],
+      "sourceLine": 439
+    },
+    {
+      "id": "E2E-UI-03",
+      "group": "UI",
+      "title": "Tìm kiếm, sắp xếp, phân trang ở server",
+      "columns": [
+        "Danh sách > 1 trang",
+        "Đổi `page`, `size` (1, 20, 100), từ khóa `q`, cột sắp xếp; mở 2 tab CRUD",
+        "Mỗi thao tác gửi `POST .../search-by-page` với body `{page,size,q,sort,...}`; `total` khớp số trên giao diện; sắp xếp chỉ theo cột server cho phép (cột lạ bị từ chối); trạng thái URL của tab này không rò sang tab khác; **không** tải một trang rồi lọc lại ở trình duyệt",
+        "UI+API",
+        "P0",
+        "CLAUDE.md \"API theo V5\""
+      ],
+      "sourceLine": 440
+    },
+    {
+      "id": "E2E-UI-04",
+      "group": "UI",
+      "title": "Giới hạn tham số phân trang",
+      "columns": [
+        "API",
+        "`page=-1`, `size=0`, `size=101`, `page=\"a\"`",
+        "400 với `errorCode` ổn định, không 500",
+        "API",
+        "P1",
+        "CLAUDE.md"
+      ],
+      "sourceLine": 441
+    },
+    {
+      "id": "E2E-UI-05",
+      "group": "UI",
+      "title": "Xử lý 409 và mã lỗi",
+      "columns": [
+        "Tạo xung đột (REG-18)",
+        "Quan sát thông báo của bên thất bại",
+        "Dữ liệu được làm mới (refetch); hiển thị câu tiếng Việt tương ứng `errorCode`; **không** hiện `message` thô hay JSON",
+        "UI",
+        "P0",
+        "CLAUDE.md"
+      ],
+      "sourceLine": 442
+    },
+    {
+      "id": "E2E-UI-06",
+      "group": "UI",
+      "title": "`allowedActions` quyết định nút",
+      "columns": [
+        "Đối tượng ở nhiều trạng thái (đơn, hợp đồng, ticket, hóa đơn)",
+        "Mở chi tiết ở từng trạng thái",
+        "Chỉ hiện các nút có trong `allowedActions`; nút hành động không có trong danh sách không xuất hiện; nhưng gọi API trái trạng thái vẫn bị từ chối",
+        "UI+API",
+        "P0",
+        "SRS 3, API-Spec mục 6"
+      ],
+      "sourceLine": 443
+    },
+    {
+      "id": "E2E-UI-07",
+      "group": "UI",
+      "title": "Hộp thoại xác nhận",
+      "columns": [
+        "Thao tác không đảo ngược (duyệt, từ chối, kích hoạt, trả phòng, hủy)",
+        "Bấm thao tác",
+        "Có hộp thoại xác nhận; hành động cần lý do thì lý do bắt buộc; Hủy hộp thoại không gọi API",
+        "UI",
+        "P0",
+        "CLAUDE.md \"API conventions\""
+      ],
+      "sourceLine": 444
+    },
+    {
+      "id": "E2E-UI-08",
+      "group": "UI",
+      "title": "Nhãn trạng thái thống nhất",
+      "columns": [
+        "Các màn có trạng thái",
+        "So nhãn/màu với `statusConfig` (ba lớp: trạng thái DB, nhãn suy ra, tình trạng giường)",
+        "Mọi nơi dùng cùng nhãn tiếng Việt; không có trạng thái hiện mã thô",
+        "UI",
+        "P1",
+        "UI 27"
+      ],
+      "sourceLine": 445
+    },
+    {
+      "id": "E2E-UI-09",
+      "group": "UI",
+      "title": "Mobile 360 px: Student",
+      "columns": [
+        "Viewport 360×740",
+        "Duyệt các màn Student: trang chủ, đơn, hợp đồng, hóa đơn, sửa chữa, thông báo",
+        "Có điều hướng dưới đáy (< 640 px); bảng chuyển thành thẻ; không cuộn ngang; vùng bấm đủ lớn; nộp đơn hoàn tất được",
+        "UI `@mobile`",
+        "P0",
+        "NFR-USA-01"
+      ],
+      "sourceLine": 446
+    },
+    {
+      "id": "E2E-UI-10",
+      "group": "UI",
+      "title": "Mobile 360 px: Technician",
+      "columns": [
+        "Viewport 360×740",
+        "Xem việc, cập nhật tiến độ, đính ghi chú",
+        "Dùng trọn vẹn không cuộn ngang",
+        "UI `@mobile`",
+        "P1",
+        "NFR-USA-01"
+      ],
+      "sourceLine": 447
+    },
+    {
+      "id": "E2E-UI-11",
+      "group": "UI",
+      "title": "Desktop: Staff, Admin",
+      "columns": [
+        "1280×800 và 900×700",
+        "Mở các màn",
+        "≥ 1024 px: sidebar; dưới 1024 px: Drawer mở/đóng được; bảng dùng DataTable",
+        "UI",
+        "P1",
+        "UI 27"
+      ],
+      "sourceLine": 448
+    },
+    {
+      "id": "E2E-UI-12",
+      "group": "UI",
+      "title": "Truy cập (a11y)",
+      "columns": [
+        "Các màn đăng nhập, danh sách, form",
+        "Quét axe; điều hướng bàn phím trong hộp thoại",
+        "Không lỗi mức nghiêm trọng/cao; Tab đi đúng thứ tự; Esc đóng hộp thoại; focus quay về nút gọi",
+        "UI `@axe`",
+        "P2",
+        "UI 27"
+      ],
+      "sourceLine": 449
+    },
+    {
+      "id": "E2E-UI-13",
+      "group": "UI",
+      "title": "Không có lỗi console",
+      "columns": [
+        "Mọi luồng smoke",
+        "Theo dõi `console.error` và `pageerror`",
+        "Không có lỗi không mong đợi (có danh sách cho phép rõ ràng)",
+        "UI",
+        "P1",
+        "—"
+      ],
+      "sourceLine": 450
+    },
+    {
+      "id": "E2E-UI-14",
+      "group": "UI",
+      "title": "Nhập/xuất Excel ở giao diện",
+      "columns": [
+        "Admin/Staff",
+        "Tải mẫu; xuất báo cáo",
+        "Tệp tải về mở được, có tiêu đề cột đúng; xuất không chứa công thức độc hại",
+        "UI",
+        "P2",
+        "SRS 5.3"
+      ],
+      "sourceLine": 451
+    },
+    {
+      "id": "E2E-SEC-01",
+      "group": "SEC",
+      "title": "XSS được escape khi hiển thị",
+      "columns": [
+        "Student/Staff",
+        "Nhập `<script>`, `<img onerror>` vào mô tả ticket, nội dung thông báo, ghi chú đơn, họ tên (nếu sửa được) → xem ở vai trò khác",
+        "Hiển thị dạng văn bản, không chạy script; không có hộp thoại bất ngờ",
+        "UI",
+        "P0",
+        "NFR-SEC-03"
+      ],
+      "sourceLine": 457
+    },
+    {
+      "id": "E2E-SEC-02",
+      "group": "SEC",
+      "title": "SQL injection",
+      "columns": [
+        "API",
+        "Gửi `' OR 1=1 --`, `\"; DROP TABLE ...` vào `q`, sort, các trường văn bản",
+        "Không lỗi 500, không lộ dữ liệu thừa, dữ liệu nguyên vẹn",
+        "API",
+        "P0",
+        "NFR-SEC-03"
+      ],
+      "sourceLine": 458
+    },
+    {
+      "id": "E2E-SEC-03",
+      "group": "SEC",
+      "title": "DTO từ chối trường ngoài hợp đồng",
+      "columns": [
+        "API",
+        "Gửi trường lạ, ID kiểu chuỗi, `page` sai kiểu, phần tử `null` trong danh sách quan hệ",
+        "400 với `errorCode` ổn định, không chạy logic",
+        "API",
+        "P0",
+        "CLAUDE.md \"Validation\""
+      ],
+      "sourceLine": 459
+    },
+    {
+      "id": "E2E-SEC-04",
+      "group": "SEC",
+      "title": "Token không lưu bền",
+      "columns": [
+        "Đã đăng nhập",
+        "Kiểm `localStorage`, `sessionStorage`, cookie, IndexedDB",
+        "Không chứa access token/refresh token dạng đọc được theo thiết kế (token trong bộ nhớ); không có mật khẩu",
+        "UI",
+        "P0",
+        "NFR-SEC-04, NFR-SEC-01"
+      ],
+      "sourceLine": 460
+    },
+    {
+      "id": "E2E-SEC-05",
+      "group": "SEC",
+      "title": "Mật khẩu tạm chỉ trả một lần",
+      "columns": [
+        "Vừa tạo/reset tài khoản",
+        "Gọi lại GET người dùng, GET audit, kiểm cache phản hồi",
+        "Không có `temporaryPassword` hay mật khẩu ở bất kỳ phản hồi sau đó, trong audit hoặc log",
+        "API",
+        "P0",
+        "CLAUDE.md, NFR-SEC-01"
+      ],
+      "sourceLine": 461
+    },
+    {
+      "id": "E2E-SEC-06",
+      "group": "SEC",
+      "title": "`requestId` trên lỗi",
+      "columns": [
+        "API",
+        "Gây lỗi 401, 403, 404, 409, và (nếu có cách an toàn) 500",
+        "Phản hồi theo dạng `{errorCode, message, details}`; 401/403/500 có `requestId`; 500 là `INTERNAL_ERROR` không lộ stack trace",
+        "API",
+        "P1",
+        "SAD, NFR-MNT-03"
+      ],
+      "sourceLine": 462
+    },
+    {
+      "id": "E2E-SEC-07",
+      "group": "SEC",
+      "title": "Quyền khai ở mọi endpoint",
+      "columns": [
+        "API",
+        "Gọi một mẫu endpoint ghi bằng tài khoản không có quyền (từng vai trò)",
+        "403 trước khi Controller chạy; chưa đăng nhập 401",
+        "API",
+        "P0",
+        "`@RequirePrivilege`"
+      ],
+      "sourceLine": 463
+    },
+    {
+      "id": "E2E-SEC-08",
+      "group": "SEC",
+      "title": "Secret không lộ ở frontend",
+      "columns": [
+        "Bản build",
+        "Tìm chuỗi secret trong bundle và phản hồi mạng",
+        "Không có `DMS_KEYCLOAK_ADMIN_CLIENT_SECRET`, mật khẩu CSDL hay khóa",
+        "UI",
+        "P1",
+        "NFR-SEC-05"
+      ],
+      "sourceLine": 464
+    },
+    {
+      "id": "E2E-XF-01",
+      "group": "XF",
+      "title": "Từ đăng ký đến ở được (AT-01)",
+      "columns": [
+        "Staff mở đợt → Student soạn và nộp đơn → Staff duyệt → Staff phân giường → Student thấy giường được giữ và hạn → Staff kích hoạt thu cọc → Student xem hợp đồng/phòng/sổ cọc",
+        "Hợp đồng ACTIVE, phân phòng STAY, sổ cọc +cọc tòa, Student thấy đúng phòng, giường; giường trong danh sách phòng tính là \"đang ở\"",
+        "P0 `@smoke`",
+        "AT-01"
+      ],
+      "sourceLine": 472
+    },
+    {
+      "id": "E2E-XF-02",
+      "group": "XF",
+      "title": "Vòng đời đầy đủ một sinh viên",
+      "columns": [
+        "XF-01 → Student báo hỏng vòi nước → Staff giao việc → KTV xử lý → Student nghiệm thu → Staff chọn hư hỏng do sử dụng 100.000 đ chia 3 → Staff nhập điện nước và phát hành → trưởng phòng nhận hóa đơn → Staff xác nhận thanh toán → sinh viên nộp bù cọc, Staff xác nhận → trả phòng hoàn cọc",
+        "Mỗi bước đúng trạng thái; số dư cọc cuối = cọc − khoản trừ + bù; hoàn cọc = số dư; công nợ còn lại đúng",
+        "P0",
+        "AT-01, 14, 19, 20"
+      ],
+      "sourceLine": 473
+    },
+    {
+      "id": "E2E-XF-03",
+      "group": "XF",
+      "title": "Chu trình hè",
+      "columns": [
+        "Staff mở đợt hè → sinh viên A chọn ở hè, B chọn tạm rời → Staff duyệt cả hai, ghi phiếu gửi đồ cho B → phát hành phí hè → đầu HK1 phân lại giường cho B",
+        "A có hóa đơn hè, B không; giường của B dùng được trong hè; B có giường lại không cần đơn mới, phiếu ghi ngày nhận lại",
+        "P1",
+        "AT-24, 25, 26"
+      ],
+      "sourceLine": 474
+    },
+    {
+      "id": "E2E-XF-04",
+      "group": "XF",
+      "title": "Chuyển phòng ảnh hưởng thế nào đến tiền",
+      "columns": [
+        "Sinh viên ở phòng giá 3.000.000 → chuyển giữa kỳ sang phòng giá khác → phát hành phí phòng",
+        "Hóa đơn kỳ hiện tại không đổi theo phòng mới; kỳ sau theo phòng mới; lịch sử phân phòng hai dòng liên tiếp",
+        "P1",
+        "Q-19, FR-BIL-05"
+      ],
+      "sourceLine": 475
+    },
+    {
+      "id": "E2E-XF-05",
+      "group": "XF",
+      "title": "Giữ chỗ hết hạn rồi phân lại",
+      "columns": [
+        "Phân giường → để quá hạn (đẩy lùi) → job tự hủy → Staff phân lại giường cho cùng đơn (nếu đơn được trả về trạng thái hợp lệ theo luồng)",
+        "Giường được trả; không có bản ghi thừa; Student nhận thông báo hủy; luồng phân lại không vi phạm ràng buộc",
+        "P1",
+        "AT-05, FR-CON-02"
+      ],
+      "sourceLine": 476
+    },
+    {
+      "id": "E2E-XF-06",
+      "group": "XF",
+      "title": "Khóa/mở khóa trong lúc đang làm việc",
+      "columns": [
+        "Student đang soạn đơn → Admin khóa → Student bấm Nộp → Admin mở khóa → Student đăng nhập lại",
+        "Nộp bị chặn; sau mở khóa phiên cũ vẫn mất hiệu lực; đăng nhập mới nộp được",
+        "P1",
+        "AT-28"
+      ],
+      "sourceLine": 477
+    }
+  ]
+}

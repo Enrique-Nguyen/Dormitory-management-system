@@ -1,0 +1,178 @@
+[
+  {
+    "name": "vn.edu.tlu.dms.ApplicationAssignmentIntegrationTest",
+    "tests": 12,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.ApplicationAssignmentIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.BedOccupancyIntegrationTest",
+    "tests": 19,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.BedOccupancyIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.BillingConcurrencyIntegrationTest",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.BillingConcurrencyIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.CatalogApiIntegrationTest",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.CatalogApiIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.CatalogMigrationIntegrationTest",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.CatalogMigrationIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.ContractActivationIntegrationTest",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.ContractActivationIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.ContractExtensionIntegrationTest",
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.ContractExtensionIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.CrudApiIntegrationTest",
+    "tests": 66,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.CrudApiIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.DepositIntegrationTest",
+    "tests": 27,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.DepositIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.DmsApplicationTests",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.DmsApplicationTests.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.InvoiceCrudScopeIntegrationTest",
+    "tests": 31,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.InvoiceCrudScopeIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.KeycloakAccountIntegrationTest",
+    "tests": 33,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.KeycloakAccountIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.MaintenanceConcludeIntegrationTest",
+    "tests": 19,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.MaintenanceConcludeIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.MaintenanceConcludeRollbackIntegrationTest",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.MaintenanceConcludeRollbackIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.MoveOutIntegrationTest",
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.MoveOutIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.RoomLeaderIntegrationTest",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.RoomLeaderIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.StorageIntegrationTest",
+    "tests": 12,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.StorageIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.StudentImportIntegrationTest",
+    "tests": 23,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.StudentImportIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.SummerChoiceIntegrationTest",
+    "tests": 18,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.SummerChoiceIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.SystemJobsIntegrationTest",
+    "tests": 14,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.SystemJobsIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.UserPreferenceConcurrencyIntegrationTest",
+    "tests": 1,
+    "failures": 0,
+    "errors": 1,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.UserPreferenceConcurrencyIntegrationTest.xml"
+  },
+  {
+    "name": "vn.edu.tlu.dms.UserPreferenceIntegrationTest",
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source": "TEST-vn.edu.tlu.dms.UserPreferenceIntegrationTest.xml"
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "database": [
+    {
+      "datname": "dms_e2e",
+      "datcollate": "C",
+      "datctype": "C"
+    },
+    {
+      "datname": "dms_e2e_integration",
+      "datcollate": "C",
+      "datctype": "C"
+    }
+  ],
+  "fold": [
+    {
+      "pg_lower": "??t ktv ??c",
+      "expected_lower": "??t ktv ??c"
+    }
+  ]
+}
