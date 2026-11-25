@@ -8,8 +8,10 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import vn.edu.tlu.dms.common.constants.DmsConstants;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Facility;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Gender;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
+import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -48,7 +50,11 @@ public final class AccountDtos {
             @Positive Long id,
             @Size(max = 50) String username,
             @Size(max = 100) String fullName,
-            @Size(max = 20) String phone,
+            @Size(max = 20)
+                    @Pattern(
+                            regexp = Facility.PHONE_PATTERN,
+                            message = ValidationMessage.PHONE_INVALID)
+                    String phone,
             @Pattern(regexp = Role.MANAGEMENT_ROLE_PATTERN) String role,
             @Positive Long managementUnitId,
             @Size(max = 20) String studentCode,
@@ -62,13 +68,21 @@ public final class AccountDtos {
     public record Create(
             @NotBlank @Size(max = 50) String username,
             @NotBlank @Size(max = 100) String fullName,
-            @Size(max = 20) String phone,
+            @Size(max = 20)
+                    @Pattern(
+                            regexp = Facility.PHONE_PATTERN,
+                            message = ValidationMessage.PHONE_INVALID)
+                    String phone,
             @NotBlank @Pattern(regexp = Role.MANAGEMENT_ROLE_PATTERN) String role,
             Long managementUnitId) {}
 
     public record Update(
             @Size(max = 100) String fullName,
-            @Size(max = 20) String phone,
+            @Size(max = 20)
+                    @Pattern(
+                            regexp = Facility.PHONE_PATTERN,
+                            message = ValidationMessage.PHONE_INVALID)
+                    String phone,
             @Pattern(regexp = Role.MANAGEMENT_ROLE_PATTERN) String role,
             Long managementUnitId,
             @Size(max = 20) String studentCode,
@@ -80,7 +94,11 @@ public final class AccountDtos {
             @Positive Long hometownId) {}
 
     public record ProfileInput(
-            @Size(max = 20) String phone,
+            @Size(max = 20)
+                    @Pattern(
+                            regexp = Facility.PHONE_PATTERN,
+                            message = ValidationMessage.PHONE_INVALID)
+                    String phone,
             @Positive Long hometownId,
             @Size(max = 200) String emergencyContact) {}
 

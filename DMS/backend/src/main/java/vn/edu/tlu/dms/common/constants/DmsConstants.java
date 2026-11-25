@@ -495,6 +495,8 @@ public final class DmsConstants {
                 "Truyền đúng một trong applicationId, transferRequestId hoặc storageRecordId";
         public static final String ACADEMIC_YEAR_CONSECUTIVE = "Hai năm phải liền nhau";
         public static final String ROOM_FEE_DUE_AFTER_START = "Hạn đóng phí phòng không được trước ngày bắt đầu học kỳ";
+        public static final String PHONE_INVALID =
+                "Số điện thoại phải bắt đầu bằng 0 hoặc +84 và gồm 10–11 chữ số";
         private ValidationMessage() {}
     }
 

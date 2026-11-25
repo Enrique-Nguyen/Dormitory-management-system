@@ -25,6 +25,7 @@ import vn.edu.tlu.dms.common.constants.DmsConstants.AuditAction;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Catalog;
 import vn.edu.tlu.dms.common.constants.DmsConstants.EntityType;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ErrorCode;
+import vn.edu.tlu.dms.common.constants.DmsConstants.Facility;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Permission;
 import vn.edu.tlu.dms.common.constants.DmsConstants.Role;
 import vn.edu.tlu.dms.common.constants.DmsConstants.ValidationMessage;
@@ -198,7 +199,7 @@ public class UserServiceImpl implements UserService {
         String temporary = generateTemporaryPassword();
         u.setUsername(input.username().trim());
         u.setFullName(trimRequiredText(input.fullName(), "fullName"));
-        u.setPhone(input.phone());
+        u.setPhone(normalizeOptionalPhone(input.phone()));
         u.setRole(input.role());
         u.setManagementUnitId(input.managementUnitId());
         u.setCrossUnitAccess(false);
@@ -252,7 +253,7 @@ public class UserServiceImpl implements UserService {
             u.setFullName(trimRequiredText(input.fullName(), "fullName"));
         }
         if (input.phone() != null) {
-            u.setPhone(input.phone().trim());
+            u.setPhone(normalizeOptionalPhone(input.phone()));
         }
         if (input.managementUnitId() != null && !Role.ADMIN.equals(input.role())) {
             if (!Set.of(Role.STAFF, Role.TECHNICIAN).contains(u.getRole())) {
@@ -403,7 +404,7 @@ public class UserServiceImpl implements UserService {
         // kiểm tra lại phiên sau khi chờ khóa tài khoản
         current.get();
         if (input.phone() != null) {
-            u.setPhone(input.phone().trim());
+            u.setPhone(normalizeOptionalPhone(input.phone()));
         }
         var p = students.findById(u.getId()).orElse(null);
         if (p != null) {
@@ -459,6 +460,18 @@ public class UserServiceImpl implements UserService {
             throw BusinessException.invalid(field, ValidationMessage.REQUIRED);
         }
         return value.trim();
+    }
+
+    /** Chuẩn hóa và kiểm tra SĐT tùy chọn; chuỗi rỗng dùng để xóa giá trị hiện có. */
+    private String normalizeOptionalPhone(String phone) {
+        if (phone == null) {
+            return null;
+        }
+        String trimmed = phone.trim();
+        if (!trimmed.matches(Facility.PHONE_PATTERN)) {
+            throw BusinessException.invalid(ApiField.PHONE, ValidationMessage.PHONE_INVALID);
+        }
+        return trimmed;
     }
 
     /** Trả lỗi đúng tên trường khi client gửi dữ liệu sinh viên vào nhánh tạo cán bộ. */
