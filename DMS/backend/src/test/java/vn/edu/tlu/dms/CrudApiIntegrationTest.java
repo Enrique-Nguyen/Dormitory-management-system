@@ -2132,6 +2132,39 @@ class CrudApiIntegrationTest {
         }
     }
 
+    /** Chuỗi số ở trường phân trang hoặc ID phải bị từ chối 400 ngay tại ranh giới DTO (DEF-03). */
+    @Test
+    void dtoRejectsNumericStringsBeforeBusinessLookup() throws Exception {
+        mvc.perform(
+                        post("/api/rooms/search-by-page")
+                                .with(asUser(staffId, Role.STAFF))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"page\":\"1\",\"size\":20}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value(ErrorCode.VALIDATION_FAILED));
+        mvc.perform(
+                        post("/api/rooms/search-by-page")
+                                .with(asUser(staffId, Role.STAFF))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"page\":0,\"size\":\"2\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value(ErrorCode.VALIDATION_FAILED));
+        mvc.perform(
+                        post("/api/applications/save-or-update")
+                                .with(asUser(studentId, Role.STUDENT))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"id\":\"123\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value(ErrorCode.VALIDATION_FAILED));
+        mvc.perform(
+                        post("/api/applications/save-or-update")
+                                .with(asUser(studentId, Role.STUDENT))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"id\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value(ErrorCode.VALIDATION_FAILED));
+    }
+
     /** Tạo và đổi mã giường đi cùng API nhưng không làm mất phòng đang sở hữu giường. */
     @Test
     void bedSaveCreatesThenUpdatesSameBedWithoutChangingItsRoom() throws Exception {
