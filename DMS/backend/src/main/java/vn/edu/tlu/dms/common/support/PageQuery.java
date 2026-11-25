@@ -35,8 +35,9 @@ public final class PageQuery {
             }
             orders.add(new Sort.Order(Sort.Direction.fromString(direction), parts[0]));
         }
-        if (orders.stream().noneMatch(order -> order.getProperty().equals("id"))) {
-            orders.add(Sort.Order.asc("id"));
+        if (allowed.contains(ApiField.ID)
+                && orders.stream().noneMatch(order -> order.getProperty().equals(ApiField.ID))) {
+            orders.add(Sort.Order.asc(ApiField.ID));
         }
         return PageRequest.of(page, size, Sort.by(orders));
     }
