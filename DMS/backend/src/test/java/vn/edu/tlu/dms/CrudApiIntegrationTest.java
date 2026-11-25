@@ -2099,6 +2099,39 @@ class CrudApiIntegrationTest {
                         post("/api/me/profile/save-or-update")
                                 .with(asUser(adminId, Role.ADMIN))
                                 .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"phone\":\"abc\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value(ErrorCode.VALIDATION_FAILED))
+                .andExpect(jsonPath("$.details.fieldErrors[0].field").value("phone"));
+        mvc.perform(get("/api/me/profile").with(asUser(adminId, Role.ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.phone").value("0901234567"));
+        mvc.perform(
+                        post("/api/me/profile/save-or-update")
+                                .with(asUser(adminId, Role.ADMIN))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"phone\":\"+84901234567\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.phone").value("+84901234567"));
+        mvc.perform(
+                        post("/api/me/profile/save-or-update")
+                                .with(asUser(adminId, Role.ADMIN))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"phone\":\"\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.phone").value(""));
+        mvc.perform(
+                        post("/api/admin/users/save-or-update")
+                                .with(asUser(adminId, Role.ADMIN))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"id\":" + staffId + ",\"phone\":\"abc\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value(ErrorCode.VALIDATION_FAILED))
+                .andExpect(jsonPath("$.details.fieldErrors[0].field").value("phone"));
+        mvc.perform(
+                        post("/api/me/profile/save-or-update")
+                                .with(asUser(adminId, Role.ADMIN))
+                                .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"role\":\"STAFF\"}"))
                 .andExpect(status().isBadRequest());
         mvc.perform(
