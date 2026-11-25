@@ -1789,6 +1789,36 @@ class CrudApiIntegrationTest {
                                 .with(asUser(adminId, "ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(0));
+
+        // Hai danh mục bộ lọc nhật ký không có cột id vẫn phải trả 200 thay vì 500 (DEF-01).
+        mvc.perform(
+                        searchByPage("/api/admin/audit-logs/actions")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").isNumber());
+        mvc.perform(
+                        searchByPage("/api/admin/audit-logs/actions", "q", action)
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].code").value(action))
+                .andExpect(jsonPath("$.content[0].name").value(action));
+        mvc.perform(
+                        searchByPage("/api/admin/audit-logs/entity-types", "q", "USER")
+                                .with(asUser(adminId, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].code").value("USER"))
+                .andExpect(jsonPath("$.content[0].name").value("USER"));
+        mvc.perform(
+                        searchByPage("/api/admin/audit-logs/actions")
+                                .with(asUser(staffId, "STAFF")))
+                .andExpect(status().isForbidden());
+        mvc.perform(
+                        searchByPage("/api/admin/audit-logs/entity-types")
+                                .with(asUser(staffId, "STAFF")))
+                .andExpect(status().isForbidden());
     }
 
     /** Đầu vào bộ lọc sai phải báo 400; quyền tổng hợp của Staff vẫn không mở API quản trị. */
