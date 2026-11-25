@@ -1281,22 +1281,18 @@ export default function CrudPage({
     }
   }
   /** Trường hiển thị trong form; giữ nguyên điều kiện ẩn theo nghiệp vụ của màn hiện tại. */
-  const formFields = useMemo(
-    () =>
-      fields
-        .filter(visible)
-        .filter(
-          (field) =>
-            !(
-              modalMode === 'create' &&
-              resource === 'maintenance' &&
-              role === Role.STUDENT &&
-              field.name === 'roomId'
-            ),
+  const formFields = fields
+    .filter(visible)
+    .filter(
+      (field) =>
+        !(
+          modalMode === 'create' &&
+          resource === 'maintenance' &&
+          role === Role.STUDENT &&
+          field.name === 'roomId'
         ),
-    [fields, modalMode, resource, role, visible],
-  )
-  const formSections: CrudFormSection[] = useMemo(() => {
+    )
+  const formSections: CrudFormSection[] = (() => {
     if (config.formSections && config.formSections.length > 0) {
       return config.formSections
     }
@@ -1326,7 +1322,7 @@ export default function CrudPage({
       })
     }
     return sections
-  }, [config.formSections, formFields])
+  })()
 
   const sectionedFieldNames = new Set(
     formSections.flatMap((section) => section.fields),

@@ -54,13 +54,14 @@ export default function NotificationInboxPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const from = searchParams.get('from') ?? ''
   const to = searchParams.get('to') ?? ''
-  const [draftFrom, setDraftFrom] = useState(from)
-  const [draftTo, setDraftTo] = useState(to)
-
-  useEffect(() => {
-    setDraftFrom(from)
-    setDraftTo(to)
-  }, [from, to])
+  const [draftRange, setDraftRange] = useState({
+    sourceFrom: from,
+    sourceTo: to,
+    from,
+    to,
+  })
+  const draftFrom = draftRange.sourceFrom === from ? draftRange.from : from
+  const draftTo = draftRange.sourceTo === to ? draftRange.to : to
 
   const q = searchParams.get('q')?.trim() ?? ''
   const unreadParam = searchParams.get('unread')
@@ -247,13 +248,27 @@ export default function NotificationInboxPage() {
               type="datetime-local"
               aria-label="Thời gian tạo từ"
               value={draftFrom}
-              onChange={(event) => setDraftFrom(event.target.value)}
+              onChange={(event) =>
+                setDraftRange({
+                  sourceFrom: from,
+                  sourceTo: to,
+                  from: event.target.value,
+                  to: draftTo,
+                })
+              }
             />
             <Input
               type="datetime-local"
               aria-label="Thời gian tạo đến"
               value={draftTo}
-              onChange={(event) => setDraftTo(event.target.value)}
+              onChange={(event) =>
+                setDraftRange({
+                  sourceFrom: from,
+                  sourceTo: to,
+                  from: draftFrom,
+                  to: event.target.value,
+                })
+              }
             />
             <Button onClick={() => {
               if (draftFrom && draftTo && new Date(draftFrom).getTime() > new Date(draftTo).getTime()) {
@@ -263,8 +278,7 @@ export default function NotificationInboxPage() {
               updateQuery({ from: draftFrom, to: draftTo })
             }}>Áp dụng thời gian</Button>
             <Button onClick={() => {
-              setDraftFrom('')
-              setDraftTo('')
+              setDraftRange({ sourceFrom: '', sourceTo: '', from: '', to: '' })
               updateQuery({ from: '', to: '' })
             }}>Xóa thời gian</Button>
             <Button

@@ -185,7 +185,7 @@ export interface ModalProps extends ComponentPropsWithRef<typeof AntModal> {
 }
 
 /** Ba cỡ hộp thoại chuẩn: nhỏ (xác nhận, ghi chú), vừa (biểu mẫu), lớn (chi tiết, nhiều cột). */
-export const MODAL_WIDTHS = { small: 560, medium: 720, large: 960 } as const
+const MODAL_WIDTHS = { small: 560, medium: 720, large: 960 } as const
 
 function normalizeModalWidth(width: ModalProps['width']): ModalProps['width'] {
   if (typeof width !== 'number') return width ?? MODAL_WIDTHS.large
